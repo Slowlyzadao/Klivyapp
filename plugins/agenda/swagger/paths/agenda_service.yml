@@ -1,0 +1,43 @@
+get:
+  tags:
+    - Serviços da Agenda
+  summary: Mostrar serviço
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Detalhes do serviço
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaService.yml'
+patch:
+  tags:
+    - Serviços da Agenda
+  summary: Atualizar serviço
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            agenda_service:
+              $ref: '../definitions/AgendaService.yml'
+  responses:
+    '200':
+      description: Serviço atualizado
+delete:
+  tags:
+    - Serviços da Agenda
+  summary: Excluir serviço
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Serviço excluído

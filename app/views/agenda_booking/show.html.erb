@@ -1,0 +1,478 @@
+<%# app/views/agenda_booking/show.html.erb %>
+
+<% if @error == 'not_found' %>
+  <div class="booking-main">
+    <div class="booking-container">
+      <div class="booking-error">
+        <div class="booking-error-icon">🔍</div>
+        <h2>Profissional não encontrado</h2>
+        <p>O link de agendamento é inválido ou foi desativado.</p>
+      </div>
+    </div>
+  </div>
+<% elsif @error == 'disabled' %>
+  <div class="booking-main">
+    <div class="booking-container">
+      <div class="booking-error">
+        <div class="booking-error-icon">🚫</div>
+        <h2>Agendamento desativado</h2>
+        <p>Este profissional não está aceitando agendamentos online no momento.</p>
+      </div>
+    </div>
+  </div>
+<% else %>
+
+<header class="booking-header">
+  <span class="booking-header-brand">Beclinic</span>
+</header>
+
+<div class="booking-main">
+  <div class="booking-container">
+
+    <!-- Professional Card -->
+    <div class="prof-card" id="prof-card">
+      <% user_avatar_url = @user.avatar_url %>
+      <div class="prof-avatar" id="prof-avatar"
+           <% if user_avatar_url.present? %>
+             style="background-image: url('<%= user_avatar_url %>'); background-size: cover; background-position: center; color: transparent;"
+           <% end %>
+      >
+        <% if user_avatar_url.blank? %>
+          <%= @user.name[0].upcase rescue '?' %>
+        <% end %>
+      </div>
+      <div class="prof-info">
+        <div class="prof-name"><%= @user.display_name || @user.name %></div>
+        <div class="prof-sub">Agendamento online</div>
+        <span class="prof-badge">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Agenda disponível
+        </span>
+      </div>
+    </div>
+
+    <!-- Steps -->
+    <div class="steps-bar" id="steps-bar">
+      <div class="step-item active" id="step-1-item">
+        <div class="step-dot">1</div>
+        <span class="step-label">Seus dados</span>
+      </div>
+      <div class="step-item" id="step-2-item">
+        <div class="step-dot">2</div>
+        <span class="step-label">Data e hora</span>
+      </div>
+      <div class="step-item" id="step-3-item">
+        <div class="step-dot">3</div>
+        <span class="step-label">Confirmação</span>
+      </div>
+    </div>
+
+    <!-- STEP 1: Patient Form -->
+    <div id="step-1" class="card">
+      <div class="card-header">
+        <div class="card-title">Seus dados</div>
+        <div class="card-sub">Preencha as informações para identificação. Todos os campos marcados com <span style="color:#ef4444">*</span> são obrigatórios.</div>
+      </div>
+      <div class="card-body">
+        <form id="patient-form" novalidate>
+          <div class="form-grid">
+            <div class="field">
+              <label for="f-first-name">Nome <span class="req">*</span></label>
+              <input type="text" id="f-first-name" placeholder="João" autocomplete="given-name" required>
+            </div>
+            <div class="field">
+              <label for="f-last-name">Sobrenome <span class="req">*</span></label>
+              <input type="text" id="f-last-name" placeholder="Silva" autocomplete="family-name" required>
+            </div>
+            <div class="field">
+              <label for="f-phone">WhatsApp / Celular <span class="req">*</span></label>
+              <input type="tel" id="f-phone" placeholder="(11) 99999-9999" autocomplete="tel" required>
+            </div>
+            <div class="field">
+              <label for="f-email">E-mail</label>
+              <input type="email" id="f-email" placeholder="joao@email.com" autocomplete="email">
+              <span class="hint">Opcional – para confirmação por e-mail</span>
+            </div>
+            <div class="field full">
+              <label for="f-cpf">CPF <span class="req">*</span></label>
+              <input type="text" id="f-cpf" placeholder="000.000.000-00" maxlength="14" required>
+            </div>
+          </div>
+          <div class="btn-row">
+            <span style="font-size:12px;color:#94a3b8">Seus dados são mantidos seguros e não serão compartilhados.</span>
+            <button type="submit" class="btn btn-primary" id="btn-next-1">
+              Próximo &rarr;
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- STEP 2: Calendar + Slots -->
+    <div id="step-2" class="card" style="display:none">
+      <div class="card-header">
+        <div class="card-title">Escolha data e horário</div>
+        <div class="card-sub">Selecione um dia disponível e depois o horário desejado.</div>
+      </div>
+      <div class="card-body">
+        <div class="cal-grid">
+          <!-- Calendar -->
+          <div>
+            <div class="cal-month-nav">
+              <button class="cal-nav-btn" id="cal-prev" title="Mês anterior">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <span class="cal-month-title" id="cal-month-title">—</span>
+              <button class="cal-nav-btn" id="cal-next" title="Próximo mês">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+            <div class="cal-weekdays">
+              <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span>
+              <span>Qui</span><span>Sex</span><span>Sáb</span>
+            </div>
+            <div class="cal-days" id="cal-days"></div>
+          </div>
+
+          <!-- Slots -->
+          <div>
+            <div class="slots-label" id="slots-header">Selecione um dia para ver horários</div>
+            <div id="slots-container">
+              <div class="slots-empty">👈 Selecione uma data no calendário</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="btn-back-2">&larr; Voltar</button>
+          <button class="btn btn-primary" id="btn-next-2" disabled>
+            Próximo &rarr;
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Confirmation -->
+    <div id="step-3" class="card" style="display:none">
+      <div class="card-header">
+        <div class="card-title">Confirme seu agendamento</div>
+        <div class="card-sub">Verifique os dados antes de confirmar.</div>
+      </div>
+      <div class="card-body">
+        <div id="confirm-summary" style="background:#f8fafc;border-radius:12px;padding:20px;margin-bottom:20px;border:1px solid #e2e8f0;font-size:14px;line-height:1.8;">
+        </div>
+
+        <div id="booking-error-msg" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;color:#dc2626;font-size:13px;margin-bottom:16px;"></div>
+
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="btn-back-3">&larr; Voltar</button>
+          <button class="btn btn-primary" id="btn-confirm">
+            <span id="btn-confirm-text">Confirmar agendamento</span>
+            <span id="btn-confirm-spinner" class="spinner" style="display:none"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Success -->
+    <div id="step-4" class="card" style="display:none">
+      <div class="success-card">
+        <div class="success-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <h2 class="success-title">Agendamento confirmado! 🎉</h2>
+        <p class="success-sub" id="success-sub">Seu agendamento foi realizado com sucesso. Em breve você receberá uma confirmação via WhatsApp.</p>
+        <div class="success-detail" id="success-detail"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function() {
+  const PUBLIC_ID = '<%= @public_id %>';
+  const API_BASE  = '/public/api/v1/agenda/' + PUBLIC_ID;
+
+  // ── State ──────────────────────────────────────────────────────────────
+  const state = {
+    step: 1,
+    patient: {},
+    selectedDate: null,
+    selectedTime: null,
+    calYear: new Date().getFullYear(),
+    calMonth: new Date().getMonth(),
+    slotsCache: {},
+    loadingSlots: false,
+  };
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+  const $ = id => document.getElementById(id);
+  const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const DAYS_SHORT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  function fmt(s) { return s.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+
+  function fmtDate(d) {
+    if (!d) return '';
+    const [y, m, day] = d.split('-');
+    return day + '/' + m + '/' + y;
+  }
+
+  function maskCpf(v) {
+    v = v.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 9) v = v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9);
+    else if (v.length > 6) v = v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);
+    else if (v.length > 3) v = v.slice(0,3)+'.'+v.slice(3);
+    return v;
+  }
+
+  function maskPhone(v) {
+    v = v.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 10) v = '('+v.slice(0,2)+') '+v.slice(2,7)+'-'+v.slice(7);
+    else if (v.length > 6) v = '('+v.slice(0,2)+') '+v.slice(2,6)+'-'+v.slice(6);
+    else if (v.length > 2) v = '('+v.slice(0,2)+') '+v.slice(2);
+    return v;
+  }
+
+  function setStep(n) {
+    state.step = n;
+    [1,2,3,4].forEach(i => {
+      const el = $('step-'+i);
+      if (el) el.style.display = i === n ? '' : 'none';
+      const item = $('step-'+i+'-item');
+      if (item) {
+        item.className = 'step-item' + (i < n ? ' done' : i === n ? ' active' : '');
+      }
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── Step 1 – Form ────────────────────────────────────────────────────────
+  $('f-cpf').addEventListener('input', function() {
+    this.value = maskCpf(this.value);
+  });
+  $('f-phone').addEventListener('input', function() {
+    this.value = maskPhone(this.value);
+  });
+
+  $('patient-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const firstName = $('f-first-name').value.trim();
+    const lastName  = $('f-last-name').value.trim();
+    const phone     = $('f-phone').value.trim();
+    const cpf       = $('f-cpf').value.trim();
+    const email     = $('f-email').value.trim();
+
+    if (!firstName || !lastName || !phone || !cpf) {
+      alert('Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
+    if (cpf.replace(/\D/g,'').length < 11) {
+      alert('CPF inválido. Informe os 11 dígitos.');
+      return;
+    }
+
+    state.patient = { firstName, lastName, phone, cpf, email };
+    setStep(2);
+    renderCalendar();
+  });
+
+  // ── Step 2 – Calendar ────────────────────────────────────────────────────
+  function renderCalendar() {
+    const year  = state.calYear;
+    const month = state.calMonth;
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    $('cal-month-title').textContent = MONTHS_PT[month] + ' ' + year;
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const container = $('cal-days');
+    container.innerHTML = '';
+
+    // Empty cells before first day
+    for (let i = 0; i < firstDay; i++) {
+      const el = document.createElement('div');
+      el.className = 'cal-day empty';
+      container.appendChild(el);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d);
+      date.setHours(0,0,0,0);
+      const iso = year + '-' + String(month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+
+      const el = document.createElement('div');
+      el.textContent = d;
+
+      const isPast = date < today;
+      const isToday = date.getTime() === today.getTime();
+      const isSelected = state.selectedDate === iso;
+
+      if (isPast) {
+        el.className = 'cal-day past';
+      } else if (isSelected) {
+        el.className = 'cal-day selected';
+      } else if (isToday) {
+        el.className = 'cal-day today available';
+      } else {
+        el.className = 'cal-day available';
+      }
+
+      if (!isPast) {
+        el.addEventListener('click', () => selectDate(iso));
+      }
+
+      container.appendChild(el);
+    }
+  }
+
+  async function selectDate(iso) {
+    state.selectedDate = iso;
+    state.selectedTime = null;
+    $('btn-next-2').disabled = true;
+    renderCalendar();
+
+    const [y, m, d] = iso.split('-');
+    $('slots-header').textContent = 'Horários disponíveis – ' + d + '/' + m + '/' + y;
+    $('slots-container').innerHTML = '<div class="slots-loading"><div class="spinner spinner-brand" style="margin:0 auto 8px"></div><br>Carregando horários...</div>';
+
+    if (state.slotsCache[iso]) {
+      renderSlots(state.slotsCache[iso], iso);
+      return;
+    }
+
+    try {
+      const res = await fetch(API_BASE + '/slots?date=' + iso);
+      const data = await res.json();
+      state.slotsCache[iso] = data.slots || [];
+      renderSlots(state.slotsCache[iso], iso);
+    } catch(err) {
+      $('slots-container').innerHTML = '<div class="slots-empty">❌ Erro ao carregar horários. Tente novamente.</div>';
+    }
+  }
+
+  function renderSlots(slots, iso) {
+    if (!slots || slots.length === 0) {
+      $('slots-container').innerHTML = '<div class="slots-empty">😔 Nenhum horário disponível neste dia.<br>Escolha outra data.</div>';
+      return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'slots-grid';
+
+    slots.forEach(time => {
+      const btn = document.createElement('button');
+      btn.className = 'slot-btn' + (state.selectedTime === time ? ' selected' : '');
+      btn.textContent = time;
+      btn.addEventListener('click', () => {
+        state.selectedTime = time;
+        $('btn-next-2').disabled = false;
+        renderSlots(slots, iso);
+      });
+      grid.appendChild(btn);
+    });
+
+    $('slots-container').innerHTML = '';
+    $('slots-container').appendChild(grid);
+  }
+
+  $('cal-prev').addEventListener('click', () => {
+    if (state.calMonth === 0) { state.calMonth = 11; state.calYear--; }
+    else state.calMonth--;
+    renderCalendar();
+  });
+  $('cal-next').addEventListener('click', () => {
+    if (state.calMonth === 11) { state.calMonth = 0; state.calYear++; }
+    else state.calMonth++;
+    renderCalendar();
+  });
+
+  $('btn-back-2').addEventListener('click', () => setStep(1));
+  $('btn-next-2').addEventListener('click', () => {
+    if (!state.selectedDate || !state.selectedTime) return;
+    buildSummary();
+    setStep(3);
+  });
+
+  // ── Step 3 – Confirm ─────────────────────────────────────────────────────
+  function buildSummary() {
+    const p = state.patient;
+    $('confirm-summary').innerHTML = `
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;align-items:baseline;">
+        <strong>Nome</strong><span>${p.firstName} ${p.lastName}</span>
+        <strong>CPF</strong><span>${p.cpf}</span>
+        <strong>WhatsApp</strong><span>${p.phone}</span>
+        ${p.email ? `<strong>E-mail</strong><span>${p.email}</span>` : ''}
+        <strong>Data</strong><span>${fmtDate(state.selectedDate)}</span>
+        <strong>Horário</strong><span>${state.selectedTime}</span>
+      </div>
+    `;
+  }
+
+  $('btn-back-3').addEventListener('click', () => setStep(2));
+  $('btn-confirm').addEventListener('click', async () => {
+    const btn = $('btn-confirm');
+    const spinner = $('btn-confirm-spinner');
+    const btnText = $('btn-confirm-text');
+    const errBox = $('booking-error-msg');
+
+    btn.disabled = true;
+    spinner.style.display = '';
+    btnText.textContent = 'Confirmando...';
+    errBox.style.display = 'none';
+
+    const p = state.patient;
+    const payload = {
+      date: state.selectedDate,
+      time: state.selectedTime,
+      patient: {
+        first_name: p.firstName,
+        last_name: p.lastName,
+        phone: p.phone.replace(/\D/g,''),
+        email: p.email || null,
+        cpf: p.cpf.replace(/\D/g,''),
+      }
+    };
+
+    try {
+      const res = await fetch(API_BASE + '/book', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        const [y, m, d] = state.selectedDate.split('-');
+        $('success-detail').textContent = '📅 ' + d + '/' + m + '/' + y + ' às ' + state.selectedTime;
+        setStep(4);
+        $('steps-bar').style.display = 'none';
+      } else {
+        errBox.textContent = data.error || 'Erro ao confirmar o agendamento. Tente novamente.';
+        errBox.style.display = '';
+        btn.disabled = false;
+        spinner.style.display = 'none';
+        btnText.textContent = 'Confirmar agendamento';
+      }
+    } catch(err) {
+      errBox.textContent = 'Erro de conexão. Verifique sua internet e tente novamente.';
+      errBox.style.display = '';
+      btn.disabled = false;
+      spinner.style.display = 'none';
+      btnText.textContent = 'Confirmar agendamento';
+    }
+  });
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+  setStep(1);
+})();
+</script>
+
+<% end %>

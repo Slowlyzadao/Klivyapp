@@ -1,0 +1,246 @@
+/* ─── AgendaSummaryBar — agenda-summary.css ─────────────────────────────────
+   Prefixo: agsum-  |  Dual-theme: rb(var(--slate-N))  |  Sem box-shadow em inputs
+─────────────────────────────────────────────────────────────────────────────── */
+
+/* ── 1. Container da barra (animação de slide) ────────────────────────────── */
+.agsum-bar {
+  width: 100%;
+  background: rgb(var(--slate-2));
+  border-bottom: 1px solid rgb(var(--slate-4));
+  overflow: hidden;
+  transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.22s ease;
+  max-height: 0;
+  opacity: 0;
+}
+
+.agsum-bar.agsum-bar--open {
+  max-height: 96px;
+  opacity: 1;
+}
+
+/* ── 2. Layout interno: cards à esquerda, período + refresh à direita ─────── */
+.agsum-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  gap: 12px;
+}
+
+/* ── 3. Grid de cards de métricas ─────────────────────────────────────────── */
+.agsum-cards {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+/* ── 4. Card individual ───────────────────────────────────────────────────── */
+.agsum-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--slate-4));
+  flex: 1;
+  min-width: 0;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.agsum-card:hover {
+  background: rgb(var(--slate-3));
+  border-color: rgb(var(--slate-5));
+}
+
+/* ── 5. Ícone colorido ────────────────────────────────────────────────────── */
+.agsum-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.agsum-card-icon span {
+  width: 18px;
+  height: 18px;
+}
+
+.agsum-icon--slate  { background: rgba(100, 116, 139, 0.12); color: rgb(var(--slate-9)); }
+.agsum-icon--blue   { background: rgba(59, 130, 246, 0.12);  color: #2563eb; }
+.agsum-icon--amber  { background: rgba(217, 119, 6, 0.12);   color: #d97706; }
+.agsum-icon--green  { background: rgba(22, 163, 74, 0.12);   color: #16a34a; }
+.agsum-icon--purple { background: rgba(124, 58, 237, 0.12);  color: #7c3aed; }
+.agsum-icon--red    { background: rgba(220, 38, 38, 0.12);   color: #dc2626; }
+
+/* ── 6. Texto do card ────────────────────────────────────────────────────── */
+.agsum-card-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.agsum-card-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: rgb(var(--slate-12));
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.agsum-card-label {
+  @apply text-sm;
+  font-weight: 500;
+  color: rgb(var(--slate-9));
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+/* Cores semânticas dos valores */
+.agsum-val--blue   { color: #2563eb; }
+.agsum-val--amber  { color: #d97706; }
+.agsum-val--green  { color: #16a34a; }
+.agsum-val--purple { color: #7c3aed; }
+.agsum-val--red    { color: #dc2626; }
+
+/* ── 7. Coluna direita: período + refresh ────────────────────────────────── */
+.agsum-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.agsum-period {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.agsum-period-label {
+  @apply text-sm;
+  font-weight: 500;
+  color: rgb(var(--slate-9));
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.agsum-period-value {
+  @apply text-sm;
+  font-weight: 600;
+  color: rgb(var(--slate-11));
+  white-space: nowrap;
+}
+
+/* ── 8. Botão de refresh ─────────────────────────────────────────────────── */
+.agsum-refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 8px;
+  background: rgb(var(--slate-1));
+  color: rgb(var(--slate-9));
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.agsum-refresh-btn span {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.5s ease;
+}
+
+.agsum-refresh-btn:hover {
+  background: rgb(var(--slate-3));
+  border-color: rgb(var(--slate-6));
+  color: rgb(var(--slate-12));
+}
+
+.agsum-refresh-btn--spinning span {
+  animation: agsum-spin 0.7s linear infinite;
+}
+
+@keyframes agsum-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── 9. Estado de loading inline ─────────────────────────────────────────── */
+.agsum-loading-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  color: rgb(var(--slate-9));
+  @apply text-sm;
+}
+
+.agsum-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgb(var(--slate-5));
+  border-top-color: rgb(var(--slate-9));
+  border-radius: 50%;
+  animation: agsum-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .agsum-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 8px 12px;
+  }
+
+  .agsum-cards {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .agsum-cards::-webkit-scrollbar {
+    height: 4px;
+  }
+  .agsum-cards::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .agsum-cards::-webkit-scrollbar-thumb {
+    background: rgb(var(--slate-4));
+    border-radius: 2px;
+  }
+
+  .agsum-card {
+    flex: 0 0 auto;
+    width: 140px;
+    scroll-snap-align: center;
+    padding: 6px 12px;
+  }
+
+  .agsum-card-value {
+    font-size: 16px;
+  }
+
+  .agsum-card-label {
+    @apply text-xs;
+  }
+
+  .agsum-right {
+    justify-content: space-between;
+    padding-top: 4px;
+    border-top: 1px dashed rgb(var(--slate-4));
+  }
+}

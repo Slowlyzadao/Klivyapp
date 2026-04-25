@@ -1,0 +1,11 @@
+json.id             form_template.id
+json.name           form_template.name
+json.template_type  form_template.template_type
+json.specialty      form_template.specialty
+json.fields         form_template.fields
+json.is_global      form_template.is_global
+json.active         form_template.active
+json.created_by_id  form_template.created_by_id
+json.account_id     form_template.account_id
+json.created_at     form_template.created_at.iso8601
+json.updated_at     form_template.updated_at.iso8601

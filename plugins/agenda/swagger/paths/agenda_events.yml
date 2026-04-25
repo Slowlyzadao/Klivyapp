@@ -1,0 +1,43 @@
+get:
+  tags:
+    - Agendamentos
+  summary: Listar agendamentos
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: user_id
+      in: query
+      schema:
+        type: integer
+    - name: status
+      in: query
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Lista de eventos
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/AgendaEvent.yml'
+post:
+  tags:
+    - Agendamentos
+  summary: Criar novo agendamento
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            agenda_event:
+              $ref: '../definitions/AgendaEvent.yml'
+  responses:
+    '201':
+      description: Evento criado
+    '422':
+      description: Erro de validação

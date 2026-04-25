@@ -1,0 +1,21 @@
+type: object
+properties:
+  id:
+    type: integer
+    example: 1
+  name:
+    type: string
+    example: "Limpeza"
+  duration_minutes:
+    type: integer
+    example: 60
+  price:
+    type: number
+    format: float
+    example: 150.0
+  color:
+    type: string
+    example: "#FF5733"
+  position:
+    type: integer
+    example: 0

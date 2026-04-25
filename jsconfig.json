@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "jsx": "preserve",
+    "allowJs": true,
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["app/javascript/*"],
+      "@plugins/*": ["plugins/*"]
+    }
+  },
+  "exclude": ["node_modules", "vendor", "tmp", "public", "dist"]
+}

@@ -1,0 +1,43 @@
+get:
+  tags:
+    - Agendamentos
+  summary: Detalhes do agendamento
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Detalhes do evento
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaEvent.yml'
+patch:
+  tags:
+    - Agendamentos
+  summary: Atualizar agendamento
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            agenda_event:
+              $ref: '../definitions/AgendaEvent.yml'
+  responses:
+    '200':
+      description: Evento atualizado
+delete:
+  tags:
+    - Agendamentos
+  summary: Excluir agendamento
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Evento excluído

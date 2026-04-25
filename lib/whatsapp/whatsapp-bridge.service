@@ -1,0 +1,20 @@
+[Unit]
+Description=WhatsApp Bridge (Baileys) para Chatwoot
+After=network.target
+
+[Service]
+Type=simple
+User=leook
+WorkingDirectory=/home/leook/chatwoot-develop/lib/whatsapp
+ExecStart=/home/leook/.nvm/versions/node/v24.13.1/bin/node /home/leook/chatwoot-develop/lib/whatsapp/server.js
+Restart=on-failure
+RestartSec=5s
+KillMode=process
+TimeoutStopSec=10s
+Environment=CHATWOOT_BASE_URL=http://localhost:3000
+Environment=NODE_ENV=production
+Environment=HOME=/home/leook
+Environment=PATH=/home/leook/.nvm/versions/node/v24.13.1/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=multi-user.target

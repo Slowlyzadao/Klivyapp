@@ -1,0 +1,149 @@
+.coupons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 1.5rem;
+}
+
+/* Coupon Card (linha de tabela) */
+.coupon-card {
+  display: grid;
+  grid-template-columns: 220px 1fr 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: #fff;
+  border: 1px solid rgb(var(--slate-4));
+  border-bottom: none;
+  transition: background 0.1s;
+}
+
+.coupon-card:first-child {
+  border-radius: 12px 12px 0 0;
+}
+
+.coupon-card:last-child {
+  border-bottom: 1px solid rgb(var(--slate-4));
+  border-radius: 0 0 12px 12px;
+}
+
+.coupon-card:only-child {
+  border-radius: 12px;
+}
+
+.coupon-card:hover {
+  background: rgb(var(--slate-1));
+}
+
+.coupon-card--inactive {
+  opacity: 0.6;
+}
+
+.coupon-card__left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.coupon-card__code {
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  font-weight: 700;
+  color: rgb(var(--slate-12));
+  letter-spacing: 1px;
+}
+
+.coupon-card__description {
+  font-size: 12px;
+  color: rgb(var(--slate-9));
+}
+
+.coupon-card__center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coupon-card__summary {
+  font-size: 13px;
+  color: rgb(var(--slate-11));
+}
+
+.coupon-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.coupon-card__usage,
+.coupon-card__expiry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgb(var(--slate-9));
+}
+
+.coupon-card__expiry--expired {
+  color: rgb(var(--ruby-11));
+}
+
+.coupon-card__actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+/* Input group (código + botão gerar) */
+.as-input-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.as-input-group .as-input {
+  flex: 1;
+}
+
+.as-btn--sm {
+  padding: 6px 10px;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+/* Seção grátis forever */
+.coupon-free-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgb(var(--teal-3));
+  color: rgb(var(--teal-11));
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Divisor de seção */
+.as-section-divider {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(var(--slate-9));
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgb(var(--slate-4));
+}
+
+/* Cabeçalho da lista */
+.coupons-header-row {
+  display: grid;
+  grid-template-columns: 220px 1fr 1fr auto;
+  gap: 1rem;
+  padding: 0.5rem 1.25rem;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgb(var(--slate-9));
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

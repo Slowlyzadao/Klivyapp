@@ -1,0 +1,789 @@
+/**
+ * Estilos globais de eventos da Agenda.
+ * Extraídos do bloco <style> não-scoped original do AgendaDashboard.vue.
+ * Deve ser importado pelo AgendaDashboard para que os componentes filhos herdem.
+ */
+
+/* ── Timeline Event Card ────────────────────────── */
+.timeline-evt {
+  position: absolute;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 3px solid transparent;
+  overflow: hidden;
+  transition: box-shadow 0.15s, opacity 0.15s, transform 0.15s;
+  pointer-events: auto;
+  user-select: none;
+  z-index: 5;
+}
+
+.timeline-evt:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 10 !important;
+}
+
+.timeline-evt.is-dragging {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.timeline-evt.is-resizing {
+  opacity: 0.8;
+}
+
+
+
+.timeline-evt.evt-no-show {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+/* ── Drag Ghost ──────────────────────────────────── */
+.drag-ghost {
+  background: rgba(99, 102, 241, 0.15) !important;
+  border: 2px dashed rgba(99, 102, 241, 0.5) !important;
+  border-left: 3px solid rgba(99, 102, 241, 0.7) !important;
+  border-radius: 8px;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.drag-ghost-title {
+  color: rgba(99, 102, 241, 0.9) !important;
+}
+
+/* ── Event Size Tiers ─────────────────────────────── */
+
+/* MICRO (≤15min) */
+.timeline-evt.evt-micro {
+  padding: 2px 6px;
+  border-radius: 4px;
+  gap: 0;
+}
+
+.evt-micro-body {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.evt-micro-time {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgb(var(--slate-10));
+  flex-shrink: 0;
+}
+
+.evt-micro-name {
+  @apply text-sm;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* COMPACT (≤29min) */
+.timeline-evt.evt-compact {
+  padding: 3px 6px;
+  border-radius: 6px;
+  gap: 0;
+}
+
+.evt-compact-body {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.evt-compact-time {
+  @apply text-sm;
+  font-weight: 700;
+  color: rgb(var(--slate-10));
+  flex-shrink: 0;
+}
+
+.evt-compact-title {
+  @apply text-sm;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evt-compact-treatment {
+  @apply text-sm;
+  color: rgb(var(--slate-10));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+}
+
+.evt-compact-star {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+}
+
+/* MEDIUM (≤39min) */
+.timeline-evt.evt-medium {
+  padding: 4px 8px;
+}
+
+/* ── Event Common Elements ────────────────────────── */
+.evt-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.evt-sbs-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.evt-sbs-title {
+  @apply text-sm;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evt-sbs-time-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.evt-sbs-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  @apply text-sm;
+  color: rgb(var(--slate-10));
+  font-weight: 500;
+}
+
+.evt-sbs-treatment {
+  @apply text-sm;
+  font-weight: 600;
+  color: rgb(var(--slate-11));
+}
+
+.evt-sbs-sep {
+  color: rgb(var(--slate-7));
+  @apply text-sm;
+}
+
+.time-icon {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+}
+
+/* ── Status Dot ──────────────────────────────────── */
+.evt-status-dot-sm {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Late Indicator ──────────────────────────────── */
+.evt-late-icon {
+  font-weight: 900;
+  @apply text-sm;
+  color: #ef4444;
+  text-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+}
+
+/* ── Action Buttons ──────────────────────────────── */
+.evt-normal-actions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 5;
+}
+
+.evt-info-btn-hover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  color: rgb(var(--slate-10));
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  opacity: 0;
+}
+
+.timeline-evt:hover .evt-info-btn-hover {
+  opacity: 1;
+}
+
+.evt-info-btn-hover:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.evt-info-btn-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: rgb(var(--slate-1));
+  color: rgb(var(--slate-8));
+  cursor: pointer;
+  padding: 1px 2px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s;
+  flex-shrink: 0;
+}
+
+.timeline-evt:hover .evt-info-btn-inline {
+  opacity: 1;
+}
+
+.evt-info-btn-inline:hover {
+  color: #ef4444;
+}
+
+/* ── Star Icon ───────────────────────────────────── */
+.evt-star-abs {
+  flex-shrink: 0;
+}
+
+/* ── Resize Handle ───────────────────────────────── */
+.evt-resize-handle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  border-radius: 0 0 8px 8px;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s;
+}
+
+.timeline-evt:hover .evt-resize-handle {
+  opacity: 1;
+  background: rgba(var(--blue-9), 0.3);
+}
+
+.evt-resize-handle:hover {
+  background: rgba(var(--blue-9), 0.5) !important;
+}
+
+/* ── Event Info Popup ─────────────────────────────── */
+.evt-info-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(2px);
+}
+
+.evt-info-popup {
+  position: fixed;
+  width: 320px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--border-strong));
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+  padding: 0;
+}
+
+.evt-info-popup-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: rgb(var(--slate-1));
+  color: rgb(var(--slate-9));
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.12s, color 0.12s;
+}
+
+.evt-info-popup-close:hover {
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-12));
+}
+
+.evt-info-popup-header {
+  padding: 16px 16px 8px;
+  border-bottom: 1px solid rgb(var(--border-strong));
+}
+
+.evt-info-popup-patient {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.evt-info-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.evt-info-avatar-placeholder {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  @apply text-sm;
+  font-weight: 700;
+  background: rgba(var(--blue-9), 0.15);
+  color: rgb(var(--blue-9));
+  flex-shrink: 0;
+}
+
+.evt-info-popup-title {
+  @apply text-sm;
+  font-weight: 700;
+  color: rgb(var(--slate-12));
+}
+
+.evt-info-popup-rows {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.evt-info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  @apply text-sm;
+}
+
+.evt-info-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: rgb(var(--slate-9));
+}
+
+.evt-info-label {
+  font-weight: 500;
+  color: rgb(var(--slate-10));
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.evt-info-value {
+  color: rgb(var(--slate-12));
+  font-weight: 500;
+}
+
+.evt-info-value--obs {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Status Section ──────────────────────────────── */
+.evt-info-status-section {
+  padding: 12px 16px;
+  border-top: 1px solid rgb(var(--border-strong));
+}
+
+.evt-info-status-label {
+  @apply text-sm;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: rgb(var(--slate-10));
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.evt-info-status-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.evt-status-option {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid rgb(var(--border-strong));
+  border-radius: 8px;
+  background: rgb(var(--slate-1));
+  color: rgb(var(--slate-11));
+  @apply text-sm;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.evt-status-option:hover {
+  background: rgb(var(--slate-3));
+}
+
+.evt-status-option.active {
+  background: rgba(var(--blue-9), 0.08);
+  border-color: rgba(var(--blue-9), 0.3);
+  color: rgb(var(--blue-9));
+  font-weight: 600;
+}
+
+.evt-status-circle-sm {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-scheduled { background: #9ca3af; }
+.status-confirmed { background: #22c55e; }
+.status-arrived { background: #eab308; }
+.status-in_progress { background: #3b82f6; }
+.status-completed { background: #22c55e; }
+.status-no_show { background: #ef4444; }
+.status-cancelled { background: #6b7280; }
+
+.evt-status-option-label {
+  white-space: nowrap;
+}
+
+/* ── Actions Footer ──────────────────────────────── */
+.evt-info-actions {
+  display: flex;
+  border-top: 1px solid rgb(var(--border-strong));
+}
+
+.evt-info-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  border: none;
+  background: rgb(var(--slate-1));
+  color: rgb(var(--slate-11));
+  @apply text-sm;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.evt-info-action-btn:hover {
+  background: rgb(var(--slate-3));
+  color: rgb(var(--blue-9));
+}
+
+.evt-info-action-btn + .evt-info-action-btn {
+  border-left: 1px solid rgb(var(--border-strong));
+}
+
+/* ── Form Styles (Modal) ──────────────────────────── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(var(--slate-12));
+  margin-bottom: 2px;
+}
+
+.label-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 0.75rem;
+  background: rgb(var(--slate-2));
+  color: rgb(var(--slate-12));
+  font-size: 0.875rem;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  min-height: 2.5rem;
+}
+
+.form-input:focus {
+  border-color: rgba(var(--blue-9), 0.5);
+  box-shadow: 0 0 0 1px rgba(var(--blue-9), 0.5);
+  background: rgb(var(--slate-1));
+}
+
+.form-select {
+  appearance: none;
+  cursor: pointer;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+.error-input {
+  border-color: rgba(239, 68, 68, 0.5) !important;
+}
+
+.error-msg {
+  @apply text-sm;
+  color: #ef4444;
+  margin-top: 2px;
+}
+
+/* ── Custom Select (Dropdown) ────────────────────── */
+.custom-select {
+  position: relative;
+}
+
+.cs-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  min-height: 2.5rem;
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 0.75rem;
+  background: rgb(var(--slate-2));
+  color: rgb(var(--slate-12));
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-align: left;
+  outline: none;
+}
+
+.cs-trigger:hover, .cs-trigger:focus {
+  border-color: rgba(var(--blue-9), 0.5);
+  box-shadow: 0 0 0 1px rgba(var(--blue-9), 0.5);
+  background: rgb(var(--slate-1));
+}
+
+.cs-arrow {
+  width: 14px;
+  height: 14px;
+  color: rgb(var(--slate-8));
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.custom-select.open .cs-arrow {
+  transform: rotate(180deg);
+}
+
+.cs-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--border-strong));
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 200;
+  padding: 4px;
+}
+
+.select-upwards .cs-dropdown {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.cs-search {
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-bottom: 1px solid rgb(var(--border-strong));
+  background: rgb(var(--slate-1));
+  color: rgb(var(--slate-12));
+  @apply text-sm;
+  outline: none;
+}
+
+.cs-option {
+  padding: 8px 10px;
+  @apply text-sm;
+  color: rgb(var(--slate-11));
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.1s;
+}
+
+.cs-option:hover {
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-12));
+}
+
+.cs-option.selected {
+  color: rgb(var(--blue-9));
+  font-weight: 600;
+}
+
+.cs-option-service {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cs-svc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cs-svc-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs-svc-dur {
+  @apply text-sm;
+  color: rgb(var(--slate-9));
+  flex-shrink: 0;
+}
+
+.empty-option {
+  color: rgb(var(--slate-8));
+  cursor: default;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ── Modal Buttons ───────────────────────────────── */
+.btn-primary {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 0.75rem;
+  background: rgb(var(--blue-9));
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-primary:hover {
+  background: rgb(var(--blue-10));
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  padding: 8px 20px;
+  border: 1px solid rgb(var(--border-strong));
+  border-radius: 0.75rem;
+  background: rgb(var(--slate-1));
+  color: rgb(var(--slate-11));
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-secondary:hover {
+  background: rgb(var(--slate-3));
+}
+
+/* ── Custom Scrollbar ────────────────────────────── */
+.custom-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+  background: rgb(var(--slate-1));
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: rgba(var(--slate-8), 0.3);
+  border-radius: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--slate-8), 0.5);
+}
+
+/* ── Solid Event Background Overrides ────────────── */
+.timeline-evt {
+  color: #fff !important;
+}
+
+.evt-micro-name,
+.evt-compact-title,
+.evt-sbs-title {
+  color: #fff !important;
+}
+
+.evt-micro-time,
+.evt-compact-time,
+.evt-compact-treatment,
+.evt-sbs-time,
+.evt-sbs-treatment,
+.evt-info-btn-hover,
+.evt-info-btn-inline {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.evt-sbs-sep {
+  color: rgba(255, 255, 255, 0.5) !important;
+}

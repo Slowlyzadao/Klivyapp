@@ -1,0 +1,51 @@
+openapi: '3.0.4'
+info:
+  title: Klivy Plugins API
+  version: 1.0.0
+  description: Documentação consolidada dos plugins do Klivy.
+servers:
+  - url: /
+paths:
+  # Agenda
+  /api/v1/accounts/{account_id}/agenda_events:
+    $ref: '../plugins/agenda/swagger/paths/agenda_events.yml'
+  /api/v1/accounts/{account_id}/agenda_events/{id}:
+    $ref: '../plugins/agenda/swagger/paths/agenda_event.yml'
+  /api/v1/accounts/{account_id}/agenda_services:
+    $ref: '../plugins/agenda/swagger/paths/agenda_services.yml'
+  /api/v1/accounts/{account_id}/agenda_services/{id}:
+    $ref: '../plugins/agenda/swagger/paths/agenda_service.yml'
+  /api/v1/accounts/{account_id}/waiting_list_entries:
+    $ref: '../plugins/agenda/swagger/paths/waiting_list_entries.yml'
+
+  # Patients
+  /api/v1/accounts/{account_id}/patients:
+    $ref: '../plugins/patients/swagger/paths/patients.yml'
+  /api/v1/accounts/{account_id}/patients/{id}/summary:
+    $ref: '../plugins/patients/swagger/paths/patient_summary.yml'
+
+  # Financial
+  /api/v1/accounts/{account_id}/financial/transactions:
+    $ref: '../plugins/financial/swagger/paths/transactions.yml'
+  /api/v1/accounts/{account_id}/financial/bank_accounts:
+    $ref: '../plugins/financial/swagger/paths/bank_accounts.yml'
+
+components:
+  schemas:
+    AgendaEvent:
+      $ref: '../plugins/agenda/swagger/definitions/AgendaEvent.yml'
+    AgendaService:
+      $ref: '../plugins/agenda/swagger/definitions/AgendaService.yml'
+    WaitingListEntry:
+      $ref: '../plugins/agenda/swagger/definitions/WaitingListEntry.yml'
+    Patient:
+      $ref: '../plugins/patients/swagger/definitions/Patient.yml'
+    AccountTransaction:
+      $ref: '../plugins/financial/swagger/definitions/AccountTransaction.yml'
+    BankAccount:
+      $ref: '../plugins/financial/swagger/definitions/BankAccount.yml'
+  parameters:
+    accountId:
+      $ref: '../plugins/agenda/swagger/common.yml#/components/parameters/accountId'
+    id:
+      $ref: '../plugins/agenda/swagger/common.yml#/components/parameters/id'

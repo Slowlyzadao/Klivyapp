@@ -1,0 +1,33 @@
+get:
+  tags:
+    - Serviços da Agenda
+  summary: Listar serviços da agenda
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Lista de serviços
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/AgendaService.yml'
+post:
+  tags:
+    - Serviços da Agenda
+  summary: Criar novo serviço
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            agenda_service:
+              $ref: '../definitions/AgendaService.yml'
+  responses:
+    '201':
+      description: Serviço criado

@@ -1,0 +1,20 @@
+type: object
+properties:
+  id:
+    type: integer
+  name:
+    type: string
+    example: "Itaú - Conta Principal"
+  bank_name:
+    type: string
+    example: "Itaú Unibanco"
+  account_type:
+    type: string
+    example: "corrente"
+  current_balance:
+    type: number
+    format: float
+    example: 15450.50
+  active:
+    type: boolean
+    example: true

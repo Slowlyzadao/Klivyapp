@@ -1,0 +1,1977 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "Klivy Plugins API",
+    "version": "1.0.0",
+    "description": "Documentação consolidada dos plugins do Klivy."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "paths": {
+    "/api/v1/accounts/{account_id}/agenda_events": {
+      "get": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "Listar agendamentos",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de eventos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "example": 1
+                      },
+                      "account_id": {
+                        "type": "integer",
+                        "example": 1
+                      },
+                      "user_id": {
+                        "type": "integer",
+                        "description": "ID do usuário (profissional) responsável",
+                        "example": 1
+                      },
+                      "contact_id": {
+                        "type": "integer",
+                        "description": "ID do contato (paciente)",
+                        "example": 1
+                      },
+                      "title": {
+                        "type": "string",
+                        "example": "Consulta de Avaliação"
+                      },
+                      "description": {
+                        "type": "string",
+                        "example": "Paciente com dor no dente siso."
+                      },
+                      "starts_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-05-01T10:00:00Z"
+                      },
+                      "ends_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-05-01T11:00:00Z"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "scheduled",
+                          "confirmed",
+                          "arrived",
+                          "in_progress",
+                          "completed",
+                          "cancelled",
+                          "no_show"
+                        ],
+                        "example": "scheduled"
+                      },
+                      "event_type": {
+                        "type": "string",
+                        "example": "appointment"
+                      },
+                      "custom_attributes": {
+                        "type": "object",
+                        "example": {}
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "Criar novo agendamento",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "agenda_event": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "example": 1
+                      },
+                      "account_id": {
+                        "type": "integer",
+                        "example": 1
+                      },
+                      "user_id": {
+                        "type": "integer",
+                        "description": "ID do usuário (profissional) responsável",
+                        "example": 1
+                      },
+                      "contact_id": {
+                        "type": "integer",
+                        "description": "ID do contato (paciente)",
+                        "example": 1
+                      },
+                      "title": {
+                        "type": "string",
+                        "example": "Consulta de Avaliação"
+                      },
+                      "description": {
+                        "type": "string",
+                        "example": "Paciente com dor no dente siso."
+                      },
+                      "starts_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-05-01T10:00:00Z"
+                      },
+                      "ends_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-05-01T11:00:00Z"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "scheduled",
+                          "confirmed",
+                          "arrived",
+                          "in_progress",
+                          "completed",
+                          "cancelled",
+                          "no_show"
+                        ],
+                        "example": "scheduled"
+                      },
+                      "event_type": {
+                        "type": "string",
+                        "example": "appointment"
+                      },
+                      "custom_attributes": {
+                        "type": "object",
+                        "example": {}
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Evento criado"
+          },
+          "422": {
+            "description": "Erro de validação"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/agenda_events/{id}": {
+      "get": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "Detalhes do agendamento",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalhes do evento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "example": 1
+                    },
+                    "account_id": {
+                      "type": "integer",
+                      "example": 1
+                    },
+                    "user_id": {
+                      "type": "integer",
+                      "description": "ID do usuário (profissional) responsável",
+                      "example": 1
+                    },
+                    "contact_id": {
+                      "type": "integer",
+                      "description": "ID do contato (paciente)",
+                      "example": 1
+                    },
+                    "title": {
+                      "type": "string",
+                      "example": "Consulta de Avaliação"
+                    },
+                    "description": {
+                      "type": "string",
+                      "example": "Paciente com dor no dente siso."
+                    },
+                    "starts_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "example": "2024-05-01T10:00:00Z"
+                    },
+                    "ends_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "example": "2024-05-01T11:00:00Z"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "scheduled",
+                        "confirmed",
+                        "arrived",
+                        "in_progress",
+                        "completed",
+                        "cancelled",
+                        "no_show"
+                      ],
+                      "example": "scheduled"
+                    },
+                    "event_type": {
+                      "type": "string",
+                      "example": "appointment"
+                    },
+                    "custom_attributes": {
+                      "type": "object",
+                      "example": {}
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "Atualizar agendamento",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "agenda_event": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "example": 1
+                      },
+                      "account_id": {
+                        "type": "integer",
+                        "example": 1
+                      },
+                      "user_id": {
+                        "type": "integer",
+                        "description": "ID do usuário (profissional) responsável",
+                        "example": 1
+                      },
+                      "contact_id": {
+                        "type": "integer",
+                        "description": "ID do contato (paciente)",
+                        "example": 1
+                      },
+                      "title": {
+                        "type": "string",
+                        "example": "Consulta de Avaliação"
+                      },
+                      "description": {
+                        "type": "string",
+                        "example": "Paciente com dor no dente siso."
+                      },
+                      "starts_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-05-01T10:00:00Z"
+                      },
+                      "ends_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-05-01T11:00:00Z"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "scheduled",
+                          "confirmed",
+                          "arrived",
+                          "in_progress",
+                          "completed",
+                          "cancelled",
+                          "no_show"
+                        ],
+                        "example": "scheduled"
+                      },
+                      "event_type": {
+                        "type": "string",
+                        "example": "appointment"
+                      },
+                      "custom_attributes": {
+                        "type": "object",
+                        "example": {}
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Evento atualizado"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "Excluir agendamento",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evento excluído"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/agenda_services": {
+      "get": {
+        "tags": [
+          "Serviços da Agenda"
+        ],
+        "summary": "Listar serviços da agenda",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de serviços",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "example": 1
+                      },
+                      "name": {
+                        "type": "string",
+                        "example": "Limpeza"
+                      },
+                      "duration_minutes": {
+                        "type": "integer",
+                        "example": 60
+                      },
+                      "price": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 150.0
+                      },
+                      "color": {
+                        "type": "string",
+                        "example": "#FF5733"
+                      },
+                      "position": {
+                        "type": "integer",
+                        "example": 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Serviços da Agenda"
+        ],
+        "summary": "Criar novo serviço",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "agenda_service": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "example": 1
+                      },
+                      "name": {
+                        "type": "string",
+                        "example": "Limpeza"
+                      },
+                      "duration_minutes": {
+                        "type": "integer",
+                        "example": 60
+                      },
+                      "price": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 150.0
+                      },
+                      "color": {
+                        "type": "string",
+                        "example": "#FF5733"
+                      },
+                      "position": {
+                        "type": "integer",
+                        "example": 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Serviço criado"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/agenda_services/{id}": {
+      "get": {
+        "tags": [
+          "Serviços da Agenda"
+        ],
+        "summary": "Mostrar serviço",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalhes do serviço",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "example": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "example": "Limpeza"
+                    },
+                    "duration_minutes": {
+                      "type": "integer",
+                      "example": 60
+                    },
+                    "price": {
+                      "type": "number",
+                      "format": "float",
+                      "example": 150.0
+                    },
+                    "color": {
+                      "type": "string",
+                      "example": "#FF5733"
+                    },
+                    "position": {
+                      "type": "integer",
+                      "example": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Serviços da Agenda"
+        ],
+        "summary": "Atualizar serviço",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "agenda_service": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "example": 1
+                      },
+                      "name": {
+                        "type": "string",
+                        "example": "Limpeza"
+                      },
+                      "duration_minutes": {
+                        "type": "integer",
+                        "example": 60
+                      },
+                      "price": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 150.0
+                      },
+                      "color": {
+                        "type": "string",
+                        "example": "#FF5733"
+                      },
+                      "position": {
+                        "type": "integer",
+                        "example": 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Serviço atualizado"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Serviços da Agenda"
+        ],
+        "summary": "Excluir serviço",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Serviço excluído"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/waiting_list_entries": {
+      "get": {
+        "tags": [
+          "Fila de Espera"
+        ],
+        "summary": "Listar fila de espera",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de entradas na fila",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "contact_id": {
+                        "type": "integer"
+                      },
+                      "period": {
+                        "type": "string",
+                        "example": "morning"
+                      },
+                      "preferred_days": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "example": [
+                          "monday",
+                          "wednesday"
+                        ]
+                      },
+                      "notes": {
+                        "type": "string",
+                        "example": "Paciente prefere horários após as 10h."
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Fila de Espera"
+        ],
+        "summary": "Adicionar ou atualizar entrada na fila",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "waiting_list_entry": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "contact_id": {
+                        "type": "integer"
+                      },
+                      "period": {
+                        "type": "string",
+                        "example": "morning"
+                      },
+                      "preferred_days": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "example": [
+                          "monday",
+                          "wednesday"
+                        ]
+                      },
+                      "notes": {
+                        "type": "string",
+                        "example": "Paciente prefere horários após as 10h."
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Entrada salva"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/patients": {
+      "get": {
+        "tags": [
+          "Pacientes"
+        ],
+        "summary": "Listar pacientes",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Busca por nome",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filtro por status",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de pacientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string",
+                        "example": "João Silva"
+                      },
+                      "email": {
+                        "type": "string",
+                        "example": "joao@email.com"
+                      },
+                      "phone": {
+                        "type": "string",
+                        "example": "11999999999"
+                      },
+                      "cpf": {
+                        "type": "string",
+                        "example": "12345678901"
+                      },
+                      "patient_status": {
+                        "type": "string",
+                        "enum": [
+                          "novo",
+                          "ativo",
+                          "inativo",
+                          "faltoso",
+                          "alta",
+                          "arquivado"
+                        ],
+                        "example": "ativo"
+                      },
+                      "sex": {
+                        "type": "string",
+                        "enum": [
+                          "masculino",
+                          "feminino",
+                          "outro",
+                          "nao_informado"
+                        ]
+                      },
+                      "birthdate": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "address": {
+                        "type": "object",
+                        "properties": {
+                          "street": {
+                            "type": "string"
+                          },
+                          "city": {
+                            "type": "string"
+                          },
+                          "state": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Pacientes"
+        ],
+        "summary": "Criar novo paciente",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "patient": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string",
+                        "example": "João Silva"
+                      },
+                      "email": {
+                        "type": "string",
+                        "example": "joao@email.com"
+                      },
+                      "phone": {
+                        "type": "string",
+                        "example": "11999999999"
+                      },
+                      "cpf": {
+                        "type": "string",
+                        "example": "12345678901"
+                      },
+                      "patient_status": {
+                        "type": "string",
+                        "enum": [
+                          "novo",
+                          "ativo",
+                          "inativo",
+                          "faltoso",
+                          "alta",
+                          "arquivado"
+                        ],
+                        "example": "ativo"
+                      },
+                      "sex": {
+                        "type": "string",
+                        "enum": [
+                          "masculino",
+                          "feminino",
+                          "outro",
+                          "nao_informado"
+                        ]
+                      },
+                      "birthdate": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "address": {
+                        "type": "object",
+                        "properties": {
+                          "street": {
+                            "type": "string"
+                          },
+                          "city": {
+                            "type": "string"
+                          },
+                          "state": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Paciente criado"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/patients/{id}/summary": {
+      "get": {
+        "tags": [
+          "Pacientes"
+        ],
+        "summary": "Resumo consolidado do prontuário (Summary)",
+        "description": "Retorna o payload completo do paciente, incluindo último agendamento, próximo agendamento e alertas críticos.",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumo do prontuário",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "patient": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "João Silva"
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "joao@email.com"
+                        },
+                        "phone": {
+                          "type": "string",
+                          "example": "11999999999"
+                        },
+                        "cpf": {
+                          "type": "string",
+                          "example": "12345678901"
+                        },
+                        "patient_status": {
+                          "type": "string",
+                          "enum": [
+                            "novo",
+                            "ativo",
+                            "inativo",
+                            "faltoso",
+                            "alta",
+                            "arquivado"
+                          ],
+                          "example": "ativo"
+                        },
+                        "sex": {
+                          "type": "string",
+                          "enum": [
+                            "masculino",
+                            "feminino",
+                            "outro",
+                            "nao_informado"
+                          ]
+                        },
+                        "birthdate": {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        "address": {
+                          "type": "object",
+                          "properties": {
+                            "street": {
+                              "type": "string"
+                            },
+                            "city": {
+                              "type": "string"
+                            },
+                            "state": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    },
+                    "last_appointment": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "account_id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "user_id": {
+                          "type": "integer",
+                          "description": "ID do usuário (profissional) responsável",
+                          "example": 1
+                        },
+                        "contact_id": {
+                          "type": "integer",
+                          "description": "ID do contato (paciente)",
+                          "example": 1
+                        },
+                        "title": {
+                          "type": "string",
+                          "example": "Consulta de Avaliação"
+                        },
+                        "description": {
+                          "type": "string",
+                          "example": "Paciente com dor no dente siso."
+                        },
+                        "starts_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2024-05-01T10:00:00Z"
+                        },
+                        "ends_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2024-05-01T11:00:00Z"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "scheduled",
+                            "confirmed",
+                            "arrived",
+                            "in_progress",
+                            "completed",
+                            "cancelled",
+                            "no_show"
+                          ],
+                          "example": "scheduled"
+                        },
+                        "event_type": {
+                          "type": "string",
+                          "example": "appointment"
+                        },
+                        "custom_attributes": {
+                          "type": "object",
+                          "example": {}
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    },
+                    "next_appointment": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "account_id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "user_id": {
+                          "type": "integer",
+                          "description": "ID do usuário (profissional) responsável",
+                          "example": 1
+                        },
+                        "contact_id": {
+                          "type": "integer",
+                          "description": "ID do contato (paciente)",
+                          "example": 1
+                        },
+                        "title": {
+                          "type": "string",
+                          "example": "Consulta de Avaliação"
+                        },
+                        "description": {
+                          "type": "string",
+                          "example": "Paciente com dor no dente siso."
+                        },
+                        "starts_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2024-05-01T10:00:00Z"
+                        },
+                        "ends_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2024-05-01T11:00:00Z"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "scheduled",
+                            "confirmed",
+                            "arrived",
+                            "in_progress",
+                            "completed",
+                            "cancelled",
+                            "no_show"
+                          ],
+                          "example": "scheduled"
+                        },
+                        "event_type": {
+                          "type": "string",
+                          "example": "appointment"
+                        },
+                        "custom_attributes": {
+                          "type": "object",
+                          "example": {}
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/financial/transactions": {
+      "get": {
+        "tags": [
+          "Transações Financeiras"
+        ],
+        "summary": "Listar transações",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "entry_type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "entrada",
+                "saida"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Busca por descrição ou nome do paciente",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de transações e métricas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "transactions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "entry_type": {
+                            "type": "string",
+                            "enum": [
+                              "entrada",
+                              "saida"
+                            ],
+                            "example": "entrada"
+                          },
+                          "amount": {
+                            "type": "number",
+                            "format": "float",
+                            "example": 250.0
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pendente",
+                              "parcial",
+                              "recebido",
+                              "pago",
+                              "vencido",
+                              "cancelado"
+                            ],
+                            "example": "pendente"
+                          },
+                          "due_date": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2024-05-10"
+                          },
+                          "description": {
+                            "type": "string",
+                            "example": "Pagamento de Consulta - João Silva"
+                          },
+                          "payment_method": {
+                            "type": "string",
+                            "enum": [
+                              "pix",
+                              "cartao_credito",
+                              "cartao_debito",
+                              "dinheiro",
+                              "boleto",
+                              "transferencia"
+                            ]
+                          },
+                          "bank_account_id": {
+                            "type": "integer"
+                          },
+                          "patient_id": {
+                            "type": "integer"
+                          },
+                          "professional_id": {
+                            "type": "integer"
+                          },
+                          "notes": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total_amount": {
+                          "type": "number"
+                        },
+                        "total_received": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Transações Financeiras"
+        ],
+        "summary": "Criar nova transação",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "account_transaction": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "entry_type": {
+                        "type": "string",
+                        "enum": [
+                          "entrada",
+                          "saida"
+                        ],
+                        "example": "entrada"
+                      },
+                      "amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 250.0
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "pendente",
+                          "parcial",
+                          "recebido",
+                          "pago",
+                          "vencido",
+                          "cancelado"
+                        ],
+                        "example": "pendente"
+                      },
+                      "due_date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-05-10"
+                      },
+                      "description": {
+                        "type": "string",
+                        "example": "Pagamento de Consulta - João Silva"
+                      },
+                      "payment_method": {
+                        "type": "string",
+                        "enum": [
+                          "pix",
+                          "cartao_credito",
+                          "cartao_debito",
+                          "dinheiro",
+                          "boleto",
+                          "transferencia"
+                        ]
+                      },
+                      "bank_account_id": {
+                        "type": "integer"
+                      },
+                      "patient_id": {
+                        "type": "integer"
+                      },
+                      "professional_id": {
+                        "type": "integer"
+                      },
+                      "notes": {
+                        "type": "string"
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Transação criada"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/financial/bank_accounts": {
+      "get": {
+        "tags": [
+          "Contas Bancárias"
+        ],
+        "summary": "Listar contas bancárias",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de contas e saldo total",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bank_accounts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string",
+                            "example": "Itaú - Conta Principal"
+                          },
+                          "bank_name": {
+                            "type": "string",
+                            "example": "Itaú Unibanco"
+                          },
+                          "account_type": {
+                            "type": "string",
+                            "example": "corrente"
+                          },
+                          "current_balance": {
+                            "type": "number",
+                            "format": "float",
+                            "example": 15450.5
+                          },
+                          "active": {
+                            "type": "boolean",
+                            "example": true
+                          }
+                        }
+                      }
+                    },
+                    "total_balance": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AgendaEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "account_id": {
+            "type": "integer",
+            "example": 1
+          },
+          "user_id": {
+            "type": "integer",
+            "description": "ID do usuário (profissional) responsável",
+            "example": 1
+          },
+          "contact_id": {
+            "type": "integer",
+            "description": "ID do contato (paciente)",
+            "example": 1
+          },
+          "title": {
+            "type": "string",
+            "example": "Consulta de Avaliação"
+          },
+          "description": {
+            "type": "string",
+            "example": "Paciente com dor no dente siso."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-05-01T10:00:00Z"
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-05-01T11:00:00Z"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "confirmed",
+              "arrived",
+              "in_progress",
+              "completed",
+              "cancelled",
+              "no_show"
+            ],
+            "example": "scheduled"
+          },
+          "event_type": {
+            "type": "string",
+            "example": "appointment"
+          },
+          "custom_attributes": {
+            "type": "object",
+            "example": {}
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AgendaService": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "example": "Limpeza"
+          },
+          "duration_minutes": {
+            "type": "integer",
+            "example": 60
+          },
+          "price": {
+            "type": "number",
+            "format": "float",
+            "example": 150.0
+          },
+          "color": {
+            "type": "string",
+            "example": "#FF5733"
+          },
+          "position": {
+            "type": "integer",
+            "example": 0
+          }
+        }
+      },
+      "WaitingListEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "contact_id": {
+            "type": "integer"
+          },
+          "period": {
+            "type": "string",
+            "example": "morning"
+          },
+          "preferred_days": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "monday",
+              "wednesday"
+            ]
+          },
+          "notes": {
+            "type": "string",
+            "example": "Paciente prefere horários após as 10h."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Patient": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string",
+            "example": "João Silva"
+          },
+          "email": {
+            "type": "string",
+            "example": "joao@email.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "11999999999"
+          },
+          "cpf": {
+            "type": "string",
+            "example": "12345678901"
+          },
+          "patient_status": {
+            "type": "string",
+            "enum": [
+              "novo",
+              "ativo",
+              "inativo",
+              "faltoso",
+              "alta",
+              "arquivado"
+            ],
+            "example": "ativo"
+          },
+          "sex": {
+            "type": "string",
+            "enum": [
+              "masculino",
+              "feminino",
+              "outro",
+              "nao_informado"
+            ]
+          },
+          "birthdate": {
+            "type": "string",
+            "format": "date"
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "street": {
+                "type": "string"
+              },
+              "city": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              }
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AccountTransaction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "entry_type": {
+            "type": "string",
+            "enum": [
+              "entrada",
+              "saida"
+            ],
+            "example": "entrada"
+          },
+          "amount": {
+            "type": "number",
+            "format": "float",
+            "example": 250.0
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pendente",
+              "parcial",
+              "recebido",
+              "pago",
+              "vencido",
+              "cancelado"
+            ],
+            "example": "pendente"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date",
+            "example": "2024-05-10"
+          },
+          "description": {
+            "type": "string",
+            "example": "Pagamento de Consulta - João Silva"
+          },
+          "payment_method": {
+            "type": "string",
+            "enum": [
+              "pix",
+              "cartao_credito",
+              "cartao_debito",
+              "dinheiro",
+              "boleto",
+              "transferencia"
+            ]
+          },
+          "bank_account_id": {
+            "type": "integer"
+          },
+          "patient_id": {
+            "type": "integer"
+          },
+          "professional_id": {
+            "type": "integer"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "BankAccount": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string",
+            "example": "Itaú - Conta Principal"
+          },
+          "bank_name": {
+            "type": "string",
+            "example": "Itaú Unibanco"
+          },
+          "account_type": {
+            "type": "string",
+            "example": "corrente"
+          },
+          "current_balance": {
+            "type": "number",
+            "format": "float",
+            "example": 15450.5
+          },
+          "active": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      }
+    },
+    "parameters": {
+      "accountId": {
+        "name": "account_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "id": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

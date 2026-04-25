@@ -1,0 +1,38 @@
+type: object
+properties:
+  id:
+    type: integer
+  name:
+    type: string
+    example: "João Silva"
+  email:
+    type: string
+    example: "joao@email.com"
+  phone:
+    type: string
+    example: "11999999999"
+  cpf:
+    type: string
+    example: "12345678901"
+  patient_status:
+    type: string
+    enum: [novo, ativo, inativo, faltoso, alta, arquivado]
+    example: "ativo"
+  sex:
+    type: string
+    enum: [masculino, feminino, outro, nao_informado]
+  birthdate:
+    type: string
+    format: date
+  address:
+    type: object
+    properties:
+      street:
+        type: string
+      city:
+        type: string
+      state:
+        type: string
+  created_at:
+    type: string
+    format: date-time

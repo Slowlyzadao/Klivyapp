@@ -1,0 +1,33 @@
+get:
+  tags:
+    - Fila de Espera
+  summary: Listar fila de espera
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Lista de entradas na fila
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/WaitingListEntry.yml'
+post:
+  tags:
+    - Fila de Espera
+  summary: Adicionar ou atualizar entrada na fila
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            waiting_list_entry:
+              $ref: '../definitions/WaitingListEntry.yml'
+  responses:
+    '200':
+      description: Entrada salva

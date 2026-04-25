@@ -1,0 +1,37 @@
+openapi: '3.0.4'
+info:
+  title: Agenda Module API
+  version: 1.0.0
+  description: API completa para gestão de agendamentos, serviços, regras de notificação e lista de espera do Klivy.
+paths:
+  /api/v1/accounts/{account_id}/agenda_events:
+    $ref: './paths/agenda_events.yml'
+  /api/v1/accounts/{account_id}/agenda_events/{id}:
+    $ref: './paths/agenda_event.yml'
+  /api/v1/accounts/{account_id}/agenda_services:
+    $ref: './paths/agenda_services.yml'
+  /api/v1/accounts/{account_id}/agenda_services/{id}:
+    $ref: './paths/agenda_service.yml'
+  /api/v1/accounts/{account_id}/waiting_list_entries:
+    $ref: './paths/waiting_list_entries.yml'
+components:
+  schemas:
+    AgendaEvent:
+      $ref: './definitions/AgendaEvent.yml'
+    AgendaService:
+      $ref: './definitions/AgendaService.yml'
+    WaitingListEntry:
+      $ref: './definitions/WaitingListEntry.yml'
+  parameters:
+    accountId:
+      name: account_id
+      in: path
+      required: true
+      schema:
+        type: integer
+    id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer

@@ -1,0 +1,30 @@
+pt_BR:
+  klivy_mailer:
+    common:
+      greeting_html: "Olá, <strong>%{name}</strong> 👋"
+      security_note: "Se não foi você, ignore este e-mail com segurança."
+      fallback_link_label: "Se o botão não funcionar, copie e cole este link no seu navegador:"
+      footer_rights: "© %{year} Klivy. Todos os direitos reservados."
+      footer_automated: "Este é um e-mail automático. Por favor, não responda."
+    confirmation:
+      heading: "Bem-vindo(a) à Klivy"
+      body: "Estamos felizes em ter você por aqui. Para garantir a segurança da sua conta e concluir seu cadastro, confirme seu e-mail no botão abaixo."
+      cta: "Confirmar meu e-mail"
+    email_change:
+      heading: "Confirme seu novo e-mail"
+      body: "Recebemos uma solicitação para atualizar o e-mail de acesso da sua conta. Confirme clicando no botão abaixo para continuar usando a Klivy normalmente."
+      cta: "Confirmar novo e-mail"
+    invitation:
+      heading: "Você foi convidado(a) para a %{account_name}"
+      body: "<strong>%{inviter_name}</strong> convidou você para fazer parte da clínica <strong>%{account_name}</strong> na Klivy. Aceite o convite e defina sua senha para começar."
+      cta: "Aceitar convite"
+    reset_password:
+      heading: "Redefinir sua senha"
+      body: "Recebemos uma solicitação para redefinir a senha da sua conta. Clique no botão abaixo para criar uma nova senha."
+      cta: "Redefinir minha senha"
+      note: "Sua senha não será alterada até você clicar no link acima e criar uma nova."
+    password_change:
+      heading: "Sua senha foi alterada"
+      body: "A senha da sua conta Klivy foi alterada com sucesso."
+      alert: "Se não foi você, entre em contato com o suporte imediatamente."
+      cta: "Falar com o suporte"

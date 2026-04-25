@@ -1,0 +1,24 @@
+get:
+  tags:
+    - Contas Bancárias
+  summary: Listar contas bancárias
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: active
+      in: query
+      schema:
+        type: boolean
+  responses:
+    '200':
+      description: Lista de contas e saldo total
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              bank_accounts:
+                type: array
+                items:
+                  $ref: '../definitions/BankAccount.yml'
+              total_balance:
+                type: number

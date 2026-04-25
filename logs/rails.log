@@ -1,0 +1,1006 @@
+=> Booting Puma
+=> Rails 7.1.5.2 application starting in development 
+=> Run `bin/rails server --help` for more startup options
+Puma starting in single mode...
+* Puma version: 6.4.3 (ruby 3.4.4-p34) ("The Eagle of Durango")
+*  Min threads: 5
+*  Max threads: 5
+*  Environment: development
+*          PID: 85646
+* Listening on http://127.0.0.1:3000
+* Listening on http://[::1]:3000
+Use Ctrl-C to stop
+Started GET "/" for 127.0.0.1 at 2026-03-06 19:58:58 -0300
+  [1m[36mActiveRecord::SchemaMigration Load (2.5ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC[0m
+Processing by DashboardController#index as */*
+  [1m[36mInstallationConfig Load (1.2ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "LOGO"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "LOGO_DARK"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "LOGO_THUMBNAIL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "INSTALLATION_NAME"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "WIDGET_BRAND_URL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "TERMS_URL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "BRAND_URL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "BRAND_NAME"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "PRIVACY_URL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "DISPLAY_MANIFEST"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "CREATE_NEW_ACCOUNT_FROM_DASHBOARD"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "CHATWOOT_INBOX_TOKEN"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "API_CHANNEL_NAME"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "API_CHANNEL_THUMBNAIL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "CLOUD_ANALYTICS_TOKEN"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "DIRECT_UPLOADS_ENABLED"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (1.2ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "MAXIMUM_FILE_UPLOAD_SIZE"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "HCAPTCHA_SITE_KEY"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "LOGOUT_REDIRECT_LINK"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "DISABLE_USER_PROFILE_UPDATE"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "INSTALLATION_PRICING_PLAN"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "VAPID_KEYS"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "ENABLE_ACCOUNT_SIGNUP"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mCACHE InstallationConfig Load (0.2ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "ENABLE_ACCOUNT_SIGNUP"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config_service.rb:12:in 'GlobalConfigService.load'
+Query Trace:
+      lib/global_config_service.rb:12:in 'GlobalConfigService.load'
+      app/controllers/dashboard_controller.rb:73:in 'DashboardController#app_config'
+      app/controllers/dashboard_controller.rb:47:in 'DashboardController#set_global_config'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config_service.rb:12:in 'GlobalConfigService.load'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "FB_APP_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "INSTAGRAM_APP_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "TIKTOK_APP_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "FACEBOOK_API_VERSION"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "WHATSAPP_APP_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "WHATSAPP_CONFIGURATION_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "AZURE_APP_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "ENABLE_GOOGLE_OAUTH_LOGIN"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mCACHE InstallationConfig Load (0.2ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "INSTALLATION_PRICING_PLAN"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/chatwoot_hub.rb:24:in 'ChatwootHub.pricing_plan'
+Query Trace:
+      lib/chatwoot_hub.rb:24:in 'ChatwootHub.pricing_plan'
+      app/controllers/dashboard_controller.rb:90:in 'DashboardController#allowed_login_methods'
+      app/controllers/dashboard_controller.rb:83:in 'DashboardController#app_config'
+      app/controllers/dashboard_controller.rb:47:in 'DashboardController#set_global_config'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/chatwoot_hub.rb:24:in 'ChatwootHub.pricing_plan'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "DASHBOARD_SCRIPTS"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:20:in 'GlobalConfig.get_value'
+      app/controllers/dashboard_controller.rb:51:in 'DashboardController#set_dashboard_scripts'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mPortal Load (1.5ms)[0m  [1m[34mSELECT "portals".* FROM "portals" WHERE "portals"."custom_domain" = $1 LIMIT $2[0m  [["custom_domain", "127.0.0.1"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/app/controllers/concerns/switch_locale.rb:40:in 'SwitchLocale#locale_from_custom_domain'
+Query Trace:
+      app/controllers/concerns/switch_locale.rb:40:in 'SwitchLocale#locale_from_custom_domain'
+      app/controllers/concerns/switch_locale.rb:14:in 'SwitchLocale#switch_locale'
+  ↳ /Users/leandrobenuv/Documents/beclinic/app/controllers/concerns/switch_locale.rb:40:in 'SwitchLocale#locale_from_custom_domain'
+  [1m[36mCACHE Portal Load (0.2ms)[0m  [1m[34mSELECT "portals".* FROM "portals" WHERE "portals"."custom_domain" = $1 LIMIT $2[0m  [["custom_domain", "127.0.0.1"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/app/controllers/dashboard_controller.rb:62:in 'DashboardController#render_hc_if_custom_domain'
+Query Trace:
+      app/controllers/dashboard_controller.rb:62:in 'DashboardController#render_hc_if_custom_domain'
+      app/controllers/concerns/switch_locale.rb:56:in 'SwitchLocale#set_locale'
+      app/controllers/concerns/switch_locale.rb:19:in 'SwitchLocale#switch_locale'
+  ↳ /Users/leandrobenuv/Documents/beclinic/app/controllers/dashboard_controller.rb:62:in 'DashboardController#render_hc_if_custom_domain'
+  Rendering layout layouts/vueapp.html.erb
+  Rendering dashboard/index.html.erb within layouts/vueapp
+  Rendered dashboard/index.html.erb within layouts/vueapp (Duration: 0.2ms | Allocations: 210)
+  Rendered layout layouts/vueapp.html.erb (Duration: 2.9ms | Allocations: 3934)
+Completed 200 OK in 98ms (Views: 4.8ms | ActiveRecord: 19.5ms | Allocations: 100166)
+
+
+Started GET "/" for ::1 at 2026-03-06 19:59:13 -0300
+Processing by DashboardController#index as */*
+  [1m[36mInstallationConfig Load (1.0ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "LOGO"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "LOGO_DARK"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "LOGO_THUMBNAIL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "INSTALLATION_NAME"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "WIDGET_BRAND_URL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "TERMS_URL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "BRAND_URL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "BRAND_NAME"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "PRIVACY_URL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.6ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "DISPLAY_MANIFEST"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "CREATE_NEW_ACCOUNT_FROM_DASHBOARD"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "CHATWOOT_INBOX_TOKEN"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "API_CHANNEL_NAME"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.3ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "API_CHANNEL_THUMBNAIL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "CLOUD_ANALYTICS_TOKEN"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "DIRECT_UPLOADS_ENABLED"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "MAXIMUM_FILE_UPLOAD_SIZE"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "HCAPTCHA_SITE_KEY"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "LOGOUT_REDIRECT_LINK"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.3ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "DISABLE_USER_PROFILE_UPDATE"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (1.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "DEPLOYMENT_ENV"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "INSTALLATION_PRICING_PLAN"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "VAPID_KEYS"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "ENABLE_ACCOUNT_SIGNUP"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mCACHE InstallationConfig Load (0.2ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "ENABLE_ACCOUNT_SIGNUP"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config_service.rb:12:in 'GlobalConfigService.load'
+Query Trace:
+      lib/global_config_service.rb:12:in 'GlobalConfigService.load'
+      app/controllers/dashboard_controller.rb:73:in 'DashboardController#app_config'
+      app/controllers/dashboard_controller.rb:47:in 'DashboardController#set_global_config'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config_service.rb:12:in 'GlobalConfigService.load'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "FB_APP_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "INSTAGRAM_APP_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "TIKTOK_APP_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "FACEBOOK_API_VERSION"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "WHATSAPP_APP_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "WHATSAPP_CONFIGURATION_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "AZURE_APP_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "ENABLE_GOOGLE_OAUTH_LOGIN"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mCACHE InstallationConfig Load (0.3ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "INSTALLATION_PRICING_PLAN"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/chatwoot_hub.rb:24:in 'ChatwootHub.pricing_plan'
+Query Trace:
+      lib/chatwoot_hub.rb:24:in 'ChatwootHub.pricing_plan'
+      app/controllers/dashboard_controller.rb:90:in 'DashboardController#allowed_login_methods'
+      app/controllers/dashboard_controller.rb:83:in 'DashboardController#app_config'
+      app/controllers/dashboard_controller.rb:47:in 'DashboardController#set_global_config'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/chatwoot_hub.rb:24:in 'ChatwootHub.pricing_plan'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "DASHBOARD_SCRIPTS"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:20:in 'GlobalConfig.get_value'
+      app/controllers/dashboard_controller.rb:51:in 'DashboardController#set_dashboard_scripts'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mPortal Load (0.6ms)[0m  [1m[34mSELECT "portals".* FROM "portals" WHERE "portals"."custom_domain" = $1 LIMIT $2[0m  [["custom_domain", "localhost"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/app/controllers/concerns/switch_locale.rb:40:in 'SwitchLocale#locale_from_custom_domain'
+Query Trace:
+      app/controllers/concerns/switch_locale.rb:40:in 'SwitchLocale#locale_from_custom_domain'
+      app/controllers/concerns/switch_locale.rb:14:in 'SwitchLocale#switch_locale'
+  ↳ /Users/leandrobenuv/Documents/beclinic/app/controllers/concerns/switch_locale.rb:40:in 'SwitchLocale#locale_from_custom_domain'
+  [1m[36mCACHE Portal Load (0.4ms)[0m  [1m[34mSELECT "portals".* FROM "portals" WHERE "portals"."custom_domain" = $1 LIMIT $2[0m  [["custom_domain", "localhost"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/app/controllers/dashboard_controller.rb:62:in 'DashboardController#render_hc_if_custom_domain'
+Query Trace:
+      app/controllers/dashboard_controller.rb:62:in 'DashboardController#render_hc_if_custom_domain'
+      app/controllers/concerns/switch_locale.rb:56:in 'SwitchLocale#set_locale'
+      app/controllers/concerns/switch_locale.rb:19:in 'SwitchLocale#switch_locale'
+  ↳ /Users/leandrobenuv/Documents/beclinic/app/controllers/dashboard_controller.rb:62:in 'DashboardController#render_hc_if_custom_domain'
+  Rendering layout layouts/vueapp.html.erb
+  Rendering dashboard/index.html.erb within layouts/vueapp
+  Rendered dashboard/index.html.erb within layouts/vueapp (Duration: 0.1ms | Allocations: 38)
+  Rendered layout layouts/vueapp.html.erb (Duration: 2.2ms | Allocations: 2335)
+Completed 200 OK in 70ms (Views: 2.4ms | ActiveRecord: 4.9ms | Allocations: 83776)
+
+
+Started GET "/" for ::1 at 2026-03-06 19:59:38 -0300
+Processing by DashboardController#index as HTML
+  [1m[36mInstallationConfig Load (14.6ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "LOGO"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.6ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "LOGO_DARK"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.6ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "LOGO_THUMBNAIL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.6ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "INSTALLATION_NAME"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "WIDGET_BRAND_URL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "TERMS_URL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "BRAND_URL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.6ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "BRAND_NAME"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (1.1ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "PRIVACY_URL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (1.0ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "DISPLAY_MANIFEST"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.8ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "CREATE_NEW_ACCOUNT_FROM_DASHBOARD"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.7ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "CHATWOOT_INBOX_TOKEN"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "API_CHANNEL_NAME"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.6ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "API_CHANNEL_THUMBNAIL"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "CLOUD_ANALYTICS_TOKEN"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.9ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "DIRECT_UPLOADS_ENABLED"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "MAXIMUM_FILE_UPLOAD_SIZE"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (1.3ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "HCAPTCHA_SITE_KEY"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "LOGOUT_REDIRECT_LINK"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "DISABLE_USER_PROFILE_UPDATE"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "DEPLOYMENT_ENV"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "INSTALLATION_PRICING_PLAN"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "VAPID_KEYS"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "ENABLE_ACCOUNT_SIGNUP"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mCACHE InstallationConfig Load (0.3ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "ENABLE_ACCOUNT_SIGNUP"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config_service.rb:12:in 'GlobalConfigService.load'
+Query Trace:
+      lib/global_config_service.rb:12:in 'GlobalConfigService.load'
+      app/controllers/dashboard_controller.rb:73:in 'DashboardController#app_config'
+      app/controllers/dashboard_controller.rb:47:in 'DashboardController#set_global_config'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config_service.rb:12:in 'GlobalConfigService.load'
+  [1m[36mInstallationConfig Load (0.5ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "FB_APP_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "INSTAGRAM_APP_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "TIKTOK_APP_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "FACEBOOK_API_VERSION"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.3ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "WHATSAPP_APP_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.3ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "WHATSAPP_CONFIGURATION_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (3.1ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "AZURE_APP_ID"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mInstallationConfig Load (0.7ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "ENABLE_GOOGLE_OAUTH_LOGIN"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:12:in 'block in GlobalConfig.get'
+      lib/global_config.rb:11:in 'Array#each'
+      lib/global_config.rb:11:in 'GlobalConfig.get'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mCACHE InstallationConfig Load (0.3ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "INSTALLATION_PRICING_PLAN"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/chatwoot_hub.rb:24:in 'ChatwootHub.pricing_plan'
+Query Trace:
+      lib/chatwoot_hub.rb:24:in 'ChatwootHub.pricing_plan'
+      app/controllers/dashboard_controller.rb:90:in 'DashboardController#allowed_login_methods'
+      app/controllers/dashboard_controller.rb:83:in 'DashboardController#app_config'
+      app/controllers/dashboard_controller.rb:47:in 'DashboardController#set_global_config'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/chatwoot_hub.rb:24:in 'ChatwootHub.pricing_plan'
+  [1m[36mInstallationConfig Load (0.4ms)[0m  [1m[34mSELECT "installation_configs".* FROM "installation_configs" WHERE "installation_configs"."name" = $1 ORDER BY "installation_configs"."created_at" DESC LIMIT $2[0m  [["name", "DASHBOARD_SCRIPTS"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+Query Trace:
+      lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+      lib/global_config.rb:45:in 'GlobalConfig.load_from_cache'
+      lib/global_config.rb:20:in 'GlobalConfig.get_value'
+      app/controllers/dashboard_controller.rb:51:in 'DashboardController#set_dashboard_scripts'
+  ↳ /Users/leandrobenuv/Documents/beclinic/lib/global_config.rb:54:in 'GlobalConfig.db_fallback'
+  [1m[36mPortal Load (0.8ms)[0m  [1m[34mSELECT "portals".* FROM "portals" WHERE "portals"."custom_domain" = $1 LIMIT $2[0m  [["custom_domain", "localhost"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/app/controllers/concerns/switch_locale.rb:40:in 'SwitchLocale#locale_from_custom_domain'
+Query Trace:
+      app/controllers/concerns/switch_locale.rb:40:in 'SwitchLocale#locale_from_custom_domain'
+      app/controllers/concerns/switch_locale.rb:14:in 'SwitchLocale#switch_locale'
+  ↳ /Users/leandrobenuv/Documents/beclinic/app/controllers/concerns/switch_locale.rb:40:in 'SwitchLocale#locale_from_custom_domain'
+  [1m[36mCACHE Portal Load (0.2ms)[0m  [1m[34mSELECT "portals".* FROM "portals" WHERE "portals"."custom_domain" = $1 LIMIT $2[0m  [["custom_domain", "localhost"], ["LIMIT", 1]]
+  ↳ /Users/leandrobenuv/Documents/beclinic/app/controllers/dashboard_controller.rb:62:in 'DashboardController#render_hc_if_custom_domain'
+Query Trace:
+      app/controllers/dashboard_controller.rb:62:in 'DashboardController#render_hc_if_custom_domain'
+      app/controllers/concerns/switch_locale.rb:56:in 'SwitchLocale#set_locale'
+      app/controllers/concerns/switch_locale.rb:19:in 'SwitchLocale#switch_locale'
+  ↳ /Users/leandrobenuv/Documents/beclinic/app/controllers/dashboard_controller.rb:62:in 'DashboardController#render_hc_if_custom_domain'
+  Rendering layout layouts/vueapp.html.erb
+  Rendering dashboard/index.html.erb within layouts/vueapp
+  Rendered dashboard/index.html.erb within layouts/vueapp (Duration: 0.0ms | Allocations: 38)
+  Rendered layout layouts/vueapp.html.erb (Duration: 2.3ms | Allocations: 2387)
+Completed 200 OK in 120ms (Views: 2.5ms | ActiveRecord: 5.7ms | Allocations: 83821)
+
+
+2026-03-06 19:59:38 -0300 Rack app ("GET /mini-profiler-resources/includes.jsv=c336b1303a50b21f5222bc23262ca7bf" - (::1)): #<NameError: uninitialized constant Rack::File>
+2026-03-06 20:00:38 -0300 Rack app ("GET /vite-dev/@vite/client" - (::1)): #<Net::ReadTimeout: Net::ReadTimeout>
+2026-03-06 20:00:38 -0300 Rack app ("GET /vite-dev/entrypoints/dashboard.js" - (::1)): #<Net::ReadTimeout: Net::ReadTimeout>

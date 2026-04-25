@@ -1,0 +1,46 @@
+type: object
+properties:
+  id:
+    type: integer
+    example: 1
+  account_id:
+    type: integer
+    example: 1
+  user_id:
+    type: integer
+    description: ID do usuário (profissional) responsável
+    example: 1
+  contact_id:
+    type: integer
+    description: ID do contato (paciente)
+    example: 1
+  title:
+    type: string
+    example: "Consulta de Avaliação"
+  description:
+    type: string
+    example: "Paciente com dor no dente siso."
+  starts_at:
+    type: string
+    format: date-time
+    example: "2024-05-01T10:00:00Z"
+  ends_at:
+    type: string
+    format: date-time
+    example: "2024-05-01T11:00:00Z"
+  status:
+    type: string
+    enum: [scheduled, confirmed, arrived, in_progress, completed, cancelled, no_show]
+    example: "scheduled"
+  event_type:
+    type: string
+    example: "appointment"
+  custom_attributes:
+    type: object
+    example: {}
+  created_at:
+    type: string
+    format: date-time
+  updated_at:
+    type: string
+    format: date-time

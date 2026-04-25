@@ -1,0 +1,20 @@
+type: object
+properties:
+  id:
+    type: integer
+  contact_id:
+    type: integer
+  period:
+    type: string
+    example: "morning"
+  preferred_days:
+    type: array
+    items:
+      type: string
+    example: ["monday", "wednesday"]
+  notes:
+    type: string
+    example: "Paciente prefere horários após as 10h."
+  created_at:
+    type: string
+    format: date-time

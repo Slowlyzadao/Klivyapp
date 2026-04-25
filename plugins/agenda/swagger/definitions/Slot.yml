@@ -1,0 +1,13 @@
+type: object
+properties:
+  id:
+    type: string
+    example: "slot_123"
+  start_at:
+    type: string
+    format: date-time
+    example: "2024-05-01T10:00:00Z"
+  end_at:
+    type: string
+    format: date-time
+    example: "2024-05-01T11:00:00Z"
