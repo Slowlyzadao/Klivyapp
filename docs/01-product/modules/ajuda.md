@@ -12,8 +12,16 @@ A **Central de Ajuda** é a área pública (logada) onde os usuários da KlivyAp
 
 Toda a curadoria (criação, edição, publicação de artigos e categorias) acontece num CMS embutido no **Super Admin** (`/super_admin/help_articles` e `/super_admin/help_categories`).
 
-**Acesso do usuário:** Sidebar lateral → "Ajuda" → `/accounts/:id/ajuda`
+**Acesso do usuário:** Sidebar lateral → "Ajuda" (dropdown) → `/accounts/:id/ajuda`
 **Acesso do admin:** `/super_admin/help_articles`, `/super_admin/help_categories`
+
+A partir de 2026-04-26, o item **"Ajuda"** no sidebar virou **dropdown** com 3 filhos:
+
+| Item | Rota | Descrição |
+|------|------|-----------|
+| 📖 Artigos | `/accounts/:id/ajuda` | FAQ original (intacta) |
+| 🐛 Reportar um erro | `/accounts/:id/ajuda/reportar-erro` | Formulário de bug report |
+| ✨ Solicitar melhoria | `/accounts/:id/ajuda/solicitar-melhoria` | Formulário de feature request |
 
 ---
 
@@ -27,6 +35,8 @@ Toda a curadoria (criação, edição, publicação de artigos e categorias) aco
 - 📖 **Drawer de leitura** com `Teleport` para body, suporte a embed de vídeo (YouTube/Vimeo) e seção "Próximos passos"
 - 📺 **Modo leitura** que centraliza o drawer na tela em formato wide (botão maximize)
 - 💬 **Botão "Iniciar conversa"** que aciona o widget nativo de chat do Chatwoot (`#cw-bubble-holder`)
+- 🐛 **Reportar um erro** — formulário com nome/e-mail pré-preenchidos do usuário logado, descrição livre e até 5 anexos (JPG/PNG/MP4/PDF, 20MB cada)
+- ✨ **Solicitar melhoria** — mesmo formulário com copy adaptada para sugestões de funcionalidade
 
 ### Para o super admin
 - ✏️ **CRUD de artigos** com editor Quill.js (toolbar: H2/H3, bold/italic/underline/strike, listas, blockquote, code, link)

@@ -1,4 +1,5 @@
 <script>
+import { computed } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required } from '@vuelidate/validators';
 import { mapGetters } from 'vuex';
@@ -6,6 +7,8 @@ import { useAlert } from 'dashboard/composables';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useConfig } from 'dashboard/composables/useConfig';
 import { useAccount } from 'dashboard/composables/useAccount';
+import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import WithLabel from 'v3/components/Form/WithLabel.vue';
 import NextInput from 'next/input/Input.vue';
@@ -34,8 +37,21 @@ export default {
     const { enabledLanguages } = useConfig();
     const { accountId } = useAccount();
     const v$ = useVuelidate();
+    // Klivy: gate "Salvar conta" por settings.account_manage; admin/dono passa.
+    const { isAdmin } = useAdmin();
+    const { can } = usePermissions();
+    const canManageAccount = computed(
+      () => isAdmin.value || can('settings', 'account_manage')
+    );
 
-    return { updateUISettings, uiSettings, v$, enabledLanguages, accountId };
+    return {
+      updateUISettings,
+      uiSettings,
+      v$,
+      enabledLanguages,
+      accountId,
+      canManageAccount,
+    };
   },
   data() {
     return {
@@ -222,7 +238,7 @@ export default {
               "
             />
           </WithLabel>
-          <div>
+          <div v-if="canManageAccount">
             <NextButton blue :is-loading="isUpdating" type="submit">
               {{ $t('GENERAL_SETTINGS.SUBMIT') }}
             </NextButton>

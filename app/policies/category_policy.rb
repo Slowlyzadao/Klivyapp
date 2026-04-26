@@ -3,24 +3,26 @@ class CategoryPolicy < ApplicationPolicy
     @account.users.include?(@user)
   end
 
-  def update?
-    @account_user.administrator?
-  end
-
   def show?
-    @account_user.administrator?
-  end
+    return true if @account_user.administrator?
 
-  def edit?
-    @account_user.administrator?
+    beclinic_can?(:help_center, :manage_categories)
   end
 
   def create?
-    @account_user.administrator?
+    show?
+  end
+
+  def update?
+    show?
+  end
+
+  def edit?
+    show?
   end
 
   def destroy?
-    @account_user.administrator?
+    show?
   end
 end
 

@@ -4,13 +4,17 @@ import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { dynamicTime } from 'shared/helpers/timeHelper';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ContactLabels from 'dashboard/components-next/Contacts/ContactLabels/ContactLabels.vue';
 import ContactsForm from 'dashboard/components-next/Contacts/ContactsForm/ContactsForm.vue';
 import ConfirmContactDeleteDialog from 'dashboard/components-next/Contacts/ContactsForm/ConfirmContactDeleteDialog.vue';
-import Policy from 'dashboard/components/policy.vue';
+
+const { can } = usePermissions();
+const canEditContact = computed(() => can('contacts', 'edit'));
+const canDeleteContact = computed(() => can('contacts', 'delete'));
 
 const props = defineProps({
   selectedContact: {
@@ -168,6 +172,7 @@ const handleAvatarDelete = async () => {
         @update="handleFormUpdate"
       />
       <Button
+        v-if="canEditContact"
         :label="t('CONTACTS_LAYOUT.CARD.EDIT_DETAILS_FORM.UPDATE_BUTTON')"
         size="sm"
         :is-loading="isUpdating"
@@ -175,7 +180,7 @@ const handleAvatarDelete = async () => {
         @click="updateContact"
       />
     </div>
-    <Policy :permissions="['administrator']">
+    <template v-if="canDeleteContact">
       <div
         class="flex flex-col items-start w-full gap-4 pt-6 border-t border-n-strong"
       >
@@ -198,6 +203,6 @@ const handleAvatarDelete = async () => {
         :selected-contact="selectedContact"
         @go-to-contacts-list="emit('goToContactsList')"
       />
-    </Policy>
+    </template>
   </div>
 </template>

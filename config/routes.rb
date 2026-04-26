@@ -114,6 +114,11 @@ Rails.application.routes.draw do
           end
           resources :sla_policies, only: [:index, :create, :show, :update, :destroy]
           resources :custom_roles, only: [:index, :create, :show, :update, :destroy]
+          resources :klivy_roles, only: [:index, :create, :show, :update, :destroy] do
+            member do
+              post :assign
+            end
+          end
           resources :agent_capacity_policies, only: [:index, :create, :show, :update, :destroy] do
             scope module: :agent_capacity_policies do
               resources :users, only: [:index, :create, :destroy]
@@ -910,6 +915,9 @@ Rails.application.routes.draw do
       # Planos de Assinatura e Cupons de Desconto — gerenciados via plugin assinatura
       resources :subscription_plans, only: [:index, :create, :update, :destroy]
       resources :discount_coupons,   only: [:index, :create, :update, :destroy]
+
+      # Migração de dados de outras plataformas (Clinicorp etc.) — plugin migration
+      resources :migrations, only: [:index, :create, :show]
 
       resource :instance_status, only: [:show]
 

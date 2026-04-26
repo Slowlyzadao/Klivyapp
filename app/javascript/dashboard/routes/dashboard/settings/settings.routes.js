@@ -21,12 +21,11 @@ import reports from './reports/reports.routes';
 import store from '../../../store';
 import sla from './sla/sla.routes';
 import teams from './teams/teams.routes';
-import customRoles from './customRoles/customRole.routes';
+import customRoles from '@plugins/custom_roles/frontend/routes/routes';
 import profile from './profile/profile.routes';
 import security from './security/security.routes';
 import conversationWorkflow from './conversationWorkflow/conversationWorkflow.routes';
 import captain from './captain/captain.routes';
-import beclinicRoles from '@plugins/beclinic_core/frontend/settings/BeClinicRoles/beclinicRoles.routes.js';
 
 export default {
   routes: [
@@ -68,6 +67,5 @@ export default {
     ...security.routes,
     ...conversationWorkflow.routes,
     ...captain.routes,
-    ...beclinicRoles.routes,
   ],
 };

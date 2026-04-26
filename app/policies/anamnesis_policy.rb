@@ -1,26 +1,32 @@
 class AnamnesisPolicy < ApplicationPolicy
   def index?
-    beclinic_can?(:patients, :view_clinical_notes)
+    beclinic_can?(:patients, :view_anamnesis)
   end
 
   def show?
-    beclinic_can?(:patients, :view_clinical_notes)
+    beclinic_can?(:patients, :view_anamnesis)
   end
 
   def create?
-    beclinic_can?(:patients, :create_clinical_notes)
+    beclinic_can?(:patients, :manage_anamnesis)
   end
 
   def update?
     return false if record.is_a?(Anamnesis) && record.status_finalized?
 
-    beclinic_can?(:patients, :create_clinical_notes)
+    beclinic_can?(:patients, :manage_anamnesis)
+  end
+
+  def finalize?
+    return false if record.is_a?(Anamnesis) && record.status_finalized?
+
+    beclinic_can?(:patients, :manage_anamnesis)
   end
 
   def destroy?
     return false if record.is_a?(Anamnesis) && record.status_finalized?
 
-    beclinic_can?(:patients, :delete_clinical_notes)
+    beclinic_can?(:patients, :manage_anamnesis)
   end
 
   class Scope < ApplicationPolicy::Scope

@@ -4,6 +4,8 @@ import { useStoreGetters } from 'dashboard/composables/store';
 import { useI18n } from 'vue-i18n';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import { useBranding } from 'shared/composables/useBranding';
+import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Label from 'dashboard/components-next/label/Label.vue';
@@ -32,6 +34,12 @@ const accountId = getters.getCurrentAccountId;
 
 const { t } = useI18n();
 const { replaceInstallationName } = useBranding();
+const { isAdmin } = useAdmin();
+const { can } = usePermissions();
+
+const canManageIntegrations = computed(
+  () => isAdmin.value || can('settings', 'integrations_manage')
+);
 
 const integrationStatus = computed(() =>
   props.enabled
@@ -74,7 +82,7 @@ const actionURL = computed(() =>
         class="font-medium mb-2 text-n-slate-12 flex justify-between items-center"
       >
         <span class="text-heading-3 text-n-slate-12">{{ name }}</span>
-        <router-link :to="actionURL">
+        <router-link v-if="canManageIntegrations" :to="actionURL">
           <Button
             :label="$t('INTEGRATION_APPS.CONFIGURE')"
             icon="i-woot-settings"

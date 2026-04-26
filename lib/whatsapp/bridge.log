@@ -1,7 +1,0 @@
-
-🚀 Motor WhatsApp Bridge (Multi-Instância): http://localhost:3002
-📡 Chatwoot webhook base: http://localhost:3000/webhooks/whatsapp_qr/<phone>
-📂 Sessões armazenadas em: /Users/leandrobenuv/Documents/Klivy/KlivyApp-main/lib/whatsapp/sessions
-
-📋 Mapeamento LID carregado: 8021 entradas
-ℹ️  Nenhuma sessão existente para re-hidratar.

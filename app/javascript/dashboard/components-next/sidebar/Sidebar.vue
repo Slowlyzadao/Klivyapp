@@ -222,10 +222,30 @@ const newReportRoutes = () => [
 
 const reportRoutes = computed(() => newReportRoutes());
 
-const { can } = usePermissions();
+const { can, moduleEnabled } = usePermissions();
+
+// Custom Roles: maps each top-level sidebar entry to its module key in the
+// permissions catalog. When a Role disables every sub-permission of a module,
+// the entry is removed from the menu entirely. Names not in this map are
+// always shown (e.g. items that aren't gated by a module).
+const SIDEBAR_NAME_TO_MODULE = {
+  Inbox: 'inbox',
+  Conversation: 'chat',
+  Captain: 'captain',
+  Agenda: 'agenda',
+  Patients: 'patients',
+  Financial: 'financial',
+  Contacts: 'contacts',
+  Companies: 'contacts',
+  Reports: 'reports',
+  Campaigns: 'campaigns',
+  Portals: 'help_center',
+  Settings: 'settings',
+  Ajuda: 'help',
+};
 
 const menuItems = computed(() => {
-  return [
+  const allItems = [
     {
       name: 'Inbox',
       label: t('SIDEBAR.INBOX'),
@@ -251,12 +271,16 @@ const menuItems = computed(() => {
               },
             ]
           : []),
-        {
-          name: 'Mentions',
-          label: t('SIDEBAR.MENTIONED_CONVERSATIONS'),
-          activeOn: ['conversation_through_mentions'],
-          to: accountScopedRoute('conversation_mentions'),
-        },
+        ...(can('chat', 'view_mentions')
+          ? [
+              {
+                name: 'Mentions',
+                label: t('SIDEBAR.MENTIONED_CONVERSATIONS'),
+                activeOn: ['conversation_through_mentions'],
+                to: accountScopedRoute('conversation_mentions'),
+              },
+            ]
+          : []),
         ...(can('chat', 'view_unassigned')
           ? [
               {
@@ -332,69 +356,97 @@ const menuItems = computed(() => {
       label: t('SIDEBAR.CAPTAIN'),
       activeOn: ['captain_assistants_create_index'],
       children: [
-        {
-          name: 'FAQs',
-          label: t('SIDEBAR.CAPTAIN_RESPONSES'),
-          activeOn: [
-            'captain_assistants_responses_index',
-            'captain_assistants_responses_pending',
-          ],
-          to: accountScopedRoute('captain_assistants_index', {
-            navigationPath: 'captain_assistants_responses_index',
-          }),
-        },
-        {
-          name: 'Documents',
-          label: t('SIDEBAR.CAPTAIN_DOCUMENTS'),
-          activeOn: ['captain_assistants_documents_index'],
-          to: accountScopedRoute('captain_assistants_index', {
-            navigationPath: 'captain_assistants_documents_index',
-          }),
-        },
-        {
-          name: 'Scenarios',
-          label: t('SIDEBAR.CAPTAIN_SCENARIOS'),
-          activeOn: ['captain_assistants_scenarios_index'],
-          to: accountScopedRoute('captain_assistants_index', {
-            navigationPath: 'captain_assistants_scenarios_index',
-          }),
-        },
-        {
-          name: 'Playground',
-          label: t('SIDEBAR.CAPTAIN_PLAYGROUND'),
-          activeOn: ['captain_assistants_playground_index'],
-          to: accountScopedRoute('captain_assistants_index', {
-            navigationPath: 'captain_assistants_playground_index',
-          }),
-        },
-        {
-          name: 'Inboxes',
-          label: t('SIDEBAR.CAPTAIN_INBOXES'),
-          activeOn: ['captain_assistants_inboxes_index'],
-          to: accountScopedRoute('captain_assistants_index', {
-            navigationPath: 'captain_assistants_inboxes_index',
-          }),
-        },
-        {
-          name: 'Tools',
-          label: t('SIDEBAR.CAPTAIN_TOOLS'),
-          activeOn: ['captain_tools_index'],
-          to: accountScopedRoute('captain_assistants_index', {
-            navigationPath: 'captain_tools_index',
-          }),
-        },
-        {
-          name: 'Settings',
-          label: t('SIDEBAR.CAPTAIN_SETTINGS'),
-          activeOn: [
-            'captain_assistants_settings_index',
-            'captain_assistants_guidelines_index',
-            'captain_assistants_guardrails_index',
-          ],
-          to: accountScopedRoute('captain_assistants_index', {
-            navigationPath: 'captain_assistants_settings_index',
-          }),
-        },
+        ...(can('captain', 'manage_faqs')
+          ? [
+              {
+                name: 'FAQs',
+                label: t('SIDEBAR.CAPTAIN_RESPONSES'),
+                activeOn: [
+                  'captain_assistants_responses_index',
+                  'captain_assistants_responses_pending',
+                ],
+                to: accountScopedRoute('captain_assistants_index', {
+                  navigationPath: 'captain_assistants_responses_index',
+                }),
+              },
+            ]
+          : []),
+        ...(can('captain', 'manage_documents')
+          ? [
+              {
+                name: 'Documents',
+                label: t('SIDEBAR.CAPTAIN_DOCUMENTS'),
+                activeOn: ['captain_assistants_documents_index'],
+                to: accountScopedRoute('captain_assistants_index', {
+                  navigationPath: 'captain_assistants_documents_index',
+                }),
+              },
+            ]
+          : []),
+        ...(can('captain', 'manage_scenarios')
+          ? [
+              {
+                name: 'Scenarios',
+                label: t('SIDEBAR.CAPTAIN_SCENARIOS'),
+                activeOn: ['captain_assistants_scenarios_index'],
+                to: accountScopedRoute('captain_assistants_index', {
+                  navigationPath: 'captain_assistants_scenarios_index',
+                }),
+              },
+            ]
+          : []),
+        ...(can('captain', 'use_playground')
+          ? [
+              {
+                name: 'Playground',
+                label: t('SIDEBAR.CAPTAIN_PLAYGROUND'),
+                activeOn: ['captain_assistants_playground_index'],
+                to: accountScopedRoute('captain_assistants_index', {
+                  navigationPath: 'captain_assistants_playground_index',
+                }),
+              },
+            ]
+          : []),
+        ...(can('captain', 'manage_inboxes')
+          ? [
+              {
+                name: 'Inboxes',
+                label: t('SIDEBAR.CAPTAIN_INBOXES'),
+                activeOn: ['captain_assistants_inboxes_index'],
+                to: accountScopedRoute('captain_assistants_index', {
+                  navigationPath: 'captain_assistants_inboxes_index',
+                }),
+              },
+            ]
+          : []),
+        ...(can('captain', 'manage_tools')
+          ? [
+              {
+                name: 'Tools',
+                label: t('SIDEBAR.CAPTAIN_TOOLS'),
+                activeOn: ['captain_tools_index'],
+                to: accountScopedRoute('captain_assistants_index', {
+                  navigationPath: 'captain_tools_index',
+                }),
+              },
+            ]
+          : []),
+        ...(can('captain', 'manage_settings')
+          ? [
+              {
+                name: 'Settings',
+                label: t('SIDEBAR.CAPTAIN_SETTINGS'),
+                activeOn: [
+                  'captain_assistants_settings_index',
+                  'captain_assistants_guidelines_index',
+                  'captain_assistants_guardrails_index',
+                ],
+                to: accountScopedRoute('captain_assistants_index', {
+                  navigationPath: 'captain_assistants_settings_index',
+                }),
+              },
+            ]
+          : []),
       ],
     },
     {
@@ -602,32 +654,28 @@ const menuItems = computed(() => {
         },
       ],
     },
-    ...(can('chat', 'send_broadcast')
-      ? [
-          {
-            name: 'Campaigns',
-            label: t('SIDEBAR.CAMPAIGNS'),
-            icon: 'i-lucide-megaphone',
-            children: [
-              {
-                name: 'Live chat',
-                label: t('SIDEBAR.LIVE_CHAT'),
-                to: accountScopedRoute('campaigns_livechat_index'),
-              },
-              {
-                name: 'SMS',
-                label: t('SIDEBAR.SMS'),
-                to: accountScopedRoute('campaigns_sms_index'),
-              },
-              {
-                name: 'WhatsApp',
-                label: t('SIDEBAR.WHATSAPP'),
-                to: accountScopedRoute('campaigns_whatsapp_index'),
-              },
-            ],
-          },
-        ]
-      : []),
+    {
+      name: 'Campaigns',
+      label: t('SIDEBAR.CAMPAIGNS'),
+      icon: 'i-lucide-megaphone',
+      children: [
+        {
+          name: 'Live chat',
+          label: t('SIDEBAR.LIVE_CHAT'),
+          to: accountScopedRoute('campaigns_livechat_index'),
+        },
+        {
+          name: 'SMS',
+          label: t('SIDEBAR.SMS'),
+          to: accountScopedRoute('campaigns_sms_index'),
+        },
+        {
+          name: 'WhatsApp',
+          label: t('SIDEBAR.WHATSAPP'),
+          to: accountScopedRoute('campaigns_whatsapp_index'),
+        },
+      ],
+    },
     {
       name: 'Portals',
       label: t('SIDEBAR.HELP_CENTER.TITLE'),
@@ -799,7 +847,8 @@ const menuItems = computed(() => {
           name: 'Settings Custom Roles',
           label: t('SIDEBAR.CUSTOM_ROLES'),
           icon: 'i-lucide-shield-plus',
-          to: accountScopedRoute('custom_roles_list'),
+          activeOn: ['klivy_roles_list', 'klivy_roles_new', 'klivy_roles_edit'],
+          to: accountScopedRoute('klivy_roles_list'),
         },
         {
           name: 'Settings Sla',
@@ -831,10 +880,172 @@ const menuItems = computed(() => {
       name: 'Ajuda',
       icon: 'i-lucide-circle-help',
       label: t('SIDEBAR.AJUDA', 'Ajuda'),
-      to: accountScopedRoute('ajuda_dashboard_index'),
-      activeOn: ['ajuda_dashboard_index'],
+      activeOn: [
+        'ajuda_dashboard_index',
+        'ajuda_report_bug',
+        'ajuda_feature_request',
+      ],
+      children: [
+        {
+          name: 'Ajuda Articles',
+          label: t('SIDEBAR.AJUDA_ARTICLES', 'Artigos'),
+          icon: 'i-lucide-file-text',
+          activeOn: ['ajuda_dashboard_index'],
+          to: accountScopedRoute('ajuda_dashboard_index'),
+        },
+        {
+          name: 'Ajuda Report Bug',
+          label: t('SIDEBAR.AJUDA_REPORT_BUG', 'Reportar um erro'),
+          icon: 'i-lucide-bug',
+          activeOn: ['ajuda_report_bug'],
+          to: accountScopedRoute('ajuda_report_bug'),
+        },
+        {
+          name: 'Ajuda Feature Request',
+          label: t('SIDEBAR.AJUDA_FEATURE_REQUEST', 'Solicitar melhoria'),
+          icon: 'i-lucide-sparkles',
+          activeOn: ['ajuda_feature_request'],
+          to: accountScopedRoute('ajuda_feature_request'),
+        },
+      ],
     },
   ];
+
+  // Sub-item gating: two modes per parent.
+  // - `filter`  → if the Klivy gate fails, the child is removed entirely
+  //   (used by Agenda where the parent module owns visibility).
+  // - `override`→ if the Klivy gate passes, the child is shown even when the
+  //   route's Chatwoot meta.permissions would normally hide it (used by the
+  //   Settings menu, whose routes are tagged `administrator` only).
+  const CHILD_GATES = {
+    Agenda: {
+      mode: 'filter',
+      rules: {
+        Calendar: ['agenda', 'view'],
+        Settings: ['agenda', 'view_settings'],
+        'Custom Attributes': ['agenda', 'manage_custom_attributes'],
+      },
+    },
+    Financial: {
+      mode: 'filter',
+      rules: {
+        'Financial Dashboard': ['financial', 'view_dashboard'],
+        'Cash Flow': ['financial', 'view_cashflow'],
+        Receivables: ['financial', 'view_receivables'],
+        Payables: ['financial', 'view_payables'],
+        DRE: ['financial', 'view_dre'],
+        'Financial Reports': ['financial', 'view_reports'],
+        'Cash Register': ['financial', 'view_cash_register'],
+        'Financial Settings': ['financial', 'manage_settings'],
+      },
+    },
+    Contacts: {
+      mode: 'filter',
+      rules: {
+        'All Contacts': ['contacts', 'view_all'],
+        Active: ['contacts', 'view_active'],
+        Segments: ['contacts', 'manage_segments'],
+        'Tagged With': ['contacts', 'manage_tags'],
+      },
+    },
+    Reports: {
+      mode: 'filter',
+      rules: {
+        'Report Overview': ['reports', 'view_overview'],
+        'Report Conversation': ['reports', 'view_conversation'],
+        'Reports Agent': ['reports', 'view_agent'],
+        'Reports Label': ['reports', 'view_label'],
+        'Reports Inbox': ['reports', 'view_inbox'],
+        'Reports Team': ['reports', 'view_team'],
+        'Reports CSAT': ['reports', 'view_csat'],
+        'Reports SLA': ['reports', 'view_sla'],
+        'Reports Bot': ['reports', 'view_bot'],
+        'Reports Agenda': ['reports', 'view_agenda'],
+      },
+    },
+    Campaigns: {
+      // Cada sub-item exige seu `manage_*` específico. Sem nenhum manage
+      // ligado, o grupo inteiro some (post-filter de children vazio).
+      // O `view` controla apenas o acesso à API (CampaignPolicy.index?).
+      mode: 'filter',
+      rules: {
+        'Live chat': ['campaigns', 'manage_live_chat'],
+        SMS: ['campaigns', 'manage_sms'],
+        WhatsApp: ['campaigns', 'manage_whatsapp'],
+      },
+    },
+    Portals: {
+      // Mesmo modelo das Campanhas: cada sub-item exige seu manage_*
+      // específico. O `view` apenas dá acesso à API de leitura.
+      mode: 'filter',
+      rules: {
+        Articles: ['help_center', 'manage_articles'],
+        Categories: ['help_center', 'manage_categories'],
+        Locales: ['help_center', 'manage_portals'],
+        Settings: ['help_center', 'manage_portals'],
+      },
+    },
+    Settings: {
+      mode: 'filter',
+      rules: {
+        'Settings Account Settings': ['settings', 'account_view'],
+        'Settings Agents': ['settings', 'users_view'],
+        'Settings Teams': ['settings', 'teams_view'],
+        'Settings Agent Assignment': ['settings', 'users_view'],
+        'Settings Inboxes': ['settings', 'inboxes_view'],
+        'Settings Labels': ['settings', 'labels_view'],
+        'Settings Custom Attributes': ['settings', 'custom_attributes_view'],
+        'Settings Automation': ['settings', 'automation_view'],
+        'Settings Agent Bots': ['settings', 'agent_bots_view'],
+        'Settings Macros': ['settings', 'macros_view'],
+        'Settings Canned Responses': ['settings', 'canned_view'],
+        'Settings Integrations': ['settings', 'integrations_view'],
+        'Settings Audit Logs': ['settings', 'audit_view'],
+        'Settings Custom Roles': ['settings', 'roles_view'],
+        'Settings Sla': ['settings', 'sla_view'],
+        'Conversation Workflow': ['settings', 'workflow_view'],
+        'Settings Security': ['settings', 'security_view'],
+        'Settings Billing': ['settings', 'billing_view'],
+      },
+    },
+  };
+
+  const gateChildren = item => {
+    const gate = CHILD_GATES[item.name];
+    if (!gate || !item.children) return item;
+    const next = item.children
+      .map(child => {
+        const rule = gate.rules[child.name];
+        if (!rule) return child;
+        const granted = can(rule[0], rule[1]);
+        if (gate.mode === 'override') {
+          return granted ? { ...child, bypassPolicy: true } : child;
+        }
+        // mode 'filter' — quando o Klivy libera, marcamos `bypassPolicy: true`
+        // para `isChildAllowed` (provider.js) pular a checagem de
+        // `meta.permissions` do Chatwoot. Sem isso, rotas tagueadas com
+        // `['administrator', ...]` (caso de Reports e Financial) ficam
+        // invisíveis para roles não-admin mesmo com a perm Klivy ativa.
+        return granted ? { ...child, bypassPolicy: true } : null;
+      })
+      .filter(Boolean);
+    return { ...item, children: next };
+  };
+
+  return allItems
+    .filter(item => {
+      const moduleKey = SIDEBAR_NAME_TO_MODULE[item.name];
+      if (!moduleKey) return true;
+      return moduleEnabled(moduleKey);
+    })
+    .map(gateChildren)
+    .filter(item => {
+      // Hide parent groups when all children got filtered out by RBAC.
+      // Leaf items (no `children` key) pass through untouched.
+      if (!CHILD_GATES[item.name]) return true;
+      if (CHILD_GATES[item.name].mode !== 'filter') return true;
+      return Array.isArray(item.children) && item.children.length > 0;
+    });
 });
 </script>
 
@@ -925,7 +1136,11 @@ const menuItems = computed(() => {
         >
           <span class="i-lucide-search size-4 text-n-slate-11" />
         </RouterLink>
-        <ComposeConversation align-position="right" @close="onComposeClose">
+        <ComposeConversation
+          v-if="can('chat', 'send_broadcast') || can('chat', 'reply')"
+          align-position="right"
+          @close="onComposeClose"
+        >
           <template #trigger="{ toggle, isOpen }">
             <Button
               icon="i-lucide-pen-line"

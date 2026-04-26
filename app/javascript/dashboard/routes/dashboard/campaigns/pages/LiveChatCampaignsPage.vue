@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useToggle } from '@vueuse/core';
 import { useStoreGetters, useMapGetter } from 'dashboard/composables/store';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import CampaignLayout from 'dashboard/components-next/Campaigns/CampaignLayout.vue';
@@ -14,6 +15,8 @@ import LiveChatCampaignEmptyState from 'dashboard/components-next/Campaigns/Empt
 
 const { t } = useI18n();
 const getters = useStoreGetters();
+const { can } = usePermissions();
+const canManage = computed(() => can('campaigns', 'manage_live_chat'));
 
 const editLiveChatCampaignDialogRef = ref(null);
 const confirmDeleteCampaignDialogRef = ref(null);
@@ -46,6 +49,7 @@ const handleDelete = campaign => {
   <CampaignLayout
     :header-title="t('CAMPAIGN.LIVE_CHAT.HEADER_TITLE')"
     :button-label="t('CAMPAIGN.LIVE_CHAT.NEW_CAMPAIGN')"
+    :can-create="canManage"
     @click="toggleLiveChatCampaignDialog()"
     @close="toggleLiveChatCampaignDialog(false)"
   >
@@ -66,6 +70,8 @@ const handleDelete = campaign => {
       v-else-if="!hasNoLiveChatCampaigns"
       :campaigns="liveChatCampaigns"
       is-live-chat-type
+      :can-edit="canManage"
+      :can-delete="canManage"
       @edit="handleEdit"
       @delete="handleDelete"
     />

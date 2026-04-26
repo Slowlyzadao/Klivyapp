@@ -39,6 +39,12 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
         )
       )
       @inbox.save!
+      # Klivy Custom Roles: a non-administrator who is allowed to create
+      # inboxes (via `settings.inboxes_create`) is auto-assigned as an
+      # InboxMember of the inbox they just created. Without this, they
+      # would lose access to the inbox they own — `assigned_inboxes`
+      # filters by InboxMember for non-admins.
+      InboxMember.find_or_create_by!(inbox: @inbox, user: Current.user) unless Current.account_user.administrator?
     end
   end
 

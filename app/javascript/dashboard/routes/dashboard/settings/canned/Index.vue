@@ -17,6 +17,8 @@ import {
   BaseTableRow,
   BaseTableCell,
 } from 'dashboard/components-next/table';
+import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 defineOptions({
   name: 'CannedResponseSettings',
@@ -25,6 +27,18 @@ defineOptions({
 const getters = useStoreGetters();
 const store = useStore();
 const { t } = useI18n();
+const { isAdmin } = useAdmin();
+const { can } = usePermissions();
+
+const canCreateCanned = computed(
+  () => isAdmin.value || can('settings', 'canned_create')
+);
+const canEditCanned = computed(
+  () => isAdmin.value || can('settings', 'canned_edit')
+);
+const canDeleteCanned = computed(
+  () => isAdmin.value || can('settings', 'canned_delete')
+);
 
 const { getPlainText } = useMessageFormatter();
 
@@ -158,6 +172,7 @@ const tableHeaders = computed(() => {
         </template>
         <template #actions>
           <Button
+            v-if="canCreateCanned"
             :label="$t('CANNED_MGMT.HEADER_BTN_TXT')"
             size="sm"
             @click="openAddPopup"
@@ -221,6 +236,7 @@ const tableHeaders = computed(() => {
               <BaseTableCell align="end" class="w-24">
                 <div class="flex gap-3 justify-end flex-shrink-0">
                   <Button
+                    v-if="canEditCanned"
                     v-tooltip.top="$t('CANNED_MGMT.EDIT.BUTTON_TEXT')"
                     icon="i-woot-edit-pen"
                     slate
@@ -228,6 +244,7 @@ const tableHeaders = computed(() => {
                     @click="openEditPopup(cannedItem)"
                   />
                   <Button
+                    v-if="canDeleteCanned"
                     v-tooltip.top="$t('CANNED_MGMT.DELETE.BUTTON_TEXT')"
                     icon="i-woot-bin"
                     slate

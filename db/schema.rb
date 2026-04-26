@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_04_25_210000) do
+ActiveRecord::Schema[7.1].define(version: 2026_04_26_023750) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -97,10 +97,12 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_25_210000) do
     t.boolean "auto_offline", default: true, null: false
     t.bigint "custom_role_id"
     t.bigint "agent_capacity_policy_id"
+    t.bigint "klivy_role_id"
     t.index ["account_id", "user_id"], name: "uniq_user_id_per_account_id", unique: true
     t.index ["account_id"], name: "index_account_users_on_account_id"
     t.index ["agent_capacity_policy_id"], name: "index_account_users_on_agent_capacity_policy_id"
     t.index ["custom_role_id"], name: "index_account_users_on_custom_role_id"
+    t.index ["klivy_role_id"], name: "index_account_users_on_klivy_role_id"
     t.index ["user_id"], name: "index_account_users_on_user_id"
   end
 
@@ -1557,6 +1559,18 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_25_210000) do
     t.jsonb "settings", default: {}
   end
 
+  create_table "klivy_roles", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 80, null: false
+    t.string "description", limit: 240
+    t.string "preset_key", limit: 40
+    t.jsonb "permissions", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "name"], name: "index_klivy_roles_on_account_and_name", unique: true
+    t.index ["account_id"], name: "index_klivy_roles_on_account_id"
+  end
+
   create_table "labels", force: :cascade do |t|
     t.string "title"
     t.text "description"
@@ -1643,6 +1657,30 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_25_210000) do
     t.index ["inbox_id"], name: "index_messages_on_inbox_id"
     t.index ["sender_type", "sender_id"], name: "index_messages_on_sender_type_and_sender_id"
     t.index ["source_id"], name: "index_messages_on_source_id"
+  end
+
+  create_table "migration_runs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "kind", null: false
+    t.string "status", default: "pending", null: false
+    t.string "source", default: "clinicorp", null: false
+    t.string "csv_filename"
+    t.integer "total_rows", default: 0
+    t.integer "processed_rows", default: 0
+    t.integer "created_count", default: 0
+    t.integer "updated_count", default: 0
+    t.integer "skipped_count", default: 0
+    t.integer "error_count", default: 0
+    t.jsonb "errors_log", default: []
+    t.text "error_message"
+    t.bigint "triggered_by_super_admin_id"
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "kind"], name: "index_migration_runs_on_account_id_and_kind"
+    t.index ["account_id"], name: "index_migration_runs_on_account_id"
+    t.index ["status"], name: "index_migration_runs_on_status"
   end
 
   create_table "notes", force: :cascade do |t|
@@ -2211,6 +2249,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_25_210000) do
     t.index ["inbox_id"], name: "index_working_hours_on_inbox_id"
   end
 
+  add_foreign_key "account_users", "klivy_roles"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "agenda_events", "accounts"
@@ -2240,6 +2279,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_25_210000) do
   add_foreign_key "critical_alerts", "patients"
   add_foreign_key "form_templates", "accounts"
   add_foreign_key "inboxes", "portals"
+  add_foreign_key "klivy_roles", "accounts"
   add_foreign_key "patient_appointments", "accounts"
   add_foreign_key "patient_appointments", "agenda_events"
   add_foreign_key "patient_appointments", "patients"

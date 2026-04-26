@@ -4,12 +4,15 @@ import { useI18n } from 'vue-i18n';
 import reportsAPI from '../api/reports';
 import { downloadFinancialPdf } from '../api/pdfs';
 import { useExportCsv } from '../composables/useExportCsv';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import MonthPicker from '../components/MonthPicker.vue';
 import DatePicker from '../components/DatePicker.vue';
 import '../financial.css';
 
 const { t } = useI18n();
 const { exportDreCsv } = useExportCsv();
+const { can } = usePermissions();
+const canExportData = computed(() => can('financial', 'export_data'));
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function fmt(val) {
@@ -289,11 +292,12 @@ function exportCsv() {
         <h1 class="financial-title">{{ $t('FINANCIAL.DRE.TITLE') }}</h1>
         <p class="financial-subtitle">{{ $t('FINANCIAL.DRE.SUBTITLE') }}</p>
       </div>
-      <button class="dre-export-btn" @click="exportPdf">
+      <button v-if="canExportData" class="dre-export-btn" @click="exportPdf">
         <i class="i-lucide-file-down" />
         Gerar PDF
       </button>
       <button
+        v-if="canExportData"
         class="financial-btn--csv"
         title="Exportar para Google Sheets (CSV)"
         @click="exportCsv"

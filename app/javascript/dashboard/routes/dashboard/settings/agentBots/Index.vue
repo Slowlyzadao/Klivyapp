@@ -16,6 +16,8 @@ import {
   BaseTableRow,
   BaseTableCell,
 } from 'dashboard/components-next/table';
+import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 const MODAL_TYPES = {
   CREATE: 'create',
@@ -24,6 +26,12 @@ const MODAL_TYPES = {
 
 const store = useStore();
 const { t } = useI18n();
+const { isAdmin } = useAdmin();
+const { can } = usePermissions();
+
+const canManageBots = computed(
+  () => isAdmin.value || can('settings', 'agent_bots_manage')
+);
 
 const agentBots = useMapGetter('agentBots/getBots');
 const uiFlags = useMapGetter('agentBots/getUIFlags');
@@ -114,6 +122,7 @@ onMounted(() => {
         </template>
         <template #actions>
           <Button
+            v-if="canManageBots"
             :label="$t('AGENT_BOTS.ADD.TITLE')"
             size="sm"
             @click="openAddModal"
@@ -168,7 +177,7 @@ onMounted(() => {
               <BaseTableCell align="end" class="w-24">
                 <div class="flex gap-3 justify-end flex-shrink-0">
                   <Button
-                    v-if="!bot.system_bot"
+                    v-if="!bot.system_bot && canManageBots"
                     v-tooltip.top="t('AGENT_BOTS.EDIT.BUTTON_TEXT')"
                     icon="i-woot-edit-pen"
                     slate
@@ -177,7 +186,7 @@ onMounted(() => {
                     @click="openEditModal(bot)"
                   />
                   <Button
-                    v-if="!bot.system_bot"
+                    v-if="!bot.system_bot && canManageBots"
                     v-tooltip.top="t('AGENT_BOTS.DELETE.BUTTON_TEXT')"
                     icon="i-woot-bin"
                     slate

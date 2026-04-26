@@ -1,27 +1,23 @@
 class CommissionRulePolicy < ApplicationPolicy
+  # Regras de comissão são listadas em Relatórios e geridas em Configurações.
   def index?
-    beclinic_can?(:financial, :view_transactions)
+    beclinic_can?(:financial, :view_reports) ||
+      beclinic_can?(:financial, :manage_settings)
   end
 
   def show?
-    beclinic_can?(:financial, :view_transactions)
+    index?
   end
 
   def create?
-    administrator?
+    beclinic_can?(:financial, :manage_settings)
   end
 
   def update?
-    administrator?
+    create?
   end
 
   def destroy?
-    administrator?
-  end
-
-  private
-
-  def administrator?
-    @account_user&.administrator?
+    create?
   end
 end

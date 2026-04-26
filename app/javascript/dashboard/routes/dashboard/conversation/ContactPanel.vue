@@ -7,6 +7,7 @@ import {
 } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 import AccordionItem from 'dashboard/components/Accordion/AccordionItem.vue';
@@ -41,6 +42,8 @@ const {
   conversationSidebarItemsOrder,
   toggleSidebarUIState,
 } = useUISettings();
+
+const { can } = usePermissions();
 
 const dragging = ref(false);
 const conversationSidebarItems = ref([]);
@@ -150,7 +153,12 @@ onMounted(() => {
       >
         <template #item="{ element }">
           <div
-            v-if="element.name === 'conversation_actions'"
+            v-if="
+              element.name === 'conversation_actions' &&
+              (can('chat', 'view_conversation_actions') ||
+                can('chat', 'assign_conversation') ||
+                can('chat', 'reply'))
+            "
             class="conversation--actions"
           >
             <AccordionItem
@@ -167,7 +175,10 @@ onMounted(() => {
             </AccordionItem>
           </div>
           <div
-            v-else-if="element.name === 'conversation_participants'"
+            v-else-if="
+              element.name === 'conversation_participants' &&
+              can('chat', 'view_participants')
+            "
             class="conversation--actions"
           >
             <AccordionItem
@@ -184,7 +195,12 @@ onMounted(() => {
               />
             </AccordionItem>
           </div>
-          <div v-else-if="element.name === 'conversation_info'">
+          <div
+            v-else-if="
+              element.name === 'conversation_info' &&
+              can('chat', 'view_conversation_info')
+            "
+          >
             <AccordionItem
               :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONVERSATION_INFO')"
               :is-open="isContactSidebarItemOpen('is_conv_details_open')"
@@ -199,7 +215,12 @@ onMounted(() => {
               />
             </AccordionItem>
           </div>
-          <div v-else-if="element.name === 'contact_attributes'">
+          <div
+            v-else-if="
+              element.name === 'contact_attributes' &&
+              can('chat', 'view_contact_attributes')
+            "
+          >
             <AccordionItem
               :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONTACT_ATTRIBUTES')"
               :is-open="isContactSidebarItemOpen('is_contact_attributes_open')"
@@ -219,7 +240,12 @@ onMounted(() => {
               />
             </AccordionItem>
           </div>
-          <div v-else-if="element.name === 'previous_conversation'">
+          <div
+            v-else-if="
+              element.name === 'previous_conversation' &&
+              can('chat', 'view_previous_conversations')
+            "
+          >
             <AccordionItem
               v-if="contact.id"
               :title="
@@ -238,7 +264,9 @@ onMounted(() => {
             </AccordionItem>
           </div>
           <woot-feature-toggle
-            v-else-if="element.name === 'macros'"
+            v-else-if="
+              element.name === 'macros' && can('chat', 'use_macros')
+            "
             feature-key="macros"
           >
             <AccordionItem
@@ -285,7 +313,12 @@ onMounted(() => {
               <ShopifyOrdersList :contact-id="contactId" />
             </AccordionItem>
           </div>
-          <div v-else-if="element.name === 'contact_notes'">
+          <div
+            v-else-if="
+              element.name === 'contact_notes' &&
+              can('chat', 'view_contact_notes')
+            "
+          >
             <AccordionItem
               :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONTACT_NOTES')"
               :is-open="isContactSidebarItemOpen('is_contact_notes_open')"

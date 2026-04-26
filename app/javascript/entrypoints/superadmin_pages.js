@@ -6,12 +6,14 @@ import PlaygroundIndex from '../superadmin_pages/views/playground/Index.vue';
 import DashboardIndex from '../superadmin_pages/views/dashboard/Index.vue';
 import AssinaturaPlans from '../../../plugins/assinatura/frontend/features/plans/PlansIndex.vue';
 import AssinaturaCoupons from '../../../plugins/assinatura/frontend/features/coupons/CouponsIndex.vue';
+import MigrationIndex from '../../../plugins/migration/frontend/features/migration/MigrationIndex.vue';
 
 const ComponentMapping = {
   PlaygroundIndex: PlaygroundIndex,
   DashboardIndex: DashboardIndex,
   AssinaturaPlans: AssinaturaPlans,
   AssinaturaCoupons: AssinaturaCoupons,
+  MigrationIndex: MigrationIndex,
 };
 
 const renderComponent = (componentName, props) => {

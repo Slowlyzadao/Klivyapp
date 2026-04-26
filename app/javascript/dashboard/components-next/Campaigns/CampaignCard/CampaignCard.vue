@@ -42,6 +42,15 @@ const props = defineProps({
     type: Number,
     default: 0,
   },
+  // Gating das ações por canal — `manage_live_chat`/`manage_sms`/`manage_whatsapp`.
+  canEdit: {
+    type: Boolean,
+    default: true,
+  },
+  canDelete: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(['edit', 'delete']);
@@ -118,7 +127,7 @@ const inboxIcon = computed(() => {
     </div>
     <div class="flex items-center justify-end w-20 gap-2">
       <Button
-        v-if="isLiveChatType"
+        v-if="isLiveChatType && canEdit"
         variant="faded"
         size="sm"
         color="slate"
@@ -126,6 +135,7 @@ const inboxIcon = computed(() => {
         @click="emit('edit')"
       />
       <Button
+        v-if="canDelete"
         variant="faded"
         color="ruby"
         size="sm"

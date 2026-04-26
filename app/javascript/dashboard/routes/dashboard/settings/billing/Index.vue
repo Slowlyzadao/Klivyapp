@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from 'vue';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useCaptain } from 'dashboard/composables/useCaptain';
 import { useMapGetter, useStore } from 'dashboard/composables/store.js';
+import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -17,6 +19,12 @@ import ButtonV4 from 'next/button/Button.vue';
 
 const store = useStore();
 const { accountId } = useAccount();
+const { isAdmin } = useAdmin();
+const { can } = usePermissions();
+
+const canManageBilling = computed(
+  () => isAdmin.value || can('settings', 'billing_manage')
+);
 const {
   captainEnabled,
   captainLimits,
@@ -79,10 +87,8 @@ const couponExpiresLabel = computed(() => {
   return format(new Date(subscription.value.coupon_expires_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 });
 
-// Can purchase credits if plan is not free/hacker. In Klivy, anything with an active billing can.
-const canPurchaseCredits = computed(() => {
-  return true; 
-});
+// Permite comprar créditos quando o usuário pode gerenciar faturamento.
+const canPurchaseCredits = computed(() => canManageBilling.value);
 
 const fetchSubscription = async () => {
   isLoading.value = true;
@@ -234,7 +240,13 @@ onMounted(initialize);
           :description="$t('BILLING_SETTINGS.CAPTAIN.UPGRADE')"
         >
           <template #action>
-            <ButtonV4 sm solid slate @click="onClickBillingPortal">
+            <ButtonV4
+              v-if="canManageBilling"
+              sm
+              solid
+              slate
+              @click="onClickBillingPortal"
+            >
               {{ $t('CAPTAIN.PAYWALL.UPGRADE_NOW') }}
             </ButtonV4>
           </template>

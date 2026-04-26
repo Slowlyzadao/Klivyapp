@@ -14,8 +14,22 @@ export default {
     isLate: { type: Boolean, default: false },
     resizingEndAt: { type: String, default: null },
     layoutMode: { type: String, default: 'side-by-side' },
+    canCancel: { type: Boolean, default: true },
+    canDrag: { type: Boolean, default: true },
+    canEdit: { type: Boolean, default: true },
   },
   emits: ['click', 'quick-delete', 'mousedown-drag', 'mousedown-resize'],
+  methods: {
+    formatEventTime,
+    onMousedownDrag($event) {
+      if (!this.canDrag) return;
+      this.$emit('mousedown-drag', $event);
+    },
+    onMousedownResize($event) {
+      if (!this.canEdit) return;
+      this.$emit('mousedown-resize', $event);
+    },
+  },
   computed: {
     sizeTier() {
       return getEventSizeTier(this.event);
@@ -49,9 +63,6 @@ export default {
       return formatEventTime(this.event.ends_at);
     },
   },
-  methods: {
-    formatEventTime,
-  },
 };
 </script>
 
@@ -73,7 +84,7 @@ export default {
     ]"
     :style="cardStyle"
     :data-tooltip="tooltipText"
-    @mousedown.stop="$emit('mousedown-drag', $event)"
+    @mousedown.stop="onMousedownDrag($event)"
     @click.stop="$emit('click', $event)"
   >
     <!-- ══ MICRO (≤15 min) ══ -->
@@ -91,6 +102,7 @@ export default {
         />
       </span>
       <button
+        v-if="canCancel"
         class="evt-info-btn-inline"
         @click.stop="$emit('quick-delete')"
       >
@@ -127,6 +139,7 @@ export default {
         {{ treatment }}
       </span>
       <button
+        v-if="canCancel"
         class="evt-info-btn-inline"
         @click.stop="$emit('quick-delete')"
       >
@@ -149,6 +162,7 @@ export default {
     <template v-else-if="sizeTier === 'medium'">
       <div class="evt-normal-actions">
         <button
+          v-if="canCancel"
           class="evt-info-btn-hover !p-0"
           @click.stop="$emit('quick-delete')"
         >
@@ -193,6 +207,7 @@ export default {
     <template v-else>
       <div class="evt-normal-actions">
         <button
+          v-if="canCancel"
           class="evt-info-btn-hover !p-0"
           @click.stop="$emit('quick-delete')"
         >
@@ -238,8 +253,9 @@ export default {
     </template>
 
     <div
+      v-if="canEdit"
       class="evt-resize-handle"
-      @mousedown.stop="$emit('mousedown-resize', $event)"
+      @mousedown.stop="onMousedownResize($event)"
     />
   </div>
 </template>

@@ -1,9 +1,10 @@
 <script>
-import { ref, provide } from 'vue';
+import { ref, provide, computed } from 'vue';
 // composable
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useLabelSuggestions } from 'dashboard/composables/useLabelSuggestions';
 import { useSnakeCase } from 'dashboard/composables/useTransformKeys';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 // components
 import ReplyBox from './ReplyBox.vue';
@@ -67,12 +68,16 @@ export default {
 
     provide('contextMenuElementTarget', conversationPanelRef);
 
+    const { can } = usePermissions();
+    const canReply = computed(() => can('chat', 'reply'));
+
     return {
       isPopOutReplyBox,
       captainTasksEnabled,
       getLabelSuggestions,
       isLabelSuggestionFeatureEnabled,
       conversationPanelRef,
+      canReply,
     };
   },
   data() {
@@ -521,9 +526,17 @@ export default {
         </div>
       </div>
       <ReplyBox
+        v-if="canReply"
         :pop-out-reply-box="isPopOutReplyBox"
         @update:pop-out-reply-box="isPopOutReplyBox = $event"
       />
+      <div
+        v-else
+        class="flex items-center justify-center gap-2 px-4 py-3 mx-3 mb-3 text-xs font-medium rounded-lg bg-n-slate-2 text-n-slate-11 border border-n-weak"
+      >
+        <i class="i-lucide-lock w-3.5 h-3.5" />
+        Você não tem permissão para responder conversas.
+      </div>
     </div>
   </div>
 </template>

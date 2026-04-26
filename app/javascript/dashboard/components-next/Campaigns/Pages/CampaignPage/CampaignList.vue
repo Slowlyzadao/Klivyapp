@@ -10,6 +10,14 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  canEdit: {
+    type: Boolean,
+    default: true,
+  },
+  canDelete: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(['edit', 'delete']);
@@ -31,6 +39,8 @@ const handleDelete = campaign => emit('delete', campaign);
       :inbox="campaign.inbox"
       :scheduled-at="campaign.scheduled_at"
       :is-live-chat-type="isLiveChatType"
+      :can-edit="canEdit"
+      :can-delete="canDelete"
       @edit="handleEdit(campaign)"
       @delete="handleDelete(campaign)"
     />

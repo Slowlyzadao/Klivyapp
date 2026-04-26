@@ -23,6 +23,8 @@ import ContactAPI from 'dashboard/api/contacts';
 import bankAccountsApi from '@plugins/financial/frontend/features/financial/api/bankAccounts';
 import { useAlert } from 'dashboard/composables';
 import { usePermissions } from 'dashboard/composables/usePermissions';
+import { useSilentErrors } from '@plugins/custom_roles/frontend/composables/useSilentErrors';
+import PermissionDenied from '@plugins/custom_roles/frontend/components/PermissionDenied.vue';
 import EvolutionTab from './tabs/EvolutionTab.vue';
 
 const router = useRouter();
@@ -30,8 +32,37 @@ const route = useRoute();
 const store = useStore();
 
 const { can } = usePermissions();
+const notifyError = useSilentErrors();
 
 const currentUser = computed(() => store.getters.getCurrentUser);
+const canEditPatient = computed(() => can('patients', 'edit'));
+const canCreateClinicalNotes = computed(() =>
+  can('patients', 'create_clinical_notes')
+);
+const canSignClinicalNotes = computed(() =>
+  can('patients', 'sign_clinical_notes')
+);
+const canDeleteClinicalNotes = computed(() =>
+  can('patients', 'delete_clinical_notes')
+);
+const canManageAnamnesis = computed(() => can('patients', 'manage_anamnesis'));
+const canManageExams = computed(() => can('patients', 'manage_exams'));
+const canViewPatientFinancial = computed(() =>
+  can('patients', 'view_financial')
+);
+const canManagePatientFinancial = computed(() =>
+  can('patients', 'manage_financial')
+);
+const NO_EDIT_PATIENT_MSG =
+  'Você não tem permissão para editar cadastro de pacientes';
+const NO_CREATE_EVOLUTION_MSG =
+  'Você não tem permissão para criar evoluções';
+const NO_SIGN_EVOLUTION_MSG =
+  'Você não tem permissão para assinar evoluções';
+const NO_DELETE_EVOLUTION_MSG =
+  'Você não tem permissão para excluir evoluções';
+const NO_EDIT_ANAMNESIS_MSG =
+  'Você não tem permissão para editar anamnese';
 
 const goBack = () => {
   router.back();
@@ -1029,6 +1060,10 @@ const UNPERMITTED_ANAMNESIS_KEYS = [
 
 const saveAnamnesis = async (finalize = false) => {
   if (isSavingAnamnesis.value) return;
+  if (!canManageAnamnesis.value) {
+    useAlert(NO_EDIT_ANAMNESIS_MSG);
+    return;
+  }
   try {
     isSavingAnamnesis.value = true;
 
@@ -1068,7 +1103,12 @@ const saveAnamnesis = async (finalize = false) => {
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error saving anamnesis', error);
-    useAlert(error?.response?.data?.error || 'Erro ao salvar anamnese.');
+    const status = error?.response?.status;
+    if (status === 401 || status === 403) {
+      useAlert(NO_EDIT_ANAMNESIS_MSG);
+    } else {
+      useAlert(error?.response?.data?.error || 'Erro ao salvar anamnese.');
+    }
   } finally {
     isSavingAnamnesis.value = false;
   }
@@ -1098,6 +1138,11 @@ const cancelDeleteNote = () => {
 
 const confirmDeleteNote = async () => {
   if (!noteToDelete.value) return;
+  if (!canDeleteClinicalNotes.value) {
+    useAlert(NO_DELETE_EVOLUTION_MSG);
+    cancelDeleteNote();
+    return;
+  }
   isDeletingNote.value = true;
   try {
     await ClinicalNotesAPI.delete(route.params.patientId, noteToDelete.value);
@@ -1124,6 +1169,14 @@ const confirmDeleteNote = async () => {
 };
 
 const saveClinicalNote = async (sign = false) => {
+  if (sign && !canSignClinicalNotes.value) {
+    useAlert(NO_SIGN_EVOLUTION_MSG);
+    return;
+  }
+  if (!canCreateClinicalNotes.value) {
+    useAlert(NO_CREATE_EVOLUTION_MSG);
+    return;
+  }
   try {
     isSavingNote.value = true;
     const payload = { ...currentNote.value };
@@ -1175,7 +1228,12 @@ const saveClinicalNote = async (sign = false) => {
       await fetchClinicalNotes();
     }
   } catch (error) {
-    useAlert('Erro ao salvar evolução.');
+    const status = error?.response?.status;
+    if (status === 401 || status === 403) {
+      useAlert(sign ? NO_SIGN_EVOLUTION_MSG : NO_CREATE_EVOLUTION_MSG);
+    } else {
+      useAlert('Erro ao salvar evolução.');
+    }
   } finally {
     isSavingNote.value = false;
   }
@@ -1571,8 +1629,7 @@ const selectConsentType = type => {
   let birthFormatted = '________________';
   if (patient.value?.birthdate) {
     try {
-      const d = new Date(patient.value.birthdate);
-      birthFormatted = d.toLocaleDateString('pt-BR', { timeZone: BRT });
+      birthFormatted = formatDate(patient.value.birthdate);
     } catch {
       birthFormatted = patient.value.birthdate;
     }
@@ -1831,7 +1888,7 @@ const fetchTreatmentPlans = async () => {
     const { data } = await TreatmentPlansAPI.get(route.params.patientId);
     treatmentPlans.value = data?.data || data || [];
   } catch (error) {
-    useAlert('Erro ao carregar planos de tratamento.');
+    notifyError('Erro ao carregar planos de tratamento.', error);
   }
 };
 
@@ -2062,7 +2119,7 @@ const fetchSessionLogs = async () => {
       ? data
       : data?.data || data?.payload || [];
   } catch (error) {
-    useAlert('Erro ao carregar sessões.');
+    notifyError('Erro ao carregar sessões.', error);
   } finally {
     isSessionsLoading.value = false;
   }
@@ -2359,8 +2416,8 @@ const fetchFinancialData = async () => {
       estimatesRes.data?.data ||
       estimatesRes.data ||
       [];
-  } catch {
-    useAlert('Erro ao carregar dados financeiros.');
+  } catch (error) {
+    notifyError('Erro ao carregar dados financeiros.', error);
   } finally {
     financialLoading.value = false;
   }
@@ -2958,7 +3015,7 @@ const fetchAppointments = async () => {
     appointments.value =
       data?.appointments || data?.data || (Array.isArray(data) ? data : []);
   } catch (error) {
-    useAlert('Erro ao carregar agenda do paciente.');
+    notifyError('Erro ao carregar agenda do paciente.', error);
   } finally {
     appointmentsLoading.value = false;
   }
@@ -3308,8 +3365,8 @@ const fetchTimeline = async () => {
     timelineEvents.value = Array.isArray(response.data?.events)
       ? response.data.events
       : [];
-  } catch {
-    useAlert('Erro ao carregar a timeline do paciente.');
+  } catch (error) {
+    notifyError('Erro ao carregar a timeline do paciente.', error);
   } finally {
     timelineLoading.value = false;
   }
@@ -3350,7 +3407,7 @@ const fetchAuditLogs = async () => {
       total_pages: 1,
     };
   } catch (error) {
-    useAlert('Erro ao carregar logs de auditoria.');
+    notifyError('Erro ao carregar logs de auditoria.', error);
   } finally {
     isAuditLoading.value = false;
   }
@@ -3758,6 +3815,10 @@ const registrationCompleteness = computed(() => {
 });
 
 const saveRegistration = async () => {
+  if (!canEditPatient.value) {
+    useAlert(NO_EDIT_PATIENT_MSG);
+    return;
+  }
   try {
     isLoading.value = true;
     // Join first + last name before saving
@@ -3792,7 +3853,12 @@ const saveRegistration = async () => {
     useAlert('Cadastro atualizado com sucesso!');
     fetchChangeHistory(); // atualiza historico se a aba estiver aberta
   } catch (error) {
-    useAlert('Erro ao atualizar cadastro.');
+    const status = error?.response?.status;
+    if (status === 401 || status === 403) {
+      useAlert(NO_EDIT_PATIENT_MSG);
+    } else {
+      useAlert('Erro ao atualizar cadastro.');
+    }
   } finally {
     isLoading.value = false;
   }
@@ -4248,30 +4314,72 @@ watch(
 // All tabs — filtered by RBAC permissions before rendering
 const allTabs = [
   { id: 'general', label: 'Geral', icon: 'i-lucide-layout-dashboard' },
-  { id: 'registration', label: 'Cadastro', icon: 'i-lucide-user' },
-  { id: 'anamnesis', label: 'Anamnese', icon: 'i-lucide-clipboard-plus' },
-  { id: 'evolution', label: 'Evolução', icon: 'i-lucide-trending-up' },
+  {
+    id: 'registration',
+    label: 'Cadastro',
+    icon: 'i-lucide-user',
+    permission: { module: 'patients', action: 'view' },
+  },
+  {
+    id: 'anamnesis',
+    label: 'Anamnese',
+    icon: 'i-lucide-clipboard-plus',
+    permission: { module: 'patients', action: 'view_anamnesis' },
+  },
+  {
+    id: 'evolution',
+    label: 'Evolução',
+    icon: 'i-lucide-trending-up',
+    permission: { module: 'patients', action: 'view_clinical_notes' },
+  },
   {
     id: 'treatment_plan',
     label: 'Plano de Tratamento',
     icon: 'i-lucide-target',
+    permission: { module: 'patients', action: 'view_treatment_plans' },
   },
   {
     id: 'procedures',
     label: 'Procedimentos',
     icon: 'i-lucide-activity',
+    permission: { module: 'patients', action: 'view_treatment_plans' },
   },
-  { id: 'exams', label: 'Exames e Imagens', icon: 'i-lucide-file-image' },
-  { id: 'documents', label: 'Documentos', icon: 'i-lucide-file-text' },
-  { id: 'consents', label: 'Consentimentos', icon: 'i-lucide-pen-tool' },
+  {
+    id: 'exams',
+    label: 'Exames e Imagens',
+    icon: 'i-lucide-file-image',
+    permission: { module: 'patients', action: 'view_exams' },
+  },
+  {
+    id: 'documents',
+    label: 'Documentos',
+    icon: 'i-lucide-file-text',
+    permission: { module: 'patients', action: 'view_documents' },
+  },
+  {
+    id: 'consents',
+    label: 'Consentimentos',
+    icon: 'i-lucide-pen-tool',
+    permission: { module: 'patients', action: 'view_consents' },
+  },
   {
     id: 'financial',
     label: 'Financeiro',
     icon: 'i-lucide-dollar-sign',
-    permission: { module: 'financial', action: 'view_transactions' },
+    permission: { module: 'patients', action: 'view_financial' },
   },
-  { id: 'schedule', label: 'Agenda e Histórico', icon: 'i-lucide-calendar' },
-  { id: 'timeline', label: 'Timeline', icon: 'i-lucide-git-commit' },
+  {
+    id: 'schedule',
+    label: 'Agenda e Histórico',
+    icon: 'i-lucide-calendar',
+    permission: { module: 'agenda', action: 'view' },
+  },
+  {
+    id: 'timeline',
+    label: 'Timeline',
+    icon: 'i-lucide-git-commit',
+    permission: { module: 'patients', action: 'view_timeline' },
+  },
   {
     id: 'audit',
     label: 'Auditoria',
@@ -4288,6 +4396,13 @@ const tabs = computed(() =>
   })
 );
 
+// True quando a aba atualmente selecionada está permitida pra esse usuário.
+// Evita que rotas como ?tab=financial entreguem o conteúdo bloqueado quando
+// a permissão correspondente está desligada na Custom Role.
+const currentTabAllowed = computed(() =>
+  tabs.value.some(t => t.id === activeTab.value)
+);
+
 const getInitials = name => {
   if (!name) return '';
   return name.charAt(0).toUpperCase();
@@ -4295,7 +4410,11 @@ const getInitials = name => {
 
 const formatDate = dateStr => {
   if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleDateString('pt-BR', { timeZone: BRT });
+  // Datas YYYY-MM-DD são parseadas como UTC pelo Date(); em fusos negativos
+  // (BR -3h) o toLocaleDateString volta um dia. Ancoramos ao meio-dia local.
+  const iso = String(dateStr).slice(0, 10);
+  const safe = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : dateStr;
+  return new Date(safe).toLocaleDateString('pt-BR', { timeZone: BRT });
 };
 
 const formatSex = sex => {
@@ -4410,6 +4529,7 @@ const handleHeaderStartService = async () => {
       </button>
       <div class="header-actions flex flex-row gap-1 sm:gap-2 w-auto overflow-x-auto pb-1 sm:pb-0 items-center">
         <button
+          v-if="can('agenda', 'create_event')"
           class="hdr-btn hdr-btn--secondary !px-2.5 sm:!px-4 focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-500 shrink-0"
           @click="handleHeaderSchedule"
           title="Agendar"
@@ -4418,6 +4538,7 @@ const handleHeaderStartService = async () => {
           <span class="hidden lg:inline">Agendar</span>
         </button>
         <button
+          v-if="can('patients', 'manage_exams')"
           class="hdr-btn hdr-btn--secondary !px-2.5 sm:!px-4 focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-500 shrink-0"
           @click="activeTab = 'exams'"
           title="Anexar arquivo"
@@ -4426,6 +4547,7 @@ const handleHeaderStartService = async () => {
           <span class="hidden lg:inline">Anexar arquivo</span>
         </button>
         <button
+          v-if="can('patients', 'manage_documents')"
           class="hdr-btn hdr-btn--secondary !px-2.5 sm:!px-4 focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-500 shrink-0"
           @click="activeTab = 'documents'"
           title="Gerar documento"
@@ -4433,9 +4555,13 @@ const handleHeaderStartService = async () => {
           <i class="i-lucide-file-text w-4 h-4 md:mr-1" />
           <span class="hidden lg:inline">Gerar documento</span>
         </button>
-        <div class="hdr-divider hidden sm:block shrink-0" />
-        <button 
-          class="hdr-btn hdr-btn--charge !px-2.5 sm:!px-4 focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-500 shrink-0" 
+        <div
+          v-if="canManagePatientFinancial"
+          class="hdr-divider hidden sm:block shrink-0"
+        />
+        <button
+          v-if="canManagePatientFinancial"
+          class="hdr-btn hdr-btn--charge !px-2.5 sm:!px-4 focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-500 shrink-0"
           @click="handleHeaderCharge"
           title="Cobrar"
         >
@@ -4443,6 +4569,7 @@ const handleHeaderStartService = async () => {
           <span class="hidden lg:inline">Cobrar</span>
         </button>
         <button
+          v-if="can('patients', 'create_clinical_notes')"
           class="hdr-btn hdr-btn--primary !px-2.5 sm:!px-4 focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-500 shrink-0"
           @click="handleHeaderStartService"
           title="Iniciar atendimento"
@@ -4669,8 +4796,12 @@ v-if="patient.age" class="pb-meta-text"
       <!-- Área Direita Principal: Conteúdo Dinâmico Baseada na Aba -->
       <div class="main-content">
         <div class="tab-content-area">
+          <!-- Bloqueio por permissão (RBAC): se a aba atual não está permitida -->
+          <div v-if="!currentTabAllowed" class="tab-pane fade-in">
+            <PermissionDenied />
+          </div>
           <!-- ABA: GERAL -->
-          <div v-if="activeTab === 'general'" class="tab-pane fade-in">
+          <div v-else-if="activeTab === 'general'" class="tab-pane fade-in">
             <!-- Header -->
             <div class="reg-header mb-5">
               <div>
@@ -4996,6 +5127,9 @@ v-else class="geral-visit-empty"
                 >
                 <button
                   class="btn-primary flex items-center gap-2"
+                  :disabled="!canEditPatient"
+                  :class="{ 'opacity-50 cursor-not-allowed': !canEditPatient }"
+                  :title="canEditPatient ? '' : NO_EDIT_PATIENT_MSG"
                   @click="saveRegistration"
                 >
                   <i class="i-lucide-save w-4 h-4" />
@@ -5004,8 +5138,20 @@ v-else class="geral-visit-empty"
               </div>
             </div>
 
+            <div
+              v-if="!canEditPatient"
+              class="mb-4 px-3 py-2 rounded-md border border-dashed border-n-slate-5 bg-n-slate-2 text-xs text-n-slate-11 flex items-center gap-2"
+            >
+              <i class="i-lucide-lock w-3.5 h-3.5" />
+              {{ NO_EDIT_PATIENT_MSG }}
+            </div>
+
             <!-- Form layout -->
-            <div class="reg-form-grid">
+            <div
+              class="reg-form-grid"
+              :inert="!canEditPatient"
+              :class="{ 'opacity-60': !canEditPatient }"
+            >
               <!-- ── SEÇÃO 1: DADOS PESSOAIS ── -->
               <div class="reg-section">
                 <button
@@ -5701,7 +5847,7 @@ v-else class="geral-visit-empty"
                 </a>
 
                 <button
-                  v-if="currentAnamnesis.status === 'finalized'"
+                  v-if="currentAnamnesis.status === 'finalized' && canManageAnamnesis"
                   class="geral-header-btn"
                   @click="startNewAnamnesis"
                 >
@@ -5709,7 +5855,9 @@ v-else class="geral-visit-empty"
                 </button>
 
                 <button
-                  v-else
+                  v-if="
+                    currentAnamnesis.status !== 'finalized' && canManageAnamnesis
+                  "
                   class="geral-header-btn"
                   :disabled="isSavingAnamnesis"
                   @click="saveAnamnesis(false)"
@@ -5718,7 +5866,9 @@ v-else class="geral-visit-empty"
                 </button>
 
                 <button
-                  v-if="currentAnamnesis.status !== 'finalized'"
+                  v-if="
+                    currentAnamnesis.status !== 'finalized' && canManageAnamnesis
+                  "
                   class="btn-primary flex items-center gap-2"
                   :disabled="isSavingAnamnesis"
                   @click="saveAnamnesis(true)"
@@ -5728,8 +5878,20 @@ v-else class="geral-visit-empty"
               </div>
             </div>
 
+            <div
+              v-if="!canManageAnamnesis"
+              class="mb-4 px-3 py-2 rounded-md border border-dashed border-n-slate-5 bg-n-slate-2 text-xs text-n-slate-11 flex items-center gap-2"
+            >
+              <i class="i-lucide-lock w-3.5 h-3.5" />
+              {{ NO_EDIT_ANAMNESIS_MSG }}
+            </div>
+
             <!-- Seções da Anamnese -->
-            <div class="reg-form-grid">
+            <div
+              class="reg-form-grid"
+              :inert="!canManageAnamnesis"
+              :class="{ 'opacity-60': !canManageAnamnesis }"
+            >
               <!-- ── SEÇÃO 1: MOTIVO DA CONSULTA ── -->
               <div class="reg-section">
                 <div class="reg-section-toggle" style="cursor: default">
@@ -6145,6 +6307,10 @@ v-else class="geral-visit-empty"
               :clinical-notes="clinicalNotes"
               :is-saving-note="isSavingNote"
               :format-date="formatDate"
+              :can-create="canCreateClinicalNotes"
+              :can-sign="canSignClinicalNotes"
+              :can-delete="canDeleteClinicalNotes"
+              :no-create-msg="NO_CREATE_EVOLUTION_MSG"
               @update:current-note="currentNote = $event"
               @save="saveClinicalNote"
               @request-delete="requestDeleteNote"
@@ -7037,7 +7203,7 @@ v-else class="geral-visit-empty"
                   suporte a PDF e imagens.
                 </p>
               </div>
-              <div class="flex items-center gap-3">
+              <div v-if="canManageExams" class="flex items-center gap-3">
                 <input
                   ref="mediaFileInput"
                   type="file"
@@ -7227,6 +7393,7 @@ v-else class="geral-visit-empty"
 
                     <!-- Ações pasta (hover) -->
                     <div
+                      v-if="canManageExams"
                       class="absolute right-8 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-0.5 bg-slate-800/90 rounded-lg px-1 py-0.5 z-10"
                     >
                       <button
@@ -7337,6 +7504,7 @@ v-else class="geral-visit-empty"
 
                       <!-- Ações subpasta (hover) -->
                       <div
+                        v-if="canManageExams"
                         class="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-0.5 bg-slate-800/90 rounded-lg px-1 py-0.5 z-10"
                       >
                         <button
@@ -7574,49 +7742,51 @@ v-else class="geral-visit-empty"
                         <span class="exams-card-category">{{
                           media.category
                         }}</span>
-                        <button
-                          class="exams-card-btn"
-                          title="Renomear"
-                          @click.stop="startRenameMedia(media)"
-                        >
-                          <i class="i-lucide-pencil w-3 h-3" />
-                        </button>
-                        <a
-                          :href="media.url"
-                          :download="media.file_name || 'arquivo'"
-                          class="exams-card-btn"
-                          title="Baixar arquivo"
-                          @click.stop
-                        >
-                          <i class="i-lucide-download w-3 h-3" />
-                        </a>
-                        <button
-                          v-if="!mediaLockMap[media.id]"
-                          class="exams-card-btn"
-                          title="Bloquear arquivo"
-                          @click.stop="openLockModal(media.id, 'lock')"
-                        >
-                          <i class="i-lucide-unlock w-3 h-3" />
-                        </button>
-                        <button
-                          v-else
-                          class="exams-card-btn exams-card-btn--locked"
-                          title="Desbloquear arquivo"
-                          @click.stop="openLockModal(media.id, 'unlock')"
-                        >
-                          <i class="i-lucide-lock w-3 h-3" />
-                        </button>
-                        <button
-                          class="exams-card-btn exams-card-btn--danger"
-                          :class="{
-                            'opacity-40 cursor-not-allowed':
-                              mediaLockMap[media.id],
-                          }"
-                          title="Excluir"
-                          @click.stop="requestDeleteMedia(media)"
-                        >
-                          <i class="i-lucide-trash-2 w-3 h-3" />
-                        </button>
+                        <template v-if="canManageExams">
+                          <button
+                            class="exams-card-btn"
+                            title="Renomear"
+                            @click.stop="startRenameMedia(media)"
+                          >
+                            <i class="i-lucide-pencil w-3 h-3" />
+                          </button>
+                          <a
+                            :href="media.url"
+                            :download="media.file_name || 'arquivo'"
+                            class="exams-card-btn"
+                            title="Baixar arquivo"
+                            @click.stop
+                          >
+                            <i class="i-lucide-download w-3 h-3" />
+                          </a>
+                          <button
+                            v-if="!mediaLockMap[media.id]"
+                            class="exams-card-btn"
+                            title="Bloquear arquivo"
+                            @click.stop="openLockModal(media.id, 'lock')"
+                          >
+                            <i class="i-lucide-unlock w-3 h-3" />
+                          </button>
+                          <button
+                            v-else
+                            class="exams-card-btn exams-card-btn--locked"
+                            title="Desbloquear arquivo"
+                            @click.stop="openLockModal(media.id, 'unlock')"
+                          >
+                            <i class="i-lucide-lock w-3 h-3" />
+                          </button>
+                          <button
+                            class="exams-card-btn exams-card-btn--danger"
+                            :class="{
+                              'opacity-40 cursor-not-allowed':
+                                mediaLockMap[media.id],
+                            }"
+                            title="Excluir"
+                            @click.stop="requestDeleteMedia(media)"
+                          >
+                            <i class="i-lucide-trash-2 w-3 h-3" />
+                          </button>
+                        </template>
                       </div>
                     </div>
                   </div>
@@ -9093,14 +9263,14 @@ v-else class="geral-visit-empty"
               </div>
               <div class="flex items-center gap-3">
                 <button
-                  v-can="['financial', 'create_estimate']"
+                  v-if="canManagePatientFinancial"
                   class="geral-header-btn"
                   @click="openEstimateModal()"
                 >
                   <i class="i-lucide-file-plus w-4 h-4" /> Novo Orçamento
                 </button>
                 <button
-                  v-can="['financial', 'create_transaction']"
+                  v-if="canManagePatientFinancial"
                   class="btn-primary bg-emerald-600 hover:bg-emerald-500 flex items-center gap-2"
                   @click="openPayModal(null)"
                 >
@@ -9364,10 +9534,10 @@ v-else class="geral-visit-empty"
                             <template v-if="!tx.is_manual">
                               <button
                                 v-if="
-                                  tx.status === 'pendente' ||
-                                  tx.status === 'vencido'
+                                  canManagePatientFinancial &&
+                                  (tx.status === 'pendente' ||
+                                    tx.status === 'vencido')
                                 "
-                                v-can="['financial', 'create_transaction']"
                                 class="fin-action-btn fin-action-btn--green"
                                 @click="openPayModal(tx.id)"
                               >
@@ -9375,8 +9545,9 @@ v-else class="geral-visit-empty"
                               </button>
                               <button
                                 v-if="
-                                  tx.status === 'pendente' ||
-                                  tx.status === 'vencido'
+                                  canManagePatientFinancial &&
+                                  (tx.status === 'pendente' ||
+                                    tx.status === 'vencido')
                                 "
                                 class="fin-icon-btn"
                                 title="Cobrar via WhatsApp"
@@ -9405,8 +9576,10 @@ v-else class="geral-visit-empty"
                                 <i class="i-ph-upload-simple w-4 h-4" />
                               </button>
                               <button
-                                v-if="tx.status === 'pago'"
-                                v-can="['financial', 'delete_transaction']"
+                                v-if="
+                                  canManagePatientFinancial &&
+                                  tx.status === 'pago'
+                                "
                                 class="fin-icon-btn"
                                 title="Estornar transação"
                                 @click="refundTransaction(tx.id)"
@@ -9553,9 +9726,10 @@ v-else class="geral-visit-empty"
                     <div class="flex gap-2">
                       <button
                         v-if="
-                          est.status === 'rascunho' || est.status === 'enviado'
+                          canManagePatientFinancial &&
+                          (est.status === 'rascunho' ||
+                            est.status === 'enviado')
                         "
-                        v-can="['financial', 'approve_estimate']"
                         class="fin-action-btn fin-action-btn--green"
                         @click="approveEstimate(est.id)"
                       >
@@ -9563,10 +9737,10 @@ v-else class="geral-visit-empty"
                       </button>
                       <button
                         v-if="
+                          canManagePatientFinancial &&
                           est.status !== 'cancelado' &&
                           est.status !== 'aprovado'
                         "
-                        v-can="['financial', 'edit_estimate']"
                         class="fin-action-btn fin-action-btn--danger"
                         @click="cancelEstimate(est.id)"
                       >

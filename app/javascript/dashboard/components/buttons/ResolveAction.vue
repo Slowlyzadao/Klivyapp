@@ -5,6 +5,7 @@ import { useToggle } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 import { useStore, useStoreGetters } from 'dashboard/composables/store';
 import { useEmitter } from 'dashboard/composables/emitter';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useConversationRequiredAttributes } from 'dashboard/composables/useConversationRequiredAttributes';
 
@@ -24,6 +25,8 @@ const store = useStore();
 const getters = useStoreGetters();
 const { t } = useI18n();
 const { checkMissingAttributes } = useConversationRequiredAttributes();
+const { can } = usePermissions();
+const canChangeStatus = computed(() => can('chat', 'reply'));
 
 const arrowDownButtonRef = ref(null);
 const isLoading = ref(false);
@@ -171,7 +174,10 @@ useEmitter(CMD_RESOLVE_CONVERSATION, onCmdResolveConversation);
 </script>
 
 <template>
-  <div class="flex relative justify-end items-center resolve-actions">
+  <div
+    v-if="canChangeStatus"
+    class="flex relative justify-end items-center resolve-actions"
+  >
     <ButtonGroup
       class="flex-shrink-0 rounded-lg shadow outline-1 outline"
       :class="!showOpenButton ? 'outline-n-container' : 'outline-transparent'"

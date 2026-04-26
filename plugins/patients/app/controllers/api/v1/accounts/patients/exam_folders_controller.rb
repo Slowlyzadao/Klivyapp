@@ -1,5 +1,7 @@
 class Api::V1::Accounts::Patients::ExamFoldersController < Api::V1::Accounts::BaseController
   before_action :set_patient
+  before_action :ensure_view_exams!, only: [:index]
+  before_action :ensure_manage_exams!, only: [:update]
 
   # GET — returns the full folder data blob for this patient
   def index
@@ -13,6 +15,18 @@ class Api::V1::Accounts::Patients::ExamFoldersController < Api::V1::Accounts::Ba
   end
 
   private
+
+  def ensure_view_exams!
+    return if Current.user.beclinic_can?(Current.account, :patients, :view_exams)
+
+    render json: { error: 'Acesso negado' }, status: :forbidden
+  end
+
+  def ensure_manage_exams!
+    return if Current.user.beclinic_can?(Current.account, :patients, :manage_exams)
+
+    render json: { error: 'Você não tem permissão para gerenciar exames' }, status: :forbidden
+  end
 
   def set_patient
     @patient = Current.account.patients.find(params[:patient_id])

@@ -1,4 +1,6 @@
 <script setup>
+import { computed } from 'vue';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
@@ -18,6 +20,9 @@ defineProps({
   isLabelView: { type: Boolean, default: false },
   isActiveView: { type: Boolean, default: false },
 });
+
+const { can } = usePermissions();
+const canManageSegments = computed(() => can('contacts', 'manage_segments'));
 
 const emit = defineEmits([
   'search',
@@ -85,7 +90,8 @@ const emit = defineEmits([
                 hasActiveFilters &&
                 !isSegmentsView &&
                 !isLabelView &&
-                !isActiveView
+                !isActiveView &&
+                canManageSegments
               "
               icon="i-lucide-save"
               color="slate"
@@ -94,7 +100,12 @@ const emit = defineEmits([
               @click="emit('createSegment')"
             />
             <Button
-              v-if="isSegmentsView && !isLabelView && !isActiveView"
+              v-if="
+                isSegmentsView &&
+                !isLabelView &&
+                !isActiveView &&
+                canManageSegments
+              "
               icon="i-lucide-trash"
               color="slate"
               size="sm"

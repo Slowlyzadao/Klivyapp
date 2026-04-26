@@ -299,6 +299,6 @@ class Api::V1::Accounts::PatientsController < Api::V1::Accounts::BaseController
   end
 
   def page_size
-    [params[:per_page].to_i, 500].min.then { |n| n.zero? ? 25 : n }
+    [params[:per_page].to_i, 50_000].min.then { |n| n.zero? ? 25 : n }
   end
 end

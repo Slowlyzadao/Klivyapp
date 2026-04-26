@@ -2,23 +2,39 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useAlert } from 'dashboard/composables';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import AgendaSettingsAPI from '@plugins/agenda/frontend/api/agendaSettings';
 
 import SettingsTabSchedules from '../../features/settings/components/SettingsTabSchedules.vue';
 import SettingsTabNotifications from '../../features/settings/components/SettingsTabNotifications.vue';
 import SettingsTabOnlineBooking from '../../features/settings/components/SettingsTabOnlineBooking.vue';
 import SettingsTabServices from '../../features/settings/components/SettingsTabServices.vue';
+import PermissionDenied from '@plugins/custom_roles/frontend/components/PermissionDenied.vue';
 
 const store = useStore();
+const { can } = usePermissions();
+
+const canViewSettings = computed(() => can('agenda', 'view_settings'));
+const canManageSchedules = computed(() => can('agenda', 'manage_schedules'));
+const canViewNotifications = computed(() => can('agenda', 'view_notifications'));
+const canManageNotifications = computed(() => can('agenda', 'manage_notifications'));
+const canManageOnlineBooking = computed(() => can('agenda', 'manage_online_booking'));
+const canManageServices = computed(() => can('agenda', 'manage_services'));
 
 // ─── TABS ───
-const activeTab = ref('horarios');
-const tabs = [
-  { id: 'horarios', label: 'Horários', icon: 'i-lucide-clock' },
-  { id: 'notificacoes', label: 'Notificações automáticas', icon: 'i-lucide-bell' },
-  { id: 'agendamento', label: 'Agendamento online', icon: 'i-lucide-calendar-plus' },
-  { id: 'servicos', label: 'Serviços', icon: 'i-lucide-syringe' },
+const allTabs = [
+  { id: 'horarios', label: 'Horários', icon: 'i-lucide-clock', allowed: canManageSchedules },
+  { id: 'notificacoes', label: 'Notificações automáticas', icon: 'i-lucide-bell', allowed: computed(() => canViewNotifications.value || canManageNotifications.value) },
+  { id: 'agendamento', label: 'Agendamento online', icon: 'i-lucide-calendar-plus', allowed: canManageOnlineBooking },
+  { id: 'servicos', label: 'Serviços', icon: 'i-lucide-syringe', allowed: canManageServices },
 ];
+const tabs = computed(() => allTabs.filter(tab => tab.allowed.value));
+const activeTab = ref(tabs.value[0]?.id || 'horarios');
+watch(tabs, list => {
+  if (!list.find(t => t.id === activeTab.value)) {
+    activeTab.value = list[0]?.id || '';
+  }
+});
 
 const setTab = (tab, event) => {
   activeTab.value = tab;
@@ -127,6 +143,18 @@ onMounted(() => {
   <div
     class="settings-root"
   >
+    <PermissionDenied
+      v-if="!canViewSettings"
+      title="Configurações da agenda restritas"
+      message="Você não tem permissão para acessar as configurações da agenda. Fale com o administrador da conta caso precise de acesso."
+    />
+    <template v-else-if="!tabs.length">
+      <PermissionDenied
+        title="Sem permissões disponíveis"
+        message="Seu perfil pode visualizar as configurações, mas não tem permissão para gerenciar nenhuma das abas. Solicite acesso ao administrador."
+      />
+    </template>
+    <template v-else>
     <!-- ═══════════════ TOP TABS ═══════════════ -->
     <div class="tabs-bar">
       <button
@@ -183,6 +211,7 @@ onMounted(() => {
 
     <!-- Spacer final para garantir o respiro no fundo da página -->
     <div class="page-footer-spacer" />
+    </template>
   </div>
 </template>
 

@@ -4,12 +4,15 @@ import { useI18n } from 'vue-i18n';
 import reportsAPI from '../api/reports';
 import { downloadFinancialPdf } from '../api/pdfs';
 import { useExportCsv } from '../composables/useExportCsv';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import MonthPicker from '../components/MonthPicker.vue';
 import DatePicker from '../components/DatePicker.vue';
 import '../financial.css';
 
 const { t } = useI18n();
 const { exportReportsCsv } = useExportCsv();
+const { can } = usePermissions();
+const canExportData = computed(() => can('financial', 'export_data'));
 
 /* ── Tabs ─────────────────────────────────────────────────────── */
 const TABS = [
@@ -443,7 +446,7 @@ onMounted(() => {
             {{ t('FINANCIAL.COMMISSIONS.SEARCH') }}
           </button>
           <button
-            v-if="commResult"
+            v-if="commResult && canExportData"
             class="financial-btn--csv"
             :title="t('FINANCIAL.REPORTS.EXPORT_CSV')"
             @click="exportCommissionsCSV"
@@ -476,7 +479,7 @@ onMounted(() => {
             </svg>
           </button>
           <button
-            v-if="commResult"
+            v-if="commResult && canExportData"
             class="rep-export-btn"
             @click="exportCommissionsPdf"
           >
@@ -664,7 +667,7 @@ onMounted(() => {
             {{ t('FINANCIAL.COMMISSIONS.SEARCH') }}
           </button>
           <button
-            v-if="expResult"
+            v-if="expResult && canExportData"
             class="rep-export-btn"
             @click="exportExpensesPdf"
           >
@@ -672,7 +675,7 @@ onMounted(() => {
             Gerar PDF
           </button>
           <button
-            v-if="expResult"
+            v-if="expResult && canExportData"
             class="financial-btn--csv"
             title="Exportar para Google Sheets (CSV)"
             @click="exportExpensesCsv"
@@ -884,7 +887,7 @@ onMounted(() => {
             {{ t('FINANCIAL.COMMISSIONS.SEARCH') }}
           </button>
           <button
-            v-if="insResult"
+            v-if="insResult && canExportData"
             class="financial-btn--csv"
             :title="t('FINANCIAL.REPORTS.EXPORT_CSV')"
             @click="exportInsuranceCSV"
@@ -917,7 +920,7 @@ onMounted(() => {
             </svg>
           </button>
           <button
-            v-if="insResult"
+            v-if="insResult && canExportData"
             class="rep-export-btn"
             @click="exportInsurancePdf"
           >
@@ -1149,7 +1152,7 @@ onMounted(() => {
             {{ t('FINANCIAL.COMMISSIONS.SEARCH') }}
           </button>
           <button
-            v-if="tickResult"
+            v-if="tickResult && canExportData"
             class="rep-export-btn"
             @click="exportTicketPdf"
           >
@@ -1157,7 +1160,7 @@ onMounted(() => {
             Gerar PDF
           </button>
           <button
-            v-if="tickResult"
+            v-if="tickResult && canExportData"
             class="financial-btn--csv"
             title="Exportar para Google Sheets (CSV)"
             @click="exportTicketCsv"

@@ -1,6 +1,12 @@
 # ignorar auth do whatsapp
 lib/whatsapp/auth_info/*
 lib/whatsapp/media_cache/*
+# Runtime do bridge (gerado em execução — não versionar)
+lib/whatsapp/sessions/
+lib/whatsapp/bridge.log
+lib/whatsapp/lid_map.json
+lib/whatsapp/in_*.tmp
+lib/whatsapp/channel_config.json
 node_modules
 /log/*
 /tmp/*

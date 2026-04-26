@@ -1,10 +1,23 @@
 class TransactionPolicy < ApplicationPolicy
+  # Mesma lógica do AccountTransactionPolicy: index/show passam se o usuário
+  # tiver qualquer perm de visualização financeira; ações específicas usam
+  # as suas próprias keys.
+  FINANCIAL_VIEW_PERMS = %i[
+    view_dashboard
+    view_cashflow
+    view_receivables
+    view_payables
+    view_dre
+    view_reports
+    view_cash_register
+  ].freeze
+
   def index?
-    beclinic_can?(:financial, :view_transactions)
+    FINANCIAL_VIEW_PERMS.any? { |perm| beclinic_can?(:financial, perm) }
   end
 
   def show?
-    beclinic_can?(:financial, :view_transactions)
+    index?
   end
 
   def create?
@@ -12,7 +25,7 @@ class TransactionPolicy < ApplicationPolicy
   end
 
   def update?
-    beclinic_can?(:financial, :create_transaction)
+    beclinic_can?(:financial, :edit_transaction)
   end
 
   def destroy?
@@ -20,11 +33,11 @@ class TransactionPolicy < ApplicationPolicy
   end
 
   def approve?
-    beclinic_can?(:financial, :view_cashflow)
+    beclinic_can?(:financial, :approve_estimate)
   end
 
   def cancel?
-    beclinic_can?(:financial, :create_transaction)
+    beclinic_can?(:financial, :edit_transaction)
   end
 
   def pay?
@@ -36,6 +49,6 @@ class TransactionPolicy < ApplicationPolicy
   end
 
   def financial_summary?
-    beclinic_can?(:financial, :view_transactions)
+    index?
   end
 end

@@ -43,6 +43,10 @@ export default {
     isEventLate: { type: Function, required: true },
     getDayBlockInfo: { type: Function, default: () => [] },
     isDarkTheme: { type: Boolean, default: true },
+    canCreate: { type: Boolean, default: true },
+    canCancel: { type: Boolean, default: true },
+    canDrag: { type: Boolean, default: true },
+    canEdit: { type: Boolean, default: true },
   },
   emits: [
     'click-cell',
@@ -357,6 +361,9 @@ export default {
               :is-late="isEventLate(event)"
               :resizing-end-at="resizingEventEndAt"
               :layout-mode="layoutMode"
+              :can-cancel="canCancel"
+              :can-drag="canDrag"
+              :can-edit="canEdit"
               @click="$emit('click-event', { event, $event })"
               @quick-delete="$emit('quick-delete', event)"
               @mousedown-drag="$emit('init-drag', { event, $event })"

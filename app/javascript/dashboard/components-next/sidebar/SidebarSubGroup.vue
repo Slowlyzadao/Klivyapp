@@ -14,12 +14,12 @@ const props = defineProps({
   activeChild: { type: Object, default: undefined },
 });
 
-const { isAllowed } = useSidebarContext();
+const { isChildAllowed } = useSidebarContext();
 const scrollableContainer = ref(null);
 
 const accessibleItems = computed(() =>
   props.children.filter(child => {
-    return child.to && isAllowed(child.to);
+    return child.to && isChildAllowed(child);
   })
 );
 

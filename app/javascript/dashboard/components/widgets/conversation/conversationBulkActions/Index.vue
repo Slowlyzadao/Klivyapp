@@ -15,6 +15,7 @@ import UpdateActions from './UpdateActions.vue';
 import LabelActions from './LabelActions.vue';
 import TeamActions from './TeamActions.vue';
 import CustomSnoozeModal from 'dashboard/components/CustomSnoozeModal.vue';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 export default {
   components: {
     AgentSelector,
@@ -58,6 +59,24 @@ export default {
     'assignTeam',
     'resolveConversations',
   ],
+  setup() {
+    const { can } = usePermissions();
+    return { can };
+  },
+  computed: {
+    canBulkAssignLabel() {
+      return this.can('chat', 'reply');
+    },
+    canBulkChangeStatus() {
+      return this.can('chat', 'reply');
+    },
+    canBulkAssignAgent() {
+      return this.can('chat', 'assign_conversation');
+    },
+    canBulkAssignTeam() {
+      return this.can('chat', 'assign_conversation');
+    },
+  },
   data() {
     return {
       showAgentsList: false,
@@ -174,6 +193,7 @@ export default {
       </label>
       <div class="flex items-center gap-1 bulk-action__actions">
         <NextButton
+          v-if="canBulkAssignLabel"
           v-tooltip="$t('BULK_ACTION.LABELS.ASSIGN_LABELS')"
           icon="i-lucide-tags"
           slate
@@ -182,6 +202,7 @@ export default {
           @click="toggleLabelActions"
         />
         <NextButton
+          v-if="canBulkChangeStatus"
           v-tooltip="$t('BULK_ACTION.UPDATE.CHANGE_STATUS')"
           icon="i-lucide-repeat"
           slate
@@ -190,6 +211,7 @@ export default {
           @click="toggleUpdateActions"
         />
         <NextButton
+          v-if="canBulkAssignAgent"
           v-tooltip="$t('BULK_ACTION.ASSIGN_AGENT_TOOLTIP')"
           icon="i-lucide-user-round-plus"
           slate
@@ -198,6 +220,7 @@ export default {
           @click="toggleAgentList"
         />
         <NextButton
+          v-if="canBulkAssignTeam"
           v-tooltip="$t('BULK_ACTION.ASSIGN_TEAM_TOOLTIP')"
           icon="i-lucide-users-round"
           slate

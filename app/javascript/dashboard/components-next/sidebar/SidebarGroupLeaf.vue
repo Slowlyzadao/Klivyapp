@@ -10,6 +10,7 @@ const props = defineProps({
   icon: { type: [String, Object], default: null },
   active: { type: Boolean, default: false },
   component: { type: Function, default: null },
+  bypassPolicy: { type: Boolean, default: false },
 });
 
 const { resolvePermissions, resolveFeatureFlag } = useSidebarContext();
@@ -17,12 +18,22 @@ const { resolvePermissions, resolveFeatureFlag } = useSidebarContext();
 const shouldRenderComponent = computed(() => {
   return typeof props.component === 'function' || isVNode(props.component);
 });
+
+// Klivy Custom Roles: when the parent menu definition marks a child with
+// `bypassPolicy: true` (because the Klivy permission catalog grants it),
+// pass empty permissions to <Policy> so its internal check resolves to
+// "no required permissions → allow". This lets non-administrator users
+// see Settings entries their custom role allows without changing the
+// Chatwoot route metadata.
+const effectivePermissions = computed(() =>
+  props.bypassPolicy ? [] : resolvePermissions(props.to)
+);
 </script>
 
 <!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <Policy
-    :permissions="resolvePermissions(to)"
+    :permissions="effectivePermissions"
     :feature-flag="resolveFeatureFlag(to)"
     as="li"
     class="py-0.5 ltr:pl-2 rtl:pr-2 rtl:mr-3 ltr:ml-3 relative text-n-slate-11 child-item before:bg-n-slate-4 after:bg-transparent after:border-n-slate-4 before:left-0 rtl:before:right-0 min-w-0"

@@ -1,6 +1,7 @@
 <script setup>
 import { useAlert } from 'dashboard/composables';
 import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import { computed, ref } from 'vue';
@@ -16,6 +17,17 @@ const store = useStore();
 const { t } = useI18n();
 const getters = useStoreGetters();
 const { isAdmin } = useAdmin();
+const { can } = usePermissions();
+
+const canCreateTeam = computed(
+  () => isAdmin.value || can('settings', 'teams_create')
+);
+const canEditTeam = computed(
+  () => isAdmin.value || can('settings', 'teams_edit')
+);
+const canDeleteTeam = computed(
+  () => isAdmin.value || can('settings', 'teams_delete')
+);
 
 const loading = ref({});
 const searchQuery = ref('');
@@ -101,7 +113,7 @@ const confirmPlaceHolderText = computed(() =>
           </span>
         </template>
         <template #actions>
-          <router-link v-if="isAdmin" :to="{ name: 'settings_teams_new' }">
+          <router-link v-if="canCreateTeam" :to="{ name: 'settings_teams_new' }">
             <Button :label="$t('TEAMS_SETTINGS.NEW_TEAM')" size="sm" />
           </router-link>
         </template>
@@ -147,7 +159,7 @@ const confirmPlaceHolderText = computed(() =>
               }"
             >
               <Button
-                v-if="isAdmin"
+                v-if="canEditTeam"
                 v-tooltip.top="$t('TEAMS_SETTINGS.LIST.EDIT_TEAM')"
                 icon="i-woot-settings"
                 slate
@@ -156,7 +168,7 @@ const confirmPlaceHolderText = computed(() =>
             </router-link>
 
             <Button
-              v-if="isAdmin"
+              v-if="canDeleteTeam"
               v-tooltip.top="$t('TEAMS_SETTINGS.DELETE.BUTTON_TEXT')"
               icon="i-woot-bin"
               slate

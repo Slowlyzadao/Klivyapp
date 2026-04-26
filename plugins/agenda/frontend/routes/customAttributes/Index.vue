@@ -4,12 +4,24 @@
 import draggable from 'vuedraggable';
 import AgendaCustomAttributesAPI from '@plugins/agenda/frontend/api/agendaCustomAttributes';
 import ModernSelect from '../../components/ModernSelect.vue';
+import PermissionDenied from '@plugins/custom_roles/frontend/components/PermissionDenied.vue';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 export default {
   name: 'AgendaCustomAttributes',
   components: {
     draggable,
     ModernSelect,
+    PermissionDenied,
+  },
+  setup() {
+    const { can } = usePermissions();
+    return { can };
+  },
+  computed: {
+    canManage() {
+      return this.can('agenda', 'manage_custom_attributes');
+    },
   },
   data() {
     return {
@@ -118,6 +130,12 @@ export default {
 
 <template>
   <div class="settings-root">
+    <PermissionDenied
+      v-if="!canManage"
+      title="Atributos personalizados restritos"
+      message="Você não tem permissão para gerenciar os atributos personalizados da agenda. Fale com o administrador da conta caso precise de acesso."
+    />
+    <template v-else>
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <div>
@@ -286,6 +304,7 @@ style="margin-top: 14px"
         </div>
       </div>
     </teleport>
+    </template>
   </div>
 </template>
 

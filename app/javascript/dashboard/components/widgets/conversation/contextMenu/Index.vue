@@ -1,6 +1,7 @@
 <script>
 import { mapGetters } from 'vuex';
 import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import { useAlert } from 'dashboard/composables';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import {
@@ -80,8 +81,10 @@ export default {
   ],
   setup() {
     const { isAdmin } = useAdmin();
+    const { can } = usePermissions();
     return {
       isAdmin,
+      can,
     };
   },
   data() {
@@ -216,6 +219,21 @@ export default {
       // Don't show snooze if the conversation is already snoozed/resolved/pending
       return this.status === wootConstants.STATUS_TYPE.OPEN;
     },
+    canChangeStatus() {
+      return this.can('chat', 'reply');
+    },
+    canAssignPriority() {
+      return this.can('chat', 'reply');
+    },
+    canAssignLabel() {
+      return this.can('chat', 'reply');
+    },
+    canAssignAgent() {
+      return this.can('chat', 'assign_conversation');
+    },
+    canAssignTeam() {
+      return this.can('chat', 'assign_conversation');
+    },
   },
   mounted() {
     this.$store.dispatch('inboxAssignableAgents/fetch', [this.inboxId]);
@@ -298,7 +316,7 @@ export default {
       />
       <hr class="m-1 rounded border-b border-n-weak dark:border-n-weak" />
     </template>
-    <template v-if="isAllowed([MENU.STATUS, MENU.SNOOZE])">
+    <template v-if="canChangeStatus && isAllowed([MENU.STATUS, MENU.SNOOZE])">
       <template v-for="option in statusMenuConfig">
         <MenuItem
           v-if="show(option.key) && isAllowed([MENU.STATUS])"
@@ -317,10 +335,13 @@ export default {
       <hr class="m-1 rounded border-b border-n-weak dark:border-n-weak" />
     </template>
     <template
-      v-if="isAllowed([MENU.PRIORITY, MENU.LABEL, MENU.AGENT, MENU.TEAM])"
+      v-if="
+        (canAssignPriority || canAssignLabel || canAssignAgent || canAssignTeam) &&
+        isAllowed([MENU.PRIORITY, MENU.LABEL, MENU.AGENT, MENU.TEAM])
+      "
     >
       <MenuItemWithSubmenu
-        v-if="isAllowed([MENU.PRIORITY])"
+        v-if="canAssignPriority && isAllowed([MENU.PRIORITY])"
         :option="priorityConfig"
       >
         <MenuItem
@@ -331,7 +352,7 @@ export default {
         />
       </MenuItemWithSubmenu>
       <MenuItemWithSubmenu
-        v-if="isAllowed([MENU.LABEL])"
+        v-if="canAssignLabel && isAllowed([MENU.LABEL])"
         :option="labelMenuConfig"
         :sub-menu-available="!!labels.length"
       >
@@ -352,7 +373,7 @@ export default {
         />
       </MenuItemWithSubmenu>
       <MenuItemWithSubmenu
-        v-if="isAllowed([MENU.AGENT])"
+        v-if="canAssignAgent && isAllowed([MENU.AGENT])"
         :option="agentMenuConfig"
         :sub-menu-available="!!assignableAgents.length"
       >
@@ -368,7 +389,7 @@ export default {
         </template>
       </MenuItemWithSubmenu>
       <MenuItemWithSubmenu
-        v-if="isAllowed([MENU.TEAM])"
+        v-if="canAssignTeam && isAllowed([MENU.TEAM])"
         :option="teamMenuConfig"
         :sub-menu-available="!!teams.length"
       >

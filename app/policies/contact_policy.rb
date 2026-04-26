@@ -1,53 +1,59 @@
 class ContactPolicy < ApplicationPolicy
+  # Listagens — view_all e view_active no catálogo Klivy.
+  # Admins nativos do Chatwoot e donos passam direto via beclinic_can?.
   def index?
-    true
+    beclinic_can?(:contacts, :view_all)
   end
 
   def active?
-    true
-  end
-
-  def import?
-    @account_user.administrator?
-  end
-
-  def export?
-    @account_user.administrator?
-  end
-
-  def search?
-    true
-  end
-
-  def filter?
-    true
-  end
-
-  def update?
-    true
-  end
-
-  def contactable_inboxes?
-    true
-  end
-
-  def destroy_custom_attributes?
-    true
+    beclinic_can?(:contacts, :view_active) ||
+      beclinic_can?(:contacts, :view_all)
   end
 
   def show?
-    true
+    index?
+  end
+
+  def search?
+    index? || active?
+  end
+
+  def filter?
+    search?
+  end
+
+  def contactable_inboxes?
+    show?
+  end
+
+  def import?
+    beclinic_can?(:contacts, :import_export)
+  end
+
+  def export?
+    beclinic_can?(:contacts, :import_export)
   end
 
   def create?
-    true
+    beclinic_can?(:contacts, :create)
+  end
+
+  def update?
+    beclinic_can?(:contacts, :edit)
   end
 
   def avatar?
-    true
+    update?
+  end
+
+  def destroy_custom_attributes?
+    update?
   end
 
   def destroy?
-    @account_user.administrator?
+    # Mantém compatibilidade com a perm `chat.delete_contact` (botão de
+    # excluir contato dentro do painel da conversa) — qualquer uma das duas
+    # permite a operação. Admins nativos passam via beclinic_can?.
+    beclinic_can?(:contacts, :delete) || beclinic_can?(:chat, :delete_contact)
   end
 end

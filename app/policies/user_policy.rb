@@ -1,21 +1,29 @@
 class UserPolicy < ApplicationPolicy
   def index?
-    true
+    return true if @account_user.administrator?
+
+    beclinic_can?(:settings, :users_view)
   end
 
   def create?
-    @account_user.administrator?
+    return true if @account_user.administrator?
+
+    beclinic_can?(:settings, :users_invite)
   end
 
   def update?
-    @account_user.administrator?
+    return true if @account_user.administrator?
+
+    beclinic_can?(:settings, :users_edit)
   end
 
   def destroy?
-    @account_user.administrator?
+    return true if @account_user.administrator?
+
+    beclinic_can?(:settings, :users_remove)
   end
 
   def bulk_create?
-    @account_user.administrator?
+    create?
   end
 end

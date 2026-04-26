@@ -11,6 +11,14 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  canEdit: {
+    type: Boolean,
+    default: true,
+  },
+  canDelete: {
+    type: Boolean,
+    default: true,
+  },
 });
 defineEmits(['delete']);
 const { t } = useI18n();
@@ -82,6 +90,7 @@ const visibilityLabel = computed(() => {
       <BaseTableCell align="end" class="w-24">
         <div class="flex gap-3 justify-end flex-shrink-0">
           <router-link
+            v-if="canEdit"
             :to="{ name: 'macros_edit', params: { macroId: macro.id } }"
           >
             <Button
@@ -92,6 +101,7 @@ const visibilityLabel = computed(() => {
             />
           </router-link>
           <Button
+            v-if="canDelete"
             v-tooltip.top="$t('MACROS.DELETE.TOOLTIP')"
             icon="i-woot-bin"
             slate

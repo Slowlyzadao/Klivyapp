@@ -15,7 +15,10 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import { mapGetters } from 'vuex';
 import { convertSecondsToTimeUnit } from '@chatwoot/utils';
 import { useAlert } from 'dashboard/composables';
+import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import { picoSearch } from '@scmmishra/pico-search';
+import { computed } from 'vue';
 
 export default {
   components: {
@@ -29,6 +32,17 @@ export default {
     WootLabel,
     Icon,
     NextButton,
+  },
+  setup() {
+    const { isAdmin } = useAdmin();
+    const { can } = usePermissions();
+    const canCreateSla = computed(
+      () => isAdmin.value || can('settings', 'sla_create')
+    );
+    const canDeleteSla = computed(
+      () => isAdmin.value || can('settings', 'sla_delete')
+    );
+    return { canCreateSla, canDeleteSla };
   },
   data() {
     return {
@@ -157,7 +171,7 @@ export default {
             {{ $t('SLA.COUNT', { n: records.length }) }}
           </span>
         </template>
-        <template v-if="!isBehindAPaywall" #actions>
+        <template v-if="!isBehindAPaywall && canCreateSla" #actions>
           <NextButton
             :label="$t('SLA.ADD_ACTION')"
             size="sm"
@@ -284,6 +298,7 @@ export default {
               <BaseTableCell align="end" class="w-12">
                 <div class="flex justify-end">
                   <NextButton
+                    v-if="canDeleteSla"
                     v-tooltip.top="$t('SLA.FORM.DELETE')"
                     icon="i-woot-bin"
                     slate

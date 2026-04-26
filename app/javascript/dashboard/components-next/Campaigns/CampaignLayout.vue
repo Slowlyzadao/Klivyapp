@@ -10,6 +10,12 @@ defineProps({
     type: String,
     default: '',
   },
+  // Quando false, o botão "Nova Campanha" some — gating via Klivy
+  // (manage_live_chat / manage_sms / manage_whatsapp).
+  canCreate: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(['click', 'close']);
@@ -28,6 +34,7 @@ const handleButtonClick = () => {
             {{ headerTitle }}
           </span>
           <div
+            v-if="canCreate"
             v-on-clickaway="() => emit('close')"
             class="relative group/campaign-button"
           >

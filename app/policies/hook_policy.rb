@@ -1,17 +1,19 @@
 class HookPolicy < ApplicationPolicy
   def create?
-    @account_user.administrator?
+    return true if @account_user.administrator?
+
+    beclinic_can?(:settings, :integrations_manage)
   end
 
   def update?
-    @account_user.administrator?
+    create?
+  end
+
+  def destroy?
+    create?
   end
 
   def process_event?
     true
-  end
-
-  def destroy?
-    @account_user.administrator?
   end
 end

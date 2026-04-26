@@ -14,6 +14,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  canEdit: {
+    type: Boolean,
+    default: true,
+  },
+  canDelete: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(['toggle', 'edit', 'delete', 'clone']);
@@ -51,7 +59,7 @@ const automationActive = computed({
       </BaseTableCell>
 
       <BaseTableCell>
-        <ToggleSwitch v-model="automationActive" />
+        <ToggleSwitch v-model="automationActive" :disabled="!canEdit" />
       </BaseTableCell>
 
       <BaseTableCell :title="readableDateWithTime(automation.created_on)">
@@ -63,6 +71,7 @@ const automationActive = computed({
       <BaseTableCell align="end">
         <div class="flex gap-3 justify-end flex-shrink-0">
           <Button
+            v-if="canEdit"
             v-tooltip.top="$t('AUTOMATION.FORM.EDIT')"
             icon="i-woot-edit-pen"
             slate
@@ -71,6 +80,7 @@ const automationActive = computed({
             @click="$emit('edit', automation)"
           />
           <Button
+            v-if="canEdit"
             v-tooltip.top="$t('AUTOMATION.CLONE.TOOLTIP')"
             icon="i-woot-clone"
             sm
@@ -79,6 +89,7 @@ const automationActive = computed({
             @click="$emit('clone', automation)"
           />
           <Button
+            v-if="canDelete"
             v-tooltip.top="$t('AUTOMATION.FORM.DELETE')"
             :is-loading="loading"
             icon="i-woot-bin"

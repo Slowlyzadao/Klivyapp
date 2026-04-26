@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import CardLayout from 'dashboard/components-next/CardLayout.vue';
 import ContactsForm from 'dashboard/components-next/Contacts/ContactsForm/ContactsForm.vue';
@@ -10,6 +11,9 @@ import Flag from 'dashboard/components-next/flag/Flag.vue';
 import ContactDeleteSection from 'dashboard/components-next/Contacts/ContactsCard/ContactDeleteSection.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import countries from 'shared/constants/countries';
+
+const { can } = usePermissions();
+const canEditContact = computed(() => can('contacts', 'edit'));
 
 const props = defineProps({
   id: { type: Number, required: true },
@@ -218,7 +222,7 @@ const handleAvatarHover = isHovered => {
                 :contact-data="contactData"
                 @update="handleFormUpdate"
               />
-              <div>
+              <div v-if="canEditContact">
                 <Button
                   :label="
                     t('CONTACTS_LAYOUT.CARD.EDIT_DETAILS_FORM.UPDATE_BUTTON')

@@ -48,6 +48,7 @@ import {
 import { useEmitter } from 'dashboard/composables/emitter';
 import { useEventListener } from '@vueuse/core';
 import { useConversationRequiredAttributes } from 'dashboard/composables/useConversationRequiredAttributes';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import { emitter } from 'shared/helpers/mitt';
 
@@ -88,6 +89,12 @@ const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
 const store = useStore();
+const { can } = usePermissions();
+
+const KLIVY_TAB_PERMISSIONS = {
+  unassigned: 'view_unassigned',
+  all: 'view_all',
+};
 
 const resolveAttributesModalRef = ref(null);
 const conversationListRef = ref(null);
@@ -210,11 +217,17 @@ const assigneeTabItems = computed(() => {
     ASSIGNEE_TYPE_TAB_PERMISSIONS,
     userPermissions.value,
     item => item.permissions
-  ).map(({ key, count: countKey }) => ({
-    key,
-    name: t(`CHAT_LIST.ASSIGNEE_TYPE_TABS.${key}`),
-    count: conversationStats.value[countKey] || 0,
-  }));
+  )
+    .filter(({ key }) => {
+      const klivyPerm = KLIVY_TAB_PERMISSIONS[key];
+      if (!klivyPerm) return true;
+      return can('chat', klivyPerm);
+    })
+    .map(({ key, count: countKey }) => ({
+      key,
+      name: t(`CHAT_LIST.ASSIGNEE_TYPE_TABS.${key}`),
+      count: conversationStats.value[countKey] || 0,
+    }));
 });
 
 const showAssigneeInConversationCard = computed(() => {
@@ -248,6 +261,13 @@ const conversationCustomAttributes = useFunctionGetter(
   'attributes/getAttributesByModel',
   'conversation_attribute'
 );
+
+watch(assigneeTabItems, items => {
+  const stillVisible = items.some(i => i.key === activeAssigneeTab.value);
+  if (!stillVisible && items.length > 0) {
+    activeAssigneeTab.value = items[0].key;
+  }
+}, { immediate: true });
 
 const activeAssigneeTabCount = computed(() => {
   const count = assigneeTabItems.value.find(

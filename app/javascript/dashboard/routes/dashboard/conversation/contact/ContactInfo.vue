@@ -3,6 +3,7 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import { dynamicTime } from 'shared/helpers/timeHelper';
 import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import ContactInfoRow from './ContactInfoRow.vue';
 import Avatar from 'next/avatar/Avatar.vue';
 import SocialIcons from './SocialIcons.vue';
@@ -49,8 +50,10 @@ export default {
   emits: ['panelClose'],
   setup() {
     const { isAdmin } = useAdmin();
+    const { can } = usePermissions();
     return {
       isAdmin,
+      can,
     };
   },
   data() {
@@ -64,6 +67,24 @@ export default {
   },
   computed: {
     ...mapGetters({ uiFlags: 'contacts/getUIFlags' }),
+    canViewContactProfile() {
+      return this.can('chat', 'view_contact_profile');
+    },
+    canViewPatientRecord() {
+      return this.can('chat', 'view_patient_record');
+    },
+    canEditContact() {
+      return this.can('chat', 'edit_contact');
+    },
+    canMergeContact() {
+      return this.can('chat', 'merge_contact');
+    },
+    canManageWaitingList() {
+      return this.can('chat', 'manage_waiting_list');
+    },
+    canDeleteContact() {
+      return this.can('chat', 'delete_contact');
+    },
     contactProfileLink() {
       return `/app/accounts/${this.$route.params.accountId}/contacts/${this.contact.id}`;
     },
@@ -234,6 +255,7 @@ export default {
               class="i-lucide-info text-sm text-n-slate-10"
             />
             <a
+              v-if="canViewContactProfile"
               :href="contactProfileLink"
               target="_blank"
               rel="noopener nofollow noreferrer"
@@ -315,6 +337,7 @@ export default {
         />
         <!-- Botão de Prontuário Eletrônico -->
         <NextButton
+          v-if="canViewPatientRecord"
           v-tooltip.top-end="
             linkedPatientId ? 'Ver prontuário' : 'Sem prontuário vinculado'
           "
@@ -326,6 +349,7 @@ export default {
           @click="togglePatientPopup"
         />
         <NextButton
+          v-if="canEditContact"
           v-tooltip.top-end="$t('EDIT_CONTACT.BUTTON_LABEL')"
           icon="i-ph-pencil-simple"
           slate
@@ -334,6 +358,7 @@ export default {
           @click="toggleEditModal"
         />
         <NextButton
+          v-if="canMergeContact"
           v-tooltip.top-end="$t('CONTACT_PANEL.MERGE_CONTACT')"
           icon="i-ph-arrows-merge"
           slate
@@ -343,6 +368,7 @@ export default {
           @click="openMergeModal"
         />
         <NextButton
+          v-if="canManageWaitingList"
           v-tooltip.top-end="'Lista de espera'"
           icon="i-ph-clock-countdown"
           slate
@@ -351,7 +377,7 @@ export default {
           @click="openWaitingListModal"
         />
         <NextButton
-          v-if="isAdmin"
+          v-if="canDeleteContact"
           v-tooltip.top-end="$t('DELETE_CONTACT.BUTTON_LABEL')"
           icon="i-ph-trash"
           slate

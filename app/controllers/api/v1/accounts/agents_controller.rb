@@ -1,6 +1,7 @@
 class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
   before_action :fetch_agent, except: [:create, :index, :bulk_create]
   before_action :check_authorization
+  before_action :prevent_admin_removal, only: [:destroy]
   before_action :validate_limit, only: [:create]
   before_action :validate_limit_for_bulk_create, only: [:bulk_create]
 
@@ -61,6 +62,19 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
 
   def check_authorization
     super(User)
+  end
+
+  # Klivy: administradores e donos (super admin) são intocáveis via essa API.
+  # Mesmo um user com `users_remove` granular não pode rebaixar nem deletar um
+  # admin — pra isso, outro admin precisa rebaixar antes pelo editor.
+  def prevent_admin_removal
+    return unless @agent
+
+    is_admin_target = @agent.current_account_user&.administrator?
+    is_owner_target = @agent.respond_to?(:beclinic_super_admin?) && @agent.beclinic_super_admin?
+    return unless is_admin_target || is_owner_target
+
+    render json: { error: 'Administradores e donos não podem ser removidos.' }, status: :forbidden
   end
 
   def fetch_agent

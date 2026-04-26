@@ -10,6 +10,7 @@ export default {
     getDayBlockInfo: { type: Function, default: () => [] },
     isDayBlocked: { type: Function, default: () => false },
     isDayInPast: { type: Function, default: () => false },
+    canCreate: { type: Boolean, default: true },
   },
   emits: ['click-day', 'click-event'],
   methods: {
@@ -33,6 +34,7 @@ export default {
       return this.dayHeaders[date.getDay()] || '';
     },
     handleDayClick(dayObj) {
+      if (!this.canCreate) return;
       if (this.isDayBlocked(dayObj) || this.isDayInPast(dayObj)) return;
       this.$emit('click-day', dayObj);
     }
@@ -83,7 +85,7 @@ export default {
               {{ dayObj.day }}
             </span>
             <button
-              v-if="!isDayBlocked(dayObj) && !isDayInPast(dayObj)"
+              v-if="canCreate && !isDayBlocked(dayObj) && !isDayInPast(dayObj)"
               class="cell-add-btn"
               @click.stop="handleDayClick(dayObj)"
             >

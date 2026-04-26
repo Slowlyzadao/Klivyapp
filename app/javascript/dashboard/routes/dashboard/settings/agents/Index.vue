@@ -9,16 +9,34 @@ import {
   useStore,
   useMapGetter,
 } from 'dashboard/composables/store';
+import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import AddAgent from './AddAgent.vue';
 import EditAgent from './EditAgent.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import AssignRoleButton from '@plugins/custom_roles/frontend/features/role-assignment/AssignRoleButton.vue';
 
 const getters = useStoreGetters();
 const store = useStore();
 const { t } = useI18n();
+const { isAdmin } = useAdmin();
+const { can } = usePermissions();
+
+// Klivy Custom Roles: admin/dono sempre veem tudo; demais são gated por
+// settings.users_invite (Adicionar), users_edit (Editar/Atribuir função) e
+// users_remove (Excluir).
+const canInviteAgents = computed(
+  () => isAdmin.value || can('settings', 'users_invite')
+);
+const canEditAgents = computed(
+  () => isAdmin.value || can('settings', 'users_edit')
+);
+const canRemoveAgents = computed(
+  () => isAdmin.value || can('settings', 'users_remove')
+);
 
 const loading = ref({});
 const showAddPopup = ref(false);
@@ -86,17 +104,14 @@ const showEditAction = agent => {
 };
 
 const showDeleteAction = agent => {
-  if (currentUserId.value === agent.id) {
-    return false;
-  }
-
-  if (!agent.confirmed) {
-    return true;
-  }
-
-  if (agent.role === 'administrator') {
-    return verifiedAdministrators.value.length !== 1;
-  }
+  // Não dá pra deletar a si mesmo (seria deslogado no meio da operação).
+  if (currentUserId.value === agent.id) return false;
+  // Administradores e donos (super admin Klivy) são intocáveis via essa UI,
+  // mesmo que o user logado tenha `users_remove` — proteção pra conta nunca
+  // ficar sem ninguém com bypass total. Se precisar trocar admin, use o
+  // editor pra rebaixar antes.
+  if (agent.role === 'administrator') return false;
+  if (agent.beclinic_super_admin) return false;
   return true;
 };
 
@@ -168,6 +183,7 @@ const confirmDeletion = () => {
         </template>
         <template #actions>
           <Button
+            v-if="canInviteAgents"
             :label="$t('AGENT_MGMT.HEADER_BTN_TXT')"
             size="sm"
             @click="openAddPopup"
@@ -255,8 +271,13 @@ const confirmDeletion = () => {
             </div>
           </div>
           <div class="flex justify-end gap-3">
+            <AssignRoleButton
+              v-if="showEditAction(agent) && canEditAgents"
+              :user="agent"
+              @assigned="store.dispatch('agents/get')"
+            />
             <Button
-              v-if="showEditAction(agent)"
+              v-if="showEditAction(agent) && canEditAgents"
               v-tooltip.top="$t('AGENT_MGMT.EDIT.BUTTON_TEXT')"
               icon="i-woot-edit-pen"
               slate
@@ -264,7 +285,7 @@ const confirmDeletion = () => {
               @click="openEditPopup(agent)"
             />
             <Button
-              v-if="showDeleteAction(agent)"
+              v-if="showDeleteAction(agent) && canRemoveAgents"
               v-tooltip.top="$t('AGENT_MGMT.DELETE.BUTTON_TEXT')"
               icon="i-woot-bin"
               slate

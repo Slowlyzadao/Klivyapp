@@ -11,10 +11,24 @@ import { picoSearch } from '@scmmishra/pico-search';
 import AutomationRuleRow from './AutomationRuleRow.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { BaseTable } from 'dashboard/components-next/table';
+import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 const getters = useStoreGetters();
 const store = useStore();
 const { t } = useI18n();
+const { isAdmin } = useAdmin();
+const { can } = usePermissions();
+
+const canCreateAutomation = computed(
+  () => isAdmin.value || can('settings', 'automation_create')
+);
+const canEditAutomation = computed(
+  () => isAdmin.value || can('settings', 'automation_edit')
+);
+const canDeleteAutomation = computed(
+  () => isAdmin.value || can('settings', 'automation_delete')
+);
 const confirmDialog = ref(null);
 
 const loading = ref({});
@@ -204,6 +218,7 @@ const tableHeaders = computed(() => {
         </template>
         <template #actions>
           <Button
+            v-if="canCreateAutomation"
             :label="$t('AUTOMATION.HEADER_BTN_TXT')"
             size="sm"
             @click="openAddPopup"
@@ -225,6 +240,8 @@ const tableHeaders = computed(() => {
             :key="automation.id"
             :automation="automation"
             :loading="loading[automation.id]"
+            :can-edit="canEditAutomation"
+            :can-delete="canDeleteAutomation"
             @clone="cloneAutomation"
             @toggle="toggleAutomation"
             @edit="openEditPopup"

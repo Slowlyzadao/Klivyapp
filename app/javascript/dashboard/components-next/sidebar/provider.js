@@ -146,12 +146,24 @@ export function useSidebarContext() {
     return shouldShow(featureFlag, permissions, installationType);
   };
 
+  // Klivy Custom Roles: a child can opt out of the Chatwoot role-based
+  // policy by setting `bypassPolicy: true`. The parent menu definition
+  // (Sidebar.vue) marks the flag when the Klivy permission catalog
+  // explicitly grants that sub-item — letting non-administrator users
+  // see Settings entries their custom role allows.
+  const isChildAllowed = child => {
+    if (!child) return false;
+    if (child.bypassPolicy) return true;
+    return isAllowed(child.to);
+  };
+
   return {
     ...context,
     resolvePath,
     resolvePermissions,
     resolveFeatureFlag,
     isAllowed,
+    isChildAllowed,
   };
 }
 

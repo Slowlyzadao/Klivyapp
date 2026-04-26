@@ -37,6 +37,12 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   def show; end
 
   def create
+    # Klivy Custom Roles: starting a new conversation from the dashboard
+    # is gated by `chat.send_broadcast` (composer / new-conversation pen icon)
+    # or `chat.reply` (replying within an existing thread). Admins skip the
+    # check natively in the policy.
+    raise Pundit::NotAuthorizedError unless allowed_to_create_conversation?
+
     ActiveRecord::Base.transaction do
       @conversation = ConversationBuilder.new(params: params, contact_inbox: @contact_inbox).perform
       Messages::MessageBuilder.new(Current.user, @conversation, params[:message]).perform if params[:message].present?
@@ -143,6 +149,15 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   end
 
   private
+
+  def allowed_to_create_conversation?
+    return true if Current.account_user.administrator?
+
+    Current.user.respond_to?(:beclinic_can?) && (
+      Current.user.beclinic_can?(Current.account, :chat, :send_broadcast) ||
+      Current.user.beclinic_can?(Current.account, :chat, :reply)
+    )
+  end
 
   def permitted_update_params
     # TODO: Move the other conversation attributes to this method and remove specific endpoints for each attribute

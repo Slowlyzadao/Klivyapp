@@ -3,6 +3,8 @@ import { useAlert } from 'dashboard/composables';
 import { computed, onBeforeMount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStoreGetters, useStore } from 'dashboard/composables/store';
+import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import { picoSearch } from '@scmmishra/pico-search';
 
 import AddLabel from './AddLabel.vue';
@@ -19,6 +21,18 @@ import {
 const getters = useStoreGetters();
 const store = useStore();
 const { t } = useI18n();
+const { isAdmin } = useAdmin();
+const { can } = usePermissions();
+
+const canCreateLabel = computed(
+  () => isAdmin.value || can('settings', 'labels_create')
+);
+const canEditLabel = computed(
+  () => isAdmin.value || can('settings', 'labels_edit')
+);
+const canDeleteLabel = computed(
+  () => isAdmin.value || can('settings', 'labels_delete')
+);
 
 const loading = ref({});
 const showAddPopup = ref(false);
@@ -117,6 +131,7 @@ onBeforeMount(() => {
         </template>
         <template #actions>
           <Button
+            v-if="canCreateLabel"
             :label="$t('LABEL_MGMT.HEADER_BTN_TXT')"
             size="sm"
             @click="openAddPopup"
@@ -162,6 +177,7 @@ onBeforeMount(() => {
               <BaseTableCell align="end">
                 <div class="flex gap-3 justify-end flex-shrink-0">
                   <Button
+                    v-if="canEditLabel"
                     v-tooltip.top="$t('LABEL_MGMT.FORM.EDIT')"
                     icon="i-woot-edit-pen"
                     slate
@@ -170,6 +186,7 @@ onBeforeMount(() => {
                     @click="openEditPopup(label)"
                   />
                   <Button
+                    v-if="canDeleteLabel"
                     v-tooltip.top="$t('LABEL_MGMT.FORM.DELETE')"
                     icon="i-woot-bin"
                     slate

@@ -1,11 +1,11 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useToggle } from '@vueuse/core';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import ConfirmContactDeleteDialog from 'dashboard/components-next/Contacts/ContactsForm/ConfirmContactDeleteDialog.vue';
-import Policy from 'dashboard/components/policy.vue';
 
 defineProps({
   selectedContact: {
@@ -15,6 +15,8 @@ defineProps({
 });
 
 const { t } = useI18n();
+const { can } = usePermissions();
+const canDeleteContact = computed(() => can('contacts', 'delete'));
 
 const [showDeleteSection, toggleDeleteSection] = useToggle();
 const confirmDeleteContactDialogRef = ref(null);
@@ -25,7 +27,7 @@ const openConfirmDeleteContactDialog = () => {
 </script>
 
 <template>
-  <Policy :permissions="['administrator']">
+  <template v-if="canDeleteContact">
     <div class="flex flex-col items-start border-t border-n-strong px-6 py-5">
       <Button
         :label="t('CONTACTS_LAYOUT.DETAILS.DELETE_CONTACT')"
@@ -64,5 +66,5 @@ const openConfirmDeleteContactDialog = () => {
       ref="confirmDeleteContactDialogRef"
       :selected-contact="selectedContact"
     />
-  </Policy>
+  </template>
 </template>

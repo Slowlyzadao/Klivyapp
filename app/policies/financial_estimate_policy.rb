@@ -1,22 +1,27 @@
 class FinancialEstimatePolicy < ApplicationPolicy
+  # Orçamentos no financeiro central são gateados pelas keys do catálogo:
+  # `manage_estimates` (criar/editar/cancelar/excluir) e `approve_estimate`
+  # (aprovar). Visualização passa com qualquer perm de view financeira.
+  FINANCIAL_VIEW_PERMS = AccountTransactionPolicy::FINANCIAL_VIEW_PERMS
+
   def index?
-    beclinic_can?(:financial, :view_estimates)
+    FINANCIAL_VIEW_PERMS.any? { |perm| beclinic_can?(:financial, perm) }
   end
 
   def show?
-    beclinic_can?(:financial, :view_estimates)
+    index?
   end
 
   def create?
-    beclinic_can?(:financial, :create_estimate)
+    beclinic_can?(:financial, :manage_estimates)
   end
 
   def update?
-    beclinic_can?(:financial, :edit_estimate)
+    beclinic_can?(:financial, :manage_estimates)
   end
 
   def destroy?
-    beclinic_can?(:financial, :delete_estimate)
+    beclinic_can?(:financial, :manage_estimates)
   end
 
   def approve?
@@ -24,14 +29,14 @@ class FinancialEstimatePolicy < ApplicationPolicy
   end
 
   def cancel?
-    beclinic_can?(:financial, :edit_estimate)
+    beclinic_can?(:financial, :manage_estimates)
   end
 
   def pay?
-    beclinic_can?(:financial, :create_estimate)
+    beclinic_can?(:financial, :create_transaction)
   end
 
   def refund?
-    beclinic_can?(:financial, :delete_estimate)
+    beclinic_can?(:financial, :delete_transaction)
   end
 end

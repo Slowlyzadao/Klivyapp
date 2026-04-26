@@ -2,11 +2,15 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { vOnClickOutside } from '@vueuse/components';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import BulkSelectBar from 'dashboard/components-next/captain/assistant/BulkSelectBar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import LabelActions from 'dashboard/components/widgets/conversation/conversationBulkActions/LabelActions.vue';
-import Policy from 'dashboard/components/policy.vue';
+
+const { can } = usePermissions();
+const canDeleteContacts = computed(() => can('contacts', 'delete'));
+const canManageTags = computed(() => can('contacts', 'manage_tags'));
 
 const props = defineProps({
   visibleContactIds: {
@@ -116,6 +120,7 @@ const handleAssignLabels = labels => {
       <template #actions>
         <div class="flex items-center gap-2 ml-auto">
           <div
+            v-if="canManageTags"
             v-on-click-outside="closeLabelSelector"
             class="relative flex items-center"
           >
@@ -145,21 +150,20 @@ const handleAssignLabels = labels => {
               />
             </transition>
           </div>
-          <Policy :permissions="['administrator']">
-            <Button
-              v-tooltip.bottom="t('CONTACTS_BULK_ACTIONS.DELETE_CONTACTS')"
-              sm
-              faded
-              ruby
-              icon="i-lucide-trash"
-              :label="t('CONTACTS_BULK_ACTIONS.DELETE_CONTACTS')"
-              :aria-label="t('CONTACTS_BULK_ACTIONS.DELETE_CONTACTS')"
-              :disabled="!selectedCount || isLoading"
-              :is-loading="isLoading"
-              class="!px-1.5 [&>span:nth-child(2)]:hidden"
-              @click="emit('deleteSelected')"
-            />
-          </Policy>
+          <Button
+            v-if="canDeleteContacts"
+            v-tooltip.bottom="t('CONTACTS_BULK_ACTIONS.DELETE_CONTACTS')"
+            sm
+            faded
+            ruby
+            icon="i-lucide-trash"
+            :label="t('CONTACTS_BULK_ACTIONS.DELETE_CONTACTS')"
+            :aria-label="t('CONTACTS_BULK_ACTIONS.DELETE_CONTACTS')"
+            :disabled="!selectedCount || isLoading"
+            :is-loading="isLoading"
+            class="!px-1.5 [&>span:nth-child(2)]:hidden"
+            @click="emit('deleteSelected')"
+          />
         </div>
       </template>
     </BulkSelectBar>

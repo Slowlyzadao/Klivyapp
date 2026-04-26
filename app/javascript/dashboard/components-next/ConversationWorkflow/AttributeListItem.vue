@@ -15,6 +15,14 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  canEdit: {
+    type: Boolean,
+    default: true,
+  },
+  canDelete: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(['edit', 'delete']);
@@ -77,12 +85,14 @@ const attributeIcon = computed(() => {
       </div>
       <div class="flex gap-3 justify-end flex-shrink-0">
         <Button
+          v-if="canEdit"
           icon="i-woot-edit-pen"
           slate
           sm
           @click="emit('edit', attribute)"
         />
         <Button
+          v-if="canDelete"
           icon="i-woot-bin"
           slate
           sm

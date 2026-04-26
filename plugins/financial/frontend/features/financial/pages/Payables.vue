@@ -4,11 +4,17 @@ import transactionsApi from '../api/accountTransactions';
 import { downloadFinancialPdf } from '../api/pdfs';
 import { useExportCsv } from '../composables/useExportCsv';
 import { useFormatCurrency } from '../composables/useFormatCurrency';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import TransactionModal from '../components/TransactionModal.vue';
 import '../financial.css';
 
 const { formatCurrency } = useFormatCurrency();
 const { exportPayablesCsv } = useExportCsv();
+const { can } = usePermissions();
+const canCreateTransaction = computed(() => can('financial', 'create_transaction'));
+const canEditTransaction = computed(() => can('financial', 'edit_transaction'));
+const canDeleteTransaction = computed(() => can('financial', 'delete_transaction'));
+const canExportData = computed(() => can('financial', 'export_data'));
 
 const loading = ref(false);
 const transactions = ref([]);
@@ -184,17 +190,23 @@ function exportCsv() {
       </div>
       <div class="flex items-center gap-2">
         <button
+          v-if="canCreateTransaction"
           class="financial-btn btn-new-expense-pay"
           @click="openNewExpense"
         >
           <span class="i-lucide-plus" />
           {{ $t('FINANCIAL.PAYABLES.NEW_EXPENSE') }}
         </button>
-        <button class="financial-btn financial-btn--pdf" @click="exportPdf">
+        <button
+          v-if="canExportData"
+          class="financial-btn financial-btn--pdf"
+          @click="exportPdf"
+        >
           <span class="i-lucide-file-down" />
           Gerar PDF
         </button>
         <button
+          v-if="canExportData"
           class="financial-btn--csv"
           title="Exportar para Google Sheets (CSV)"
           @click="exportCsv"
@@ -404,7 +416,11 @@ function exportCsv() {
               <td class="financial-table__col--actions">
                 <div class="financial-table__actions">
                   <button
-                    v-if="tx.status !== 'paid' && tx.status !== 'pago'"
+                    v-if="
+                      canCreateTransaction &&
+                      tx.status !== 'paid' &&
+                      tx.status !== 'pago'
+                    "
                     class="financial-action-btn financial-action-btn--success"
                     :title="$t('FINANCIAL.PAYABLES.PAY')"
                     @click="markPaid(tx)"
@@ -412,6 +428,7 @@ function exportCsv() {
                     <span class="i-lucide-check" />
                   </button>
                   <button
+                    v-if="canEditTransaction"
                     class="financial-action-btn financial-action-btn--edit"
                     :title="$t('FINANCIAL.SETTINGS.EDIT')"
                     @click="openEditTx(tx)"

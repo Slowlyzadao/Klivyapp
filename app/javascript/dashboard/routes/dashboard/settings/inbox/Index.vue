@@ -5,6 +5,7 @@ import { useAlert } from 'dashboard/composables';
 import { picoSearch } from '@scmmishra/pico-search';
 import Avatar from 'next/avatar/Avatar.vue';
 import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import SettingsLayout from '../SettingsLayout.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import {
@@ -20,6 +21,19 @@ const getters = useStoreGetters();
 const store = useStore();
 const { t } = useI18n();
 const { isAdmin } = useAdmin();
+const { can } = usePermissions();
+
+// Klivy Custom Roles: admins always see all actions; non-admins are gated
+// by the role's fine-grained settings.inboxes_* keys.
+const canCreateInbox = computed(
+  () => isAdmin.value || can('settings', 'inboxes_create')
+);
+const canEditInbox = computed(
+  () => isAdmin.value || can('settings', 'inboxes_edit')
+);
+const canDeleteInbox = computed(
+  () => isAdmin.value || can('settings', 'inboxes_delete')
+);
 
 const showDeletePopup = ref(false);
 const selectedInbox = ref({});
@@ -101,7 +115,7 @@ const openDelete = inbox => {
           </span>
         </template>
         <template #actions>
-          <router-link v-if="isAdmin" :to="{ name: 'settings_inbox_new' }">
+          <router-link v-if="canCreateInbox" :to="{ name: 'settings_inbox_new' }">
             <Button :label="$t('SETTINGS.INBOXES.NEW_INBOX')" size="sm" />
           </router-link>
         </template>
@@ -157,7 +171,7 @@ const openDelete = inbox => {
               }"
             >
               <Button
-                v-if="isAdmin"
+                v-if="canEditInbox"
                 v-tooltip.top="$t('INBOX_MGMT.SETTINGS')"
                 icon="i-woot-settings"
                 slate
@@ -165,7 +179,7 @@ const openDelete = inbox => {
               />
             </router-link>
             <Button
-              v-if="isAdmin"
+              v-if="canDeleteInbox"
               v-tooltip.top="$t('INBOX_MGMT.DELETE.BUTTON_TEXT')"
               icon="i-woot-bin"
               slate

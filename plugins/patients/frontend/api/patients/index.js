@@ -27,7 +27,7 @@ class PatientsAPI extends ApiClient {
       sortAttr,
       search,
       status
-    )}&per_page=500`;
+    )}&per_page=50000`;
     return axios.get(requestURL);
   }
 

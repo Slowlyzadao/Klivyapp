@@ -1,21 +1,28 @@
 class LabelPolicy < ApplicationPolicy
   def index?
+    # qualquer agente lista labels (necessário pra filtrar conversas, etc)
     @account_user.administrator? || @account_user.agent?
   end
 
-  def update?
-    @account_user.administrator?
-  end
-
   def show?
-    @account_user.administrator?
+    index?
   end
 
   def create?
-    @account_user.administrator?
+    return true if @account_user.administrator?
+
+    beclinic_can?(:settings, :labels_create)
+  end
+
+  def update?
+    return true if @account_user.administrator?
+
+    beclinic_can?(:settings, :labels_edit)
   end
 
   def destroy?
-    @account_user.administrator?
+    return true if @account_user.administrator?
+
+    beclinic_can?(:settings, :labels_delete)
   end
 end

@@ -6,12 +6,16 @@ import bankAccountsApi from '../api/bankAccounts';
 import { downloadFinancialPdf } from '../api/pdfs';
 import { useExportCsv } from '../composables/useExportCsv';
 import { useFormatCurrency } from '../composables/useFormatCurrency';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import TransactionModal from '../components/TransactionModal.vue';
 import DateRangePicker from '../components/DateRangePicker.vue';
 import '../financial.css';
 
 const { formatCurrency } = useFormatCurrency();
 const { exportCashFlowCsv } = useExportCsv();
+const { can } = usePermissions();
+const canCreateTransaction = computed(() => can('financial', 'create_transaction'));
+const canExportData = computed(() => can('financial', 'export_data'));
 
 const dateRange = ref([]);
 
@@ -351,11 +355,16 @@ async function handleSave({ payload }) {
         </p>
       </div>
       <div class="financial-header-actions">
-        <button class="financial-btn btn-new-entry-cf" @click="openNewEntry">
+        <button
+          v-if="canCreateTransaction"
+          class="financial-btn btn-new-entry-cf"
+          @click="openNewEntry"
+        >
           <span class="i-lucide-arrow-down-circle" />
           {{ $t('FINANCIAL.CASH_FLOW.NEW_ENTRY') }}
         </button>
         <button
+          v-if="canCreateTransaction"
           class="financial-btn btn-new-expense-cf"
           @click="openNewExpense"
         >
@@ -363,6 +372,7 @@ async function handleSave({ payload }) {
           {{ $t('FINANCIAL.CASH_FLOW.NEW_EXPENSE') }}
         </button>
         <button
+          v-if="canExportData"
           class="financial-btn financial-btn--pdf"
           title="Exportar PDF"
           @click="exportPdf"
@@ -371,6 +381,7 @@ async function handleSave({ payload }) {
           Gerar PDF
         </button>
         <button
+          v-if="canExportData"
           class="financial-btn--csv"
           title="Exportar para Google Sheets (CSV)"
           @click="exportCsv"

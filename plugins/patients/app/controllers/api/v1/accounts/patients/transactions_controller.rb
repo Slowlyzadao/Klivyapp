@@ -4,12 +4,14 @@ module Api
       module Patients
         class TransactionsController < Api::V1::Accounts::BaseController
           before_action :set_patient
+          before_action :ensure_view_patient_financial!,
+                        only: [:index, :show, :financial_summary, :proof_url]
+          before_action :ensure_manage_patient_financial!,
+                        only: [:create, :destroy, :pay, :refund, :charge_whatsapp, :upload_proof]
           before_action :set_transaction, only: [:show, :destroy, :pay, :refund, :charge_whatsapp, :upload_proof, :proof_url]
 
           # GET /api/v1/accounts/:account_id/patients/:patient_id/transactions
           def index
-            authorize Transaction
-
             # Transações do prontuário (parcelas de orçamentos)
             patient_txs = @patient.transactions.active
                                   .order(due_date: :asc)
@@ -39,7 +41,6 @@ module Api
 
           # GET /api/v1/accounts/:account_id/patients/:patient_id/financial_summary
           def financial_summary
-            authorize Transaction
             transactions = @patient.transactions.active
 
             total_approved = @patient.financial_estimates
@@ -84,13 +85,11 @@ module Api
 
           # GET /api/v1/accounts/:account_id/patients/:patient_id/transactions/:id
           def show
-            authorize @transaction
             render :show
           end
 
           # POST /api/v1/accounts/:account_id/patients/:patient_id/transactions
           def create
-            authorize Transaction
             @transaction = Transaction.new(transaction_params)
             @transaction.account = Current.account
             @transaction.patient = @patient
@@ -111,7 +110,6 @@ module Api
           # PATCH /api/v1/accounts/:account_id/patients/:patient_id/transactions/:id/pay
           # BAIXA DUPLA: marca como pago + injeta no CashEntry
           def pay
-            authorize @transaction
             result = ::Patients::InstallmentPayService.call(
               transaction: @transaction,
               actor: current_user,
@@ -133,7 +131,6 @@ module Api
           end
 
           def refund
-            authorize @transaction
             ActiveRecord::Base.transaction do
               # Cria uma transação negativa de reembolso
               refund_transaction = Transaction.create!(
@@ -168,7 +165,6 @@ module Api
 
           # POST /api/v1/accounts/:account_id/patients/:patient_id/transactions/:id/charge_whatsapp
           def charge_whatsapp
-            authorize @transaction, :update?
             patient = @transaction.patient
             phone = patient.phone.presence || patient.contacts&.first&.dig('value')
 
@@ -194,7 +190,6 @@ module Api
 
           # DELETE /api/v1/accounts/:account_id/patients/:patient_id/transactions/:id
           def destroy
-            authorize @transaction
             return render json: { error: 'Transações pagas não podem ser removidas' }, status: :forbidden if @transaction.status_pago?
 
             @transaction.soft_delete!
@@ -207,7 +202,6 @@ module Api
 
           # POST /api/v1/accounts/:account_id/patients/:patient_id/transactions/:id/upload_proof
           def upload_proof
-            authorize @transaction, :update?
             return render json: { error: 'Arquivo não enviado' }, status: :bad_request unless params[:file].present?
 
             @transaction.payment_proof.attach(params[:file])
@@ -222,7 +216,6 @@ module Api
 
           # GET /api/v1/accounts/:account_id/patients/:patient_id/transactions/:id/proof_url
           def proof_url
-            authorize @transaction, :show?
             if @transaction.payment_proof.attached?
               render json: { url: rails_blob_url(@transaction.payment_proof, only_path: true), filename: @transaction.payment_proof.filename.to_s }
             else
@@ -231,6 +224,20 @@ module Api
           end
 
           private
+
+          def ensure_view_patient_financial!
+            return if Current.user.beclinic_can?(Current.account, :patients, :view_financial)
+
+            render json: { error: 'Você não tem permissão para visualizar o financeiro do paciente' },
+                   status: :forbidden
+          end
+
+          def ensure_manage_patient_financial!
+            return if Current.user.beclinic_can?(Current.account, :patients, :manage_financial)
+
+            render json: { error: 'Você não tem permissão para gerenciar o financeiro do paciente' },
+                   status: :forbidden
+          end
 
           def set_patient
             @patient = Current.account.patients.find(params[:patient_id])

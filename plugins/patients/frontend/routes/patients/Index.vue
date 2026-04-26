@@ -6,6 +6,9 @@ import PatientsAPI from '@plugins/patients/frontend/api/patients/index';
 import NewPatientModal from './components/NewPatientModal.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import { useAlert } from 'dashboard/composables';
+import { usePermissions } from 'dashboard/composables/usePermissions';
+
+const { can } = usePermissions();
 
 const formatCpf = cpfStr => {
   if (!cpfStr) return '-';
@@ -19,7 +22,11 @@ const formatCpf = cpfStr => {
 
 const formatDate = dateStr => {
   if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleDateString('pt-BR', {
+  // Datas YYYY-MM-DD são parseadas como UTC pelo Date(); em fusos negativos
+  // (BR -3h) o toLocaleDateString volta um dia. Ancoramos ao meio-dia local.
+  const iso = String(dateStr).slice(0, 10);
+  const safe = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : dateStr;
+  return new Date(safe).toLocaleDateString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
   });
 };
@@ -268,7 +275,7 @@ const statusCls = patient =>
           <span>{{ showArchived ? 'Fechar Arquivo' : 'Arquivados' }}</span>
         </button>
         <button
-          v-if="!showArchived"
+          v-if="!showArchived && can('patients', 'create')"
           class="pt-btn-new hidden md:flex"
           @click="openNewPatientModal"
         >
@@ -278,7 +285,7 @@ const statusCls = patient =>
 
         <!-- FAB Mobile: Novo Paciente -->
         <button
-          v-if="!showArchived"
+          v-if="!showArchived && can('patients', 'create')"
           class="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-[0_4px_14px_rgba(37,99,235,0.4)] flex items-center justify-center z-50 transition-transform active:scale-95"
           @click="openNewPatientModal"
         >
@@ -456,6 +463,7 @@ const statusCls = patient =>
               <i class="i-lucide-file-text w-4 h-4" />
             </button>
             <button
+              v-if="can('patients', 'delete')"
               class="pt-action-btn pt-action-btn--danger"
               title="Arquivar"
               @click="openDeleteModal(patient)"
@@ -713,6 +721,7 @@ const statusCls = patient =>
               <i class="i-lucide-file-text w-4 h-4" />
             </button>
             <button
+              v-if="can('patients', 'delete')"
               class="pt-action-btn pt-action-btn--restore"
               :disabled="isRestoring === patient.id"
               title="Restaurar paciente"

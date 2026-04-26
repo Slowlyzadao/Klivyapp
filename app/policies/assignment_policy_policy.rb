@@ -1,21 +1,25 @@
 class AssignmentPolicyPolicy < ApplicationPolicy
   def index?
-    @account_user.administrator?
+    return true if @account_user.administrator?
+
+    beclinic_can?(:settings, :users_view)
   end
 
   def show?
-    @account_user.administrator?
+    index?
   end
 
   def create?
-    @account_user.administrator?
+    return true if @account_user.administrator?
+
+    beclinic_can?(:settings, :users_edit)
   end
 
   def update?
-    @account_user.administrator?
+    create?
   end
 
   def destroy?
-    @account_user.administrator?
+    create?
   end
 end

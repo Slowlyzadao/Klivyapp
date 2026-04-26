@@ -17,12 +17,26 @@ import {
   useMapGetter,
 } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
+import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 const { t } = useI18n();
 
 const getters = useStoreGetters();
 const store = useStore();
 const { currentAccount } = useAccount();
+const { isAdmin } = useAdmin();
+const { can } = usePermissions();
+
+const canCreateAttribute = computed(
+  () => isAdmin.value || can('settings', 'custom_attributes_create')
+);
+const canEditAttribute = computed(
+  () => isAdmin.value || can('settings', 'custom_attributes_edit')
+);
+const canDeleteAttribute = computed(
+  () => isAdmin.value || can('settings', 'custom_attributes_delete')
+);
 const inboxes = useMapGetter('inboxes/getInboxes');
 
 const [showAddPopup, toggleAddPopup] = useToggle(false);
@@ -187,6 +201,7 @@ const filteredAttributes = computed(() => {
         </template>
         <template #actions>
           <Button
+            v-if="canCreateAttribute"
             :label="$t('ATTRIBUTES_MGMT.HEADER_BTN_TXT')"
             size="sm"
             @click="openAddPopup"
@@ -211,6 +226,8 @@ const filteredAttributes = computed(() => {
             :key="attribute.id"
             :attribute="attribute"
             :badges="attribute.badges"
+            :can-edit="canEditAttribute"
+            :can-delete="canDeleteAttribute"
             @edit="handleEditAttribute"
             @delete="handleDeleteAttribute"
           />

@@ -14,6 +14,7 @@ import { useAgendaInit } from '../composables/useAgendaInit.js';
 import { useAgendaCrud } from '../composables/useAgendaCrud.js';
 import { useAgendaDnD } from '../composables/useAgendaDnD.js';
 import { useAgendaPopups } from '../composables/useAgendaPopups.js';
+import { useAgendaPermissions } from '../composables/useAgendaPermissions.js';
 import { createDefaultNewEvent } from '../utils/agenda-date.js';
 
 // Components
@@ -54,36 +55,48 @@ const { fetchInitialData } = useAgendaInit({
 });
 
 const {
-  openEventModal,
-  closeEventModal,
-  openEditEvent,
-  saveEvent,
-  deleteEvent,
-  cancelDelete,
-  confirmDelete,
-  quickDeleteEvent,
-  checkQueryParams
-} = useAgendaCrud({ agenda, store, router, route, newEvent, wlScheduleEntry, _returnPatientId });
+  canCreate,
+  canEdit,
+  canCancel,
+  canDrag,
+  guard,
+} = useAgendaPermissions();
 
-const {
-  initDrag,
-  initResize,
-  onGlobalMouseMove,
-  onGlobalMouseUp
-} = useAgendaDnD({ agenda, store, timelineAreaRef: timelineArea });
+const crud = useAgendaCrud({ agenda, store, router, route, newEvent, wlScheduleEntry, _returnPatientId });
+const closeEventModal = crud.closeEventModal;
+const saveEvent = crud.saveEvent;
+const cancelDelete = crud.cancelDelete;
+const confirmDelete = crud.confirmDelete;
+const checkQueryParams = crud.checkQueryParams;
 
-const {
-  toggleEventInfo,
-  closeEventInfoPopup,
-  getInfoPopupEvent,
-  updateEventStatus,
-  openPatientRecord,
-  openWlScheduleForCell,
-  closeWlScheduleModal,
-  confirmWlSchedule,
-  showWlInfo,
-  closeWlInfo
-} = useAgendaPopups({ agenda, agendaEvents: computed(() => store.getters['agendaEvents/getAgendaEvents']), router, route, store, newEvent, wlScheduleEntry, openEventModal });
+const openEventModal = (...args) => guard('create_event', () => crud.openEventModal(...args));
+const openEditEvent = (...args) => guard('edit_event', () => crud.openEditEvent(...args));
+const deleteEvent = (...args) => guard('cancel_event', () => crud.deleteEvent(...args));
+const quickDeleteEvent = (...args) => guard('cancel_event', () => crud.quickDeleteEvent(...args));
+
+const dnd = useAgendaDnD({ agenda, store, timelineAreaRef: timelineArea });
+const onGlobalMouseMove = dnd.onGlobalMouseMove;
+const onGlobalMouseUp = dnd.onGlobalMouseUp;
+const initDrag = (payload) => {
+  if (!canDrag.value) return;
+  dnd.initDrag(payload);
+};
+const initResize = (payload) => {
+  if (!canEdit.value) return;
+  dnd.initResize(payload);
+};
+
+const popups = useAgendaPopups({ agenda, agendaEvents: computed(() => store.getters['agendaEvents/getAgendaEvents']), router, route, store, newEvent, wlScheduleEntry, openEventModal });
+const toggleEventInfo = popups.toggleEventInfo;
+const closeEventInfoPopup = popups.closeEventInfoPopup;
+const getInfoPopupEvent = popups.getInfoPopupEvent;
+const openPatientRecord = popups.openPatientRecord;
+const closeWlScheduleModal = popups.closeWlScheduleModal;
+const confirmWlSchedule = popups.confirmWlSchedule;
+const showWlInfo = popups.showWlInfo;
+const closeWlInfo = popups.closeWlInfo;
+const openWlScheduleForCell = (...args) => guard('create_event', () => popups.openWlScheduleForCell(...args));
+const updateEventStatus = (payload) => guard('edit_event', () => popups.updateEventStatus(payload));
 
 // Lifecycles
 onMounted(() => {
@@ -177,6 +190,10 @@ const isDayBlockedBound = (dayObj) => agenda.isDayBlocked(dayObj);
 const isDayInPastBound = (dayObj) => agenda.isDayInPast(dayObj);
 
 const handleCellClick = ({ dayObj, hour, agent }) => {
+  if (!canCreate.value) {
+    useAlert('Você não tem permissão para criar eventos.');
+    return;
+  }
   if (agenda.isHourBlocked(dayObj, hour)) {
     agenda.getBlockedMessage(dayObj, hour, useAlert);
     return;
@@ -206,6 +223,7 @@ const toggleTreatment = (val) => agenda.toggleTreatment(val);
       :show-summary-bar="agenda.state.showSummaryBar"
       :show-mobile-sidebar="agenda.state.showMobileSidebar"
       :view-dropdown-open="agenda.state.viewDropdownOpen"
+      :can-create="canCreate"
       @prev="prevPeriod"
       @next="nextPeriod"
       @today="goToToday"
@@ -218,7 +236,7 @@ const toggleTreatment = (val) => agenda.toggleTreatment(val);
     />
 
     <!-- MOBILE FAB -->
-    <button class="mobile-fab" @click="openEventModal()">
+    <button v-if="canCreate" class="mobile-fab" @click="openEventModal()">
       <i class="i-lucide-plus" />
     </button>
 
@@ -243,6 +261,7 @@ const toggleTreatment = (val) => agenda.toggleTreatment(val);
         :get-day-block-info="getDayBlockInfoBound"
         :is-day-blocked="isDayBlockedBound"
         :is-day-in-past="isDayInPastBound"
+        :can-create="canCreate"
         @click-day="openEventModal({ dayObj: $event })"
         @click-event="toggleEventInfo($event)"
       />
@@ -284,6 +303,10 @@ const toggleTreatment = (val) => agenda.toggleTreatment(val);
         :get-status-config="getStatusConfigBound"
         :is-event-late="isEventLateBound"
         :is-dark-theme="agenda.state.isDarkTheme"
+        :can-create="canCreate"
+        :can-cancel="canCancel"
+        :can-drag="canDrag"
+        :can-edit="canEdit"
         @click-cell="handleCellClick"
         @click-event="toggleEventInfo($event)"
         @init-drag="initDrag($event)"
@@ -339,6 +362,7 @@ const toggleTreatment = (val) => agenda.toggleTreatment(val);
       :treatment-options="treatmentOptions"
       :is-saving="agenda.state.isSaving"
       :is-deleting="agenda.state.isDeleting"
+      :can-cancel="canCancel"
       @close="closeEventModal"
       @save="saveEvent"
       @delete="deleteEvent"
@@ -361,6 +385,7 @@ const toggleTreatment = (val) => agenda.toggleTreatment(val);
       :agents="agentList"
       :custom-attributes-config="agenda.state.customAttributesConfig"
       :status-updating-id="agenda.state.statusUpdatingId"
+      :can-edit="canEdit"
       @close="closeEventInfoPopup"
       @edit="openEditEvent"
       @status-change="updateEventStatus"

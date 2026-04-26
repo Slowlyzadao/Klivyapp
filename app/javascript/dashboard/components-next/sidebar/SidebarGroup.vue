@@ -27,6 +27,7 @@ const {
   resolvePermissions,
   resolveFeatureFlag,
   isAllowed,
+  isChildAllowed,
   isCollapsed,
   isResizing,
 } = useSidebarContext();
@@ -105,7 +106,7 @@ const accessibleItems = computed(() => {
     // If a item has no link, it means it's just a subgroup header
     // So we don't need to check for permissions here, because there's nothing to
     // access here anyway
-    return child.to && isAllowed(child.to);
+    return child.to && isChildAllowed(child);
   });
 });
 
@@ -284,7 +285,7 @@ watch(
             :active-child="activeChild"
           />
           <SidebarGroupLeaf
-            v-else-if="isAllowed(child.to)"
+            v-else-if="isChildAllowed(child)"
             v-show="isExpanded || activeChild?.name === child.name"
             v-bind="child"
             :active="activeChild?.name === child.name"

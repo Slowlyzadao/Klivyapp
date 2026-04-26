@@ -16,6 +16,7 @@ export default {
     treatmentOptions: { type: Array, default: () => TREATMENTS },
     isSaving: { type: Boolean, default: false },
     isDeleting: { type: Boolean, default: false },
+    canCancel: { type: Boolean, default: true },
   },
   emits: ['close', 'save', 'delete', 'update:newEvent'],
   data() {
@@ -669,10 +670,10 @@ export default {
         <!-- Footer -->
         <div
           class="flex items-center px-5 py-4 border-t border-n-weak"
-          :class="isEditing ? 'justify-between' : 'justify-end'"
+          :class="isEditing && canCancel ? 'justify-between' : 'justify-end'"
         >
           <button
-            v-if="isEditing"
+            v-if="isEditing && canCancel"
             class="btn-secondary !text-red-400 hover:!bg-red-500/10 hover:!border-red-500/20 flex items-center gap-1.5"
             :disabled="isDeleting"
             @click="$emit('delete')"

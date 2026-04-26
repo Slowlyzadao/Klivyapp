@@ -3,11 +3,15 @@ import { computed, useSlots, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { vOnClickOutside } from '@vueuse/components';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Breadcrumb from 'dashboard/components-next/breadcrumb/Breadcrumb.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
 import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
+
+const { can } = usePermissions();
+const canEditContact = computed(() => can('contacts', 'edit'));
 
 const props = defineProps({
   selectedContact: {
@@ -89,6 +93,7 @@ const closeMobileSidebar = () => {
             />
             <div class="flex items-center gap-2">
               <Button
+                v-if="canEditContact"
                 :label="
                   !isContactBlocked
                     ? $t('CONTACTS_LAYOUT.HEADER.BLOCK_CONTACT')

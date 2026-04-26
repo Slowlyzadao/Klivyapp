@@ -1,11 +1,14 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import { useStore } from 'vuex';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import cashRegistersAPI from '../api/cashRegisters';
 import DatePicker from '../components/DatePicker.vue';
 import '../financial.css';
 
 const store = useStore();
+const { can } = usePermissions();
+const canCreateTransaction = computed(() => can('financial', 'create_transaction'));
 
 const accountId = computed(() => store.getters.getCurrentAccountId);
 const currentUser = computed(() => store.getters.getCurrentUser);
@@ -370,6 +373,7 @@ const paymentMethods = [
             />
           </div>
           <button
+            v-if="canCreateTransaction"
             class="cr-btn cr-btn--primary"
             :disabled="submitting"
             @click="openRegister"
@@ -458,7 +462,7 @@ const paymentMethods = [
         </div>
 
         <!-- Action buttons (only when open) -->
-        <div v-if="isOpen" class="cr-actions">
+        <div v-if="isOpen && canCreateTransaction" class="cr-actions">
           <button
             class="cr-btn cr-btn--secondary"
             @click="

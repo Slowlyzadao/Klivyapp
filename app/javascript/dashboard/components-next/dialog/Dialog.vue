@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import { OnClickOutside } from '@vueuse/components';
 import { useI18n } from 'vue-i18n';
 
@@ -85,8 +85,13 @@ const positionClass = computed(() =>
   props.position === 'top' ? 'dialog-position-top' : ''
 );
 
-const open = () => {
+const open = async () => {
   isOpen.value = true;
+  // Aguarda Vue renderizar o slot (gated por `v-if="isOpen"`) antes de
+  // chamar showModal(). Sem o nextTick, em alguns casos o <dialog> nativo
+  // abre com o conteúdo ainda não montado e o usuário vê só título e
+  // botões, sem os campos do formulário.
+  await nextTick();
   dialogRef.value?.showModal();
 };
 

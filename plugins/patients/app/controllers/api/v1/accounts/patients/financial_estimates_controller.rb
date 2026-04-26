@@ -4,24 +4,24 @@ module Api
       module Patients
         class FinancialEstimatesController < Api::V1::Accounts::BaseController
           before_action :set_patient
+          before_action :ensure_view_patient_financial!, only: [:index, :show]
+          before_action :ensure_manage_patient_financial!,
+                        only: [:create, :update, :destroy, :approve, :cancel]
           before_action :set_estimate, only: [:show, :update, :destroy, :approve, :cancel]
 
           # GET /api/v1/accounts/:account_id/patients/:patient_id/financial_estimates
           def index
-            authorize FinancialEstimate
             @estimates = @patient.financial_estimates.active.order(created_at: :desc)
             render :index
           end
 
           # GET /api/v1/accounts/:account_id/patients/:patient_id/financial_estimates/:id
           def show
-            authorize @estimate
             render :show
           end
 
           # POST /api/v1/accounts/:account_id/patients/:patient_id/financial_estimates
           def create
-            authorize FinancialEstimate
             @estimate = FinancialEstimate.new(estimate_params)
             @estimate.account = Current.account
             @estimate.patient = @patient
@@ -40,7 +40,6 @@ module Api
 
           # PATCH /api/v1/accounts/:account_id/patients/:patient_id/financial_estimates/:id
           def update
-            authorize @estimate
             return render json: { error: 'Orçamento aprovado não pode ser editado' }, status: :forbidden if @estimate.status_aprovado?
 
             if @estimate.update(estimate_params)
@@ -56,7 +55,6 @@ module Api
 
           # DELETE /api/v1/accounts/:account_id/patients/:patient_id/financial_estimates/:id
           def destroy
-            authorize @estimate
             if @estimate.status_aprovado?
               return render json: { error: 'Orçamento aprovado não pode ser cancelado por esta rota. Use PATCH /cancel.' }, status: :forbidden
             end
@@ -71,7 +69,6 @@ module Api
 
           # PATCH /api/v1/accounts/:account_id/patients/:patient_id/financial_estimates/:id/approve
           def approve
-            authorize @estimate
             unless @estimate.status_rascunho? || @estimate.status_enviado?
               return render json: { error: "Orçamento com status '#{@estimate.status}' não pode ser aprovado" }, status: :unprocessable_entity
             end
@@ -87,7 +84,6 @@ module Api
 
           # PATCH /api/v1/accounts/:account_id/patients/:patient_id/financial_estimates/:id/cancel
           def cancel
-            authorize @estimate
             return render json: { error: 'Orçamento já cancelado' }, status: :unprocessable_entity if @estimate.status_cancelado?
 
             @estimate.update!(status: 'cancelado')
@@ -95,6 +91,20 @@ module Api
           end
 
           private
+
+          def ensure_view_patient_financial!
+            return if Current.user.beclinic_can?(Current.account, :patients, :view_financial)
+
+            render json: { error: 'Você não tem permissão para visualizar o financeiro do paciente' },
+                   status: :forbidden
+          end
+
+          def ensure_manage_patient_financial!
+            return if Current.user.beclinic_can?(Current.account, :patients, :manage_financial)
+
+            render json: { error: 'Você não tem permissão para gerenciar o financeiro do paciente' },
+                   status: :forbidden
+          end
 
           def set_patient
             @patient = Current.account.patients.find(params[:patient_id])

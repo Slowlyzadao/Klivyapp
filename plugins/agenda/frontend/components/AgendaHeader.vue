@@ -7,6 +7,7 @@ export default {
     showSummaryBar: { type: Boolean, default: false },
     showMobileSidebar: { type: Boolean, default: false },
     viewDropdownOpen: { type: Boolean, default: false },
+    canCreate: { type: Boolean, default: true },
   },
   emits: [
     'prev',
@@ -171,7 +172,7 @@ export default {
         <i class="i-ph-chart-bar" />
         <span class="hide-mobile">Resumo</span>
       </button>
-      <button class="new-event-btn desktop-new-event" @click="$emit('new-event')">
+      <button v-if="canCreate" class="new-event-btn desktop-new-event" @click="$emit('new-event')">
         <i class="i-lucide-plus" />
         <span class="new-event-text">{{ $t('AGENDA.HEADER.NEW_EVENT') }}</span>
       </button>

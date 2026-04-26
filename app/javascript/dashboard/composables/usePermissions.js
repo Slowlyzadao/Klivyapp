@@ -78,6 +78,23 @@ export function usePermissions() {
   };
 
   /**
+   * Whether a module is enabled (has at least one active sub-permission).
+   * Used by the sidebar to hide entire sections when a Custom Role disables
+   * the module wholesale. Admins and donos always see every module.
+   * @param {string} moduleName
+   * @returns {boolean}
+   */
+  const moduleEnabled = moduleName => {
+    if (isAdmin.value || isDono.value) return true;
+    const perms = store.getters['beclinicPermissions/getPermissions'];
+    const modulePerms = perms?.[moduleName];
+    if (!modulePerms) return true;
+    return Object.entries(modulePerms).some(
+      ([k, v]) => k !== 'scope' && v === true
+    );
+  };
+
+  /**
    * Fetch permissions from the server.
    * Call this once after authentication.
    */
@@ -99,6 +116,7 @@ export function usePermissions() {
     isEspecialista,
     can,
     scope,
+    moduleEnabled,
     fetchPermissions,
     clearPermissions,
   };

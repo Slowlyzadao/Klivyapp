@@ -1,5 +1,6 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import EmptyStateLayout from 'dashboard/components-next/EmptyStateLayout.vue';
 import CreateNewContactDialog from 'dashboard/components-next/Contacts/ContactsForm/CreateNewContactDialog.vue';
@@ -28,6 +29,9 @@ defineProps({
 
 const emit = defineEmits(['create']);
 
+const { can } = usePermissions();
+const canCreateContact = computed(() => can('contacts', 'create'));
+
 const createNewContactDialogRef = ref(null);
 
 const onClick = () => {
@@ -54,7 +58,7 @@ const onClick = () => {
       </div>
     </template>
     <template #actions>
-      <div v-if="showButton">
+      <div v-if="showButton && canCreateContact">
         <Button :label="buttonLabel" icon="i-lucide-plus" @click="onClick" />
         <CreateNewContactDialog
           ref="createNewContactDialogRef"

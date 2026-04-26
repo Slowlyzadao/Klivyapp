@@ -10,6 +10,7 @@ export default {
     agents: { type: Array, default: () => [] },
     customAttributesConfig: { type: Array, default: () => [] },
     statusUpdatingId: { type: [Number, String], default: null },
+    canEdit: { type: Boolean, default: true },
   },
   emits: ['close', 'edit', 'status-change', 'open-patient'],
   data() {
@@ -185,7 +186,7 @@ export default {
           </div>
 
           <!-- Status Section -->
-          <div class="px-4 py-3 bg-slate-50/80 dark:bg-slate-900/40 border-y border-slate-100 dark:border-slate-700/60 sticky bottom-[64.5px] z-10 w-full backdrop-blur-md">
+          <div v-if="canEdit" class="px-4 py-3 bg-slate-50/80 dark:bg-slate-900/40 border-y border-slate-100 dark:border-slate-700/60 sticky bottom-[64.5px] z-10 w-full backdrop-blur-md">
             <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2.5">Atualizar Status</p>
             <div class="grid grid-cols-2 gap-2">
               <button
@@ -204,8 +205,8 @@ export default {
           </div>
 
           <!-- Footer Actions -->
-          <div class="p-3 bg-white dark:bg-slate-800 flex gap-2">
-            <button @click="$emit('edit', event)" class="flex-1 h-10 flex items-center justify-center gap-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm transition-all active:scale-95">
+          <div v-if="canEdit || event.contact_id" class="p-3 bg-white dark:bg-slate-800 flex gap-2">
+            <button v-if="canEdit" @click="$emit('edit', event)" class="flex-1 h-10 flex items-center justify-center gap-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm transition-all active:scale-95">
               <i class="i-lucide-pencil size-4" />
               Editar
             </button>

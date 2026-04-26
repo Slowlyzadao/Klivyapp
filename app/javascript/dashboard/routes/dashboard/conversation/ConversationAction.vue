@@ -3,6 +3,7 @@
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import { useAgentsList } from 'dashboard/composables/useAgentsList';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import ContactDetailsItem from './ContactDetailsItem.vue';
 import MultiselectDropdown from 'shared/components/ui/MultiselectDropdown.vue';
 import ConversationLabels from './labels/LabelBox.vue';
@@ -26,8 +27,10 @@ export default {
   },
   setup() {
     const { agentsList } = useAgentsList();
+    const { can } = usePermissions();
     return {
       agentsList,
+      can,
     };
   },
   data() {
@@ -67,6 +70,12 @@ export default {
       currentUser: 'getCurrentUser',
       teams: 'teams/getTeams',
     }),
+    canAssignConversation() {
+      return this.can('chat', 'assign_conversation');
+    },
+    canChangeStatus() {
+      return this.can('chat', 'reply');
+    },
     hasAnAssignedTeam() {
       return !!this.currentChat?.meta?.team;
     },
@@ -211,7 +220,7 @@ export default {
 
 <template>
   <div>
-    <div>
+    <div v-if="canAssignConversation">
       <ContactDetailsItem
         compact
         :title="$t('CONVERSATION_SIDEBAR.ASSIGNEE_LABEL')"
@@ -242,7 +251,7 @@ export default {
         @select="onClickAssignAgent"
       />
     </div>
-    <div>
+    <div v-if="canAssignConversation">
       <ContactDetailsItem
         compact
         :title="$t('CONVERSATION_SIDEBAR.TEAM_LABEL')"
@@ -261,7 +270,7 @@ export default {
         @select="onClickAssignTeam"
       />
     </div>
-    <div>
+    <div v-if="canChangeStatus">
       <ContactDetailsItem compact :title="$t('CONVERSATION.PRIORITY.TITLE')" />
       <MultiselectDropdown
         :options="priorityOptions"
@@ -279,10 +288,12 @@ export default {
         @select="onClickAssignPriority"
       />
     </div>
-    <ContactDetailsItem
-      compact
-      :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONVERSATION_LABELS')"
-    />
-    <ConversationLabels :conversation-id="conversationId" />
+    <template v-if="canChangeStatus">
+      <ContactDetailsItem
+        compact
+        :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONVERSATION_LABELS')"
+      />
+      <ConversationLabels :conversation-id="conversationId" />
+    </template>
   </div>
 </template>
