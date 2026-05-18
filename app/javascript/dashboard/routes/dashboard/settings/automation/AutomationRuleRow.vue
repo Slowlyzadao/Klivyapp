@@ -59,7 +59,7 @@ const automationActive = computed({
       </BaseTableCell>
 
       <BaseTableCell>
-        <ToggleSwitch v-model="automationActive" :disabled="!canEdit" />
+        <ToggleSwitch v-if="canEdit" v-model="automationActive" />
       </BaseTableCell>
 
       <BaseTableCell :title="readableDateWithTime(automation.created_on)">

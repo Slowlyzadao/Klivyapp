@@ -12,3 +12,18 @@ by providing a `content_for(:stylesheet)` block.
 <% end %>
 
 <%= yield :stylesheet %>
+
+<%# ── Klivy Super Admin overrides ────────────────────────────────────────
+    Aumenta a largura útil dos formulários (Administrate default trava em
+    50rem ≈ 800px, deixando muito espaço vazio em monitores wide). %>
+<style>
+  .main-content { max-width: none !important; }
+  .field-unit__field { max-width: none !important; }
+  .main-content__body { padding-right: 2.5rem; }
+  .main-content__body form .field-unit__field input[type="text"],
+  .main-content__body form .field-unit__field input[type="email"],
+  .main-content__body form .field-unit__field input[type="url"],
+  .main-content__body form .field-unit__field input[type="number"],
+  .main-content__body form .field-unit__field select,
+  .main-content__body form .field-unit__field textarea { width: 100%; max-width: 100%; }
+</style>

@@ -39,7 +39,7 @@ Desenvolvimento de uma API robusta para suportar:
   - **Prioridade**: Urgente, Alta, Média, Baixa.
   - **Tipo de Evento**: Consulta, Bloqueio de Agenda, Compromisso.
   - **Tratamento**: Lista específica para Beclinic (veja Seção 6).
-  - **Status do Agendamento**: Pendente, Confirmado, Cancelado, Compareceu, Não Compareceu.
+  - **Status do Agendamento**: `pending_confirmation` (criado pela Bea/IA, aguarda validação humana — badge laranja "Aguardando confirmação"), Agendado (`scheduled`), Confirmado (`confirmed`), Chegou (`arrived`), Em atendimento (`in_progress`), Atendido (`completed`), Cancelado (`cancelled`), Faltou (`no_show`). Quando humano muda `pending_confirmation` → `scheduled`/`confirmed`, dispara as notificações configuradas em `AgendaNotificationRule` (que ficaram seguradas durante a reserva pendente).
   - **Horário**: Data/Hora de início e fim.
   - **Observações**: Campo de texto para detalhes clínicos ou lembretes.
 

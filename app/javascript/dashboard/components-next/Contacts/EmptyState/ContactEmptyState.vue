@@ -1,12 +1,12 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import EmptyStateLayout from 'dashboard/components-next/EmptyStateLayout.vue';
 import CreateNewContactDialog from 'dashboard/components-next/Contacts/ContactsForm/CreateNewContactDialog.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ContactsCard from 'dashboard/components-next/Contacts/ContactsCard/ContactsCard.vue';
 import contactContent from 'dashboard/components-next/Contacts/EmptyState/contactEmptyStateContent';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 defineProps({
   title: {
@@ -29,8 +29,10 @@ defineProps({
 
 const emit = defineEmits(['create']);
 
-const { can } = usePermissions();
-const canCreateContact = computed(() => can('contacts', 'create'));
+const { isAdmin, can: klivyCan } = usePermissions();
+const canCreateContact = computed(
+  () => isAdmin.value || klivyCan('contacts', 'create')
+);
 
 const createNewContactDialogRef = ref(null);
 

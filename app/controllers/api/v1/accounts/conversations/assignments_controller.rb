@@ -2,6 +2,7 @@ class Api::V1::Accounts::Conversations::AssignmentsController < Api::V1::Account
   # assigns agent/team to a conversation
   def create
     authorize @conversation, :assign?
+
     if params.key?(:assignee_id) || agent_bot_assignment?
       set_agent
     elsif params.key?(:team_id)

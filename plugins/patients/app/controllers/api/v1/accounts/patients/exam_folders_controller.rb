@@ -1,58 +1,128 @@
-class Api::V1::Accounts::Patients::ExamFoldersController < Api::V1::Accounts::BaseController
-  before_action :set_patient
-  before_action :ensure_view_exams!, only: [:index]
-  before_action :ensure_manage_exams!, only: [:update]
+module Api
+  module V1
+    module Accounts
+      module Patients
+        class ExamFoldersController < Api::V1::Accounts::BaseController
+          before_action :set_patient
+          before_action :set_folder, only: [:update, :destroy]
+          before_action :ensure_view_exams!, only: [:index]
+          before_action :ensure_manage_exams!, only: [:create, :update, :destroy, :reorder]
 
-  # GET — returns the full folder data blob for this patient
-  def index
-    render json: (@patient.exam_folder_data || {})
-  end
+          # GET /api/v1/accounts/:account_id/patients/:patient_id/exam_folders
+          def index
+            @folders = @patient.exam_folders.ordered
+            render :index
+          end
 
-  # PUT /bulk — saves the entire folder structure as a JSON blob
-  def update
-    @patient.update!(exam_folder_data: sanitized_folder_data)
-    render json: @patient.exam_folder_data
-  end
+          # POST /api/v1/accounts/:account_id/patients/:patient_id/exam_folders
+          def create
+            @folder = @patient.exam_folders.new(folder_params)
+            @folder.account = Current.account
+            @folder.position ||= next_position(@folder.parent_id)
 
-  private
+            if @folder.save
+              render :show, status: :created
+            else
+              render json: { errors: @folder.errors.full_messages }, status: :unprocessable_entity
+            end
+          end
 
-  def ensure_view_exams!
-    return if Current.user.beclinic_can?(Current.account, :patients, :view_exams)
+          # PATCH /api/v1/accounts/:account_id/patients/:patient_id/exam_folders/:id
+          def update
+            if @folder.update(folder_params)
+              render :show
+            else
+              render json: { errors: @folder.errors.full_messages }, status: :unprocessable_entity
+            end
+          end
 
-    render json: { error: 'Acesso negado' }, status: :forbidden
-  end
+          # DELETE /api/v1/accounts/:account_id/patients/:patient_id/exam_folders/:id
+          # Move arquivos da pasta para a raiz e exclui (subpastas vão junto via dependent: :destroy).
+          def destroy
+            ActiveRecord::Base.transaction do
+              # Move medias direto para raiz (não para a pasta-pai, alinhado com a UX atual).
+              @folder.exam_medias.update_all(exam_folder_id: nil)
+              @folder.children.find_each do |child|
+                child.exam_medias.update_all(exam_folder_id: nil)
+              end
+              @folder.destroy!
+            end
 
-  def ensure_manage_exams!
-    return if Current.user.beclinic_can?(Current.account, :patients, :manage_exams)
+            head :no_content
+          end
 
-    render json: { error: 'Você não tem permissão para gerenciar exames' }, status: :forbidden
-  end
+          # PUT /api/v1/accounts/:account_id/patients/:patient_id/exam_folders/reorder
+          # Body: { items: [{ id, parent_id, position }, ...] }
+          # Aplica todas as mudanças em uma transação. IDs não pertencentes ao paciente são ignorados.
+          def reorder
+            items = Array(params[:items])
+            return head(:ok) if items.empty?
 
-  def set_patient
-    @patient = Current.account.patients.find(params[:patient_id])
-  end
+            ActiveRecord::Base.transaction do
+              items.each do |item|
+                folder = @patient.exam_folders.find_by(id: item[:id])
+                next unless folder
 
-  def folder_data_params
-    params.permit(
-      folders: [:id, :name, :color, :isRoot, :parent_id, :position],
-      lock_map: {},
-      media_folder_map: {},
-      expanded_ids: []
-    ).to_h
-  end
+                attrs = {}
+                attrs[:position]  = item[:position].to_i if item.key?(:position)
+                attrs[:parent_id] = normalize_parent_id(item[:parent_id]) if item.key?(:parent_id)
 
-  # Filtra media_folder_map e lock_map para só aceitar IDs de medias
-  # que pertencem a este paciente (evita persistir IDs cross-tenant/inexistentes).
-  def sanitized_folder_data
-    raw = folder_data_params
-    valid_media_ids = @patient.exam_medias.active.pluck(:id).map(&:to_s).to_set
+                folder.update!(attrs) if attrs.any?
+              end
+            end
 
-    raw['media_folder_map'] = (raw['media_folder_map'] || {}).select do |media_id, _folder_id|
-      valid_media_ids.include?(media_id.to_s)
+            head :ok
+          rescue ActiveRecord::RecordInvalid => e
+            render json: { errors: [e.message] }, status: :unprocessable_entity
+          end
+
+          private
+
+          def ensure_view_exams!
+            return if Current.account_user&.administrator?
+            return if Current.user.beclinic_can?(Current.account, :patients, :view_exams)
+
+            render json: { error: 'Sem permissão para visualizar exames.' }, status: :forbidden
+          end
+
+          def ensure_manage_exams!
+            return if Current.account_user&.administrator?
+            return if Current.user.beclinic_can?(Current.account, :patients, :manage_exams)
+
+            render json: { error: 'Sem permissão para gerenciar exames.' }, status: :forbidden
+          end
+
+          def set_patient
+            @patient = Current.account.patients.find(params[:patient_id])
+          rescue ActiveRecord::RecordNotFound
+            render json: { error: 'Paciente não encontrado' }, status: :not_found
+          end
+
+          def set_folder
+            @folder = @patient.exam_folders.find(params[:id])
+          rescue ActiveRecord::RecordNotFound
+            render json: { error: 'Pasta não encontrada' }, status: :not_found
+          end
+
+          def folder_params
+            params.require(:exam_folder).permit(:name, :color, :parent_id, :position)
+          rescue ActionController::ParameterMissing
+            params.permit(:name, :color, :parent_id, :position)
+          end
+
+          def next_position(parent_id)
+            scope = @patient.exam_folders.where(parent_id: parent_id)
+            (scope.maximum(:position) || -1) + 1
+          end
+
+          def normalize_parent_id(value)
+            return nil if value.blank? || value == 'root'
+
+            # Garante que o pai é do mesmo paciente — defesa em profundidade contra IDs cross-tenant.
+            @patient.exam_folders.where(id: value).pick(:id)
+          end
+        end
+      end
     end
-    raw['lock_map'] = (raw['lock_map'] || {}).select do |media_id, _locked|
-      valid_media_ids.include?(media_id.to_s)
-    end
-    raw
   end
 end

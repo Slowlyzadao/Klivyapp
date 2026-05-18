@@ -1,7 +1,10 @@
 <script>
 import AgendaEventCard from './AgendaEventCard.vue';
 import AgendaDragGhost from './AgendaDragGhost.vue';
-import { parseEventDate, formatEventTime, getEventDurationInHours, getEventSizeTier } from '../utils/agenda-date.js';
+import { parseEventDate, formatEventTime, getEventSizeTier } from '../utils/agenda-date.js';
+import { pastelBgFromColor, opaquePastelFromColor, darkenedTextColor, translucentBgFromColor } from '../utils/agenda-colors.js';
+
+const MIN_EVENT_HEIGHT_PX = 28;
 
 export default {
   name: 'AgendaTimelineView',
@@ -15,6 +18,8 @@ export default {
     dayHours: { type: Array, required: true },
     rowHeight: { type: Number, default: 80 },
     pixelsPerHour: { type: Number, default: 80 },
+    slotIntervalMinutes: { type: Number, default: 60 },
+    visibleStartHour: { type: Number, default: 0 },
     agendaEvents: { type: Array, default: () => [] },
     agentList: { type: Array, default: () => [] },
     currentUserID: { type: [Number, String], default: null },
@@ -28,6 +33,8 @@ export default {
     dragCurrentStartsAt: { type: String, default: null },
     dragCurrentEndsAt: { type: String, default: null },
     dragGhostStyle: { type: Object, default: () => ({}) },
+    dragIsBlocked: { type: Boolean, default: false },
+    dragBlockReason: { type: String, default: null },
     // Resize state
     isResizing: { type: Boolean, default: false },
     resizingEventId: { type: [Number, String], default: null },
@@ -39,14 +46,12 @@ export default {
     calculateOverlaps: { type: Function, required: true },
     getEventBackground: { type: Function, required: true },
     getAgentColor: { type: Function, required: true },
+    getTreatmentColor: { type: Function, default: () => null },
+    getCategoryColor: { type: Function, default: () => null },
     getStatusConfig: { type: Function, required: true },
     isEventLate: { type: Function, required: true },
     getDayBlockInfo: { type: Function, default: () => [] },
     isDarkTheme: { type: Boolean, default: true },
-    canCreate: { type: Boolean, default: true },
-    canCancel: { type: Boolean, default: true },
-    canDrag: { type: Boolean, default: true },
-    canEdit: { type: Boolean, default: true },
   },
   emits: [
     'click-cell',
@@ -83,44 +88,136 @@ export default {
         dayObj.year === n.getFullYear()
       );
     },
-    getColumnEventsWithPositions(colItem) {
-      let dayObj;
-      if (this.viewMode === 'week') {
-        dayObj = colItem;
-      } else {
-        dayObj = this.currentDayObj;
-      }
-
-      const dayEvents = this.getEventsForDay(dayObj);
-
-      let filtered;
-      if (this.viewMode === 'day') {
-        filtered = dayEvents.filter(e => e.user_id === colItem.id);
-      } else {
-        filtered = dayEvents;
-      }
-
-      const withOverlaps = this.calculateOverlaps(filtered);
-
-      return withOverlaps.map(event => {
-        return {
-          ...event,
-          _style: this.getEventTimelineStyle(
-            event,
-            event.totalCols,
-            event.colIdx
-          ),
-          _agentColor: this.getAgentColor(event),
-          _bg: this.getEventBackground(event),
-        };
-      });
+    isWeekend(dayObj) {
+      const dow = new Date(dayObj.year, dayObj.month, dayObj.day).getDay();
+      return dow === 0 || dow === 6;
     },
-    getEventTimelineStyle(event, totalCols, colIdx) {
+    getColumnEventsWithPositions(colItem) {
+      // Day view: coluna É o agente — filtra eventos pelo agente da coluna,
+      // calcula overlaps internos, renderiza ocupando 100% da largura.
+      if (this.viewMode === 'day') {
+        const dayEvents = this.getEventsForDay(this.currentDayObj);
+        const filtered = dayEvents.filter(e => e.user_id === colItem.id);
+        const withOverlaps = this.calculateOverlaps(filtered);
+        return withOverlaps.map(event => ({
+          ...event,
+          _style: this.getEventTimelineStyle(event, event.totalCols, event.colIdx),
+          _agentColor: this.getAgentColor(event),
+          _treatmentColor: this.getTreatmentColor(event),
+          _bg: this.getEventBackground(event),
+        }));
+      }
+
+      // Week view: divide a coluna do dia em sub-colunas (lanes) por agente.
+      // Cada agente que tem evento naquele dia ganha uma fatia igual da
+      // largura total. Dentro da lane do agente, overlaps internos são
+      // resolvidos pelo `calculateOverlaps` clássico — então 2 consultas
+      // sobrepostas do mesmo agente continuam dividindo a lane dele em duas.
+      const dayObj = colItem;
+      const lanes = this.getDayAgentLanes(dayObj);
+      const laneByAgent = new Map(lanes.map(l => [l.agentId, l]));
+
+      // Agrupa por agente
+      const dayEvents = this.getEventsForDay(dayObj);
+      const buckets = new Map();
+      const orphans = [];
+      for (const e of dayEvents) {
+        if (e.user_id && laneByAgent.has(e.user_id)) {
+          if (!buckets.has(e.user_id)) buckets.set(e.user_id, []);
+          buckets.get(e.user_id).push(e);
+        } else {
+          orphans.push(e);
+        }
+      }
+
+      const result = [];
+      for (const [agentId, events] of buckets) {
+        const lane = laneByAgent.get(agentId);
+        const withOverlaps = this.calculateOverlaps(events);
+        for (const ev of withOverlaps) {
+          result.push({
+            ...ev,
+            _style: this.getEventTimelineStyle(ev, ev.totalCols, ev.colIdx, lane),
+            _agentColor: this.getAgentColor(ev),
+            _treatmentColor: this.getTreatmentColor(ev),
+            _bg: this.getEventBackground(ev),
+          });
+        }
+      }
+      // Eventos sem agente associado: caem em uma "lane fantasma" full-width
+      // sob comportamento legado (overlap clássico). Raros — manter simples.
+      if (orphans.length) {
+        const withOverlaps = this.calculateOverlaps(orphans);
+        for (const ev of withOverlaps) {
+          result.push({
+            ...ev,
+            _style: this.getEventTimelineStyle(ev, ev.totalCols, ev.colIdx, null),
+            _agentColor: this.getAgentColor(ev),
+            _treatmentColor: this.getTreatmentColor(ev),
+            _bg: this.getEventBackground(ev),
+          });
+        }
+      }
+      return result;
+    },
+    // Lista as lanes do dia em week view: um slot por agente que tem evento
+    // naquele dia. Ordem segue `activeAgents` (estável entre renders) e
+    // ignora agentes ocultos pelo filtro. Retorno usado tanto pra calcular
+    // a posição dos cards quanto pra renderizar os fundos das lanes.
+    getDayAgentLanes(dayObj) {
+      if (this.viewMode !== 'week') return [];
+      const events = this.getEventsForDay(dayObj);
+      const idsInDay = new Set();
+      for (const e of events) {
+        if (e.user_id) idsInDay.add(e.user_id);
+      }
+      if (!idsInDay.size) return [];
+      const ordered = this.activeAgents.filter(a => idsInDay.has(a.id));
+      if (!ordered.length) return [];
+      const total = ordered.length;
+      const isDark = this.isDarkTheme;
+      return ordered.map((agent, idx) => ({
+        agentId: agent.id,
+        agentColor: agent.color,
+        agentName: agent.name,
+        agentIdx: idx,
+        totalAgents: total,
+        leftPct: (idx * 100) / total,
+        widthPct: 100 / total,
+        // Translúcido (não opaco) para preservar a visibilidade do hatch das
+        // células bloqueadas/almoço/feriado que ficam atrás da lane. Em
+        // dark mode subimos a alpha — alpha 0.12 sobre fundo escuro fica
+        // praticamente invisível.
+        bg: translucentBgFromColor(agent.color, isDark ? 0.18 : 0.12),
+      }));
+    },
+    // Agrupa os slots da grade em ranges contínuos de horas NÃO-bloqueadas.
+    // Usado para renderizar as lanes do agente apenas dentro das horas de
+    // trabalho — bloqueio (almoço, feriado, fora do expediente) interrompe
+    // o tint pra que o hatch da célula fique visível e limpo, igual day view.
+    getLaneSegments(dayObj) {
+      const segments = [];
+      let currentStart = null;
+      this.dayHours.forEach((hour, idx) => {
+        const blocked = this.isHourBlocked(dayObj, hour);
+        if (!blocked) {
+          if (currentStart === null) currentStart = idx;
+        } else if (currentStart !== null) {
+          segments.push({ startIdx: currentStart, endIdx: idx - 1 });
+          currentStart = null;
+        }
+      });
+      if (currentStart !== null) {
+        segments.push({
+          startIdx: currentStart,
+          endIdx: this.dayHours.length - 1,
+        });
+      }
+      return segments;
+    },
+    getEventTimelineStyle(event, totalCols, colIdx, agentLane) {
       if (!event.starts_at || !event.ends_at) return {};
       const start = parseEventDate(event.starts_at);
-      const topOffset =
-        start.getHours() * this.pixelsPerHour +
-        (start.getMinutes() / 60) * this.pixelsPerHour;
 
       let endAtForCalc = event.ends_at;
       if (
@@ -130,33 +227,94 @@ export default {
       ) {
         endAtForCalc = this.resizingEventEndAt;
       }
+      const end = parseEventDate(endAtForCalc);
 
-      const durationHours = getEventDurationInHours(
-        event,
-        this.isResizing && this.resizingEventId === event.id
-          ? endAtForCalc
-          : null
-      );
+      const interval = this.slotIntervalMinutes || 60;
+      const slotHeight = this.rowHeight;
+      const visibleStartMin = this.visibleStartHour * 60;
+      const startMin = start.getHours() * 60 + start.getMinutes();
+      const endMin = end.getHours() * 60 + end.getMinutes();
+
+      // Snap to slot boundaries so the event sits exactly on grid lines.
+      // floor() the start so the top aligns with the slot containing
+      // start_time; ceil() the end so trailing minutes always fill the
+      // last partial slot (per spec: NEVER floor — the bottom must reach
+      // the end of the last slot the event touches).
+      const snapStartSlot = Math.floor((startMin - visibleStartMin) / interval);
+      const snapEndSlot = Math.ceil((endMin - visibleStartMin) / interval);
+      const slotsOccupied = Math.max(1, snapEndSlot - snapStartSlot);
+
+      const topOffset = snapStartSlot * slotHeight;
+      // Subtract a 2px sliver from the bottom so consecutive events have a
+      // visible vertical gap instead of looking glued. Top stays
+      // slot-aligned, only the visual height shrinks.
       const heightPx = Math.max(
-        20,
-        durationHours * this.pixelsPerHour - 4
+        MIN_EVENT_HEIGHT_PX,
+        slotsOccupied * slotHeight - 2,
       );
 
+      // Posicionamento horizontal:
+      //   - Sem agentLane (day view ou orfão em week): o evento ocupa a
+      //     coluna toda dividido apenas pelos overlaps internos.
+      //   - Com agentLane (week view padrão): o evento vive dentro da lane
+      //     do agente. A largura é a fatia da lane dividida pelos overlaps
+      //     internos do próprio agente.
       const colCount = totalCols || 1;
       const idx = colIdx || 0;
-      const colWidthPct = 100 / colCount;
-      const leftPct = idx * colWidthPct;
+      let leftPct;
+      let widthPct;
+      if (agentLane) {
+        const innerWidth = agentLane.widthPct / colCount;
+        leftPct = agentLane.leftPct + idx * innerWidth;
+        widthPct = innerWidth;
+      } else {
+        widthPct = 100 / colCount;
+        leftPct = idx * widthPct;
+      }
+
+      // Regra de cor do card (independente de view):
+      //   - tem categoria → pastel OPACO da categoria + accent saturado
+      //   - não tem        → fundo neutro (branco light / slate-800 dark)
+      // Opaco (não rgba) é crucial: o card senta em cima das linhas do grid
+      // do calendário; alpha deixa as linhas vazarem e prejudica leitura.
+      // A identidade do agente é comunicada pelo wash da lane/coluna, nunca
+      // pelo body do card.
+      const isDark = this.isDarkTheme;
+      const categoryColor = this.getCategoryColor(event);
+      const hasCategory = !!categoryColor;
+      const bg = hasCategory
+        ? opaquePastelFromColor(categoryColor, isDark)
+        : (isDark ? 'rgb(30, 41, 59)' : '#ffffff');
+      const accent = hasCategory
+        ? categoryColor
+        : (isDark ? '#475569' : '#cbd5e1');
+      const textColor = hasCategory
+        ? darkenedTextColor(categoryColor, isDark)
+        : (isDark ? '#e2e8f0' : '#1f2937');
 
       return {
         position: 'absolute',
-        top: `${topOffset + 2}px`,
+        top: `${topOffset}px`,
         height: `${heightPx}px`,
         left: `calc(${leftPct}% + 3px)`,
-        width: `calc(${colWidthPct}% - 6px)`,
-        background: this.getEventBackground(event),
-        borderLeftColor: this.getAgentColor(event),
+        width: `calc(${widthPct}% - 6px)`,
+        background: bg,
+        borderLeftColor: accent,
+        borderLeftWidth: '4px',
+        '--evt-text-color': textColor,
+        '--evt-accent-color': accent,
+        color: textColor,
         zIndex: this.isDragging && this.draggingEventId === event.id ? 50 : 5,
       };
+    },
+    // Wash atrás da coluna do agente (apenas day view). Usa exatamente o
+    // mesmo cálculo da lane backdrop em week view (`translucentBgFromColor`
+    // com mesma alpha) — antes day view usava `pastelBgFromColor` opaco
+    // (HSL L=95%) e ficava visualmente diferente do tom translúcido da
+    // lane em week. Agora os dois tons batem.
+    getAgentColumnTint(agent) {
+      if (!agent || !agent.color) return null;
+      return translucentBgFromColor(agent.color, this.isDarkTheme ? 0.18 : 0.12);
     },
     isDragInDay(dayObj) {
       if (!this.dragCurrentDayObj) return false;
@@ -213,13 +371,13 @@ export default {
               v-for="(dayObj, idx) in currentWeekDays"
               :key="idx"
               class="timeline-day-header"
-              :class="{ 'is-today': isToday(dayObj) }"
+              :class="{ 'is-today': isToday(dayObj), 'is-weekend': isWeekend(dayObj) }"
             >
               <div style="display: flex; align-items: center; gap: 4px;">
                 <span class="day-str">{{ dayObj.label }}</span>
-                <i 
-                  v-if="getDayBlockInfo(dayObj).some(b => b.type === 'closed')" 
-                  class="i-lucide-lock text-n-slate-8 text-xs" 
+                <i
+                  v-if="getDayBlockInfo(dayObj).some(b => b.type === 'closed')"
+                  class="i-lucide-lock text-n-slate-8 text-xs"
                   title="Dias fechado"
                 />
               </div>
@@ -231,11 +389,29 @@ export default {
               <div class="header-day-blocks" v-if="getDayBlockInfo(dayObj).some(b => b.type !== 'closed')">
                  <template v-for="(block, bIdx) in getDayBlockInfo(dayObj)" :key="bIdx">
                     <div v-if="block.type !== 'closed'"
-                         class="header-block-banner" 
+                         class="header-block-banner"
                          :class="[`block-type-${block.type}`, { 'is-past': block.isPast }]">
                        {{ block.title }}
                     </div>
                  </template>
+              </div>
+              <!-- Faixas coloridas dos agentes na borda inferior do header
+                   (week view). Mesma proporção das lanes abaixo, então o
+                   olho conecta visualmente "topo colorido = começo da lane
+                   daquele agente". Substitui o border-top que ficava no
+                   primeiro segmento da lane. -->
+              <div class="day-header-agent-stripes">
+                <div
+                  v-for="lane in getDayAgentLanes(dayObj)"
+                  :key="`hdr-stripe-${lane.agentId}`"
+                  class="day-header-agent-stripe"
+                  :title="lane.agentName"
+                  :style="{
+                    left: `${lane.leftPct}%`,
+                    width: `${lane.widthPct}%`,
+                    background: lane.agentColor,
+                  }"
+                />
               </div>
             </div>
           </template>
@@ -272,6 +448,7 @@ export default {
               <div
                 v-for="(dayObj, idx) in currentWeekDays"
                 :key="idx"
+                :data-col-idx="idx"
                 class="timeline-cell"
                 :class="{
                   'cell-blocked': isHourBlocked(dayObj, hour),
@@ -286,7 +463,9 @@ export default {
                   class="blocked-slot-overlay"
                 >
                   <i class="i-lucide-lock blocked-slot-icon" />
-                  <span class="blocked-slot-text">{{ isHourBlocked(dayObj, hour) === true ? 'Indisponível' : isHourBlocked(dayObj, hour) }}</span>
+                  <span class="blocked-slot-tooltip" role="tooltip">
+                    {{ isHourBlocked(dayObj, hour) === true ? 'Indisponível' : isHourBlocked(dayObj, hour) }}
+                  </span>
                 </div>
                 <div
                   v-else-if="
@@ -313,12 +492,19 @@ export default {
             </template>
             <template v-else>
               <div
-                v-for="agent in activeAgents"
+                v-for="(agent, aIdx) in activeAgents"
                 :key="agent.id"
+                :data-col-idx="aIdx"
                 class="timeline-cell day-cell"
                 :class="{
                   'cell-blocked': isHourBlocked(currentDayObj, hour),
+                  'cell-agent-tinted': !isHourBlocked(currentDayObj, hour) && getAgentColumnTint(agent),
                 }"
+                :style="
+                  !isHourBlocked(currentDayObj, hour) && getAgentColumnTint(agent)
+                    ? { '--agent-tint': getAgentColumnTint(agent) }
+                    : null
+                "
                 @click="$emit('click-cell', { dayObj: currentDayObj, hour, agent })"
               >
                 <div
@@ -326,7 +512,9 @@ export default {
                   class="blocked-slot-overlay"
                 >
                   <i class="i-lucide-lock blocked-slot-icon" />
-                  <span class="blocked-slot-text">{{ isHourBlocked(currentDayObj, hour) === true ? 'Indisponível' : isHourBlocked(currentDayObj, hour) }}</span>
+                  <span class="blocked-slot-tooltip" role="tooltip">
+                    {{ isHourBlocked(currentDayObj, hour) === true ? 'Indisponível' : isHourBlocked(currentDayObj, hour) }}
+                  </span>
                 </div>
               </div>
             </template>
@@ -348,22 +536,50 @@ export default {
           <div
             v-for="(colItem, dIdx) in columns"
             :key="dIdx"
+            :data-col-idx="dIdx"
             class="day-events-column"
+            :style="{ height: `${dayHours.length * rowHeight}px` }"
           >
+            <!-- Lane backdrops (week view): uma faixa pastel por agente
+                 quebrada em segmentos contínuos de horas não-bloqueadas.
+                 Slots bloqueados (almoço/feriado/fora do expediente) ficam
+                 sem tint pra mostrar o hatch limpo, igual day view. A
+                 identificação visual do agente vai pra faixa colorida no
+                 day header (`.day-header-agent-stripe`) — aqui a lane é só
+                 o tint pastel limpo, sem borda. -->
+            <template v-if="viewMode === 'week'">
+              <template
+                v-for="lane in getDayAgentLanes(colItem)"
+                :key="`lane-${colItem.year}-${colItem.month}-${colItem.day}-${lane.agentId}`"
+              >
+                <div
+                  v-for="seg in getLaneSegments(colItem)"
+                  :key="`lane-${lane.agentId}-${seg.startIdx}`"
+                  class="agent-lane-bg"
+                  :title="lane.agentName"
+                  :style="{
+                    top: `${seg.startIdx * rowHeight}px`,
+                    height: `${(seg.endIdx - seg.startIdx + 1) * rowHeight}px`,
+                    left: `${lane.leftPct}%`,
+                    width: `${lane.widthPct}%`,
+                    background: lane.bg,
+                  }"
+                />
+              </template>
+            </template>
+
             <AgendaEventCard
               v-for="event in getColumnEventsWithPositions(colItem)"
               :key="event.id"
               :event="event"
               :card-style="event._style"
               :agent-color="event._agentColor"
+              :treatment-color="event._treatmentColor"
               :is-resizing-this="isResizing && resizingEventId === event.id"
               :is-dragging-this="isDragging && draggingEventId === event.id"
               :is-late="isEventLate(event)"
               :resizing-end-at="resizingEventEndAt"
               :layout-mode="layoutMode"
-              :can-cancel="canCancel"
-              :can-drag="canDrag"
-              :can-edit="canEdit"
               @click="$emit('click-event', { event, $event })"
               @quick-delete="$emit('quick-delete', event)"
               @mousedown-drag="$emit('init-drag', { event, $event })"
@@ -377,6 +593,8 @@ export default {
               :ghost-style="dragGhostStyle"
               :drag-starts-at="dragCurrentStartsAt"
               :drag-ends-at="dragCurrentEndsAt"
+              :is-blocked="dragIsBlocked"
+              :block-reason="dragBlockReason"
             />
           </div>
         </div>
@@ -471,6 +689,12 @@ export default {
   text-transform: uppercase;
   font-weight: 600;
   color: rgb(var(--slate-10));
+}
+
+/* Weekends styled in red — matches the reference visual language */
+.timeline-day-header.is-weekend .day-str,
+.timeline-day-header.is-weekend .day-num:not(.today) {
+  color: #dc2626;
 }
 
 .day-num-wrap {
@@ -623,19 +847,37 @@ export default {
   min-width: 0;
 }
 
-.timeline-cell:hover {
-  background: rgb(var(--slate-2));
+.timeline-cell {
+  transition: background 0.15s ease-in-out;
 }
 
-/* Blocked slot */
+.timeline-cell:hover {
+  background: rgba(59, 130, 246, 0.10);
+}
+
+/* Agent column wash (day view) — usa CSS variable setada via inline style
+   no template; o hover acima ainda funciona porque a regra de classe perde
+   pra :hover (mesma specificity, mas :hover vem depois na cascade). */
+.timeline-cell.cell-agent-tinted {
+  background: var(--agent-tint, transparent);
+}
+.timeline-cell.cell-agent-tinted:hover {
+  background: rgba(59, 130, 246, 0.10);
+}
+
+/* Blocked slot — diagonal hatch differentiates closed/past/lunch/holiday from
+   normal slots. Uses solid slate-2/slate-4 tokens (same recipe as the modal's
+   blocked slot button) so the pattern actually renders — the previous
+   `rgba(var(--slate-12), 0.04)` mix of modern + legacy syntax is invalid and
+   the gradient was being silently dropped by the parser. */
 .timeline-cell.cell-blocked {
   cursor: not-allowed;
   background: repeating-linear-gradient(
     -45deg,
-    transparent,
-    transparent 10px,
-    rgba(var(--slate-12), 0.05) 10px,
-    rgba(var(--slate-12), 0.06) 11px
+    rgb(var(--slate-2)),
+    rgb(var(--slate-2)) 7px,
+    rgb(var(--slate-3)) 7px,
+    rgb(var(--slate-3)) 9px
   ) !important;
   position: relative;
 }
@@ -643,10 +885,10 @@ export default {
 .timeline-cell.cell-blocked:hover {
   background: repeating-linear-gradient(
     -45deg,
-    transparent,
-    transparent 10px,
-    rgba(var(--slate-12), 0.08) 10px,
-    rgba(var(--slate-12), 0.09) 11px
+    rgb(var(--slate-2)),
+    rgb(var(--slate-2)) 7px,
+    rgb(var(--slate-4)) 7px,
+    rgb(var(--slate-4)) 9px
   ) !important;
 }
 
@@ -667,11 +909,50 @@ export default {
   color: rgb(var(--slate-8));
 }
 
-.blocked-slot-text {
-  @apply text-xs;
+/* Tooltip moderno do slot bloqueado — aparece em hover do cell.
+   Hover é detectado no .timeline-cell (overlay tem pointer-events:none e
+   passa eventos pra trás). z-index alto + lift do cell pai pra escapar do
+   stacking context da events-layer (z-index: 5). */
+.blocked-slot-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: rgb(31, 41, 55);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 500;
-  color: rgb(var(--slate-8));
-  opacity: 0.8;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease-in-out, transform 0.15s ease-in-out;
+  z-index: 100;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.blocked-slot-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-bottom-color: rgb(31, 41, 55);
+}
+
+/* Eleva a célula bloqueada hovered acima da events-layer pra que o tooltip
+   não seja escondido. cell-blocked não tem nada da events-layer em cima
+   visualmente (lanes pulam slots bloqueados), então o lift não esconde
+   conteúdo relevante. */
+.timeline-cell.cell-blocked:hover {
+  z-index: 50;
+}
+
+.timeline-cell.cell-blocked:hover .blocked-slot-tooltip {
+  opacity: 1;
 }
 
 /* WL matched cells */
@@ -750,9 +1031,40 @@ export default {
 .day-events-column {
   flex: 1;
   position: relative;
-  height: 1920px;
+  /* height set inline as dayHours.length × rowHeight so the events layer
+     matches the grid background exactly (it shrinks when show_only_working_hours
+     is on, instead of leaving a hardcoded 24h gap). */
   border-right: 1px solid transparent;
   min-width: var(--dynamic-col-width, 0px) !important;
+}
+
+/* Lane do agente em week view — faixa pastel atrás dos cards. Top/height
+   são definidos inline via segmentos. A identificação visual do agente
+   (linha colorida na cor sólida) vive no day header em `.day-header-agent-stripe`,
+   não na lane. Sem pointer-events pra não interferir com cliques nos cards.
+   z-index: 0 mantém abaixo dos eventos (z-index 5+). */
+.agent-lane-bg {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Faixas coloridas dos agentes na borda inferior do day header (week view).
+   Mesma proporção das lanes abaixo, criando alinhamento visual "linha
+   colorida → lane do agente". */
+.day-header-agent-stripes {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  pointer-events: none;
+}
+
+.day-header-agent-stripe {
+  position: absolute;
+  top: 0;
+  bottom: 0;
 }
 
 .time-label-spacer {
@@ -784,10 +1096,4 @@ export default {
   border-radius: 50%;
 }
 
-/* Mobile responsive fixes */
-@media (max-width: 767px) {
-  .blocked-slot-text {
-    display: none !important;
-  }
-}
 </style>

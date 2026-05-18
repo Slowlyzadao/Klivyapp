@@ -1,8 +1,10 @@
 class Document < ApplicationRecord
   include TimelineTrackable
+  include BeclinicPurgeableAttachment
 
   # Active Storage — o PDF gerado ou arquivo externo
   has_one_attached :file
+  purges_attachment_with job_class: Patients::DocumentPurgeJob
 
   # Soft delete
   scope :active, -> { where(deleted_at: nil) }
@@ -59,21 +61,32 @@ class Document < ApplicationRecord
 
   def soft_delete!
     update!(deleted_at: Time.current)
+    schedule_attachment_purge!
   end
 
   def deleted?
     deleted_at.present?
   end
 
-  # Retorna URL assinada com expiração de 15 minutos
-  def signed_url(expires_in: 15.minutes, disposition: :inline)
+  # URL assinada via Active Storage padrão (rails_blob_url).
+  #
+  # NOTA arquitetural: tentamos antes apontar pra um SecureBlobsController
+  # com guard de cross-tenant via devise_token_auth, mas isso quebra o
+  # click-to-open do browser (browser GET vanilla não envia headers de auth
+  # token, então devise rejeita com 401). A guarda de cross-tenant via
+  # auth de API é incompatível com o fluxo "clicar no link pra abrir PDF".
+  #
+  # Mitigação atual: signed_id curto (30min) + HTTPS limitam superfície de
+  # replay caso a URL vaze. Para hardening adicional (cross-tenant guard
+  # SEM quebrar click-to-open), seria necessário redesign — token customizado
+  # que carrega account_id + auth via cookie de sessão. Fora de escopo agora.
+  def signed_url(expires_in: 30.minutes, disposition: :inline)
     return nil unless file.attached?
 
     Rails.application.routes.url_helpers.rails_blob_url(
       file,
       expires_in: expires_in,
-      disposition: disposition,
-      host: Rails.application.config.action_mailer.default_url_options&.dig(:host) || 'localhost:3000'
+      disposition: disposition
     )
   rescue StandardError
     nil

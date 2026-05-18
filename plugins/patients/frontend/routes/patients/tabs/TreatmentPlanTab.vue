@@ -1,105 +1,354 @@
 <!-- eslint-disable @intlify/vue-i18n/no-raw-text, vue/no-bare-strings-in-template -->
+<script setup>
+/**
+ * TreatmentPlanTab — Aba "Plano de Tratamento" do prontuário do paciente.
+ *
+ * Planejamento clínico, orçamentos propostos e status de execução.
+ * Permite criar planos com diagnóstico/CID, adicionar procedimentos
+ * (com lookup de preço em agendaServices), aprovar planos e gerar PDF.
+ *
+ * Auto-suficiente: lê patientId da rota e faz seu próprio fetch.
+ *
+ * Recebe `agenda-services` como prop (necessário para o dropdown de
+ * procedimentos no modal — cada serviço tem nome + preço).
+ *
+ * Componente extraído de Record.vue (Fase 5 do refactor).
+ */
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { useAlert } from 'dashboard/composables';
+import { formatDateBR } from '@plugins/beclinic_core/frontend/helpers/dateHelpers';
+import TreatmentPlansAPI from '@plugins/patients/frontend/api/patients/treatmentPlans';
+
+const props = defineProps({
+  agendaServices: { type: Array, default: () => [] },
+});
+
+const route = useRoute();
+
+const formatDate = dateStr => {
+  if (!dateStr) return '—';
+  return formatDateBR(dateStr) || '—';
+};
+const formatCurrency = value => {
+  if (!value) return 'R$ 0,00';
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
+};
+
+// ── State ──────────────────────────────────────────────────
+const treatmentPlans = ref([]);
+const editingPlanId = ref(null);
+const showItemModal = ref(false);
+const activePlanId = ref(null);
+const currentItem = ref({
+  id: null,
+  procedure_name: '',
+  region: '',
+  sessions_planned: 1,
+});
+const isSavingItem = ref(false);
+
+const globalDiagnosisTitle = ref('');
+const globalDiagnosisDescription = ref('');
+
+const showConfirmDeletePlan = ref(false);
+const planToDelete = ref(null);
+
+const showConfirmDeleteItem = ref(false);
+const itemToDelete = ref({ planId: null, itemId: null });
+
+// ── Actions ────────────────────────────────────────────────
+const fetchTreatmentPlans = async () => {
+  try {
+    const { data } = await TreatmentPlansAPI.get(route.params.patientId);
+    treatmentPlans.value = data?.data || data || [];
+  } catch (error) {
+    useAlert('Erro ao carregar planos de tratamento.');
+  }
+};
+
+const createTreatmentPlan = async () => {
+  try {
+    const res = await TreatmentPlansAPI.create(route.params.patientId, {
+      title: globalDiagnosisTitle.value,
+      description: globalDiagnosisDescription.value,
+    });
+    useAlert('Novo plano criado!');
+    await fetchTreatmentPlans();
+
+    const newId = res.data?.payload?.id || res.data?.id;
+    if (newId) editingPlanId.value = newId;
+
+    globalDiagnosisTitle.value = '';
+    globalDiagnosisDescription.value = '';
+  } catch (error) {
+    useAlert('Erro ao criar plano.');
+  }
+};
+
+const savePlan = async plan => {
+  try {
+    await TreatmentPlansAPI.update(route.params.patientId, plan.id, {
+      title: plan.title,
+      description: plan.description,
+      estimated_duration: plan.estimated_duration,
+    });
+    editingPlanId.value = null;
+    useAlert('Plano atualizado com sucesso!');
+    fetchTreatmentPlans();
+  } catch (error) {
+    useAlert('Erro ao atualizar plano.');
+  }
+};
+
+const approvePlan = async planId => {
+  try {
+    await TreatmentPlansAPI.approve(route.params.patientId, planId);
+    editingPlanId.value = null;
+    useAlert('Plano aprovado e comissionamento disparado!');
+    await fetchTreatmentPlans();
+  } catch (error) {
+    useAlert('Erro ao aprovar plano.');
+  }
+};
+
+const requestDeletePlan = planId => {
+  planToDelete.value = planId;
+  showConfirmDeletePlan.value = true;
+};
+
+const cancelDeletePlan = () => {
+  showConfirmDeletePlan.value = false;
+  planToDelete.value = null;
+};
+
+const confirmDeletePlan = async () => {
+  if (!planToDelete.value) return;
+  try {
+    await TreatmentPlansAPI.destroy(route.params.patientId, planToDelete.value);
+    useAlert('Plano excluído com sucesso!');
+    await fetchTreatmentPlans();
+  } catch (error) {
+    useAlert('Erro ao excluir plano.');
+  } finally {
+    cancelDeletePlan();
+  }
+};
+
+const openItemModal = async (plan, item = null) => {
+  if (editingPlanId.value === plan.id) {
+    try {
+      await TreatmentPlansAPI.update(route.params.patientId, plan.id, {
+        title: plan.title,
+        description: plan.description,
+        estimated_duration: plan.estimated_duration,
+      });
+      editingPlanId.value = null;
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(e);
+    }
+  }
+
+  activePlanId.value = plan.id;
+  if (item) {
+    currentItem.value = { ...item };
+  } else {
+    currentItem.value = {
+      id: null,
+      procedure_name: '',
+      region: '',
+      sessions_planned: 1,
+      unit_price: 0,
+    };
+  }
+  showItemModal.value = true;
+};
+
+const handleProcedureSelect = () => {
+  const selectedService = props.agendaServices.find(
+    s => s.name === currentItem.value.procedure_name
+  );
+  if (selectedService) {
+    currentItem.value.unit_price = selectedService.price;
+  }
+};
+
+const saveItem = async () => {
+  isSavingItem.value = true;
+  try {
+    if (currentItem.value.id) {
+      await TreatmentPlansAPI.updateItem(
+        route.params.patientId,
+        activePlanId.value,
+        currentItem.value.id,
+        currentItem.value
+      );
+      useAlert('Procedimento atualizado!');
+    } else {
+      await TreatmentPlansAPI.createItem(
+        route.params.patientId,
+        activePlanId.value,
+        currentItem.value
+      );
+      useAlert('Procedimento adicionado!');
+    }
+    showItemModal.value = false;
+    fetchTreatmentPlans();
+  } catch (error) {
+    useAlert('Erro ao salvar procedimento.');
+  } finally {
+    isSavingItem.value = false;
+  }
+};
+
+const requestDeleteItem = (planId, itemId) => {
+  itemToDelete.value = { planId, itemId };
+  showConfirmDeleteItem.value = true;
+};
+
+const cancelDeleteItem = () => {
+  showConfirmDeleteItem.value = false;
+  itemToDelete.value = { planId: null, itemId: null };
+};
+
+const confirmDeleteItem = async () => {
+  if (!itemToDelete.value.planId || !itemToDelete.value.itemId) return;
+  try {
+    await TreatmentPlansAPI.deleteItem(
+      route.params.patientId,
+      itemToDelete.value.planId,
+      itemToDelete.value.itemId
+    );
+    useAlert('Procedimento removido!');
+    fetchTreatmentPlans();
+  } catch (error) {
+    useAlert('Erro ao remover procedimento.');
+  } finally {
+    cancelDeleteItem();
+  }
+};
+
+const printPlan = plan => {
+  if (plan && plan.pdf_url) {
+    window.open(plan.pdf_url, '_blank');
+  } else {
+    window.print();
+  }
+};
+
+onMounted(() => {
+  fetchTreatmentPlans();
+});
+</script>
+
 <template>
-  <div class="tp-tab">
-    <!-- ── Cabeçalho ── -->
-    <div class="tp-tab-header hide-on-print">
+  <div class="tab-pane fade-in print-section">
+    <!-- Cabeçalho -->
+    <div class="rp-tab-header hide-on-print">
       <div>
-        <h3 class="tp-tab-title">Plano de Tratamento</h3>
-        <p class="tp-tab-subtitle">
+        <h3 class="rp-tab-title">Plano de Tratamento</h3>
+        <p class="rp-tab-subtitle">
           Planejamento clínico, orçamentos propostos e status de execução.
         </p>
       </div>
-      <button class="tp-btn-new" @click="createTreatmentPlan">
-        <i class="i-lucide-plus tp-btn-new-icon" />
+      <button
+        v-can="['patients', 'manage_treatment_plans']"
+        class="rp-btn-new"
+        @click="createTreatmentPlan"
+      >
+        <i class="i-lucide-plus rp-btn-new-icon" />
         Novo Plano
       </button>
     </div>
 
-    <div class="tp-content-grid">
-      <!-- ── Formulário de Diagnóstico (novo plano) ── -->
-      <div class="tp-card hide-on-print">
-        <div class="tp-card-header">
-          <div class="tp-card-header-icon tp-card-header-icon--blue">
+    <div class="rp-content-grid">
+      <!-- Formulário de novo diagnóstico -->
+      <div class="rp-card hide-on-print">
+        <div class="rp-card-header">
+          <div class="rp-card-icon rp-card-icon--blue">
             <i class="i-lucide-search" />
           </div>
           <div>
-            <span class="tp-card-title">Diagnóstico e Hipótese Inicial</span>
-            <span class="tp-card-subtitle"
+            <span class="rp-card-title">Diagnóstico e Hipótese Inicial</span>
+            <span class="rp-card-subtitle"
               >Preencha para criar um novo plano de tratamento</span
             >
           </div>
         </div>
-        <div class="tp-card-body">
-          <div class="tp-field">
-            <label class="tp-field-label"
+        <div class="rp-card-body">
+          <div class="rp-field">
+            <label class="rp-field-label"
               >Justificativa Clínica / Queixa Principal do Novo Plano</label
             >
             <textarea
               v-model="globalDiagnosisDescription"
-              class="tp-field-input"
+              class="rp-field-input"
               rows="2"
               placeholder="Paciente apresenta escurecimento generalizado nos dentes e má oclusão leve..."
             />
           </div>
-          <div class="tp-field">
-            <label class="tp-field-label"
+          <div class="rp-field">
+            <label class="rp-field-label"
               >Hipótese Diagnóstica / CID do Novo Plano</label
             >
             <input
               v-model="globalDiagnosisTitle"
               type="text"
-              class="tp-field-input"
+              class="rp-field-input"
               placeholder="Ex: Esmalte escurecido (K03.7) + má oclusão leve"
             />
           </div>
         </div>
       </div>
 
-      <!-- ── Empty State ── -->
+      <!-- Empty State -->
       <div
         v-if="!treatmentPlans || treatmentPlans.length === 0"
-        class="tp-empty"
+        class="rp-empty"
       >
-        <div class="tp-empty-icon">
+        <div class="rp-empty-icon">
           <i class="i-lucide-clipboard-list" />
         </div>
-        <p class="tp-empty-text">Nenhum plano de tratamento criado ainda.</p>
-        <p class="tp-empty-hint">
+        <p class="rp-empty-text">Nenhum plano de tratamento criado ainda.</p>
+        <p class="rp-empty-hint">
           Preencha os campos acima e clique em "Novo Plano".
         </p>
       </div>
 
-      <!-- ── Planos ── -->
+      <!-- Planos dinâmicos -->
       <div
         v-for="plan in treatmentPlans"
         :key="plan.id"
-        class="tp-plan page-break-inside-avoid print-card"
+        class="rp-plan page-break-inside-avoid print-card"
       >
         <!-- Cabeçalho do plano -->
-        <div class="tp-plan-head">
-          <div class="tp-plan-head-left">
-            <div class="tp-plan-head-icon">
+        <div class="rp-plan-head">
+          <div class="rp-plan-head-left">
+            <div class="rp-plan-head-icon">
               <i class="i-lucide-list-checks" />
             </div>
             <div>
-              <span class="tp-plan-name">Plano de Tratamento</span>
-              <span class="tp-plan-cid">{{
+              <span class="rp-plan-name">Plano de Tratamento</span>
+              <span class="rp-plan-cid">{{
                 plan.title || 'Sem hipótese definida'
               }}</span>
             </div>
           </div>
-          <div class="tp-plan-actions hide-on-print">
-            <!-- Aprovado -->
+          <div class="rp-plan-actions hide-on-print">
             <span
               v-if="plan.status === 'aprovado' || plan.status === 'approved'"
-              class="tp-badge tp-badge--green"
+              class="rp-badge rp-badge--green"
             >
-              <i class="i-lucide-check-circle tp-badge-icon" /> Aprovado
+              <i class="i-lucide-check-circle rp-badge-icon" />
+              Aprovado
             </span>
-            <!-- Proposto -->
             <template v-else-if="plan.status === 'proposto'">
               <button
-                class="tp-action-btn"
+                class="rp-action-btn"
                 @click="
                   editingPlanId === plan.id
                     ? savePlan(plan)
@@ -112,69 +361,74 @@
                       ? 'i-lucide-save'
                       : 'i-lucide-pencil'
                   "
-                  class="tp-action-btn-icon"
+                  class="rp-action-btn-icon"
                 />
                 {{
                   editingPlanId === plan.id ? 'Salvar Plano' : 'Editar Plano'
                 }}
               </button>
               <button
-                class="tp-action-btn tp-action-btn--green"
+                v-can="['patients', 'manage_treatment_plans']"
+                class="rp-action-btn rp-action-btn--green"
                 @click="approvePlan(plan.id)"
               >
-                <i class="i-lucide-check-circle tp-action-btn-icon" /> Aprovar
+                <i class="i-lucide-check-circle rp-action-btn-icon" />
+                Aprovar
               </button>
               <button
-                class="tp-action-btn tp-action-btn--danger"
+                v-can="['patients', 'manage_treatment_plans']"
+                class="rp-action-btn rp-action-btn--danger"
                 @click="requestDeletePlan(plan.id)"
               >
-                <i class="i-lucide-trash-2 tp-action-btn-icon" />
+                <i class="i-lucide-trash-2 rp-action-btn-icon" />
               </button>
             </template>
           </div>
         </div>
 
         <!-- Diagnóstico e Hipótese -->
-        <div class="tp-section">
-          <div class="tp-section-label">
-            <i class="i-lucide-search tp-section-icon tp-section-icon--blue" />
+        <div class="rp-section">
+          <div class="rp-section-label">
+            <i class="i-lucide-search rp-section-icon rp-section-icon--blue" />
             Diagnóstico e Hipótese
           </div>
 
-          <!-- Modo edição -->
-          <div v-if="editingPlanId === plan.id" class="tp-section-body">
-            <div class="tp-field">
-              <label class="tp-field-label"
+          <div v-if="editingPlanId === plan.id" class="rp-section-body">
+            <div class="rp-field">
+              <label class="rp-field-label"
                 >Justificativa Clínica / Queixa Principal</label
               >
               <textarea
                 v-model="plan.description"
-                class="tp-field-input"
+                class="rp-field-input"
                 rows="2"
               />
             </div>
-            <div class="tp-field">
-              <label class="tp-field-label">Hipótese Diagnóstica / CID</label>
-              <input v-model="plan.title" type="text" class="tp-field-input" />
+            <div class="rp-field">
+              <label class="rp-field-label">Hipótese Diagnóstica / CID</label>
+              <input
+                v-model="plan.title"
+                type="text"
+                class="rp-field-input"
+              />
             </div>
           </div>
 
-          <!-- Modo leitura -->
-          <div v-else class="tp-section-body tp-diag-grid">
-            <div class="tp-diag-item">
-              <span class="tp-diag-label"
+          <div v-else class="rp-section-body rp-diag-grid">
+            <div class="rp-diag-item">
+              <span class="rp-diag-label"
                 >Justificativa / Queixa Principal</span
               >
-              <p class="tp-diag-value">
+              <p class="rp-diag-value">
                 {{
                   plan.description ||
                   'O paciente não informou a queixa principal.'
                 }}
               </p>
             </div>
-            <div class="tp-diag-item">
-              <span class="tp-diag-label">Hipótese / CID</span>
-              <p class="tp-diag-value tp-diag-value--accent">
+            <div class="rp-diag-item">
+              <span class="rp-diag-label">Hipótese / CID</span>
+              <p class="rp-diag-value rp-diag-value--accent">
                 {{ plan.title || 'Nenhum CID informado.' }}
               </p>
             </div>
@@ -182,34 +436,34 @@
         </div>
 
         <!-- Procedimentos Planejados -->
-        <div class="tp-section">
-          <div class="tp-section-label">
+        <div class="rp-section">
+          <div class="rp-section-label">
             <i
-              class="i-lucide-clipboard-list tp-section-icon tp-section-icon--amber"
+              class="i-lucide-clipboard-list rp-section-icon rp-section-icon--amber"
             />
             Procedimentos Planejados
             <button
               v-if="plan.status === 'proposto'"
-              class="tp-add-btn hide-on-print"
+              class="rp-add-btn hide-on-print"
               @click="openItemModal(plan)"
             >
-              <i class="i-lucide-plus tp-add-btn-icon" /> Adicionar
+              <i class="i-lucide-plus rp-add-btn-icon" /> Adicionar
             </button>
           </div>
 
-          <div class="tp-section-body">
-            <table class="tp-table">
-              <thead class="tp-table-head">
+          <div class="rp-section-body rp-table-wrap">
+            <table class="rp-table">
+              <thead class="rp-table-head">
                 <tr>
-                  <th class="tp-th">Procedimento</th>
-                  <th class="tp-th">Região/Elemento</th>
-                  <th class="tp-th tp-th--center">Sessões</th>
-                  <th class="tp-th tp-th--right">Valor Un.</th>
-                  <th class="tp-th tp-th--right">Subtotal</th>
-                  <th class="tp-th tp-th--center hide-on-print">Status</th>
+                  <th class="rp-th">Procedimento</th>
+                  <th class="rp-th">Região/Elemento</th>
+                  <th class="rp-th rp-th--center">Sessões</th>
+                  <th class="rp-th rp-th--right">Valor Un.</th>
+                  <th class="rp-th rp-th--right">Subtotal</th>
+                  <th class="rp-th rp-th--center hide-on-print">Status</th>
                   <th
                     v-if="plan.status === 'proposto'"
-                    class="tp-th tp-th--right hide-on-print"
+                    class="rp-th rp-th--right hide-on-print"
                   >
                     Ação
                   </th>
@@ -221,41 +475,41 @@
                     !plan.treatment_items || plan.treatment_items.length === 0
                   "
                 >
-                  <td colspan="7" class="tp-td-empty">
+                  <td colspan="7" class="rp-td-empty">
                     Nenhum procedimento adicionado a este plano.
                   </td>
                 </tr>
                 <tr
                   v-for="item in plan.treatment_items"
                   :key="item.id"
-                  class="tp-tr"
+                  class="rp-tr"
                 >
-                  <td class="tp-td tp-td--name">
+                  <td class="rp-td rp-td--name">
                     {{ item.procedure_name || item.procedure_code }}
                   </td>
-                  <td class="tp-td tp-td--muted">
+                  <td class="rp-td rp-td--muted">
                     {{ item.region || item.tooth_number || '-' }}
                   </td>
-                  <td class="tp-td tp-td--muted tp-td--center">
+                  <td class="rp-td rp-td--muted rp-td--center">
                     {{ item.sessions_planned }}
                   </td>
-                  <td class="tp-td tp-td--muted tp-td--right">
+                  <td class="rp-td rp-td--muted rp-td--right">
                     {{ formatCurrency(item.unit_price) }}
                   </td>
-                  <td class="tp-td tp-td--strong tp-td--right">
+                  <td class="rp-td rp-td--strong rp-td--right">
                     {{
                       formatCurrency(
                         (item.unit_price || 0) * (item.sessions_planned || 1)
                       )
                     }}
                   </td>
-                  <td class="tp-td tp-td--center hide-on-print">
+                  <td class="rp-td rp-td--center hide-on-print">
                     <span
-                      class="tp-status"
+                      class="rp-status"
                       :class="
                         item.status === 'aprovado' || item.status === 'approved'
-                          ? 'tp-status--green'
-                          : 'tp-status--blue'
+                          ? 'rp-status--green'
+                          : 'rp-status--blue'
                       "
                     >
                       {{
@@ -267,18 +521,18 @@
                   </td>
                   <td
                     v-if="plan.status === 'proposto'"
-                    class="tp-td tp-td--right hide-on-print"
+                    class="rp-td rp-td--right hide-on-print"
                   >
-                    <div class="tp-row-actions">
+                    <div class="rp-row-actions">
                       <button
-                        class="tp-icon-btn"
+                        class="rp-icon-btn"
                         title="Editar"
                         @click="openItemModal(plan, item)"
                       >
                         <i class="i-lucide-pencil" />
                       </button>
                       <button
-                        class="tp-icon-btn tp-icon-btn--danger"
+                        class="rp-icon-btn rp-icon-btn--danger"
                         title="Remover"
                         @click="requestDeleteItem(plan.id, item.id)"
                       >
@@ -293,10 +547,10 @@
             <!-- Total estimado -->
             <div
               v-if="plan.treatment_items && plan.treatment_items.length > 0"
-              class="tp-total"
+              class="rp-total"
             >
-              <span class="tp-total-label">Total Estimado</span>
-              <span class="tp-total-value">{{
+              <span class="rp-total-label">Total Estimado</span>
+              <span class="rp-total-value">{{
                 formatCurrency(
                   plan.treatment_items.reduce(
                     (sum, item) =>
@@ -311,45 +565,44 @@
         </div>
 
         <!-- Observações e Previsão -->
-        <div class="tp-section">
-          <div class="tp-section-label">
+        <div class="rp-section">
+          <div class="rp-section-label">
             <i
-              class="i-lucide-calendar-clock tp-section-icon tp-section-icon--purple"
+              class="i-lucide-calendar-clock rp-section-icon rp-section-icon--purple"
             />
             Observações e Previsão
           </div>
-          <div class="tp-section-body tp-diag-grid">
-            <div class="tp-diag-item">
-              <span class="tp-diag-label">Previsão de Conclusão</span>
+          <div class="rp-section-body rp-diag-grid">
+            <div class="rp-diag-item">
+              <span class="rp-diag-label">Previsão de Conclusão</span>
               <template v-if="editingPlanId === plan.id">
                 <input
                   v-model="plan.estimated_duration"
                   type="text"
-                  class="tp-field-input tp-field-input--sm"
+                  class="rp-field-input rp-field-input--sm"
                   placeholder="Ex: Aprox. 45 dias"
                 />
               </template>
-              <p v-else class="tp-diag-value">
+              <p v-else class="rp-diag-value">
                 {{ plan.estimated_duration || 'Não informada' }}
               </p>
             </div>
-            <div class="tp-diag-item">
-              <span class="tp-diag-label">Profissional Responsável</span>
-              <p class="tp-diag-value">
+            <div class="rp-diag-item">
+              <span class="rp-diag-label">Profissional Responsável</span>
+              <p class="rp-diag-value">
                 {{ plan.professional_name || 'Profissional da Conta' }}
               </p>
             </div>
           </div>
 
-          <!-- Footer do plano -->
-          <div class="tp-plan-footer">
-            <div class="tp-approval-info">
+          <div class="rp-plan-footer">
+            <div class="rp-approval-info">
               <i
-                class="i-lucide-shield-check tp-approval-icon"
+                class="i-lucide-shield-check rp-approval-icon"
                 :class="
                   plan.status === 'aprovado' || plan.status === 'approved'
-                    ? 'tp-approval-icon--green'
-                    : 'tp-approval-icon--muted'
+                    ? 'rp-approval-icon--green'
+                    : 'rp-approval-icon--muted'
                 "
               />
               <span>{{
@@ -365,639 +618,190 @@
                 :href="plan.pdf_url"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="tp-action-btn"
+                class="rp-action-btn"
               >
-                <i class="i-lucide-file-text tp-action-btn-icon" />
+                <i class="i-lucide-file-text rp-action-btn-icon" />
                 Visualizar PDF
               </a>
-              <button v-else class="tp-action-btn" @click="printPlan(plan)">
-                <i class="i-lucide-printer tp-action-btn-icon" />
+              <button v-else class="rp-action-btn" @click="printPlan(plan)">
+                <i class="i-lucide-printer rp-action-btn-icon" />
                 Imprimir Plano
               </button>
             </div>
           </div>
         </div>
       </div>
-      <!-- fim v-for -->
+      <!-- fim v-for planos -->
+    </div>
+
+    <!-- Treatment Item Modal -->
+    <div
+      v-if="showItemModal"
+      class="tp-modal-overlay"
+      @click.self="showItemModal = false"
+    >
+      <div class="tp-modal-card">
+        <div class="tp-modal-header">
+          <div>
+            <h3 class="tp-modal-title">
+              {{ currentItem.id ? 'Editar Procedimento' : 'Novo Procedimento' }}
+            </h3>
+            <p class="tp-modal-subtitle">
+              Defina os detalhes da intervenção planejada
+            </p>
+          </div>
+          <button class="tp-modal-close" @click="showItemModal = false">
+            <i class="i-lucide-x" />
+          </button>
+        </div>
+
+        <div class="tp-modal-body">
+          <div class="tp-field">
+            <label class="tp-label">
+              Nome do Procedimento <span class="tp-required">*</span>
+            </label>
+            <select
+              v-model="currentItem.procedure_name"
+              class="tp-input tp-select"
+              @change="handleProcedureSelect"
+            >
+              <option disabled value="">Selecione um serviço...</option>
+              <option
+                v-for="svc in agendaServices"
+                :key="svc.id"
+                :value="svc.name"
+              >
+                {{ svc.name }} - {{ formatCurrency(svc.price) }}
+              </option>
+            </select>
+          </div>
+
+          <div class="tp-row-2">
+            <div class="tp-field">
+              <label class="tp-label">Região/Dente</label>
+              <input
+                v-model="currentItem.region"
+                class="tp-input"
+                placeholder="Ex: 11, 21 ou Geral"
+              />
+            </div>
+            <div class="tp-field">
+              <label class="tp-label">Qtd. Sessões</label>
+              <input
+                v-model.number="currentItem.sessions_planned"
+                type="number"
+                min="1"
+                class="tp-input"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="tp-modal-footer">
+          <button class="tp-btn-cancel" @click="showItemModal = false">
+            Cancelar
+          </button>
+          <button
+            class="tp-btn-submit"
+            :disabled="isSavingItem || !currentItem.procedure_name"
+            @click="saveItem"
+          >
+            <i
+              v-if="isSavingItem"
+              class="i-lucide-loader-2 tp-spinner-icon animate-spin"
+            />
+            <span v-else>Confirmar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Excluir Procedimento -->
+    <div
+      v-if="showConfirmDeleteItem"
+      class="delete-modal-overlay flex items-center justify-center fixed inset-0 backdrop-blur-sm z-[99999] bg-black/60"
+      @click.self="cancelDeleteItem"
+    >
+      <div
+        class="delete-modal-card rounded-2xl w-full max-w-[420px] overflow-hidden bg-[linear-gradient(145deg,#1e293b,#0f172a)] border border-white/5 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]"
+      >
+        <div class="p-6">
+          <div class="flex items-start gap-4">
+            <div
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-500/10"
+            >
+              <i class="i-lucide-alert-triangle size-5 text-rose-500" />
+            </div>
+            <div class="flex flex-col gap-2 pt-1">
+              <h3 class="font-medium text-slate-100 m-0 text-lg leading-tight">
+                Excluir Procedimento?
+              </h3>
+              <p class="text-slate-400 m-0 text-sm leading-relaxed">
+                Esta ação não pode ser desfeita. O procedimento será removido
+                permanentemente do plano de tratamento selecionado.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="px-6 py-4 flex justify-end gap-3 border-t border-white/5">
+          <button
+            class="rounded-lg px-4 py-2 text-sm font-medium bg-transparent text-slate-400 hover:text-slate-100 transition-colors border-0 cursor-pointer"
+            @click="cancelDeleteItem"
+          >
+            Cancelar
+          </button>
+          <button
+            class="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 bg-transparent transition-all border-0 cursor-pointer"
+            @click="confirmDeleteItem"
+          >
+            Excluir
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Excluir Plano de Tratamento -->
+    <div
+      v-if="showConfirmDeletePlan"
+      class="delete-modal-overlay flex items-center justify-center fixed inset-0 backdrop-blur-sm z-[99999] bg-black/60"
+      @click.self="cancelDeletePlan"
+    >
+      <div
+        class="delete-modal-card rounded-2xl w-full max-w-[420px] overflow-hidden bg-[linear-gradient(145deg,#1e293b,#0f172a)] border border-white/5 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]"
+      >
+        <div class="p-6">
+          <div class="flex items-start gap-4">
+            <div
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-500/10"
+            >
+              <i class="i-lucide-alert-triangle size-5 text-rose-500" />
+            </div>
+            <div class="flex flex-col gap-2 pt-1">
+              <h3 class="font-medium text-slate-100 m-0 text-lg leading-tight">
+                Excluir Plano de Tratamento?
+              </h3>
+              <p class="text-slate-400 m-0 text-sm leading-relaxed">
+                Tem certeza que deseja excluir este plano? Esta ação é
+                irreversível e todos os procedimentos serão apagados.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="px-6 py-4 flex justify-end gap-3 border-t border-white/5">
+          <button
+            class="rounded-lg px-4 py-2 text-sm font-medium bg-transparent text-slate-400 hover:text-slate-100 transition-colors border-0 cursor-pointer"
+            @click="cancelDeletePlan"
+          >
+            Cancelar
+          </button>
+          <button
+            class="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 bg-transparent transition-all border-0 cursor-pointer"
+            @click="confirmDeletePlan"
+          >
+            Excluir
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-/* ================================================================
-   TREATMENT PLAN TAB — tp-* design system
-   Light/dark dual-theme via rgb(var(--slate-N))
-   Zero hardcoded dark colors. Zero box-shadow.
-   ================================================================ */
-
-/* ── Layout geral ── */
-.tp-tab {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.tp-content-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* ── Cabeçalho da aba ── */
-.tp-tab-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-
-.tp-tab-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: rgb(var(--slate-12));
-  margin: 0;
-}
-
-.tp-tab-subtitle {
-  font-size: 13px;
-  color: rgb(var(--slate-9));
-  margin: 4px 0 0;
-}
-
-/* ── Botão Novo Plano ── */
-.tp-btn-new {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: #3b82f6;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: none;
-  transition: background 0.15s;
-  flex-shrink: 0;
-}
-.tp-btn-new:hover {
-  background: #2563eb;
-}
-.tp-btn-new-icon {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-
-/* ── Card genérico (formulário diagnóstico) ── */
-.tp-card {
-  background: rgb(var(--slate-2));
-  border: 1px solid rgb(var(--slate-4));
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.tp-card-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 18px;
-  border-bottom: 1px solid rgb(var(--slate-4));
-}
-
-.tp-card-header-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  flex-shrink: 0;
-  font-size: 16px;
-}
-.tp-card-header-icon--blue {
-  background: rgba(59, 130, 246, 0.12);
-  color: #2563eb;
-}
-
-.tp-card-title {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-  color: rgb(var(--slate-12));
-  line-height: 1.3;
-}
-.tp-card-subtitle {
-  display: block;
-  font-size: 12px;
-  color: rgb(var(--slate-9));
-  margin-top: 2px;
-}
-
-.tp-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px 18px;
-}
-
-/* ── Campos de formulário ── */
-.tp-field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.tp-field-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: rgb(var(--slate-11));
-}
-
-.tp-field-input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 8px 12px;
-  border: 1px solid rgb(var(--border-strong));
-  border-radius: 8px;
-  background: rgb(var(--slate-1));
-  color: rgb(var(--slate-12));
-  font-size: 14px;
-  font-family: inherit;
-  outline: none;
-  box-shadow: none;
-  resize: vertical;
-  transition: border-color 0.15s;
-}
-.tp-field-input:focus {
-  border-color: rgb(var(--blue-9));
-}
-.tp-field-input::placeholder {
-  color: rgb(var(--slate-8));
-}
-.tp-field-input--sm {
-  font-size: 13px;
-  padding: 6px 10px;
-}
-
-/* ── Empty state ── */
-.tp-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 40px 24px;
-  background: rgb(var(--slate-2));
-  border: 1px dashed rgb(var(--slate-5));
-  border-radius: 12px;
-  text-align: center;
-}
-.tp-empty-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: rgb(var(--slate-3));
-  border: 1px solid rgb(var(--slate-4));
-  color: rgb(var(--slate-8));
-  font-size: 20px;
-}
-.tp-empty-text {
-  font-size: 14px;
-  font-weight: 500;
-  color: rgb(var(--slate-10));
-  margin: 0;
-}
-.tp-empty-hint {
-  font-size: 12px;
-  color: rgb(var(--slate-8));
-  margin: 0;
-}
-
-/* ── Card do plano ── */
-.tp-plan {
-  background: rgb(var(--slate-1));
-  border: 1px solid rgb(var(--slate-4));
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-/* Cabeçalho do plano */
-.tp-plan-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  background: rgb(var(--slate-2));
-  border-bottom: 1px solid rgb(var(--slate-4));
-  gap: 12px;
-}
-
-.tp-plan-head-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.tp-plan-head-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: rgba(22, 163, 74, 0.12);
-  color: #16a34a;
-  font-size: 15px;
-  flex-shrink: 0;
-}
-
-.tp-plan-name {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-  color: rgb(var(--slate-12));
-  line-height: 1.3;
-}
-
-.tp-plan-cid {
-  display: block;
-  font-size: 12px;
-  color: rgb(var(--slate-9));
-  margin-top: 1px;
-}
-
-.tp-plan-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-/* ── Badges de status ── */
-.tp-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 99px;
-}
-.tp-badge--green {
-  background: rgba(22, 163, 74, 0.1);
-  color: #16a34a;
-  border: 1px solid rgba(22, 163, 74, 0.2);
-}
-.tp-badge-icon {
-  width: 12px;
-  height: 12px;
-}
-
-/* ── Botões de ação do plano ── */
-.tp-action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 13px;
-  font-weight: 500;
-  padding: 5px 12px;
-  border-radius: 7px;
-  border: 1px solid rgb(var(--slate-4));
-  background: rgb(var(--slate-2));
-  color: rgb(var(--slate-10));
-  cursor: pointer;
-  transition:
-    background 0.12s,
-    color 0.12s,
-    border-color 0.12s;
-  text-decoration: none;
-  white-space: nowrap;
-}
-.tp-action-btn:hover {
-  background: rgb(var(--slate-3));
-  color: rgb(var(--slate-12));
-  border-color: rgb(var(--slate-5));
-}
-.tp-action-btn--green {
-  color: #16a34a;
-  border-color: rgba(22, 163, 74, 0.22);
-  background: rgba(22, 163, 74, 0.06);
-}
-.tp-action-btn--green:hover {
-  background: rgba(22, 163, 74, 0.12);
-}
-.tp-action-btn--danger {
-  color: #dc2626;
-  border-color: rgba(220, 38, 38, 0.18);
-  background: transparent;
-}
-.tp-action-btn--danger:hover {
-  background: rgba(220, 38, 38, 0.07);
-}
-.tp-action-btn-icon {
-  width: 13px;
-  height: 13px;
-  flex-shrink: 0;
-}
-
-/* ── Seções internas do plano ── */
-.tp-section {
-  border-top: 1px solid rgb(var(--slate-4));
-}
-
-.tp-section-label {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: rgb(var(--slate-9));
-  padding: 10px 18px;
-}
-
-.tp-section-icon {
-  width: 13px;
-  height: 13px;
-  flex-shrink: 0;
-}
-.tp-section-icon--blue {
-  color: #3b82f6;
-}
-.tp-section-icon--amber {
-  color: #d97706;
-}
-.tp-section-icon--purple {
-  color: #7c3aed;
-}
-
-.tp-add-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid rgb(var(--slate-4));
-  background: rgb(var(--slate-2));
-  color: rgb(var(--slate-10));
-  cursor: pointer;
-  margin-left: auto;
-  transition:
-    background 0.12s,
-    color 0.12s;
-  white-space: nowrap;
-}
-.tp-add-btn:hover {
-  background: rgb(var(--slate-3));
-  color: rgb(var(--slate-12));
-}
-.tp-add-btn-icon {
-  width: 12px;
-  height: 12px;
-}
-
-.tp-section-body {
-  padding: 14px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* Grid de diagnóstico (2 colunas) */
-.tp-diag-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.tp-diag-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.tp-diag-label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: rgb(var(--slate-9));
-}
-
-.tp-diag-value {
-  font-size: 13px;
-  font-weight: 400;
-  color: rgb(var(--slate-11));
-  margin: 0;
-  line-height: 1.5;
-}
-.tp-diag-value--accent {
-  color: #2563eb;
-  font-weight: 500;
-}
-
-/* ── Tabela de procedimentos ── */
-.tp-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.tp-table-head {
-  background: rgb(var(--slate-3));
-  border-bottom: 1px solid rgb(var(--slate-4));
-}
-
-.tp-th {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: rgb(var(--slate-9));
-  padding: 9px 12px;
-  text-align: left;
-  white-space: nowrap;
-}
-.tp-th--center {
-  text-align: center;
-}
-.tp-th--right {
-  text-align: right;
-}
-
-.tp-tr {
-  border-bottom: 1px solid rgb(var(--slate-3));
-  transition: background 0.1s;
-}
-.tp-tr:last-child {
-  border-bottom: none;
-}
-.tp-tr:hover {
-  background: rgb(var(--slate-3));
-}
-
-.tp-td {
-  font-size: 13px;
-  padding: 10px 12px;
-  color: rgb(var(--slate-11));
-}
-.tp-td--name {
-  font-weight: 500;
-  color: rgb(var(--slate-12));
-}
-.tp-td--muted {
-  color: rgb(var(--slate-9));
-}
-.tp-td--strong {
-  font-weight: 600;
-  color: rgb(var(--slate-12));
-}
-.tp-td--center {
-  text-align: center;
-}
-.tp-td--right {
-  text-align: right;
-}
-
-.tp-td-empty {
-  font-size: 13px;
-  color: rgb(var(--slate-8));
-  text-align: center;
-  padding: 24px 12px;
-}
-
-/* Status badge na tabela */
-.tp-status {
-  display: inline-flex;
-  align-items: center;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 9px;
-  border-radius: 99px;
-}
-.tp-status--blue {
-  background: rgba(59, 130, 246, 0.1);
-  color: #2563eb;
-  border: 1px solid rgba(59, 130, 246, 0.18);
-}
-.tp-status--green {
-  background: rgba(22, 163, 74, 0.1);
-  color: #16a34a;
-  border: 1px solid rgba(22, 163, 74, 0.18);
-}
-
-/* Botões de ação inline na tabela */
-.tp-row-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-}
-
-.tp-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: 1px solid rgb(var(--slate-4));
-  background: transparent;
-  color: rgb(var(--slate-8));
-  cursor: pointer;
-  font-size: 13px;
-  transition:
-    background 0.12s,
-    color 0.12s;
-}
-.tp-icon-btn:hover {
-  background: rgb(var(--slate-3));
-  color: rgb(var(--slate-12));
-}
-.tp-icon-btn--danger:hover {
-  background: rgba(220, 38, 38, 0.07);
-  color: #dc2626;
-  border-color: rgba(220, 38, 38, 0.18);
-}
-
-/* ── Total estimado ── */
-.tp-total {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 12px 16px;
-  background: rgb(var(--slate-2));
-  border-top: 1px solid rgb(var(--slate-4));
-  border-radius: 0 0 8px 8px;
-}
-
-.tp-total-label {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: rgb(var(--slate-9));
-}
-
-.tp-total-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: #2563eb;
-}
-
-/* ── Footer do plano ── */
-.tp-plan-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 0 0;
-  border-top: 1px solid rgb(var(--slate-4));
-  margin-top: 4px;
-  gap: 12px;
-}
-
-.tp-approval-info {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: rgb(var(--slate-9));
-}
-
-.tp-approval-icon {
-  width: 13px;
-  height: 13px;
-  flex-shrink: 0;
-}
-.tp-approval-icon--green {
-  color: #16a34a;
-}
-.tp-approval-icon--muted {
-  color: rgb(var(--slate-8));
-}
-
-/* ── Print ── */
-@media print {
-  .hide-on-print {
-    display: none !important;
-  }
-  .tp-plan {
-    border: 1px solid #ccc !important;
-    background: white !important;
-  }
-  .tp-table-head {
-    background: #f8fafc !important;
-  }
-  .tp-total {
-    background: #f8fafc !important;
-  }
-}
-</style>

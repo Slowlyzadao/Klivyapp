@@ -6,6 +6,7 @@ import {
 import AgendaDashboard from './AgendaDashboard.vue';
 import AgendaSettings from './settings/Index.vue';
 import AgendaCustomAttributes from './customAttributes/Index.vue';
+import AgendaCategories from './categories/Index.vue';
 
 export const routes = [
   {
@@ -15,6 +16,14 @@ export const routes = [
       permissions: [...ROLES, ...CONVERSATION_PERMISSIONS],
     },
     component: AgendaDashboard,
+  },
+  {
+    path: frontendURL('accounts/:accountId/agenda/categories'),
+    name: 'agenda_categories_index',
+    meta: {
+      permissions: [...ROLES, ...CONVERSATION_PERMISSIONS],
+    },
+    component: AgendaCategories,
   },
   {
     path: frontendURL('accounts/:accountId/agenda/settings'),

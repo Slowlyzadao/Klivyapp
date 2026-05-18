@@ -81,26 +81,76 @@
     <% if @dashboard_scripts.present? %>
       <%= @dashboard_scripts.html_safe %>
     <% end %>
-    <script>
-      (function(d,t) {
-        var BASE_URL="https://waha-chatwoot.efqhwo.easypanel.host";
-        var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
-        g.src=BASE_URL+"/packs/js/sdk.js";
-        g.async = true;
-        s.parentNode.insertBefore(g,s);
-        g.onload=function(){
-          // Hide widget on non-help pages as soon as SDK is ready
-          window.addEventListener('chatwoot:ready', function() {
-            if (!window.location.pathname.includes('/ajuda')) {
-              window.$chatwoot.toggleBubbleVisibility('hide');
-            }
-          });
-          window.chatwootSDK.run({
-            websiteToken: 'RroQdfAJ1m2m93Fx43sUMSNZ',
-            baseUrl: BASE_URL
-          })
+    <%# ── Klivy support widget — controlado por InstallationConfig ──
+        Edite em /super_admin/installation_configs (KLIVY_SUPPORT_WIDGET_ENABLED/_TOKEN/_URL).
+        O bubble fica oculto por padrão (hideMessageBubble: true) e só é exibido
+        quando o usuário entra no módulo Ajuda (composable useChatBubble). %>
+    <%
+      klivy_widget_enabled = InstallationConfig.find_by(name: 'KLIVY_SUPPORT_WIDGET_ENABLED')&.value.to_s == 'true'
+      klivy_widget_token   = InstallationConfig.find_by(name: 'KLIVY_SUPPORT_WIDGET_TOKEN')&.value
+      klivy_widget_url     = InstallationConfig.find_by(name: 'KLIVY_SUPPORT_WIDGET_URL')&.value
+    %>
+    <% if klivy_widget_enabled && klivy_widget_token.present? && klivy_widget_url.present? %>
+      <style>
+        /* ── Visibilidade controlada por classe no <body> ──
+           Por padrão TUDO do widget fica display:none. O composable
+           useChatBubble adiciona `klivy-help-active` no body só dentro
+           do módulo Ajuda — então o bubble só aparece lá.
+           Mais confiável que depender de hideMessageBubble + toggleBubbleVisibility,
+           que podem falhar quando o SDK ainda não carregou ou em race conditions
+           de SPA navigation. */
+        .woot--bubble-holder,
+        .woot-widget-bubble,
+        .woot-widget-holder { display: none !important; }
+        body.klivy-help-active .woot--bubble-holder,
+        body.klivy-help-active .woot-widget-bubble:not(.woot--hide),
+        body.klivy-help-active .woot-widget-holder { display: block !important; }
+
+        /* ── Tamanho do bubble: 56x56 (alinha com o botão do Captain copilot
+           ao lado; default do SDK é 64x64). Os 3 overrides abaixo casam
+           matematicamente para o ícone 24x24 ficar centralizado:
+            - width/height = 56
+            - svg margin = (56 - 24) / 2 = 16
+            - close X bars: left = 56/2 - 1 = 27 (cruz centralizada no eixo X),
+                            top = (56 - 24) / 2 = 16 (barra de altura 24 centrada). */
+        .woot-widget-bubble:not(.woot-widget--expanded) {
+          width: 56px !important;
+          height: 56px !important;
         }
-      })(document,"script");
-    </script>
+        .woot-widget-bubble:not(.woot-widget--expanded) svg {
+          margin: 16px !important;
+        }
+        .woot-widget-bubble.woot--close::before,
+        .woot-widget-bubble.woot--close::after {
+          left: 27px !important;
+          top: 16px !important;
+        }
+
+        /* ── Posição: sobe o bubble para evitar overlap com Captain copilot
+           (também ancorado em bottom-right). 88px = ~24px margem + ~64px
+           do botão do Captain abaixo. Seletores: .woot-widget-bubble (botão
+           visível) e .woot-widget-holder (iframe da janela). %#cw-bubble-holder
+           é só wrapper sem position fixa. */
+        .woot-widget-bubble { bottom: 88px !important; }
+        .woot-widget-bubble.woot-widget--expanded { bottom: 92px !important; }
+        .woot-widget-holder { bottom: 162px !important; }
+      </style>
+      <script>
+        (function(d,t) {
+          var BASE_URL = <%= klivy_widget_url.to_json.html_safe %>;
+          var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+          g.src=BASE_URL+"/packs/js/sdk.js";
+          g.async = true;
+          s.parentNode.insertBefore(g,s);
+          g.onload=function(){
+            window.chatwootSDK.run({
+              websiteToken: <%= klivy_widget_token.to_json.html_safe %>,
+              baseUrl: BASE_URL,
+              hideMessageBubble: true
+            })
+          }
+        })(document,"script");
+      </script>
+    <% end %>
   </body>
 </html>

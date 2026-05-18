@@ -16,7 +16,6 @@ import {
   BaseTableRow,
   BaseTableCell,
 } from 'dashboard/components-next/table';
-import { useAdmin } from 'dashboard/composables/useAdmin';
 import { usePermissions } from 'dashboard/composables/usePermissions';
 
 const MODAL_TYPES = {
@@ -26,11 +25,9 @@ const MODAL_TYPES = {
 
 const store = useStore();
 const { t } = useI18n();
-const { isAdmin } = useAdmin();
-const { can } = usePermissions();
-
+const { isAdmin, can: klivyCan } = usePermissions();
 const canManageBots = computed(
-  () => isAdmin.value || can('settings', 'agent_bots_manage')
+  () => isAdmin.value || klivyCan('settings', 'agent_bots_manage')
 );
 
 const agentBots = useMapGetter('agentBots/getBots');

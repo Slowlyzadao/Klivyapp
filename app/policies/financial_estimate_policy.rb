@@ -1,42 +1,52 @@
 class FinancialEstimatePolicy < ApplicationPolicy
-  # Orçamentos no financeiro central são gateados pelas keys do catálogo:
-  # `manage_estimates` (criar/editar/cancelar/excluir) e `approve_estimate`
-  # (aprovar). Visualização passa com qualquer perm de view financeira.
-  FINANCIAL_VIEW_PERMS = AccountTransactionPolicy::FINANCIAL_VIEW_PERMS
+  FINANCIAL_VIEW_PERMS = %i[
+    view_dashboard view_cashflow view_receivables view_payables view_dre
+    view_reports view_cash_register
+  ].freeze
 
   def index?
-    FINANCIAL_VIEW_PERMS.any? { |perm| beclinic_can?(:financial, perm) }
+    administrator? || any_view_perm?
   end
 
   def show?
-    index?
+    administrator? || any_view_perm?
   end
 
   def create?
-    beclinic_can?(:financial, :manage_estimates)
+    administrator? || beclinic_can?(:financial, :manage_estimates)
   end
 
   def update?
-    beclinic_can?(:financial, :manage_estimates)
+    administrator? || beclinic_can?(:financial, :manage_estimates)
   end
 
   def destroy?
-    beclinic_can?(:financial, :manage_estimates)
+    administrator? || beclinic_can?(:financial, :manage_estimates)
   end
 
   def approve?
-    beclinic_can?(:financial, :approve_estimate)
+    administrator? || beclinic_can?(:financial, :approve_estimate)
   end
 
   def cancel?
-    beclinic_can?(:financial, :manage_estimates)
+    administrator? || beclinic_can?(:financial, :manage_estimates)
   end
 
   def pay?
-    beclinic_can?(:financial, :create_transaction)
+    administrator? || beclinic_can?(:financial, :manage_estimates)
   end
 
   def refund?
-    beclinic_can?(:financial, :delete_transaction)
+    administrator? || beclinic_can?(:financial, :manage_estimates)
+  end
+
+  private
+
+  def administrator?
+    @account_user&.administrator?
+  end
+
+  def any_view_perm?
+    FINANCIAL_VIEW_PERMS.any? { |perm| beclinic_can?(:financial, perm) }
   end
 end

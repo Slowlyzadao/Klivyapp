@@ -51,9 +51,14 @@ class Public::Api::V1::Agenda::PublicController < ActionController::API
       starts_at = Time.zone.parse("#{date_iso} #{time_str}")
 
       config = @account.agenda_online_config
+      setting = @account.agenda_setting
 
-      # Duração do slot
-      slot_duration = config&.respond_to?(:slot_duration_minutes) && config.slot_duration_minutes.to_i > 0 ? config.slot_duration_minutes.to_i : 60
+      # Duração do slot — espelha exatamente o slot_interval_minutes
+      # configurado pela clínica em AgendaSetting (mesmo valor que gera a
+      # grade de slots em `calculate_slots`). Garante que o evento criado
+      # ocupa um slot inteiro do calendário interno, sem sobreposição
+      # parcial.
+      slot_duration = (setting&.slot_interval_minutes || 60).to_i
       ends_at = starts_at + slot_duration.minutes
 
       min_lead = config.min_lead_time_minutes.to_i
@@ -114,7 +119,8 @@ class Public::Api::V1::Agenda::PublicController < ActionController::API
         starts_at: starts_at,
         ends_at: ends_at,
         status: 'scheduled',
-        event_type: 'consultation'    # Correto para 'Consulta' no frontend
+        event_type: 'consultation',   # Correto para 'Consulta' no frontend
+        source: 'public_booking'      # Distingue auto-agendamento do paciente vs criação manual da recepção (filtro de Follow-ups)
       )
 
       render json: {
@@ -140,43 +146,59 @@ class Public::Api::V1::Agenda::PublicController < ActionController::API
     render json: { error: 'Profissional não encontrado.' }, status: :not_found
   end
 
+  # Generates available time slots for the given date, respecting all
+  # AgendaSetting rules configured by the clinic in the dashboard:
+  #   - slot_interval_minutes (15/30/60) — grid step AND event duration.
+  #   - week_days[].enabled / start / end — working hours per weekday.
+  #   - week_days[].lunchStart / lunchEnd + block_lunch_break — skips lunch.
+  #   - holidays (status: 'closed') — returns no slots on holidays.
+  #   - exceptions (folgas/exceções) — returns no slots inside the range.
+  # Falls back to inbox-level WorkingHour only if AgendaSetting is missing,
+  # preserving backwards-compat for accounts that haven't configured it yet.
+  DOW_KEYS = %w[sun mon tue wed thu fri sat].freeze
+
   def calculate_slots(date)
-    # WorkingHour está associado a um inbox, não diretamente à conta sem inbox
-    # Usamos o inbox principal da conta ou qualquer working hour do dia
-    working_hour = @account.working_hours
-                           .where(day_of_week: date.wday)
-                           .where(closed_all_day: false)
-                           .first
+    setting = @account.agenda_setting
+    config  = @account.agenda_online_config
 
-    return [] unless working_hour
-    return [] if working_hour.open_hour.nil? || working_hour.close_hour.nil?
+    open_str, close_str, lunch_start_str, lunch_end_str = working_window_for(date, setting)
+    return [] if open_str.blank? || close_str.blank?
+    return [] if blocked_by_holiday?(date, setting)
+    return [] if blocked_by_exception?(date, setting)
 
-    config   = @account.agenda_online_config
+    slot_interval = (setting&.slot_interval_minutes || 60).to_i
+    block_lunch   = setting&.block_lunch_break == true
+
     slots = []
 
     Time.use_zone('America/Sao_Paulo') do
       min_lead = config&.min_lead_time_minutes.to_i
       earliest_bookable = Time.zone.now + min_lead.minutes
 
-      # Duração do slot em minutos (padrão 60 para bater com a criação)
-      slot_duration = config&.respond_to?(:slot_duration_minutes) && config.slot_duration_minutes.to_i > 0 ? config.slot_duration_minutes.to_i : 60
+      open_time  = Time.zone.parse("#{date} #{open_str}")
+      close_time = Time.zone.parse("#{date} #{close_str}")
+      lunch_start = lunch_start_str.present? ? Time.zone.parse("#{date} #{lunch_start_str}") : nil
+      lunch_end   = lunch_end_str.present?   ? Time.zone.parse("#{date} #{lunch_end_str}")   : nil
 
-      open_time  = "#{date} #{working_hour.open_hour}:#{format('%02d', working_hour.open_minutes.to_i)}"
-      close_time = "#{date} #{working_hour.close_hour}:#{format('%02d', working_hour.close_minutes.to_i)}"
+      current_time = open_time
 
-      current_time = Time.zone.parse(open_time)
-      end_time     = Time.zone.parse(close_time)
+      # Stop the slot generator only after the LAST possible full-length slot
+      # has been considered. Using `<=` here so a slot ending exactly on the
+      # close time still gets offered.
+      while current_time + slot_interval.minutes <= close_time
+        slot_end = current_time + slot_interval.minutes
 
-      while current_time < end_time
-        slot_end = current_time + slot_duration.minutes
-
-        # Pular horários antes do lead time mínimo
         if current_time < earliest_bookable
           current_time = slot_end
           next
         end
 
-        # Verificar conflito com eventos existentes deste profissional
+        if block_lunch && lunch_start && lunch_end &&
+           current_time < lunch_end && slot_end > lunch_start
+          current_time = slot_end
+          next
+        end
+
         has_event = @account.agenda_events
                             .where(user_id: @user.id)
                             .where('starts_at < ? AND ends_at > ?', slot_end, current_time)
@@ -189,5 +211,56 @@ class Public::Api::V1::Agenda::PublicController < ActionController::API
     end
 
     slots
+  end
+
+  # Returns [open_str, close_str, lunch_start_str, lunch_end_str] for the
+  # given date, preferring AgendaSetting.week_days (clinic-managed) over
+  # the inbox-level WorkingHour fallback.
+  def working_window_for(date, setting)
+    if setting&.week_days.is_a?(Array)
+      day_id = DOW_KEYS[date.wday]
+      day_cfg = setting.week_days.find { |d| d['id'] == day_id }
+      if day_cfg
+        return [nil, nil, nil, nil] unless day_cfg['enabled']
+        return [
+          day_cfg['start'],
+          day_cfg['end'],
+          day_cfg['lunchStart'],
+          day_cfg['lunchEnd']
+        ]
+      end
+    end
+
+    wh = @account.working_hours
+                 .where(day_of_week: date.wday, closed_all_day: false)
+                 .first
+    return [nil, nil, nil, nil] unless wh
+    return [nil, nil, nil, nil] if wh.open_hour.nil? || wh.close_hour.nil?
+
+    [
+      "#{wh.open_hour}:#{format('%02d', wh.open_minutes.to_i)}",
+      "#{wh.close_hour}:#{format('%02d', wh.close_minutes.to_i)}",
+      nil,
+      nil
+    ]
+  end
+
+  def blocked_by_holiday?(date, setting)
+    return false unless setting&.holidays.is_a?(Array)
+    day_month = "#{date.day.to_s.rjust(2, '0')}/#{date.month.to_s.rjust(2, '0')}"
+    setting.holidays.any? do |h|
+      h['status'] == 'closed' && h['date'].to_s.start_with?(day_month)
+    end
+  end
+
+  def blocked_by_exception?(date, setting)
+    return false unless setting&.exceptions.is_a?(Array)
+    setting.exceptions.any? do |ex|
+      next false if ex['start'].blank? || ex['end'].blank?
+      ex_start = (Date.parse(ex['start']) rescue nil)
+      ex_end   = (Date.parse(ex['end'])   rescue nil)
+      next false unless ex_start && ex_end
+      date >= ex_start && date <= ex_end
+    end
   end
 end

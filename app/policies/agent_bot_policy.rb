@@ -1,32 +1,29 @@
 class AgentBotPolicy < ApplicationPolicy
   def index?
-    # leitura aberta a qualquer agente (usado em selects de inbox)
     @account_user.administrator? || @account_user.agent?
   end
 
+  def update?
+    @account_user.administrator?
+  end
+
   def show?
-    index?
+    @account_user.administrator? || @account_user.agent?
   end
 
   def create?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :agent_bots_manage)
-  end
-
-  def update?
-    create?
+    @account_user.administrator?
   end
 
   def destroy?
-    create?
+    @account_user.administrator?
   end
 
   def avatar?
-    create?
+    @account_user.administrator?
   end
 
   def reset_access_token?
-    create?
+    @account_user.administrator?
   end
 end

@@ -1,29 +1,21 @@
 class SlaPolicyPolicy < ApplicationPolicy
   def index?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :sla_view)
-  end
-
-  def show?
-    index?
-  end
-
-  def create?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :sla_create)
+    @account_user.administrator? || @account_user.agent?
   end
 
   def update?
-    return true if @account_user.administrator?
+    @account_user.administrator?
+  end
 
-    beclinic_can?(:settings, :sla_edit)
+  def show?
+    @account_user.administrator? || @account_user.agent?
+  end
+
+  def create?
+    @account_user.administrator?
   end
 
   def destroy?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :sla_delete)
+    @account_user.administrator?
   end
 end

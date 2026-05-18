@@ -1,0 +1,24 @@
+<%#
+# Override per-resource — prioridade MÁXIMA de Rails view lookup
+# (controller_path: super_admin/help_categories vence super_admin/application
+# vence administrate/application).
+# Label hardcoded em PT-BR, não depende de I18n/YAML reload nem de helper customizado.
+%>
+
+<% content_for(:title) { 'Ajuda - Categorias' } %>
+
+<header class="main-content__header">
+  <h1 class="main-content__page-title" id="page-title">Ajuda - Categorias</h1>
+
+  <% if show_search_bar %>
+    <%= render("search", search_term: search_term, resource_name: 'Ajuda - Categorias') %>
+  <% end %>
+
+  <div>
+    <% if accessible_action?(new_resource, :new) %>
+      <%= link_to('Nova Categoria',
+                  [:new, namespace, page.resource_path.to_sym],
+                  class: 'button') %>
+    <% end %>
+  </div>
+</header>

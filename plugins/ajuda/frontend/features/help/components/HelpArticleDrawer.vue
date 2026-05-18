@@ -4,7 +4,7 @@ import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 const props = defineProps({
   data: { type: Object, default: null },
 });
-const emit = defineEmits(['close', 'openArticle']);
+const emit = defineEmits(['close', 'openArticle', 'openChat']);
 
 const helpfulVote = ref(null);
 const expanded    = ref(false);
@@ -146,7 +146,8 @@ const nextStepsList = computed(() => {
             <h1>{{ data.cat.name }}</h1>
             <p style="color: rgb(var(--slate-10));">{{ data.cat.description }}</p>
             <h2 style="margin-top: 24px;">Todos os artigos</h2>
-            <div class="hp-art-list">
+
+            <div v-if="data.cat.articles && data.cat.articles.length > 0" class="hp-art-list">
               <button
                 v-for="art in data.cat.articles"
                 :key="art.id"
@@ -161,6 +162,21 @@ const nextStepsList = computed(() => {
                   <div class="hp-art-list-time">{{ art.time || 'Leitura rápida' }}</div>
                 </div>
                 <span class="hp-art-list-chev i-lucide-chevron-right" style="margin-left: auto;" />
+              </button>
+            </div>
+
+            <div v-else class="hp-empty-state">
+              <div class="hp-empty-state-icon">
+                <span class="i-lucide-file-search" style="font-size: 28px;" />
+              </div>
+              <h3 class="hp-empty-state-title">Ainda não há artigos nesta categoria</h3>
+              <p class="hp-empty-state-text">
+                Estamos preparando o conteúdo. Enquanto isso, fale com nosso time
+                — respondemos em poucos minutos.
+              </p>
+              <button class="hp-empty-state-btn" @click="emit('openChat')">
+                <span class="i-lucide-message-circle" style="font-size: 14px;" />
+                Falar com suporte
               </button>
             </div>
           </template>

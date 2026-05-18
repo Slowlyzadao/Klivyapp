@@ -1,9 +1,9 @@
 class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
   before_action :fetch_agent, except: [:create, :index, :bulk_create]
   before_action :check_authorization
-  before_action :prevent_admin_removal, only: [:destroy]
   before_action :validate_limit, only: [:create]
   before_action :validate_limit_for_bulk_create, only: [:bulk_create]
+  before_action :prevent_admin_removal, only: [:destroy]
 
   def index
     @agents = agents
@@ -64,9 +64,10 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
     super(User)
   end
 
-  # Klivy: administradores e donos (super admin) são intocáveis via essa API.
-  # Mesmo um user com `users_remove` granular não pode rebaixar nem deletar um
-  # admin — pra isso, outro admin precisa rebaixar antes pelo editor.
+  # Even an attacker (or an agent with users_remove who knows the target's id)
+  # cannot delete an administrator or super admin via the API. To remove an
+  # admin, demote them first via the agent editor (which exercises a different
+  # authorization path).
   def prevent_admin_removal
     return unless @agent
 

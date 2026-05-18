@@ -2,22 +2,17 @@ require 'administrate/base_dashboard'
 
 class HelpArticleDashboard < Administrate::BaseDashboard
   ATTRIBUTE_TYPES = {
-    id:         Field::Number,
-    title:      Field::String.with_options(searchable: true),
-    body:       RichTextField,
-    category:   Field::Select.with_options(
-                  collection: -> { HelpCategory.ordered.pluck(:slug) rescue HelpArticle::CATEGORIES },
-                  include_blank: false
-                ),
-    status:     Field::Select.with_options(
-                  collection: HelpArticle::STATUSES,
-                  include_blank: false
-                ),
-    video_url:  Field::String,
+    id: Field::Number,
+    title: Field::String,
+    body: RichTextField,
+    category: Field::Select.with_options(collection: -> { HelpCategory.ordered.pluck(:slug) }),
+    status: Field::Select.with_options(collection: HelpArticle::STATUSES),
+    video_url: Field::String,
     next_steps: Field::Text,
-    position:   Field::Number,
+    position: Field::Number,
+    deleted_at: Field::DateTime,
     created_at: Field::DateTime,
-    updated_at: Field::DateTime,
+    updated_at: Field::DateTime
   }.freeze
 
   COLLECTION_ATTRIBUTES = %i[
@@ -26,17 +21,17 @@ class HelpArticleDashboard < Administrate::BaseDashboard
     category
     status
     position
-    created_at
+    updated_at
   ].freeze
 
   SHOW_PAGE_ATTRIBUTES = %i[
     id
     title
-    body
     category
     status
     video_url
     next_steps
+    body
     position
     created_at
     updated_at
@@ -44,20 +39,24 @@ class HelpArticleDashboard < Administrate::BaseDashboard
 
   FORM_ATTRIBUTES = %i[
     title
-    body
-    next_steps
     category
     status
     video_url
     position
+    next_steps
+    body
   ].freeze
 
   COLLECTION_FILTERS = {
     published: ->(resources) { resources.where(status: 'published') },
-    draft:     ->(resources) { resources.where(status: 'draft') },
+    draft: ->(resources) { resources.where(status: 'draft') }
   }.freeze
 
-  def display_resource(help_article)
-    "##{help_article.id} #{help_article.title}"
+  def display_resource(article)
+    article.title
+  end
+
+  def self.resource_name(opts = {})
+    opts[:count] == 1 ? 'Artigo' : 'Ajuda - Artigos'
   end
 end

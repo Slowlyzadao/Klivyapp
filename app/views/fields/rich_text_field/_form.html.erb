@@ -1,176 +1,28 @@
-<div class="ha-quill-wrap" data-field-name="<%= field.attribute %>">
-  <div class="ha-quill-editor"></div>
-  <textarea
-    class="ha-quill-html-textarea"
-    style="display:none;"
-    placeholder="Cole ou edite o HTML aqui..."
-  ></textarea>
-  <%= f.hidden_field field.attribute, class: 'ha-quill-hidden', value: field.data.to_s %>
+<%# Quill rich text editor — bootstrap em app/javascript/superadmin_pages/quill_editor.js %>
+<div class="field-unit__label">
+  <%= f.label field.attribute %>
+</div>
+<div class="field-unit__field">
+  <div class="ha-quill-wrap" data-quill-field>
+    <div class="ha-quill-editor"></div>
+    <textarea
+      class="ha-quill-html"
+      style="display:none; width:100%; min-height:300px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px;"
+    ><%= field.data %></textarea>
+    <%= f.hidden_field field.attribute, value: field.data, class: 'ha-quill-input' %>
+  </div>
 </div>
 
 <style>
-/* ── Quill container ──────────────────────────────────────── */
-.ha-quill-wrap {
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  overflow: hidden;
-  font-family: inherit;
-}
-
-/* Toolbar */
-.ha-quill-wrap .ql-toolbar.ql-snow {
-  border: none;
-  border-bottom: 1px solid #e5e7eb;
-  background: #f9fafb;
-  padding: 8px 10px;
-  font-family: inherit;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
-}
-.ha-quill-wrap .ql-toolbar.ql-snow .ql-formats {
-  margin-right: 4px;
-}
-.ha-quill-wrap .ql-toolbar.ql-snow button,
-.ha-quill-wrap .ql-toolbar.ql-snow .ql-picker-label {
-  border-radius: 5px;
-  transition: background 100ms;
-  color: #374151;
-}
-.ha-quill-wrap .ql-toolbar.ql-snow button:hover,
-.ha-quill-wrap .ql-toolbar.ql-snow .ql-picker-label:hover {
-  background: #e5e7eb;
-  color: #111827;
-}
-.ha-quill-wrap .ql-toolbar.ql-snow button.ql-active,
-.ha-quill-wrap .ql-toolbar.ql-snow .ql-picker-label.ql-active {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-.ha-quill-wrap .ql-toolbar.ql-snow .ql-stroke { stroke: currentColor; }
-.ha-quill-wrap .ql-toolbar.ql-snow .ql-fill  { fill:   currentColor; }
-
-/* Picker dropdowns */
-.ha-quill-wrap .ql-picker-options {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0,0,0,.1);
-  z-index: 9999;
-}
-.ha-quill-wrap .ql-picker-item:hover {
-  background: #f3f4f6;
-  color: #111827;
-}
-
-/* Color pickers */
-.ha-quill-wrap .ql-color-picker .ql-picker-options,
-.ha-quill-wrap .ql-background .ql-picker-options {
-  padding: 6px;
-  width: 164px;
-}
-.ha-quill-wrap .ql-color-picker .ql-picker-item {
-  border-radius: 3px;
-  width: 16px;
-  height: 16px;
-}
-
-/* HTML toggle button (custom) */
-.ha-quill-wrap .ql-html-toggle {
-  font-size: 12px;
-  font-weight: 600;
-  font-family: ui-monospace, monospace;
-  color: #6b7280;
-  padding: 2px 6px !important;
-  width: auto !important;
-  border: 1px solid transparent;
-  border-radius: 5px;
-}
-.ha-quill-wrap .ql-html-toggle:hover  { background: #e5e7eb !important; color: #111827 !important; }
-.ha-quill-wrap .ql-html-toggle.ql-active {
-  background: #dbeafe !important;
-  border-color: #93c5fd !important;
-  color: #1d4ed8 !important;
-}
-
-/* Editor area */
-.ha-quill-wrap .ql-container.ql-snow {
-  border: none;
-  font-family: inherit;
-  font-size: 14px;
-}
-.ha-quill-wrap .ql-editor {
-  min-height: 400px;
-  padding: 16px 18px;
-  font-size: 14px;
-  line-height: 1.7;
-  color: #111827;
-}
-.ha-quill-wrap .ql-editor.ql-blank::before {
-  color: #9ca3af;
-  font-style: normal;
-  left: 18px;
-}
-
-/* Content styling inside editor — all headers */
-.ha-quill-wrap .ql-editor h1 { font-size: 2em;   font-weight: 800; margin: 20px 0 10px; line-height: 1.3; }
-.ha-quill-wrap .ql-editor h2 { font-size: 1.6em;  font-weight: 700; margin: 18px 0 9px;  line-height: 1.3; }
-.ha-quill-wrap .ql-editor h3 { font-size: 1.3em;  font-weight: 600; margin: 16px 0 8px;  line-height: 1.4; }
-.ha-quill-wrap .ql-editor h4 { font-size: 1.1em;  font-weight: 600; margin: 14px 0 7px;  line-height: 1.4; }
-.ha-quill-wrap .ql-editor h5 { font-size: 1em;    font-weight: 600; margin: 12px 0 6px;  }
-.ha-quill-wrap .ql-editor h6 { font-size: 0.9em;  font-weight: 600; margin: 10px 0 5px;  color: #6b7280; }
-
-.ha-quill-wrap .ql-editor blockquote {
-  border-left: 3px solid #6366f1;
-  padding-left: 12px;
-  color: #4b5563;
-  margin: 10px 0;
-  font-style: normal;
-}
-.ha-quill-wrap .ql-editor pre.ql-syntax {
-  background: #f3f4f6;
-  color: #111827;
-  border-radius: 6px;
-  padding: 12px 16px;
-  font-size: 13px;
-}
-.ha-quill-wrap .ql-editor a { color: #2563eb; }
-
-/* Images inserted in editor */
-.ha-quill-wrap .ql-editor img {
-  max-width: 100%;
-  height: auto;
-  border-radius: 6px;
-  display: block;
-  margin: 8px 0;
-}
-
-/* Video iframes */
-.ha-quill-wrap .ql-editor .ql-video {
-  width: 100%;
-  max-width: 720px;
-  aspect-ratio: 16 / 9;
-  border-radius: 8px;
-  border: none;
-  display: block;
-  margin: 12px 0;
-}
-
-/* HTML textarea (raw mode) */
-.ha-quill-html-textarea {
-  width: 100%;
-  min-height: 400px;
-  padding: 16px 18px;
-  font-family: ui-monospace, 'Cascadia Code', monospace;
-  font-size: 13px;
-  line-height: 1.6;
-  color: #111827;
-  background: #f8fafc;
-  border: none;
-  outline: none;
-  resize: vertical;
-  box-sizing: border-box;
-}
-
-.ha-quill-hidden { display: none !important; }
+  .ha-quill-wrap { border: 1px solid #d1d5db; border-radius: 6px; background: #fff; }
+  .ha-quill-wrap .ql-toolbar { border: 0; border-bottom: 1px solid #e5e7eb; border-top-left-radius: 6px; border-top-right-radius: 6px; }
+  .ha-quill-wrap .ql-container { border: 0; min-height: 360px; font-size: 14px; }
+  .ha-quill-wrap .ql-toolbar { padding: 6px 8px; }
+  .ha-quill-wrap .ql-toolbar .ql-formats { margin-right: 8px; }
+  .ha-quill-wrap.ha-quill--html .ha-quill-editor,
+  .ha-quill-wrap.ha-quill--html .ql-toolbar > .ql-formats:not(.ha-quill-html-toggle-wrap) { display: none; }
+  .ha-quill-wrap:not(.ha-quill--html) .ha-quill-html { display: none !important; }
+  .ha-quill-html-toggle { padding: 2px 6px; font-size: 12px; cursor: pointer; border: 1px solid transparent; border-radius: 4px; background: transparent; }
+  .ha-quill-html-toggle:hover { background: #f3f4f6; }
+  .ha-quill-wrap.ha-quill--html .ha-quill-html-toggle { background: #1f2937; color: #fff; border-color: #1f2937; }
 </style>

@@ -1,0 +1,13 @@
+<%# Override per-resource — título e botão "Voltar" em PT-BR. %>
+<% content_for(:title) { 'Novo Artigo' } %>
+
+<header class="main-content__header">
+  <h1 class="main-content__page-title">Novo Artigo</h1>
+  <div>
+    <%= link_to 'Voltar', :back, class: 'button' %>
+  </div>
+</header>
+
+<section class="main-content__body">
+  <%= render 'form', page: page %>
+</section>

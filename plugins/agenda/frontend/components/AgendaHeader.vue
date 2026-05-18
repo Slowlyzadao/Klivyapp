@@ -7,7 +7,6 @@ export default {
     showSummaryBar: { type: Boolean, default: false },
     showMobileSidebar: { type: Boolean, default: false },
     viewDropdownOpen: { type: Boolean, default: false },
-    canCreate: { type: Boolean, default: true },
   },
   emits: [
     'prev',
@@ -55,10 +54,10 @@ export default {
         <button
           type="button"
           class="view-btn"
-          :class="{ active: viewMode === 'month' }"
-          @click="setViewMode('month')"
+          :class="{ active: viewMode === 'day' }"
+          @click="setViewMode('day')"
         >
-          {{ $t('AGENDA.HEADER.MONTH') }}
+          {{ $t('AGENDA.HEADER.DAY') }}
         </button>
         <button
           type="button"
@@ -71,10 +70,10 @@ export default {
         <button
           type="button"
           class="view-btn"
-          :class="{ active: viewMode === 'day' }"
-          @click="setViewMode('day')"
+          :class="{ active: viewMode === 'month' }"
+          @click="setViewMode('month')"
         >
-          {{ $t('AGENDA.HEADER.DAY') }}
+          {{ $t('AGENDA.HEADER.MONTH') }}
         </button>
       </div>
 
@@ -101,11 +100,11 @@ export default {
           <button
             type="button"
             class="view-dropdown-item"
-            :class="{ active: viewMode === 'month' }"
-            @click="setViewMode('month')"
+            :class="{ active: viewMode === 'day' }"
+            @click="setViewMode('day')"
           >
-            <i class="i-lucide-calendar" />
-            {{ $t('AGENDA.HEADER.MONTH') }}
+            <i class="i-lucide-calendar-check" />
+            {{ $t('AGENDA.HEADER.DAY') }}
           </button>
           <button
             type="button"
@@ -119,11 +118,11 @@ export default {
           <button
             type="button"
             class="view-dropdown-item"
-            :class="{ active: viewMode === 'day' }"
-            @click="setViewMode('day')"
+            :class="{ active: viewMode === 'month' }"
+            @click="setViewMode('month')"
           >
-            <i class="i-lucide-calendar-check" />
-            {{ $t('AGENDA.HEADER.DAY') }}
+            <i class="i-lucide-calendar" />
+            {{ $t('AGENDA.HEADER.MONTH') }}
           </button>
         </div>
       </div>
@@ -172,7 +171,7 @@ export default {
         <i class="i-ph-chart-bar" />
         <span class="hide-mobile">Resumo</span>
       </button>
-      <button v-if="canCreate" class="new-event-btn desktop-new-event" @click="$emit('new-event')">
+      <button class="new-event-btn desktop-new-event" @click="$emit('new-event')">
         <i class="i-lucide-plus" />
         <span class="new-event-text">{{ $t('AGENDA.HEADER.NEW_EVENT') }}</span>
       </button>

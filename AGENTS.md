@@ -111,3 +111,63 @@ Practical checklist for any change impacting core logic or public APIs
 ## Branding / White-labeling note
 
 - For user-facing strings that currently contain "Chatwoot" but should adapt to branded/self-hosted installs, prefer applying `replaceInstallationName` from `shared/composables/useBranding` in the UI layer (for example tooltip and suggestion labels) instead of adding hardcoded brand-specific copy.
+
+---
+
+# Beclinic Custom Rules
+
+> Project-specific rules layered on top of the Chatwoot OSS base. Anything in this section overrides or extends the Chatwoot guidelines above. **Beclinic** is the code/engine standard — all custom code identifiers use it. **Klivy** is only the end-product brand name; it appears exclusively in user-visible text (sourced from `BRAND_NAME` via `GlobalConfigService`) and never in new code identifiers, file names, classes, tables, columns, components, routes, or i18n keys.
+
+## Change Scope (Isolation)
+
+- **Develop in isolation by default**: only touch core (shared code, central models, base controllers, fundamental services, structural migrations) when strictly required by the task.
+- Before editing a core file, ask: "Is there an extension point (module, hook, `enterprise/` override, decorator, dedicated plugin engine under `plugins/`) that solves this without changing core?" — if yes, use it.
+- If a core change is unavoidable, **state the reason and the impact in the response** before applying it.
+- Prefer creating new files / isolated modules over expanding existing core files.
+- New custom feature work belongs in a dedicated engine under `plugins/` (`plugins/beclinic_core`, `plugins/agenda`, `plugins/patients`, `plugins/billing`, `plugins/financial`, etc.) or a new plugin engine — never mixed into generic Chatwoot OSS logic.
+
+## Architecture & Code Quality
+
+Apply these rules **before** writing any code, not after:
+
+- **Think first**: before touching the keyboard, map the impact — which files/engines are affected, which existing patterns the change must respect, which integration points it crosses. Skip this only for trivial one-line fixes.
+- **Read context first**: open the surrounding files (sibling controllers/services/components, the engine's `engine.rb`, related tests) to learn the established pattern. Match it instead of inventing a new one.
+- **Check `plugins/` structure before creating a new module**: list `plugins/<engine>/app/`, `plugins/<engine>/lib/`, `plugins/<engine>/frontend/` and follow the same folder layout already in use. Do not invent parallel structures.
+- **No hardcoded values**: route brand strings through `BRAND_NAME`/`GlobalConfigService`, environment values through `ENV`/Rails config, business constants through model constants or DB-backed settings, URLs through route helpers. Magic numbers in business logic must become named constants.
+- **Separation of concerns**: controllers stay thin (params + auth + delegation); business logic lives in services (`*::Service`, `*::Action`, jobs); persistence and validations in models; presentation in components/serializers. Do not collapse layers.
+- **No god files**: if a file grows past ~200 lines of real logic, or holds two unrelated responsibilities, split it. Prefer many small, single-purpose files over one large multi-purpose file.
+- **Consistency with existing system**: naming (covered in the next section), folder organization, and data flow (params → service → model → response) must follow the patterns already present in the surrounding engine. When in doubt, copy the closest existing example.
+- **Reuse vs. MVP — tiebreaker**: the General Guidelines above say "MVP focus, least code change". That stays in force for new code. Extract for reuse, add an extension point, or build an abstraction **only when 2+ real callers already exist**. Designing for hypothetical future callers is a violation, not a virtue. When the second caller appears, refactor then — not before.
+
+## Naming — Avoid Chatwoot Core Collisions (Beclinic standard)
+
+All custom code identifiers use the **`Beclinic` / `beclinic_`** standard. This matches the existing engine `BeclinicCore`, table prefixes (`beclinic_profiles`, `beclinic_preset_roles`), and column prefixes (`beclinic_role`).
+
+Legacy identifiers that still carry the brand name (e.g. `KlivyMailer`, `klivy_mailer.html.erb`) are not a pattern to extend — treat them as tech debt. Do not introduce new `Klivy`-named code; if you touch one of those files for an unrelated reason, leave the rename out of scope unless explicitly requested.
+
+Concrete rules for new custom code:
+
+- **Ruby modules/classes**:
+  - Foundation/shared code lives under `BeclinicCore::*` (e.g. `BeclinicCore::AccountSetup`, `BeclinicCore::AccountProfile`).
+  - Domain plugins keep their own top-level engine namespace matching the plugin folder (`Patients::*`, `Agenda::*`, `Billing::*`, `Financial::*`). Inside a plugin, scope further as needed (e.g. `Patients::Registration::Service`).
+  - Never define a top-level constant that could shadow a Chatwoot OSS or Enterprise constant — when in doubt, wrap under the engine namespace.
+- **Controllers/routes**: keep new endpoints under their plugin engine's namespace (`Patients::Api::V1::*`, `Agenda::Api::V1::*`) or a dedicated `Beclinic`-scoped namespace for cross-plugin admin (`BeclinicAdmin::*` is already in use — see `spec/plugins/beclinic_core/controllers/beclinic_admin/`). Avoid attaching new routes directly to `Api::V1::Accounts::*` unless extending an existing Chatwoot resource.
+- **Database tables**: prefix custom tables with `beclinic_` only when they belong to `BeclinicCore` (e.g. `beclinic_profiles`, `beclinic_preset_roles`). Plugin-owned tables follow the plugin name (`patients`, `agenda_settings`, `billing_invoices`, etc.) — match the engine that owns them.
+- **Columns added to Chatwoot core tables**: prefix with `beclinic_` to mark them as ours (e.g. `beclinic_role` on `teams`). Never repurpose an existing Chatwoot column.
+- **Vue components**: prefix with `Beclinic` (e.g. `BeclinicPatientForm.vue`, `BeclinicAgendaSlot.vue`) when the component is generic/shared. Plugin-scoped components live under that plugin's frontend folder (`plugins/patients/frontend/...`) and may use the plugin name as prefix (`PatientRecord.vue`).
+- **JS/TS modules and composables**: prefix shared utilities with `beclinic` / `useBeclinic` (e.g. `beclinicDateMask.js`, `useBeclinicAgenda.js`). Plugin-scoped utilities can use the plugin name.
+- **i18n keys**: nest custom strings under a `BECLINIC.*` root in `en.json` / `en.yml` to keep them separate from upstream Chatwoot keys.
+- **CSS classes / design tokens**: prefix utility classes with `bcl-`. Brand color tokens stay as the existing `--brand*` set in `tailwind.config.js` (these are brand-neutral semantic tokens, not code-identifier).
+- **Pre-creation check**: before naming a new file/class/route/table/column/i18n key, run a search across `app/`, `enterprise/`, and `plugins/` (e.g. `rg -n "ClassName|table_name|route_path"`) to confirm no upstream or sibling-plugin identifier already uses the name. If a collision exists, namespace it under `Beclinic` (or the owning plugin engine) instead of overloading the existing one.
+- **Renames**: never rename a Chatwoot core identifier to avoid a collision — namespace the new Beclinic code instead.
+
+## CHANGELOG.md (Mandatory)
+
+Every functional change (feat, fix, refactor with visible impact, behavior change) **must** add an entry to `CHANGELOG.md` before commit, following the pattern already established in the file:
+
+- **Version `1.B.C.D`**: increment `D` for a bug/minor change; when `D` reaches 10, increment `C` and reset `D`; bump `B` only when a full module/project is completed.
+- **ISO timestamp** with `-03:00` timezone in the entry header: `## [1.B.C.D] - YYYY-MM-DDTHH:MM:SS-03:00`.
+- **Descriptive title** on the next line, as `###`.
+- **Expected sections** when applicable: `**Problema:**`, `**Solução:**` (numbered if multiple fronts), and always at the end **`**Arquivos Modificados:**`** listing every touched file (relative path).
+- Purely cosmetic changes (style, chore, manifest tweaks, asset rebuilds) **do not** require an entry — align with the recent `style:` / `chore:` commits in history.
+- Add the entry at the **top** of the file, right below the "Estrutura de Versão" block.

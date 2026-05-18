@@ -13,5 +13,14 @@ json.agenda_public_id resource.agenda_public_id
 json.role resource.role
 json.thumbnail resource.avatar_url
 json.custom_role_id resource.current_account_user&.custom_role_id if ChatwootApp.enterprise?
+json.klivy_role_id resource.current_account_user&.klivy_role_id
+if resource.current_account_user&.klivy_role
+  json.klivy_role do
+    json.id resource.current_account_user.klivy_role.id
+    json.name resource.current_account_user.klivy_role.name
+    json.preset_key resource.current_account_user.klivy_role.preset_key
+  end
+end
 json.beclinic_super_admin resource.beclinic_super_admin?
+json.agenda_service_ids resource.respond_to?(:agenda_service_ids) ? resource.agenda_service_ids : []
 

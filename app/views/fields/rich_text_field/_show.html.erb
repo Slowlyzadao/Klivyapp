@@ -1,3 +1,25 @@
-<div class="help-article-body">
-  <%= field.data.to_s.html_safe %>
+<%# Whitelist alinhada com o toolbar do Quill (color, align, indent, image, video, etc.).
+    Conteúdo é editado pelo Super Admin (já autenticado), risco de XSS é baixo;
+    ainda assim mantemos sanitize com whitelist estrita ao invés de raw HTML. %>
+<div class="ha-rich-text-show">
+  <%= sanitize(
+        field.data.to_s,
+        tags: %w[
+          p br hr div span
+          h1 h2 h3 h4 h5 h6
+          strong b em i u s sub sup
+          ul ol li
+          blockquote code pre
+          a img iframe video source
+          table thead tbody tfoot tr td th
+        ],
+        attributes: %w[
+          href src target rel title alt name
+          width height
+          frameborder allow allowfullscreen controls poster
+          class style
+          colspan rowspan
+          data-list
+        ]
+      ) %>
 </div>

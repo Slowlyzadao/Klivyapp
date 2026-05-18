@@ -34,6 +34,15 @@ class ActionCableConnector extends BaseActionCableConnector {
       'conversation.updated': this.onConversationUpdated,
       'account.cache_invalidated': this.onCacheInvalidate,
       'copilot.message.created': this.onCopilotMessageCreated,
+      // InternalChat plugin (chat interno entre profissionais).
+      // Handlers dispatch direto pros stores Vuex do plugin.
+      'internal_chat.message.created': this.onInternalChatMessageCreated,
+      'internal_chat.message.updated': this.onInternalChatMessageUpdated,
+      'internal_chat.room.updated': this.onInternalChatRoomUpdated,
+      'internal_chat.room.deleted': this.onInternalChatRoomDeleted,
+      'internal_chat.mention.created': this.onInternalChatMentionCreated,
+      'internal_chat.read_receipt.updated': this.onInternalChatReadReceiptUpdated,
+      'internal_chat.typing': this.onInternalChatTyping,
     };
   }
 
@@ -192,6 +201,45 @@ class ActionCableConnector extends BaseActionCableConnector {
 
   onCopilotMessageCreated = data => {
     this.app.$store.dispatch('copilotMessages/upsert', data);
+  };
+
+  onInternalChatMessageCreated = data => {
+    this.app.$store.dispatch('internalChatMessages/receiveFromCable', data);
+    const currentUserId = this.app.$store.getters.getCurrentUserID;
+    if (data?.sender?.id !== currentUserId) {
+      this.app.$store.dispatch('internalChatRooms/bumpUnread', data.room_id);
+    }
+    // Defensive: se chegou mensagem pra uma sala que não conhecemos (DM nova,
+    // room.updated perdido em cable disconnect), busca do backend pra
+    // aparecer na lista — senão o usuário recebe a mensagem mas nunca vê.
+    const known = this.app.$store.getters['internalChatRooms/getRoomById'](data.room_id);
+    if (!known) {
+      this.app.$store.dispatch('internalChatRooms/show', data.room_id);
+    }
+  };
+
+  onInternalChatMessageUpdated = data => {
+    this.app.$store.dispatch('internalChatMessages/receiveFromCable', data);
+  };
+
+  onInternalChatRoomUpdated = data => {
+    this.app.$store.dispatch('internalChatRooms/upsertFromCable', data);
+  };
+
+  onInternalChatRoomDeleted = data => {
+    this.app.$store.dispatch('internalChatRooms/handleDeletedFromCable', data);
+  };
+
+  onInternalChatMentionCreated = data => {
+    this.app.$store.dispatch('internalChatMentions/receiveFromCable', data);
+  };
+
+  onInternalChatReadReceiptUpdated = data => {
+    this.app.$store.dispatch('internalChatRooms/applyReadReceipt', data);
+  };
+
+  onInternalChatTyping = data => {
+    this.app.$store.dispatch('internalChatTyping/receive', data);
   };
 
   onCacheInvalidate = data => {

@@ -17,16 +17,15 @@ const store = useStore();
 const { t } = useI18n();
 const getters = useStoreGetters();
 const { isAdmin } = useAdmin();
-const { can } = usePermissions();
-
+const { can: klivyCan } = usePermissions();
 const canCreateTeam = computed(
-  () => isAdmin.value || can('settings', 'teams_create')
+  () => isAdmin.value || klivyCan('settings', 'teams_create')
 );
 const canEditTeam = computed(
-  () => isAdmin.value || can('settings', 'teams_edit')
+  () => isAdmin.value || klivyCan('settings', 'teams_edit')
 );
 const canDeleteTeam = computed(
-  () => isAdmin.value || can('settings', 'teams_delete')
+  () => isAdmin.value || klivyCan('settings', 'teams_delete')
 );
 
 const loading = ref({});
@@ -113,7 +112,10 @@ const confirmPlaceHolderText = computed(() =>
           </span>
         </template>
         <template #actions>
-          <router-link v-if="canCreateTeam" :to="{ name: 'settings_teams_new' }">
+          <router-link
+            v-if="canCreateTeam"
+            :to="{ name: 'settings_teams_new' }"
+          >
             <Button :label="$t('TEAMS_SETTINGS.NEW_TEAM')" size="sm" />
           </router-link>
         </template>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_04_26_023750) do
+ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -160,6 +160,19 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_26_023750) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
+  create_table "agenda_categories", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "color", default: "#3b82f6", null: false
+    t.integer "position", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.bigint "account_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "name"], name: "index_agenda_categories_on_account_id_and_name", unique: true
+    t.index ["account_id", "position"], name: "index_agenda_categories_on_account_id_and_position"
+    t.index ["account_id"], name: "index_agenda_categories_on_account_id"
+  end
+
   create_table "agenda_custom_attributes", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", null: false
@@ -187,7 +200,13 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_26_023750) do
     t.string "event_type", default: "appointment", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "category_id"
+    t.string "source", default: "manual", null: false
+    t.index ["account_id", "source"], name: "index_agenda_events_on_account_and_source"
+    t.index ["account_id", "starts_at"], name: "index_agenda_events_on_account_and_starts_at"
+    t.index ["account_id", "user_id", "starts_at"], name: "index_agenda_events_on_account_user_starts_at"
     t.index ["account_id"], name: "index_agenda_events_on_account_id"
+    t.index ["category_id"], name: "index_agenda_events_on_category_id"
     t.index ["contact_id"], name: "index_agenda_events_on_contact_id"
     t.index ["user_id"], name: "index_agenda_events_on_user_id"
   end
@@ -241,6 +260,18 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_26_023750) do
     t.index ["account_id"], name: "index_agenda_online_configs_on_account_id"
   end
 
+  create_table "agenda_service_users", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "agenda_service_id", null: false
+    t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_agenda_service_users_on_account_id"
+    t.index ["agenda_service_id", "user_id"], name: "idx_agenda_service_users_unique", unique: true
+    t.index ["agenda_service_id"], name: "index_agenda_service_users_on_agenda_service_id"
+    t.index ["user_id"], name: "index_agenda_service_users_on_user_id"
+  end
+
   create_table "agenda_services", force: :cascade do |t|
     t.string "name", null: false
     t.integer "duration_minutes", default: 60, null: false
@@ -251,8 +282,10 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_26_023750) do
     t.bigint "account_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "default_category_id"
     t.index ["account_id", "position"], name: "index_agenda_services_on_account_id_and_position"
     t.index ["account_id"], name: "index_agenda_services_on_account_id"
+    t.index ["default_category_id"], name: "index_agenda_services_on_default_category_id"
   end
 
   create_table "agenda_settings", force: :cascade do |t|
@@ -265,6 +298,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_26_023750) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "slot_interval_minutes", default: 60, null: false
+    t.boolean "block_past_dates", default: false, null: false
+    t.boolean "show_only_working_hours", default: false, null: false
+    t.integer "visible_hours_buffer", default: 2, null: false
     t.index ["account_id"], name: "index_agenda_settings_on_account_id", unique: true
   end
 
@@ -297,6 +333,270 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_26_023750) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_agent_capacity_policies_on_account_id"
+  end
+
+  create_table "ai_agent_account_settings", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.boolean "enabled", default: false, null: false
+    t.string "chat_model"
+    t.integer "monthly_token_budget"
+    t.integer "max_tokens_per_conversation"
+    t.bigint "persona_id"
+    t.jsonb "enabled_tools", default: [], null: false
+    t.text "system_prompt_prefix"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "responsible_physician_id"
+    t.string "responsible_physician_crm"
+    t.string "responsible_physician_council"
+    t.index ["account_id"], name: "index_ai_agent_account_settings_on_account_id", unique: true
+    t.index ["persona_id"], name: "index_ai_agent_account_settings_on_persona_id"
+    t.index ["responsible_physician_id"], name: "index_ai_agent_account_settings_on_responsible_physician_id"
+  end
+
+  create_table "ai_agent_audit_logs", force: :cascade do |t|
+    t.bigint "super_admin_id"
+    t.bigint "user_id"
+    t.bigint "account_id"
+    t.string "scope", null: false
+    t.string "action", null: false
+    t.jsonb "changes_summary", default: {}, null: false
+    t.string "ip_address"
+    t.datetime "created_at", null: false
+    t.index ["account_id"], name: "index_ai_agent_audit_logs_on_account_id"
+    t.index ["created_at"], name: "index_ai_agent_audit_logs_on_created_at"
+    t.index ["scope"], name: "index_ai_agent_audit_logs_on_scope"
+  end
+
+  create_table "ai_agent_child_chunks", force: :cascade do |t|
+    t.bigint "parent_chunk_id", null: false
+    t.bigint "document_id", null: false
+    t.bigint "account_id", null: false
+    t.integer "position", null: false
+    t.text "content", null: false
+    t.vector "embedding", limit: 1536
+    t.integer "char_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_ai_agent_child_chunks_on_account_id"
+    t.index ["document_id"], name: "index_ai_agent_child_chunks_on_document_id"
+    t.index ["embedding"], name: "ai_agent_child_chunks_embedding_idx", opclass: :vector_cosine_ops, using: :ivfflat
+    t.index ["parent_chunk_id", "position"], name: "index_ai_agent_child_chunks_on_parent_chunk_id_and_position", unique: true
+    t.index ["parent_chunk_id"], name: "index_ai_agent_child_chunks_on_parent_chunk_id"
+  end
+
+  create_table "ai_agent_conversation_states", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.string "status", default: "active", null: false
+    t.string "last_intent"
+    t.text "summary"
+    t.jsonb "working_memory", default: {}, null: false
+    t.datetime "last_message_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "last_sentiment_score", precision: 4, scale: 3
+    t.string "last_sentiment_label"
+    t.integer "consecutive_negative_count", default: 0, null: false
+    t.integer "consecutive_tool_failures", default: 0, null: false
+    t.index ["account_id", "conversation_id"], name: "idx_ai_agent_state_on_account_conv", unique: true
+    t.index ["account_id"], name: "index_ai_agent_conversation_states_on_account_id"
+    t.index ["status"], name: "index_ai_agent_conversation_states_on_status"
+  end
+
+  create_table "ai_agent_documents", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.string "source_type", default: "pdf", null: false
+    t.string "external_link"
+    t.integer "status", default: 0, null: false
+    t.text "error_message"
+    t.string "checksum"
+    t.integer "char_count", default: 0
+    t.integer "parent_chunk_count", default: 0
+    t.integer "child_chunk_count", default: 0
+    t.datetime "processed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "checksum"], name: "index_ai_agent_documents_on_account_id_and_checksum"
+    t.index ["account_id"], name: "index_ai_agent_documents_on_account_id"
+    t.index ["status"], name: "index_ai_agent_documents_on_status"
+  end
+
+  create_table "ai_agent_feedbacks", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "trace_id"
+    t.bigint "conversation_id"
+    t.bigint "message_id"
+    t.bigint "contact_id"
+    t.integer "rating", null: false
+    t.text "comment"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "index_ai_agent_feedbacks_on_account_id_and_created_at"
+    t.index ["account_id"], name: "index_ai_agent_feedbacks_on_account_id"
+    t.index ["rating"], name: "index_ai_agent_feedbacks_on_rating"
+    t.index ["trace_id"], name: "index_ai_agent_feedbacks_on_trace_id"
+  end
+
+  create_table "ai_agent_follow_up_executions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "rule_id", null: false
+    t.bigint "contact_id"
+    t.bigint "conversation_id"
+    t.bigint "agenda_event_id"
+    t.datetime "target_at", null: false
+    t.datetime "sent_at"
+    t.string "status", default: "pending", null: false
+    t.string "skip_reason"
+    t.bigint "message_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status", "target_at"], name: "idx_ai_agent_follow_up_executions_status"
+    t.index ["account_id"], name: "index_ai_agent_follow_up_executions_on_account_id"
+    t.index ["rule_id", "contact_id", "agenda_event_id", "target_at"], name: "idx_ai_agent_follow_up_executions_unique_target", unique: true
+    t.index ["rule_id"], name: "index_ai_agent_follow_up_executions_on_rule_id"
+  end
+
+  create_table "ai_agent_follow_up_rules", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 120, null: false
+    t.boolean "enabled", default: true, null: false
+    t.integer "position", default: 0, null: false
+    t.string "trigger_type", null: false
+    t.integer "offset_hours", default: 24, null: false
+    t.jsonb "status_filter", default: {}, null: false
+    t.text "context_brief", null: false
+    t.integer "max_per_target", default: 1, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "offset_unit", default: "hours", null: false
+    t.string "applies_to", default: "both", null: false
+    t.index ["account_id", "enabled", "trigger_type"], name: "idx_ai_agent_follow_up_rules_dispatch"
+    t.index ["account_id"], name: "index_ai_agent_follow_up_rules_on_account_id"
+  end
+
+  create_table "ai_agent_global_settings", force: :cascade do |t|
+    t.string "chat_provider", default: "openai", null: false
+    t.string "chat_model"
+    t.integer "max_tokens_per_conversation", default: 4096, null: false
+    t.integer "max_monthly_cost_per_account_cents", default: 0, null: false
+    t.bigint "default_persona_id"
+    t.boolean "enabled_by_default_for_new_accounts", default: false, null: false
+    t.jsonb "guardrails", default: {}, null: false
+    t.jsonb "telemetry_config", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["default_persona_id"], name: "index_ai_agent_global_settings_on_default_persona_id"
+  end
+
+  create_table "ai_agent_internal_notification_templates", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "event_key", null: false
+    t.string "name", null: false
+    t.text "body", null: false
+    t.string "target_type", default: "room", null: false
+    t.bigint "target_id"
+    t.boolean "enabled", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "event_key"], name: "idx_ai_internal_notif_tpl_account_event", unique: true
+    t.index ["account_id"], name: "index_ai_agent_internal_notification_templates_on_account_id"
+  end
+
+  create_table "ai_agent_parent_chunks", force: :cascade do |t|
+    t.bigint "document_id", null: false
+    t.integer "position", null: false
+    t.text "content", null: false
+    t.integer "char_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["document_id", "position"], name: "index_ai_agent_parent_chunks_on_document_id_and_position", unique: true
+    t.index ["document_id"], name: "index_ai_agent_parent_chunks_on_document_id"
+  end
+
+  create_table "ai_agent_patient_memories", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.jsonb "preferences", default: {}, null: false
+    t.jsonb "history", default: [], null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "last_consolidated_at"
+    t.index ["account_id", "contact_id"], name: "idx_ai_agent_memory_on_account_contact", unique: true
+    t.index ["account_id"], name: "index_ai_agent_patient_memories_on_account_id"
+    t.index ["last_consolidated_at"], name: "index_ai_agent_patient_memories_on_last_consolidated_at"
+  end
+
+  create_table "ai_agent_persona_templates", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "vertical", default: "general", null: false
+    t.text "system_prompt", null: false
+    t.jsonb "tone_settings", default: {}, null: false
+    t.jsonb "few_shot_examples", default: [], null: false
+    t.boolean "builtin", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_ai_agent_persona_templates_on_name", unique: true
+    t.index ["vertical"], name: "index_ai_agent_persona_templates_on_vertical"
+  end
+
+  create_table "ai_agent_tool_definitions", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "name", null: false
+    t.text "description"
+    t.boolean "enabled_globally", default: true, null: false
+    t.boolean "requires_oauth", default: false, null: false
+    t.boolean "builtin", default: false, null: false
+    t.jsonb "config_schema", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["enabled_globally"], name: "index_ai_agent_tool_definitions_on_enabled_globally"
+    t.index ["key"], name: "index_ai_agent_tool_definitions_on_key", unique: true
+  end
+
+  create_table "ai_agent_traces", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id"
+    t.bigint "message_id"
+    t.bigint "contact_id"
+    t.string "model"
+    t.string "provider"
+    t.integer "latency_ms"
+    t.bigint "input_tokens", default: 0
+    t.bigint "output_tokens", default: 0
+    t.integer "cost_cents", default: 0
+    t.jsonb "tool_calls", default: [], null: false
+    t.string "sentiment_label"
+    t.decimal "sentiment_score", precision: 4, scale: 3
+    t.boolean "escalated", default: false, null: false
+    t.string "escalation_reason"
+    t.jsonb "guardrail_violations", default: [], null: false
+    t.boolean "short_circuited", default: false, null: false
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.index ["account_id", "created_at"], name: "index_ai_agent_traces_on_account_id_and_created_at"
+    t.index ["account_id"], name: "index_ai_agent_traces_on_account_id"
+    t.index ["conversation_id"], name: "index_ai_agent_traces_on_conversation_id"
+    t.index ["escalated"], name: "index_ai_agent_traces_on_escalated"
+    t.index ["message_id"], name: "idx_ai_agent_traces_unique_message_success", unique: true, where: "((message_id IS NOT NULL) AND (error_message IS NULL))"
+    t.index ["message_id"], name: "index_ai_agent_traces_on_message_id"
+  end
+
+  create_table "ai_agent_usage_counters", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.date "date", null: false
+    t.bigint "input_tokens", default: 0, null: false
+    t.bigint "output_tokens", default: 0, null: false
+    t.integer "cost_cents", default: 0, null: false
+    t.integer "conversations_count", default: 0, null: false
+    t.integer "tool_calls_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "date"], name: "index_ai_agent_usage_counters_on_account_id_and_date", unique: true
+    t.index ["account_id"], name: "index_ai_agent_usage_counters_on_account_id"
+    t.index ["date"], name: "index_ai_agent_usage_counters_on_date"
   end
 
   create_table "anamneses", force: :cascade do |t|
@@ -1559,6 +1859,157 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_26_023750) do
     t.jsonb "settings", default: {}
   end
 
+  create_table "internal_chat_attachments", force: :cascade do |t|
+    t.bigint "message_id", null: false
+    t.string "file_type", default: "file", null: false
+    t.string "file_name"
+    t.string "content_type"
+    t.bigint "file_size"
+    t.jsonb "meta", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id"], name: "index_internal_chat_attachments_on_message_id"
+  end
+
+  create_table "internal_chat_memberships", force: :cascade do |t|
+    t.bigint "room_id", null: false
+    t.bigint "user_id"
+    t.bigint "ai_agent_id"
+    t.string "role", default: "member", null: false
+    t.bigint "last_read_message_id"
+    t.datetime "muted_until"
+    t.datetime "joined_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "left_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ai_agent_id"], name: "index_internal_chat_memberships_on_ai_agent_id"
+    t.index ["room_id", "ai_agent_id"], name: "idx_unique_membership_ai_agent", unique: true, where: "(ai_agent_id IS NOT NULL)"
+    t.index ["room_id", "user_id"], name: "idx_unique_membership_user", unique: true, where: "(user_id IS NOT NULL)"
+    t.index ["room_id"], name: "index_internal_chat_memberships_on_room_id"
+    t.index ["user_id"], name: "index_internal_chat_memberships_on_user_id"
+    t.check_constraint "user_id IS NOT NULL AND ai_agent_id IS NULL OR user_id IS NULL AND ai_agent_id IS NOT NULL", name: "internal_chat_memberships_member_check"
+  end
+
+  create_table "internal_chat_mentions", force: :cascade do |t|
+    t.bigint "message_id", null: false
+    t.bigint "user_id"
+    t.bigint "account_id", null: false
+    t.datetime "read_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "ai_agent_id"
+    t.index ["account_id", "ai_agent_id", "read_at"], name: "idx_on_account_id_ai_agent_id_read_at_d6ecd67437"
+    t.index ["account_id", "user_id", "read_at"], name: "idx_on_account_id_user_id_read_at_7db12fe148"
+    t.index ["message_id", "user_id"], name: "index_internal_chat_mentions_on_message_id_and_user_id", unique: true
+    t.index ["message_id"], name: "index_internal_chat_mentions_on_message_id"
+    t.check_constraint "user_id IS NOT NULL AND ai_agent_id IS NULL OR user_id IS NULL AND ai_agent_id IS NOT NULL", name: "internal_chat_mentions_target_check"
+  end
+
+  create_table "internal_chat_message_favorites", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "message_id", null: false
+    t.bigint "account_id", null: false
+    t.bigint "room_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_internal_chat_message_favorites_on_account_id"
+    t.index ["message_id"], name: "index_internal_chat_message_favorites_on_message_id"
+    t.index ["user_id", "account_id", "created_at"], name: "idx_msg_fav_user_account_created"
+    t.index ["user_id", "message_id"], name: "idx_msg_fav_uniq", unique: true
+    t.index ["user_id", "room_id", "created_at"], name: "idx_msg_fav_user_room_created"
+    t.index ["user_id"], name: "index_internal_chat_message_favorites_on_user_id"
+  end
+
+  create_table "internal_chat_message_reactions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "message_id", null: false
+    t.bigint "account_id", null: false
+    t.bigint "room_id", null: false
+    t.string "emoji", limit: 16, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_internal_chat_message_reactions_on_account_id"
+    t.index ["message_id"], name: "index_internal_chat_message_reactions_on_message_id"
+    t.index ["user_id", "message_id"], name: "idx_msg_reaction_uniq", unique: true
+    t.index ["user_id"], name: "index_internal_chat_message_reactions_on_user_id"
+  end
+
+  create_table "internal_chat_messages", force: :cascade do |t|
+    t.bigint "room_id", null: false
+    t.bigint "sender_user_id"
+    t.bigint "sender_ai_agent_id"
+    t.text "content"
+    t.string "content_type", default: "text", null: false
+    t.jsonb "content_attributes", default: {}, null: false
+    t.datetime "edited_at"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "sticker_id"
+    t.index ["content_attributes"], name: "index_internal_chat_messages_on_content_attributes", using: :gin
+    t.index ["room_id", "created_at"], name: "index_internal_chat_messages_on_room_id_and_created_at", order: { created_at: :desc }
+    t.index ["room_id"], name: "index_internal_chat_messages_on_room_id"
+    t.index ["sender_ai_agent_id"], name: "index_internal_chat_messages_on_sender_ai_agent_id"
+    t.index ["sender_user_id"], name: "index_internal_chat_messages_on_sender_user_id"
+    t.index ["sticker_id"], name: "index_internal_chat_messages_on_sticker_id"
+  end
+
+  create_table "internal_chat_read_receipts", force: :cascade do |t|
+    t.bigint "message_id", null: false
+    t.bigint "user_id", null: false
+    t.datetime "read_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id", "user_id"], name: "index_internal_chat_read_receipts_on_message_id_and_user_id", unique: true
+    t.index ["user_id"], name: "index_internal_chat_read_receipts_on_user_id"
+  end
+
+  create_table "internal_chat_rooms", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "kind", default: "direct", null: false
+    t.string "name"
+    t.text "description"
+    t.string "avatar_url"
+    t.bigint "created_by_user_id"
+    t.datetime "last_message_at"
+    t.datetime "archived_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "system_role"
+    t.index ["account_id", "kind"], name: "index_internal_chat_rooms_on_account_id_and_kind"
+    t.index ["account_id", "last_message_at"], name: "index_internal_chat_rooms_on_account_id_and_last_message_at", order: { last_message_at: :desc }
+    t.index ["account_id", "system_role"], name: "idx_internal_chat_rooms_system_role", unique: true, where: "(system_role IS NOT NULL)"
+    t.index ["account_id"], name: "index_internal_chat_rooms_on_account_id"
+    t.index ["created_by_user_id"], name: "index_internal_chat_rooms_on_created_by_user_id"
+  end
+
+  create_table "internal_chat_sticker_favorites", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "sticker_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sticker_id"], name: "index_internal_chat_sticker_favorites_on_sticker_id"
+    t.index ["user_id", "sticker_id"], name: "idx_sticker_fav_uniq", unique: true
+    t.index ["user_id"], name: "index_internal_chat_sticker_favorites_on_user_id"
+  end
+
+  create_table "internal_chat_stickers", force: :cascade do |t|
+    t.bigint "account_id"
+    t.bigint "created_by_user_id"
+    t.string "name", limit: 120
+    t.string "kind", default: "account", null: false
+    t.integer "width"
+    t.integer "height"
+    t.integer "file_size"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "category", limit: 40
+    t.index ["account_id", "kind"], name: "index_internal_chat_stickers_on_account_id_and_kind"
+    t.index ["account_id"], name: "index_internal_chat_stickers_on_account_id"
+    t.index ["created_by_user_id"], name: "index_internal_chat_stickers_on_created_by_user_id"
+    t.index ["kind", "category"], name: "index_internal_chat_stickers_on_kind_and_category"
+  end
+
   create_table "klivy_roles", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", limit: 80, null: false
@@ -1851,7 +2302,10 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_26_023750) do
     t.string "marital_status"
     t.datetime "recall_dismissed_at"
     t.bigint "recall_dismissed_by_id"
-    t.jsonb "exam_folder_data", default: {}
+    t.text "notes"
+    t.boolean "has_guardian", default: false, null: false
+    t.jsonb "guardian", default: {}, null: false
+    t.string "social_name"
     t.index ["account_id", "deleted_at"], name: "index_patients_on_account_id_and_deleted_at"
     t.index ["account_id", "name"], name: "index_patients_on_account_id_and_name"
     t.index ["account_id"], name: "index_patients_on_account_id"
@@ -2252,7 +2706,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_26_023750) do
   add_foreign_key "account_users", "klivy_roles"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "agenda_categories", "accounts"
   add_foreign_key "agenda_events", "accounts"
+  add_foreign_key "agenda_events", "agenda_categories", column: "category_id"
   add_foreign_key "agenda_events", "contacts", on_delete: :nullify
   add_foreign_key "agenda_events", "users"
   add_foreign_key "agenda_notification_logs", "accounts"
@@ -2260,7 +2716,28 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_26_023750) do
   add_foreign_key "agenda_notification_logs", "agenda_notification_rules"
   add_foreign_key "agenda_notification_rules", "accounts"
   add_foreign_key "agenda_online_configs", "accounts"
+  add_foreign_key "agenda_service_users", "accounts"
+  add_foreign_key "agenda_service_users", "agenda_services"
+  add_foreign_key "agenda_service_users", "users"
   add_foreign_key "agenda_services", "accounts"
+  add_foreign_key "agenda_services", "agenda_categories", column: "default_category_id", on_delete: :nullify
+  add_foreign_key "ai_agent_account_settings", "accounts"
+  add_foreign_key "ai_agent_account_settings", "users", column: "responsible_physician_id"
+  add_foreign_key "ai_agent_child_chunks", "accounts"
+  add_foreign_key "ai_agent_child_chunks", "ai_agent_documents", column: "document_id"
+  add_foreign_key "ai_agent_child_chunks", "ai_agent_parent_chunks", column: "parent_chunk_id"
+  add_foreign_key "ai_agent_conversation_states", "accounts"
+  add_foreign_key "ai_agent_documents", "accounts"
+  add_foreign_key "ai_agent_feedbacks", "accounts"
+  add_foreign_key "ai_agent_feedbacks", "ai_agent_traces", column: "trace_id"
+  add_foreign_key "ai_agent_follow_up_executions", "accounts"
+  add_foreign_key "ai_agent_follow_up_executions", "ai_agent_follow_up_rules", column: "rule_id", on_delete: :cascade
+  add_foreign_key "ai_agent_follow_up_rules", "accounts"
+  add_foreign_key "ai_agent_internal_notification_templates", "accounts"
+  add_foreign_key "ai_agent_parent_chunks", "ai_agent_documents", column: "document_id"
+  add_foreign_key "ai_agent_patient_memories", "accounts"
+  add_foreign_key "ai_agent_traces", "accounts"
+  add_foreign_key "ai_agent_usage_counters", "accounts"
   add_foreign_key "anamneses", "accounts"
   add_foreign_key "anamneses", "patients"
   add_foreign_key "beclinic_account_profiles", "accounts"
@@ -2279,6 +2756,22 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_26_023750) do
   add_foreign_key "critical_alerts", "patients"
   add_foreign_key "form_templates", "accounts"
   add_foreign_key "inboxes", "portals"
+  add_foreign_key "internal_chat_attachments", "internal_chat_messages", column: "message_id", on_delete: :cascade
+  add_foreign_key "internal_chat_memberships", "internal_chat_rooms", column: "room_id", on_delete: :cascade
+  add_foreign_key "internal_chat_mentions", "internal_chat_messages", column: "message_id", on_delete: :cascade
+  add_foreign_key "internal_chat_message_favorites", "accounts", on_delete: :cascade
+  add_foreign_key "internal_chat_message_favorites", "internal_chat_messages", column: "message_id", on_delete: :cascade
+  add_foreign_key "internal_chat_message_favorites", "users", on_delete: :cascade
+  add_foreign_key "internal_chat_message_reactions", "accounts", on_delete: :cascade
+  add_foreign_key "internal_chat_message_reactions", "internal_chat_messages", column: "message_id", on_delete: :cascade
+  add_foreign_key "internal_chat_message_reactions", "users", on_delete: :cascade
+  add_foreign_key "internal_chat_messages", "internal_chat_rooms", column: "room_id", on_delete: :cascade
+  add_foreign_key "internal_chat_messages", "internal_chat_stickers", column: "sticker_id", on_delete: :nullify
+  add_foreign_key "internal_chat_read_receipts", "internal_chat_messages", column: "message_id", on_delete: :cascade
+  add_foreign_key "internal_chat_rooms", "accounts", on_delete: :cascade
+  add_foreign_key "internal_chat_sticker_favorites", "internal_chat_stickers", column: "sticker_id", on_delete: :cascade
+  add_foreign_key "internal_chat_sticker_favorites", "users", on_delete: :cascade
+  add_foreign_key "internal_chat_stickers", "accounts", on_delete: :cascade
   add_foreign_key "klivy_roles", "accounts"
   add_foreign_key "patient_appointments", "accounts"
   add_foreign_key "patient_appointments", "agenda_events"

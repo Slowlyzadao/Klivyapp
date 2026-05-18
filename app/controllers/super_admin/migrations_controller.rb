@@ -33,7 +33,46 @@ class SuperAdmin::MigrationsController < SuperAdmin::ApplicationController
     render json: { error: 'Conta não encontrada.' }, status: :not_found
   end
 
+  # Read-only "what would happen if I imported this CSV" — runs the same
+  # parse/match/decide logic as create but doesn't touch the DB. Used by the
+  # frontend to show a preview table before the user clicks "Iniciar".
+  def preview
+    account = Account.find(params[:account_id])
+    kind    = params[:kind].to_s
+
+    return render json: { error: 'Tipo de migração inválido.' }, status: :unprocessable_entity unless MigrationRun::KINDS.include?(kind)
+
+    if kind == 'patients'
+      preview = preview_patients(account)
+      render json: preview
+    else
+      render json: { error: "Pré-visualização ainda não disponível para kind=#{kind}." }, status: :not_implemented
+    end
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: 'Conta não encontrada.' }, status: :not_found
+  rescue StandardError => e
+    render json: { error: "#{e.class}: #{e.message}" }, status: :unprocessable_entity
+  end
+
   private
+
+  def preview_patients(account)
+    patients_file          = params[:csv_patients] || params[:csv]
+    patient_anamnesis_file = params[:csv_patient_anamnesis]
+    anamnesis_file         = params[:csv_anamnesis]
+
+    raise 'Arquivo de Pacientes é obrigatório.' if patients_file.blank?
+    [patients_file, patient_anamnesis_file, anamnesis_file].compact.each do |f|
+      raise "Arquivo '#{f.original_filename}' excede o limite de #{MAX_FILE_SIZE / 1.megabyte}MB." if f.size.to_i > MAX_FILE_SIZE
+    end
+
+    Migration::ClinicorpPatientPreviewer.new(
+      account,
+      patients_csv: read_file(patients_file),
+      patient_anamnesis_csv: patient_anamnesis_file ? read_file(patient_anamnesis_file) : nil,
+      anamnesis_csv: anamnesis_file ? read_file(anamnesis_file) : nil
+    ).call
+  end
 
   def handle_patients_create(account)
     patients_file          = params[:csv_patients] || params[:csv]  # accept legacy field name

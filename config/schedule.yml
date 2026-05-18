@@ -89,3 +89,10 @@ process_recurring_expenses_job:
   class: 'Financial::ProcessRecurringExpensesJob'
   queue: scheduled_jobs
 
+# executed monthly at 0400 UTC on the 1st
+# garbage collector de ActiveStorage::Blob órfãos (sem attachment + criados há mais de 24h)
+purge_unattached_blobs_job:
+  cron: '0 4 1 * *'
+  class: 'Internal::PurgeUnattachedBlobsJob'
+  queue: housekeeping
+

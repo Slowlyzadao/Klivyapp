@@ -1,0 +1,16 @@
+<%# Override per-resource — título e botão "Ver" em PT-BR. %>
+<% content_for(:title) { "Editar Artigo: #{page.page_title}" } %>
+
+<header class="main-content__header">
+  <h1 class="main-content__page-title">Editar Artigo</h1>
+  <div>
+    <% if accessible_action?(page.resource, :show) %>
+      <%= link_to('Ver artigo', [namespace, page.resource], class: 'button') %>
+    <% end %>
+    <%= link_to 'Voltar', :back, class: 'button' %>
+  </div>
+</header>
+
+<section class="main-content__body">
+  <%= render 'form', page: page %>
+</section>

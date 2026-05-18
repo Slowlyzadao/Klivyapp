@@ -195,9 +195,22 @@
   display_title: 'OpenAI API Endpoint (optional)'
   description: 'The OpenAI endpoint configured for use in Captain AI. Default: https://api.openai.com/'
   locked: false
+- name: CAPTAIN_GEMINI_API_KEY
+  display_title: 'Gemini API Key'
+  description: 'The Google AI Studio API key used to authenticate requests to Gemini for Captain AI / Bea.'
+  locked: false
+  type: secret
+- name: CAPTAIN_GEMINI_MODEL
+  display_title: 'Gemini Model'
+  description: 'The Gemini model configured for use in Captain AI / Bea. Default: gemini-3-flash'
+  locked: false
+- name: CAPTAIN_LLM_PROVIDER
+  display_title: 'Active LLM Provider'
+  description: 'Active provider for chat completions. Accepted values: openai, gemini. Default: openai (gemini will be selected automatically when a model starting with "gemini-" is chosen for a feature).'
+  locked: false
 - name: CAPTAIN_EMBEDDING_MODEL
   display_title: 'Embedding Model (optional)'
-  description: 'The embedding model configured for use in Captain AI. Default: text-embedding-3-small'
+  description: 'The embedding model configured for use in Captain AI. Default: text-embedding-3-small. Note: changing the embedding model requires re-embedding all existing documents and may require a schema migration if dimensions differ from 1536.'
   locked: false
 - name: CAPTAIN_FIRECRAWL_API_KEY
   display_title: 'FireCrawl API Key (optional)'
@@ -209,6 +222,16 @@
   description: 'The limits for the Captain AI service for different plans'
   value:
   type: code
+- name: AI_AGENT_HEALTH_SLACK_WEBHOOK
+  display_title: 'Bea Health — Slack Webhook URL'
+  description: 'Incoming webhook do Slack pra receber alertas de saúde da Bea (deflection, custo, latência, provider). Deixe vazio pra desabilitar.'
+  locked: false
+  type: secret
+- name: AI_AGENT_HEALTH_ALERT_EMAILS
+  display_title: 'Bea Health — E-mails para alerta'
+  description: 'Lista de e-mails (separados por vírgula) que recebem alertas de saúde da Bea. Deixe vazio pra desabilitar.'
+  locked: false
+  type: string
 # End of Captain Config
 
 # ------- Chatwoot Internal Config for Cloud ----#
@@ -525,3 +548,23 @@
   value: 'https://us.cloud.langfuse.com'
   locked: false
 ## ---- End of LLM Observability ---- ##
+
+## ------ Klivy Support Widget (bubble que aparece em todas as páginas do dashboard) ------ ##
+- name: KLIVY_SUPPORT_WIDGET_ENABLED
+  display_title: 'Widget de Suporte — Ativar'
+  description: 'Quando desativado, o bubble de suporte (canto inferior direito) some de todas as páginas do dashboard. Permite reativar sem deploy.'
+  value: 'true'
+  type: boolean
+  locked: false
+- name: KLIVY_SUPPORT_WIDGET_TOKEN
+  display_title: 'Widget de Suporte — Website Token'
+  description: 'Website token do canal Chatwoot/WAHA usado pelo widget. Trocar aqui para apontar pra outra inbox sem precisar editar código.'
+  value: 'RroQdfAJ1m2m93Fx43sUMSNZ'
+  type: secret
+  locked: false
+- name: KLIVY_SUPPORT_WIDGET_URL
+  display_title: 'Widget de Suporte — Base URL'
+  description: 'URL base da instância Chatwoot que serve o sdk.js e recebe as conversas. Ex: https://waha-chatwoot.efqhwo.easypanel.host'
+  value: 'https://waha-chatwoot.efqhwo.easypanel.host'
+  locked: false
+## ------ End of Klivy Support Widget ------ ##

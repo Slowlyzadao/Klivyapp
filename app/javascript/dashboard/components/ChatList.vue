@@ -22,6 +22,9 @@ import {
 // https://tanstack.com/virtual/latest/docs/framework/vue/examples/variable
 import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller';
 import ChatListHeader from './ChatListHeader.vue';
+import BeclinicUnifiedSearchResults from './BeclinicUnifiedSearchResults.vue';
+import BeclinicUnifiedSearchAPI from 'dashboard/api/beclinicUnifiedSearch';
+import { debounce } from '@chatwoot/utils';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import ConversationFilter from 'next/filter/ConversationFilter.vue';
 import SaveCustomView from 'next/filter/SaveCustomView.vue';
@@ -36,6 +39,7 @@ import ConversationResolveAttributesModal from 'dashboard/components-next/Conver
 
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useAlert } from 'dashboard/composables';
+import { useBeclinicStartWhatsAppConversation } from 'dashboard/composables/useBeclinicStartWhatsAppConversation';
 import { useChatListKeyboardEvents } from 'dashboard/composables/chatlist/useChatListKeyboardEvents';
 import { useBulkActions } from 'dashboard/composables/chatlist/useBulkActions';
 import { useFilter } from 'shared/composables/useFilter';
@@ -48,7 +52,6 @@ import {
 import { useEmitter } from 'dashboard/composables/emitter';
 import { useEventListener } from '@vueuse/core';
 import { useConversationRequiredAttributes } from 'dashboard/composables/useConversationRequiredAttributes';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import { emitter } from 'shared/helpers/mitt';
 
@@ -70,6 +73,14 @@ import {
 import { matchesFilters } from '../store/modules/conversations/helpers/filterHelpers';
 import { CONVERSATION_EVENTS } from '../helper/AnalyticsHelper/events';
 import { ASSIGNEE_TYPE_TAB_PERMISSIONS } from 'dashboard/constants/permissions.js';
+import { usePermissions } from 'dashboard/composables/usePermissions';
+
+// Maps Chatwoot tab keys to Klivy chat sub-permissions. Tabs without a mapping
+// (e.g. 'me') are not gated by Klivy.
+const KLIVY_TAB_PERMISSIONS = {
+  unassigned: 'view_unassigned',
+  all: 'view_all',
+};
 
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
 
@@ -89,15 +100,49 @@ const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
 const store = useStore();
-const { can } = usePermissions();
-
-const KLIVY_TAB_PERMISSIONS = {
-  unassigned: 'view_unassigned',
-  all: 'view_all',
-};
 
 const resolveAttributesModalRef = ref(null);
 const conversationListRef = ref(null);
+
+// Detecta se o usuário digitou um número de telefone na busca.
+// Aceita formatos brasileiros (10-11 dígitos = DDD + número, sem +55)
+// E internacionais (12+ dígitos, já com código do país).
+// Quem normaliza o "+55" implícito é o backend.
+const phoneCandidate = computed(() => {
+  const raw = (localSearchQuery.value || '').toString();
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length < 10 || digits.length > 15) return null;
+  return digits;
+});
+
+// Formata o número pra display no botão (BR: "(21) 98668-8681" ou "+55 21 ...")
+const phoneCandidateLabel = computed(() => {
+  const digits = phoneCandidate.value;
+  if (!digits) return '';
+  // Brasileiro 10-11 dígitos sem código: (21) 98668-8681
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  // Internacional ou já com +55
+  return `+${digits}`;
+});
+
+const {
+  isStarting: isStartingConversation,
+  startConversation: startWhatsAppConversation,
+} = useBeclinicStartWhatsAppConversation();
+
+const startNewConversationWithQuery = async () => {
+  const digits = phoneCandidate.value;
+  if (!digits) return;
+  // Limpa o input antes de navegar — assim quando voltar pra lista, não
+  // entra de novo no painel de busca híbrida.
+  localSearchQuery.value = '';
+  await startWhatsAppConversation(digits);
+};
 const conversationDynamicScroller = ref(null);
 
 provide('contextMenuElementTarget', conversationDynamicScroller);
@@ -107,6 +152,69 @@ const activeStatus = ref(wootConstants.STATUS_TYPE.OPEN);
 const activeSortBy = ref(wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC);
 const showAdvancedFilters = ref(false);
 const localSearchQuery = ref('');
+
+// Busca unificada (conversas + contatos sem conversa) — só ativa quando
+// `localSearchQuery` está preenchida. Substitui a lista virtual habitual
+// pela tela de resultados híbrida estilo WhatsApp Web.
+const unifiedSearchLoading = ref(false);
+const unifiedSearchResults = ref({ conversations: [], contacts: [] });
+const startingContactId = ref(null);
+
+const isSearching = computed(() => Boolean(localSearchQuery.value));
+
+const runUnifiedSearch = debounce(async query => {
+  // Race: se a query mudou enquanto o request estava em voo, descartamos.
+  const currentQuery = query;
+  unifiedSearchLoading.value = true;
+  try {
+    const { data } = await BeclinicUnifiedSearchAPI.search({ q: currentQuery });
+    if (currentQuery !== localSearchQuery.value) return;
+    unifiedSearchResults.value = {
+      conversations: data?.conversations || [],
+      contacts: data?.contacts || [],
+    };
+  } catch (err) {
+    if (currentQuery !== localSearchQuery.value) return;
+    unifiedSearchResults.value = { conversations: [], contacts: [] };
+  } finally {
+    if (currentQuery === localSearchQuery.value) {
+      unifiedSearchLoading.value = false;
+    }
+  }
+}, 300);
+
+watch(localSearchQuery, query => {
+  if (!query) {
+    unifiedSearchResults.value = { conversations: [], contacts: [] };
+    unifiedSearchLoading.value = false;
+    return;
+  }
+  unifiedSearchLoading.value = true;
+  runUnifiedSearch(query);
+});
+
+const onSelectSearchConversation = conversation => {
+  emitter.emit('clearSearchInput');
+  router.push({
+    name: 'inbox_conversation',
+    params: {
+      accountId: route.params.accountId,
+      conversation_id: conversation.id,
+    },
+  });
+};
+
+const onStartConversationWithContact = async contact => {
+  if (!contact?.phone_number || startingContactId.value) return;
+  startingContactId.value = contact.id;
+  try {
+    localSearchQuery.value = '';
+    await startWhatsAppConversation(contact.phone_number);
+  } finally {
+    startingContactId.value = null;
+  }
+};
+
 // chatsOnView is to store the chats that are currently visible on the screen,
 // which mirrors the conversationList.
 const chatsOnView = ref([]);
@@ -212,6 +320,8 @@ const userPermissions = computed(() => {
   return getUserPermissions(currentUser.value, currentAccountId.value);
 });
 
+const { can: klivyCan } = usePermissions();
+
 const assigneeTabItems = computed(() => {
   return filterItemsByPermission(
     ASSIGNEE_TYPE_TAB_PERMISSIONS,
@@ -221,7 +331,7 @@ const assigneeTabItems = computed(() => {
     .filter(({ key }) => {
       const klivyPerm = KLIVY_TAB_PERMISSIONS[key];
       if (!klivyPerm) return true;
-      return can('chat', klivyPerm);
+      return klivyCan('chat', klivyPerm);
     })
     .map(({ key, count: countKey }) => ({
       key,
@@ -229,6 +339,19 @@ const assigneeTabItems = computed(() => {
       count: conversationStats.value[countKey] || 0,
     }));
 });
+
+// Watcher: if the user is on a tab that just disappeared (lost permission
+// at runtime), switch to the first visible tab.
+watch(
+  assigneeTabItems,
+  items => {
+    if (!items.length) return;
+    if (!items.some(item => item.key === activeAssigneeTab.value)) {
+      activeAssigneeTab.value = items[0].key;
+    }
+  },
+  { flush: 'post' }
+);
 
 const showAssigneeInConversationCard = computed(() => {
   return (
@@ -261,13 +384,6 @@ const conversationCustomAttributes = useFunctionGetter(
   'attributes/getAttributesByModel',
   'conversation_attribute'
 );
-
-watch(assigneeTabItems, items => {
-  const stillVisible = items.some(i => i.key === activeAssigneeTab.value);
-  if (!stillVisible && items.length > 0) {
-    activeAssigneeTab.value = items[0].key;
-  }
-}, { immediate: true });
 
 const activeAssigneeTabCount = computed(() => {
   const count = assigneeTabItems.value.find(
@@ -369,9 +485,19 @@ const conversationList = computed(() => {
 
   if (localSearchQuery.value) {
     const q = localSearchQuery.value.toLowerCase();
+    // Quando o usuário digita um número (ex: "11916019363"), filtramos
+    // também pelo phone_number do contato — senão a busca por número
+    // sempre retorna vazia (filtro só por nome) mesmo com a conversa
+    // existindo, e o botão "Iniciar conversa" aparecia indevidamente.
+    const qDigits = localSearchQuery.value.replace(/\D/g, '');
     localConversationList = localConversationList.filter(conv => {
-      const name = conv.meta?.sender?.name || '';
-      return name.toLowerCase().includes(q);
+      const name = (conv.meta?.sender?.name || '').toLowerCase();
+      if (name.includes(q)) return true;
+      if (qDigits.length >= 4) {
+        const phone = (conv.meta?.sender?.phone_number || '').replace(/\D/g, '');
+        if (phone && phone.includes(qDigits)) return true;
+      }
+      return false;
     });
   }
 
@@ -978,21 +1104,33 @@ watch(conversationFilters, (newVal, oldVal) => {
     />
 
     <ChatTypeTabs
-      v-if="!hasAppliedFiltersOrActiveFolders"
+      v-if="!hasAppliedFiltersOrActiveFolders && !isSearching"
       :items="assigneeTabItems"
       :active-tab="activeAssigneeTab"
       is-compact
       @chat-tab-change="updateAssigneeTab"
     />
 
-    <p
-      v-if="!chatListLoading && !conversationList.length"
-      class="flex overflow-auto justify-center items-center p-4"
-    >
-      {{ $t('CHAT_LIST.LIST.404') }}
-    </p>
+    <!-- Busca híbrida (conversas + contatos sem conversa). Substitui a lista
+         tradicional enquanto há query — assim quando o agente digita um nome
+         de contato que ainda não tem conversa, o botão "Iniciar conversa"
+         aparece direto na lista sem precisar abrir outra tela. -->
+    <BeclinicUnifiedSearchResults
+      v-if="isSearching"
+      class="flex-1 min-h-0"
+      :conversations="unifiedSearchResults.conversations"
+      :contacts="unifiedSearchResults.contacts"
+      :loading="unifiedSearchLoading"
+      :starting-contact-id="startingContactId"
+      :phone-candidate="phoneCandidate"
+      :phone-candidate-label="phoneCandidateLabel"
+      :starting-new-conversation="isStartingConversation"
+      @select-conversation="onSelectSearchConversation"
+      @start-conversation="onStartConversationWithContact"
+      @start-conversation-by-phone="startNewConversationWithQuery"
+    />
     <ConversationBulkActions
-      v-if="selectedConversations.length"
+      v-if="selectedConversations.length && !isSearching"
       :conversations="selectedConversations"
       :all-conversations-selected="allConversationsSelected"
       :selected-inboxes="uniqueInboxes"
@@ -1006,6 +1144,7 @@ watch(conversationFilters, (newVal, oldVal) => {
       @assign-team="onAssignTeamsForBulk"
     />
     <div
+      v-show="!isSearching"
       ref="conversationListRef"
       class="overflow-hidden flex-1 conversations-list hover:overflow-y-auto"
       :class="{ 'overflow-hidden': isContextMenuOpen }"

@@ -1,5 +1,5 @@
 <script>
-import { STATUS_OPTIONS } from '../utils/agenda-constants.js';
+import { STATUS_OPTIONS, STATUS_CONFIGS } from '../utils/agenda-constants.js';
 import { formatEventTime } from '../utils/agenda-date.js';
 
 export default {
@@ -8,9 +8,9 @@ export default {
     event: { type: Object, default: null },
     position: { type: Object, default: () => ({ x: 0, y: 0 }) },
     agents: { type: Array, default: () => [] },
+    treatmentOptions: { type: Array, default: () => [] },
     customAttributesConfig: { type: Array, default: () => [] },
     statusUpdatingId: { type: [Number, String], default: null },
-    canEdit: { type: Boolean, default: true },
   },
   emits: ['close', 'edit', 'status-change', 'open-patient'],
   data() {
@@ -23,6 +23,26 @@ export default {
       if (!this.event) return '';
       const agent = this.agents.find(a => a.id === this.event.user_id);
       return agent ? agent.name : '';
+    },
+    agentColor() {
+      if (!this.event) return null;
+      const agent = this.agents.find(a => a.id === this.event.user_id);
+      return agent ? agent.color : null;
+    },
+    treatmentColor() {
+      const name = this.event?.custom_attributes?.treatment;
+      if (!name) return null;
+      const found = this.treatmentOptions.find(
+        t => (typeof t === 'string' ? t : t.name) === name
+      );
+      return found && typeof found === 'object' ? found.color : null;
+    },
+    initials() {
+      const source = this.event?.title || '';
+      const parts = source.trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return '?';
+      if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     },
     formattedTime() {
       if (!this.event) return '';
@@ -106,6 +126,11 @@ export default {
         }));
     },
   },
+  methods: {
+    statusColor(key) {
+      return (STATUS_CONFIGS[key] && STATUS_CONFIGS[key].color) || '#9ca3af';
+    },
+  },
 };
 </script>
 
@@ -128,11 +153,16 @@ export default {
           <!-- Header (Patient Info) -->
           <div class="p-4 pb-3 border-b border-slate-100 dark:border-slate-700/60 sticky top-0 bg-white dark:bg-slate-800 z-10 w-full">
             <div class="flex items-center gap-3">
-              <div v-if="event.contact?.avatar_url" class="size-10 rounded-lg overflow-hidden flex-shrink-0">
+              <div v-if="event.contact?.avatar_url" class="size-10 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-white dark:ring-slate-700/40 shadow-sm">
                 <img :src="event.contact.avatar_url" class="size-full object-cover" />
               </div>
-              <div v-else class="size-10 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold flex-shrink-0">
-                {{ (event.title || '?').charAt(0).toUpperCase() }}
+              <div
+                v-else
+                class="size-10 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ring-2 ring-white dark:ring-slate-700/40 shadow-sm"
+                :style="agentColor ? { background: `color-mix(in srgb, ${agentColor} 18%, transparent)`, color: agentColor, borderColor: `color-mix(in srgb, ${agentColor} 35%, transparent)`, borderWidth: '1px', borderStyle: 'solid' } : null"
+                :class="agentColor ? '' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'"
+              >
+                {{ initials }}
               </div>
               <div class="min-w-0 flex-1">
                 <h3 class="text-base font-bold text-slate-900 dark:text-white truncate leading-tight">{{ event.title }}</h3>
@@ -146,33 +176,64 @@ export default {
 
           <!-- Body (Info Rows) -->
           <div class="p-4 space-y-3.5">
-            <div class="flex gap-3">
+            <div class="flex gap-3 items-center">
               <div class="size-8 rounded-lg bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center flex-shrink-0 text-slate-400 dark:text-slate-400">
                 <i class="i-lucide-clock size-4" />
               </div>
-              <div>
-                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Horário</p>
-                <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ formattedTime }}</p>
+              <div class="leading-tight">
+                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-0.5">Horário</p>
+                <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 leading-none">{{ formattedTime }}</p>
               </div>
             </div>
 
-            <div v-if="agentName" class="flex gap-3">
+            <div v-if="agentName" class="flex gap-3 items-center">
               <div class="size-8 rounded-lg bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center flex-shrink-0 text-slate-400 dark:text-slate-400">
                 <i class="i-lucide-user size-4" />
               </div>
-              <div>
-                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Profissional</p>
-                <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ agentName }}</p>
+              <div class="min-w-0 leading-tight">
+                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-0.5">Profissional</p>
+                <div class="flex items-center gap-1.5">
+                  <span
+                    v-if="agentColor"
+                    class="info-dot"
+                    :style="{ background: agentColor }"
+                  />
+                  <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate leading-none">{{ agentName }}</p>
+                </div>
               </div>
             </div>
 
-            <div v-if="event.custom_attributes?.treatment" class="flex gap-3">
+            <div v-if="event.custom_attributes?.treatment" class="flex gap-3 items-center">
               <div class="size-8 rounded-lg bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center flex-shrink-0 text-slate-400 dark:text-slate-400">
                 <i class="i-lucide-stethoscope size-4" />
               </div>
-              <div>
-                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Procedimento</p>
-                <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ event.custom_attributes.treatment }}</p>
+              <div class="min-w-0 leading-tight">
+                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-0.5">Serviço</p>
+                <div class="flex items-center gap-1.5">
+                  <span
+                    v-if="treatmentColor"
+                    class="info-dot"
+                    :style="{ background: treatmentColor }"
+                  />
+                  <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate leading-none">{{ event.custom_attributes.treatment }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="event.category" class="flex gap-3 items-center">
+              <div class="size-8 rounded-lg bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center flex-shrink-0 text-slate-400 dark:text-slate-400">
+                <i class="i-lucide-tag size-4" />
+              </div>
+              <div class="min-w-0 leading-tight">
+                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-0.5">Categoria</p>
+                <div class="flex items-center gap-1.5">
+                  <span
+                    v-if="event.category.color"
+                    class="info-dot"
+                    :style="{ background: event.category.color }"
+                  />
+                  <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate leading-none">{{ event.category.name }}</p>
+                </div>
               </div>
             </div>
 
@@ -186,7 +247,7 @@ export default {
           </div>
 
           <!-- Status Section -->
-          <div v-if="canEdit" class="px-4 py-3 bg-slate-50/80 dark:bg-slate-900/40 border-y border-slate-100 dark:border-slate-700/60 sticky bottom-[64.5px] z-10 w-full backdrop-blur-md">
+          <div class="px-4 py-3 bg-slate-50/80 dark:bg-slate-900/40 border-y border-slate-100 dark:border-slate-700/60 sticky bottom-[64.5px] z-10 w-full backdrop-blur-md">
             <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2.5">Atualizar Status</p>
             <div class="grid grid-cols-2 gap-2">
               <button
@@ -198,15 +259,15 @@ export default {
                   ? 'bg-white dark:bg-slate-800/80 text-blue-700 dark:text-blue-400 shadow-[0_1px_3px_rgba(0,0,0,0.08)] dark:shadow-black/20 ring-1 ring-blue-200 dark:ring-blue-500/30' 
                   : 'bg-transparent dark:bg-slate-800/30 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700/80 hover:text-slate-800 dark:hover:text-slate-100 border border-transparent hover:border-slate-200 dark:border-slate-700/50 dark:hover:border-slate-600'"
               >
-                <span class="size-2 rounded-full flex-shrink-0" :class="'status-' + opt.key" />
+                <span class="size-2 rounded-full flex-shrink-0" :style="{ background: statusColor(opt.key) }" />
                 <span class="truncate">{{ opt.label }}</span>
               </button>
             </div>
           </div>
 
           <!-- Footer Actions -->
-          <div v-if="canEdit || event.contact_id" class="p-3 bg-white dark:bg-slate-800 flex gap-2">
-            <button v-if="canEdit" @click="$emit('edit', event)" class="flex-1 h-10 flex items-center justify-center gap-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm transition-all active:scale-95">
+          <div class="p-3 bg-white dark:bg-slate-800 flex gap-2">
+            <button @click="$emit('edit', event)" class="flex-1 h-10 flex items-center justify-center gap-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm transition-all active:scale-95">
               <i class="i-lucide-pencil size-4" />
               Editar
             </button>
@@ -229,12 +290,14 @@ export default {
   z-index: 10000;
 }
 
-.status-scheduled { background-color: #3b82f6; } /* blue-500 */
-.status-confirmed { background-color: #10b981; } /* emerald-500 */
-.status-arrived { background-color: #f59e0b; } /* amber-500 */
-.status-in_service { background-color: #6366f1; } /* indigo-500 */
-.status-completed { background-color: #22c55e; } /* green-600 */
-.status-absent { background-color: #f43f5e; } /* rose-500 */
+.info-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1.5px #fff, 0 0 0 2px rgba(0, 0, 0, 0.08);
+}
 
 @media (max-width: 767px) {
   .evt-info-overlay {

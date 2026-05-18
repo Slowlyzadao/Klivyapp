@@ -10,11 +10,14 @@ import '../financial.css';
 
 const { formatCurrency } = useFormatCurrency();
 const { exportPayablesCsv } = useExportCsv();
-const { can } = usePermissions();
-const canCreateTransaction = computed(() => can('financial', 'create_transaction'));
-const canEditTransaction = computed(() => can('financial', 'edit_transaction'));
-const canDeleteTransaction = computed(() => can('financial', 'delete_transaction'));
-const canExportData = computed(() => can('financial', 'export_data'));
+const { can: klivyCan } = usePermissions();
+const canCreateTransaction = computed(() =>
+  klivyCan('financial', 'create_transaction')
+);
+const canEditTransaction = computed(() =>
+  klivyCan('financial', 'edit_transaction')
+);
+const canExportData = computed(() => klivyCan('financial', 'export_data'));
 
 const loading = ref(false);
 const transactions = ref([]);

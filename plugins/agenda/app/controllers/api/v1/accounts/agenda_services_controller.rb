@@ -45,7 +45,8 @@ class Api::V1::Accounts::AgendaServicesController < Api::V1::Accounts::BaseContr
 
   def service_params
     params.require(:agenda_service).permit(
-      :name, :duration_minutes, :price, :requires_room, :color, :position
+      :name, :duration_minutes, :price, :requires_room, :color, :position,
+      :default_category_id
     )
   end
 end

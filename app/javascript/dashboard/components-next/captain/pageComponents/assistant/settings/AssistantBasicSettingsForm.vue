@@ -13,6 +13,10 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  lockName: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['submit']);
@@ -100,7 +104,9 @@ watch(
       v-model="state.name"
       :label="t('CAPTAIN.ASSISTANTS.FORM.NAME.LABEL')"
       :placeholder="t('CAPTAIN.ASSISTANTS.FORM.NAME.PLACEHOLDER')"
-      :message="formErrors.name"
+      :readonly="lockName"
+      :disabled="lockName"
+      :message="lockName ? 'O nome da Beatriz é fixo e faz parte da identidade da Klivy.' : formErrors.name"
       :message-type="formErrors.name ? 'error' : 'info'"
     />
 

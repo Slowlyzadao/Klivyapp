@@ -86,8 +86,9 @@ const showDefaultAvatar = computed(() => !props.src && !props.name);
 const initials = computed(() => {
   if (!props.name) return '';
   const cleaned = removeEmoji(props.name).trim();
-  // Nomes curtos (≤3 chars, ex: "BEA") são exibidos inteiros como iniciais
-  if (cleaned.length <= 3) return cleaned.toUpperCase();
+  // Nomes curtos (≤3 chars, ex: "Bea") são exibidos inteiros como iniciais,
+  // preservando o case original do nome (não força uppercase pra respeitar branding).
+  if (cleaned.length <= 3) return cleaned;
   const words = cleaned.split(/\s+/);
   return words.length === 1
     ? words[0].charAt(0).toUpperCase()

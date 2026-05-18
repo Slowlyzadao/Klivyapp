@@ -3,38 +3,36 @@ class PortalPolicy < ApplicationPolicy
     @account.users.include?(@user)
   end
 
-  def show?
-    index?
-  end
-
-  def ssl_status?
-    index?
-  end
-
-  def create?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:help_center, :manage_portals)
-  end
-
   def update?
-    create?
+    @account_user.administrator?
+  end
+
+  def show?
+    @account.users.include?(@user)
   end
 
   def edit?
-    create?
+    @account_user.administrator?
+  end
+
+  def create?
+    @account_user.administrator?
   end
 
   def destroy?
-    create?
+    @account_user.administrator?
   end
 
   def logo?
-    create?
+    @account_user.administrator?
   end
 
   def send_instructions?
-    create?
+    @account_user.administrator?
+  end
+
+  def ssl_status?
+    @account.users.include?(@user)
   end
 end
 

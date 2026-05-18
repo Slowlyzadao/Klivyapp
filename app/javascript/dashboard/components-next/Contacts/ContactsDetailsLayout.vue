@@ -3,15 +3,12 @@ import { computed, useSlots, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { vOnClickOutside } from '@vueuse/components';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Breadcrumb from 'dashboard/components-next/breadcrumb/Breadcrumb.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
 import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
-
-const { can } = usePermissions();
-const canEditContact = computed(() => can('contacts', 'edit'));
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 const props = defineProps({
   selectedContact: {
@@ -27,6 +24,10 @@ const props = defineProps({
 const emit = defineEmits(['goToContactsList', 'toggleBlock']);
 
 const { t } = useI18n();
+const { isAdmin, can: klivyCan } = usePermissions();
+const canEditContact = computed(
+  () => isAdmin.value || klivyCan('contacts', 'edit')
+);
 const slots = useSlots();
 const route = useRoute();
 

@@ -4,11 +4,9 @@ module Api
       module Patients
         class TransactionsController < Api::V1::Accounts::BaseController
           before_action :set_patient
-          before_action :ensure_view_patient_financial!,
-                        only: [:index, :show, :financial_summary, :proof_url]
-          before_action :ensure_manage_patient_financial!,
-                        only: [:create, :destroy, :pay, :refund, :charge_whatsapp, :upload_proof]
           before_action :set_transaction, only: [:show, :destroy, :pay, :refund, :charge_whatsapp, :upload_proof, :proof_url]
+          before_action :ensure_view_patient_financial!, only: [:index, :financial_summary, :show, :proof_url]
+          before_action :ensure_manage_patient_financial!, only: [:create, :pay, :refund, :charge_whatsapp, :destroy, :upload_proof]
 
           # GET /api/v1/accounts/:account_id/patients/:patient_id/transactions
           def index
@@ -226,17 +224,17 @@ module Api
           private
 
           def ensure_view_patient_financial!
+            return if Current.account_user&.administrator?
             return if Current.user.beclinic_can?(Current.account, :patients, :view_financial)
 
-            render json: { error: 'Você não tem permissão para visualizar o financeiro do paciente' },
-                   status: :forbidden
+            render json: { error: 'Sem permissão para visualizar o financeiro do paciente.' }, status: :forbidden
           end
 
           def ensure_manage_patient_financial!
+            return if Current.account_user&.administrator?
             return if Current.user.beclinic_can?(Current.account, :patients, :manage_financial)
 
-            render json: { error: 'Você não tem permissão para gerenciar o financeiro do paciente' },
-                   status: :forbidden
+            render json: { error: 'Sem permissão para gerenciar o financeiro do paciente.' }, status: :forbidden
           end
 
           def set_patient

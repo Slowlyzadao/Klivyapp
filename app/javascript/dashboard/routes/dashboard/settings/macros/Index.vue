@@ -9,23 +9,20 @@ import { useI18n } from 'vue-i18n';
 import { useStoreGetters, useStore } from 'dashboard/composables/store';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { BaseTable } from 'dashboard/components-next/table';
-import { useAdmin } from 'dashboard/composables/useAdmin';
 import { usePermissions } from 'dashboard/composables/usePermissions';
 
 const getters = useStoreGetters();
 const store = useStore();
 const { t } = useI18n();
-const { isAdmin } = useAdmin();
-const { can } = usePermissions();
-
+const { isAdmin, can: klivyCan } = usePermissions();
 const canCreateMacro = computed(
-  () => isAdmin.value || can('settings', 'macros_create')
+  () => isAdmin.value || klivyCan('settings', 'macros_create')
 );
 const canEditMacro = computed(
-  () => isAdmin.value || can('settings', 'macros_edit')
+  () => isAdmin.value || klivyCan('settings', 'macros_edit')
 );
 const canDeleteMacro = computed(
-  () => isAdmin.value || can('settings', 'macros_delete')
+  () => isAdmin.value || klivyCan('settings', 'macros_delete')
 );
 
 const showDeleteConfirmationPopup = ref(false);

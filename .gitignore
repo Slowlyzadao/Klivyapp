@@ -1,12 +1,14 @@
-# ignorar auth do whatsapp
+# ignorar auth do whatsapp (credenciais Baileys multi-tenant)
 lib/whatsapp/auth_info/*
+lib/whatsapp/sessions/*
+!lib/whatsapp/sessions/.gitkeep
 lib/whatsapp/media_cache/*
-# Runtime do bridge (gerado em execução — não versionar)
-lib/whatsapp/sessions/
-lib/whatsapp/bridge.log
+# PII: mapeamento LID -> telefone real de pacientes (LGPD)
 lib/whatsapp/lid_map.json
+# Buffers temporários do bridge (áudios/imagens em trânsito)
 lib/whatsapp/in_*.tmp
-lib/whatsapp/channel_config.json
+lib/whatsapp/out_*.tmp
+lib/whatsapp/*.tmp
 node_modules
 /log/*
 /tmp/*
@@ -46,6 +48,12 @@ pnpm-debug.log*
 /CLAUDE.md
 /changelog_Qwen.md
 /.vscode/
+/.claude/settings.local.json
+/.claude/projects/
+
+# ----------------- ASSETS LOCAIS / LOGS ADICIONAIS ----------------- #
+/FIGURINHAS predefinidas/
+/logs/
 
 # Node/PNPM stores e caches
 .pnpm-store/
@@ -63,13 +71,9 @@ pnpm-debug.log*
 .claude/session-pids.json
 .claude/hooks/log-attribution.sh
 
-# Configs locais de IA / IDE
-.claude/
-.cursor/
-*.local.json
-
-# Logs auxiliares de dev (gerados em troca de processo)
-log/puma_restart.log
-
-# Clone embarcado vazio do repositório destino (acidental)
-/Klivyapp/
+# ----------------- NOTAS LOCAIS COM CREDENCIAIS ----------------- #
+# Nunca commitar arquivos de notas com tokens / chaves
+docs/R2_Cloudlare_*.md
+docs/R2_Cloudflare_*.md
+docs/**/credentials*.md
+docs/**/secrets*.md

@@ -1,5 +1,6 @@
 json.id         patient.id
 json.name       patient.name
+json.social_name patient.social_name
 json.phone      patient.phone
 json.email      patient.email
 json.cpf        patient.cpf
@@ -14,6 +15,7 @@ json.no_show_count patient.no_show_count
 json.needs_recall patient.needs_recall
 json.recall_dismissed_at patient.recall_dismissed_at&.iso8601
 json.pinned_note patient.pinned_note
+json.notes       patient.notes
 json.origin     patient.origin
 json.unit       patient.unit
 json.contact_id patient.contact_id
@@ -21,6 +23,8 @@ json.responsible_professional_id patient.responsible_professional_id
 
 json.address patient.address
 json.emergency_contact patient.emergency_contact
+json.has_guardian patient.has_guardian
+json.guardian patient.guardian
 json.insurance  patient.insurance
 
 json.created_at patient.created_at.iso8601

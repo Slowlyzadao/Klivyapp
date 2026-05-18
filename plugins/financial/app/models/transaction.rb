@@ -1,5 +1,6 @@
 class Transaction < ApplicationRecord
   include TimelineTrackable
+  include BeclinicPurgeableAttachment
 
   # Soft delete
   scope :active, -> { where(deleted_at: nil) }
@@ -13,6 +14,7 @@ class Transaction < ApplicationRecord
   belongs_to :cash_entry, optional: true  # preenchido após baixa dupla
   has_many :installments, dependent: :destroy
   has_one_attached :payment_proof
+  purges_attachment_with job_class: Financial::TransactionPurgeJob
 
   # Enums
   enum :transaction_type, {
@@ -56,6 +58,7 @@ class Transaction < ApplicationRecord
   # Methods
   def soft_delete!
     update!(deleted_at: Time.current)
+    schedule_attachment_purge!
   end
 
   def deleted?

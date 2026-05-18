@@ -1,0 +1,412 @@
+<% content_for(:title) { 'Bea — Configurações Globais' } %>
+
+<header class="main-content__header">
+  <h1 class="main-content__page-title">Bea — Configurações Globais</h1>
+</header>
+
+<section class="main-content__body">
+  <div style="max-width: 1400px;">
+    <p style="color: #6b7280; font-size: 14px; margin-bottom: 24px; line-height: 1.55;">
+      Configurações da Bea aplicáveis a todas as contas. Apenas o super admin
+      tem acesso a esta tela. Configurações por conta ficam na aba Bea da
+      própria conta.
+    </p>
+
+    <%
+      provider = (@settings['CAPTAIN_LLM_PROVIDER'].presence || 'openai').to_s
+    %>
+
+    <%# ── Stats (últimos 30 dias) ───────────────────────────────────── %>
+    <%
+      card_box  = 'background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 18px 18px 16px;'
+      card_lbl  = 'color: #6b7280; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500;'
+      card_val  = ->(color) { "font-size: 26px; font-weight: 700; color: #{color}; line-height: 1.15; margin-top: 6px;" }
+      card_sub  = 'color: #6b7280; font-size: 11.5px; margin-top: 2px;'
+      card_desc = 'color: #9ca3af; font-size: 11.5px; margin-top: 10px; line-height: 1.45;'
+
+      top_tool_name  = @stats[:top_tools].first&.first || '—'
+      top_tool_count = @stats[:top_tools].first&.last
+    %>
+
+    <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 28px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+        <h3 style="font-size: 15px; font-weight: 600; color: #111827; margin: 0;">📊 Bea — últimos 30 dias</h3>
+        <span style="color: #9ca3af; font-size: 12px;">Atualizado a cada turno</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px;">
+        <div style="<%= card_box %>">
+          <div style="<%= card_lbl %>">Turnos</div>
+          <div style="<%= card_val.call('#111827') %>"><%= number_with_delimiter(@stats[:total_turns]) %></div>
+          <div style="<%= card_desc %>">Cada vez que a Bea respondeu um paciente (1 pergunta + 1 resposta).</div>
+        </div>
+
+        <div style="<%= card_box %>">
+          <div style="<%= card_lbl %>">Deflection</div>
+          <div style="<%= card_val.call(@stats[:deflection_rate] >= 50 ? '#10b981' : '#f59e0b') %>"><%= @stats[:deflection_rate] %>%</div>
+          <div style="<%= card_sub %>"><%= @stats[:escalated] %> escaladas</div>
+          <div style="<%= card_desc %>">% de turnos que a Bea resolveu sozinha sem transferir pra humano. Acima de 50% é bom.</div>
+        </div>
+
+        <div style="<%= card_box %>">
+          <div style="<%= card_lbl %>">Custo total</div>
+          <div style="<%= card_val.call('#111827') %>">R$ <%= sprintf('%.2f', @stats[:total_cost_cents] / 100.0) %></div>
+          <div style="<%= card_sub %>"><%= number_with_delimiter(@stats[:total_tokens]) %> tokens</div>
+          <div style="<%= card_desc %>">Gasto somado com chamadas de LLM (input + output) nos últimos 30 dias.</div>
+        </div>
+
+        <div style="<%= card_box %>">
+          <div style="<%= card_lbl %>">Latência média</div>
+          <div style="<%= card_val.call('#111827') %>"><%= @stats[:avg_latency_ms] %> ms</div>
+          <div style="<%= card_desc %>">Tempo médio entre receber a mensagem e enviar a resposta.</div>
+        </div>
+
+        <div style="<%= card_box %>">
+          <div style="<%= card_lbl %>">Sentimento</div>
+          <div style="<%= card_val.call(@stats[:sentiment_avg] >= 0 ? '#10b981' : '#ef4444') %>"><%= @stats[:sentiment_avg].positive? ? '+' : '' %><%= @stats[:sentiment_avg] %></div>
+          <div style="<%= card_desc %>">Tom emocional médio das mensagens dos pacientes (-1 negativo · 0 neutro · +1 positivo).</div>
+        </div>
+
+        <div style="<%= card_box %>">
+          <div style="<%= card_lbl %>">Guardrail blocks</div>
+          <div style="<%= card_val.call(@stats[:guardrail_blocks].zero? ? '#10b981' : '#ef4444') %>"><%= @stats[:guardrail_blocks] %></div>
+          <div style="<%= card_desc %>">Respostas que a Bea tentou enviar mas foram bloqueadas (PII, fora de tom, etc). Idealmente zero.</div>
+        </div>
+
+        <div style="<%= card_box %>">
+          <div style="<%= card_lbl %>">Sentinel (2ª camada)</div>
+          <% if @stats[:sentinel_enabled] %>
+            <div style="<%= card_val.call('#10b981') %>">ENABLED</div>
+            <div style="<%= card_desc %>">LLM-as-judge pós-resposta está ativo. Bloqueia respostas suspeitas em turnos high-stakes.</div>
+          <% else %>
+            <div style="<%= card_val.call('#f59e0b') %>">DISABLED</div>
+            <div style="<%= card_desc %>">2ª camada de validação está desligada. Habilite em <code>CAPTAIN_BEA_SENTINEL_ENABLED=true</code> antes de produção.</div>
+          <% end %>
+        </div>
+
+        <div style="<%= card_box %>">
+          <div style="<%= card_lbl %>">Rate-limit hits (7d)</div>
+          <div style="<%= card_val.call(@stats[:rate_limit_hits_7d].zero? ? '#10b981' : '#f59e0b') %>"><%= @stats[:rate_limit_hits_7d] %></div>
+          <div style="<%= card_desc %>">Tentativas bloqueadas por rate limit (todas as contas). Acima de 50/sem pode indicar spam ou conversa em loop.</div>
+        </div>
+
+        <div style="<%= card_box %>">
+          <div style="<%= card_lbl %>">CSAT</div>
+          <div style="<%= card_val.call('#111827') %>"><%= @stats[:csat_pct] ? "#{@stats[:csat_pct]}%" : '—' %></div>
+          <div style="<%= card_sub %>">👍 <%= @stats[:thumbs_up] %> &nbsp;·&nbsp; 👎 <%= @stats[:thumbs_down] %></div>
+          <div style="<%= card_desc %>">% de avaliações positivas dos pacientes sobre as respostas da Bea.</div>
+        </div>
+
+        <div style="<%= card_box %>">
+          <div style="<%= card_lbl %>">Top tool</div>
+          <div style="font-size: 17px; font-weight: 700; color: #111827; line-height: 1.2; margin-top: 6px; font-family: ui-monospace, Menlo, monospace; word-break: break-all;"><%= top_tool_name %></div>
+          <% if top_tool_count %>
+            <div style="<%= card_sub %>"><%= top_tool_count %> chamadas</div>
+          <% end %>
+          <div style="<%= card_desc %>">Função interna que a Bea mais usou (ex: clinic_info, book_appointment).</div>
+        </div>
+      </div>
+
+      <% if @stats[:top_tools].any? %>
+        <div style="margin-top: 22px; padding-top: 18px; border-top: 1px solid #e5e7eb;">
+          <div style="color: #6b7280; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; font-weight: 500;">Tools mais usadas</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <% @stats[:top_tools].each do |name, count| %>
+              <span style="display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px 10px; font-size: 12.5px;">
+                <span style="font-family: ui-monospace, Menlo, monospace; color: #111827;"><%= name %></span>
+                <span style="color: #6b7280; font-weight: 500;"><%= count %></span>
+              </span>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <%# ── Tabs ──────────────────────────────────────────────────────── %>
+    <div style="border-bottom: 1px solid #e5e7eb; margin-bottom: 24px; display: flex; gap: 24px;">
+      <div style="padding: 10px 4px; border-bottom: 2px solid #1f93ff; color: #1f93ff; font-size: 14px; font-weight: 500;">Provider</div>
+      <div style="padding: 10px 4px; color: #9ca3af; font-size: 14px; cursor: not-allowed;" title="Em breve">Limits</div>
+      <div style="padding: 10px 4px; color: #9ca3af; font-size: 14px; cursor: not-allowed;" title="Em breve">Personas</div>
+      <div style="padding: 10px 4px; color: #9ca3af; font-size: 14px; cursor: not-allowed;" title="Em breve">Tools</div>
+      <div style="padding: 10px 4px; color: #9ca3af; font-size: 14px; cursor: not-allowed;" title="Em breve">Guardrails</div>
+    </div>
+
+    <%= form_with url: super_admin_bea_url, method: :patch, local: true do |f| %>
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="bea_captain_llm_provider">Provider Ativo</label>
+        </div>
+        <div class="field-unit__field">
+          <select name="bea[captain_llm_provider]" id="bea_captain_llm_provider">
+            <option value="openai" <%= 'selected' if provider == 'openai' %>>OpenAI</option>
+            <option value="gemini" <%= 'selected' if provider == 'gemini' %>>Gemini (Google)</option>
+          </select>
+          <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px;">
+            Provider usado por padrão. OpenAI fica como fallback automático em outage do Gemini.
+          </p>
+        </div>
+      </div>
+
+      <h2 style="margin-top: 32px; margin-bottom: 12px; font-size: 16px; font-weight: 600; color: #111827;">OpenAI</h2>
+
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="bea_captain_open_ai_api_key">API Key</label>
+        </div>
+        <div class="field-unit__field">
+          <input
+            type="password"
+            id="bea_captain_open_ai_api_key"
+            name="bea[captain_open_ai_api_key]"
+            value="<%= @settings['CAPTAIN_OPEN_AI_API_KEY'] %>"
+            placeholder="sk-..."
+            autocomplete="off"
+            style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13.5px;"
+          >
+        </div>
+      </div>
+
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="bea_captain_open_ai_model">Modelo Padrão</label>
+        </div>
+        <div class="field-unit__field">
+          <input
+            type="text"
+            id="bea_captain_open_ai_model"
+            name="bea[captain_open_ai_model]"
+            value="<%= @settings['CAPTAIN_OPEN_AI_MODEL'] %>"
+            placeholder="gpt-4.1-mini"
+            autocomplete="off"
+            style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13.5px;"
+          >
+          <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px;">
+            Em branco usa o default (<code>gpt-4.1-mini</code>). Exemplos: <code>gpt-4.1</code>, <code>gpt-5-mini</code>, <code>gpt-5.1</code>.
+          </p>
+        </div>
+      </div>
+
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="bea_captain_open_ai_endpoint">Endpoint (opcional)</label>
+        </div>
+        <div class="field-unit__field">
+          <input
+            type="url"
+            id="bea_captain_open_ai_endpoint"
+            name="bea[captain_open_ai_endpoint]"
+            value="<%= @settings['CAPTAIN_OPEN_AI_ENDPOINT'] %>"
+            placeholder="https://api.openai.com/"
+            autocomplete="off"
+            style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13.5px;"
+          >
+          <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px;">
+            Deixe em branco para usar o endpoint oficial da OpenAI.
+          </p>
+        </div>
+      </div>
+
+      <h2 style="margin-top: 32px; margin-bottom: 12px; font-size: 16px; font-weight: 600; color: #111827;">Gemini (Google)</h2>
+
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="bea_captain_gemini_api_key">API Key</label>
+        </div>
+        <div class="field-unit__field">
+          <input
+            type="password"
+            id="bea_captain_gemini_api_key"
+            name="bea[captain_gemini_api_key]"
+            value="<%= @settings['CAPTAIN_GEMINI_API_KEY'] %>"
+            placeholder="AIza..."
+            autocomplete="off"
+            style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13.5px;"
+          >
+          <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px;">
+            Gere em <a href="https://aistudio.google.com/apikey" target="_blank" style="color: #1f93ff;">Google AI Studio</a>.
+          </p>
+        </div>
+      </div>
+
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="bea_captain_gemini_model">Modelo Padrão</label>
+        </div>
+        <div class="field-unit__field">
+          <input
+            type="text"
+            id="bea_captain_gemini_model"
+            name="bea[captain_gemini_model]"
+            value="<%= @settings['CAPTAIN_GEMINI_MODEL'] %>"
+            placeholder="gemini-3-flash"
+            autocomplete="off"
+            style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13.5px;"
+          >
+          <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px;">
+            Em branco usa o default (<code>gemini-3-flash</code>). Exemplos: <code>gemini-3-pro</code>, <code>gemini-2.5-flash</code>. Lista oficial em <a href="https://ai.google.dev/gemini-api/docs/models" target="_blank" style="color: #1f93ff;">ai.google.dev/models</a>.
+          </p>
+        </div>
+      </div>
+
+      <h2 style="margin-top: 32px; margin-bottom: 12px; font-size: 16px; font-weight: 600; color: #111827;">Embeddings</h2>
+
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="bea_captain_embedding_model">Modelo de Embedding</label>
+        </div>
+        <div class="field-unit__field">
+          <input
+            type="text"
+            id="bea_captain_embedding_model"
+            name="bea[captain_embedding_model]"
+            value="<%= @settings['CAPTAIN_EMBEDDING_MODEL'] %>"
+            placeholder="text-embedding-3-small"
+            autocomplete="off"
+            style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13.5px;"
+          >
+          <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px;">
+            Em branco usa o default (<code>text-embedding-3-small</code>, 1536 dim).
+            ⚠️ O schema atual usa <code>vector(1536)</code>. Mudar para um modelo com dimensão diferente exige re-embed de toda a base.
+          </p>
+        </div>
+      </div>
+
+      <h2 style="margin-top: 32px; margin-bottom: 12px; font-size: 16px; font-weight: 600; color: #111827;">Personalidade & Instruções</h2>
+
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="bea_captain_bea_system_prompt">System Prompt</label>
+        </div>
+        <div class="field-unit__field">
+          <textarea
+            id="bea_captain_bea_system_prompt"
+            name="bea[captain_bea_system_prompt]"
+            rows="22"
+            style="width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; line-height: 1.6; padding: 14px 16px; border: 1px solid #d1d5db; border-radius: 8px; resize: vertical; background: #fcfcfd;"
+          ><%= @settings['CAPTAIN_BEA_SYSTEM_PROMPT'].presence || @default_system_prompt %></textarea>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 12px; flex-wrap: wrap;">
+            <p style="color: #6b7280; font-size: 12.5px; margin: 0; line-height: 1.5; flex: 1; min-width: 280px;">
+              Este é o conjunto de instruções que define como a Bea se comporta:
+              quem ela é, o tom de voz, a ordem em que consulta as tools, quando
+              transfere pra humano e o que ela <strong>nunca</strong> deve fazer.
+              <strong>Aplica-se a todas as contas</strong> a partir do próximo turno.
+            </p>
+            <button type="button"
+                    onclick="if(confirm('Substituir o conteúdo atual pelo template padrão?')) { document.getElementById('bea_captain_bea_system_prompt').value = document.getElementById('bea_default_prompt_source').value; }"
+                    style="background: white; border: 1px solid #d1d5db; color: #374151; padding: 7px 14px; border-radius: 6px; font-size: 12.5px; cursor: pointer; white-space: nowrap;">
+              ↺ Restaurar template padrão
+            </button>
+          </div>
+          <%# Hidden input (not <script>) so the browser decodes HTML entities
+              like &quot; back to real quotes when JS reads `.value`. With a
+              <script type="text/plain"> the entities stay literal — that's
+              what was poisoning the saved prompt previously. %>
+          <input type="hidden" id="bea_default_prompt_source" value="<%= @default_system_prompt %>">
+        </div>
+      </div>
+
+      <h2 style="margin-top: 32px; margin-bottom: 12px; font-size: 16px; font-weight: 600; color: #111827;">Chat Interno (resposta a @beatriz)</h2>
+
+      <p style="color: #6b7280; font-size: 12.5px; margin-bottom: 16px; line-height: 1.5;">
+        Configurações específicas pra quando alguém da equipe menciona <code>@beatriz</code> no Chat Interno.
+        Prompt e limite afetam <strong>todas as contas</strong> a partir do próximo turno.
+      </p>
+
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="bea_captain_bea_internal_chat_system_prompt">System Prompt do Chat Interno</label>
+        </div>
+        <div class="field-unit__field">
+          <textarea
+            id="bea_captain_bea_internal_chat_system_prompt"
+            name="bea[captain_bea_internal_chat_system_prompt]"
+            rows="14"
+            style="width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; line-height: 1.6; padding: 14px 16px; border: 1px solid #d1d5db; border-radius: 8px; resize: vertical; background: #fcfcfd;"
+          ><%= @settings['CAPTAIN_BEA_INTERNAL_CHAT_SYSTEM_PROMPT'].presence || @default_internal_chat_prompt %></textarea>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 12px; flex-wrap: wrap;">
+            <p style="color: #6b7280; font-size: 12.5px; margin: 0; line-height: 1.5; flex: 1; min-width: 280px;">
+              Prompt usado quando a Bea responde no Chat Interno (contexto profissional, NÃO paciente).
+              Tom direto, sem saudações, sem oferta de agendamento.
+            </p>
+            <button type="button"
+                    onclick="if(confirm('Substituir pelo template padrão?')) { document.getElementById('bea_captain_bea_internal_chat_system_prompt').value = document.getElementById('bea_default_internal_chat_prompt_source').value; }"
+                    style="background: white; border: 1px solid #d1d5db; color: #374151; padding: 7px 14px; border-radius: 6px; font-size: 12.5px; cursor: pointer; white-space: nowrap;">
+              ↺ Restaurar template padrão
+            </button>
+          </div>
+          <input type="hidden" id="bea_default_internal_chat_prompt_source" value="<%= @default_internal_chat_prompt %>">
+        </div>
+      </div>
+
+      <div class="field-unit" style="margin-top: 16px;">
+        <div class="field-unit__label">
+          <label for="bea_captain_bea_internal_chat_daily_limit">Limite diário de respostas por sala</label>
+        </div>
+        <div class="field-unit__field">
+          <input
+            type="number"
+            min="0"
+            max="500"
+            id="bea_captain_bea_internal_chat_daily_limit"
+            name="bea[captain_bea_internal_chat_daily_limit]"
+            value="<%= @settings['CAPTAIN_BEA_INTERNAL_CHAT_DAILY_LIMIT'].presence || @default_internal_chat_daily_limit %>"
+            style="width: 120px; font-size: 14px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;"
+          >
+          <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px; line-height: 1.5;">
+            Quantas vezes a Bea responde por sala/dia antes de avisar "passei do limite". Padrão <code>30</code>. Use <code>0</code> pra desativar a Bea no Chat Interno temporariamente.
+          </p>
+        </div>
+      </div>
+
+      <h2 style="margin-top: 32px; margin-bottom: 12px; font-size: 16px; font-weight: 600; color: #111827;">Saúde da Bea — alertas externos</h2>
+      <p style="color: #6b7280; font-size: 13px; margin-bottom: 16px; line-height: 1.5;">
+        A Bea faz auto-check a cada 10min nas últimas 24h (deflection, custo, latência, taxa de erro, fallback de provider). Quando algum limite estoura, dispara alerta nos canais abaixo. Deduplicado por 1h pra não floodar.
+        O endpoint público <code>GET /api/v1/ai_agent/health</code> retorna o snapshot atual em JSON (200 ok/degraded, 503 down) — plugue no UptimeRobot/BetterUptime.
+      </p>
+
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="bea_ai_agent_health_slack_webhook">Slack Webhook URL</label>
+        </div>
+        <div class="field-unit__field">
+          <input
+            type="password"
+            id="bea_ai_agent_health_slack_webhook"
+            name="bea[ai_agent_health_slack_webhook]"
+            value="<%= @settings['AI_AGENT_HEALTH_SLACK_WEBHOOK'] %>"
+            placeholder="https://hooks.slack.com/services/..."
+            style="width: 100%; font-size: 14px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-family: monospace;"
+          >
+          <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px; line-height: 1.5;">
+            Incoming webhook do Slack. Deixe vazio pra desabilitar alertas no Slack.
+          </p>
+        </div>
+      </div>
+
+      <div class="field-unit" style="margin-top: 16px;">
+        <div class="field-unit__label">
+          <label for="bea_ai_agent_health_alert_emails">E-mails para alerta</label>
+        </div>
+        <div class="field-unit__field">
+          <input
+            type="text"
+            id="bea_ai_agent_health_alert_emails"
+            name="bea[ai_agent_health_alert_emails]"
+            value="<%= @settings['AI_AGENT_HEALTH_ALERT_EMAILS'] %>"
+            placeholder="ops@klivy.com.br, leandro@klivy.com.br"
+            style="width: 100%; font-size: 14px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;"
+          >
+          <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px; line-height: 1.5;">
+            Lista de e-mails separados por vírgula. Deixe vazio pra desabilitar alertas por e-mail.
+          </p>
+        </div>
+      </div>
+
+      <div style="margin-top: 32px;">
+        <%= f.submit 'Salvar', class: 'button' %>
+      </div>
+    <% end %>
+  </div>
+</section>

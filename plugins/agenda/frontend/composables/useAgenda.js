@@ -17,7 +17,7 @@ export function createAgendaState() {
   const state = reactive({
     // ─── Navegação ──────────────────────────────────────
     currentDate: new Date(),
-    viewMode: 'month',
+    viewMode: 'week',
     layoutMode: 'side-by-side',
 
     // ─── Tema & Responsividade ─────────────────────────
@@ -35,12 +35,14 @@ export function createAgendaState() {
       priority: false,
       eventType: false,
       treatments: false,
+      categories: false,
       waitingList: false,
     },
     hiddenAgents: [],
     hiddenPriorities: [],
     hiddenEventTypes: [],
     hiddenTreatments: [],
+    hiddenCategories: [],
 
     // ─── Modal de Evento ───────────────────────────────
     showNewEventModal: false,
@@ -72,9 +74,12 @@ export function createAgendaState() {
     dragCurrentEndsAt: null,
     dragCurrentDayObj: null,
     dragHasMoved: false,
+    dragArmed: false,
     dragStartX: 0,
     dragStartY: 0,
     dragClickOffsetPx: 0,
+    dragIsBlocked: false,
+    dragBlockReason: null,
 
     // ─── Popups ────────────────────────────────────────
     eventInfoPopup: null,
@@ -88,7 +93,14 @@ export function createAgendaState() {
     skipNextClick: false,
 
     // ─── Timer ─────────────────────────────────────────
-    now: new Date(),
+    // nowMinute: muda a cada minuto. Lido por currentTimeLineStyle, isEventLate,
+    //            isHourBlocked (check "Passado"), isCurrentTimeWithinExpediente.
+    //            Mudanças nele invalidam consumidores 1x/min — esperado.
+    // nowDay:    muda só na virada do dia. Lido por isDayInPast (granularidade
+    //            de dia, não precisa de minuto). Headers de dia / month-view
+    //            não re-renderizam a cada minuto por causa do "isPast".
+    nowMinute: new Date(),
+    nowDay: new Date(),
 
     // ─── Configurações carregadas ──────────────────────
     agendaSettingsData: null,
@@ -108,7 +120,7 @@ export function createAgendaState() {
 
   const rowHeight = computed(() => {
     const interval = agendaSettings.value?.slot_interval_minutes || 60;
-    return (interval / 60) * 80;
+    return (interval / 60) * 128;
   });
 
   const pixelsPerHour = computed(() => {
@@ -116,11 +128,53 @@ export function createAgendaState() {
     return rowHeight.value * (60 / interval);
   });
 
+  // Visible window for the timeline. When "show_only_working_hours" is enabled,
+  // collapse to the union of enabled days' working hours so events from any
+  // day stay visible. Falls back to 0-24 otherwise. Used by positioning calcs
+  // (event cards, current-time line, drag ghost) so absolute times are mapped
+  // correctly into the visible grid.
+  //
+  // `visible_hours_buffer` (default 2) extends the window before/after the
+  // working hours when collapsed — purely visual, those rows stay flagged as
+  // "Fora do expediente" by isHourBlocked so they can't be reserved.
+  const visibleHourRange = computed(() => {
+    const settings = agendaSettings.value;
+    let startH = 0;
+    let endH = 24;
+    if (settings?.show_only_working_hours && Array.isArray(settings.week_days)) {
+      const enabledDays = settings.week_days.filter(
+        d => d.enabled && d.start && d.end
+      );
+      if (enabledDays.length) {
+        const minStart = Math.min(
+          ...enabledDays.map(d => parseInt(d.start.split(':')[0], 10))
+        );
+        const maxEnd = Math.max(
+          ...enabledDays.map(d => {
+            const [h, m] = d.end.split(':').map(Number);
+            return m > 0 ? h + 1 : h;
+          })
+        );
+        const buffer = Number.isFinite(settings.visible_hours_buffer)
+          ? settings.visible_hours_buffer
+          : 2;
+        startH = Math.max(0, minStart - buffer);
+        endH = Math.min(24, maxEnd + buffer);
+      }
+    }
+    return { startH, endH };
+  });
+
+  const visibleStartHour = computed(() => visibleHourRange.value.startH);
+
   const dayHours = computed(() => {
     const hours = [];
-    const interval = agendaSettings.value?.slot_interval_minutes || 60;
+    const settings = agendaSettings.value;
+    const interval = settings?.slot_interval_minutes || 60;
     const slotsPerHour = 60 / interval;
-    for (let h = 0; h < 24; h += 1) {
+    const { startH, endH } = visibleHourRange.value;
+
+    for (let h = startH; h < endH; h += 1) {
       for (let s = 0; s < slotsPerHour; s += 1) {
         const minutes = s * interval;
         hours.push(`${padZ(h)}:${padZ(minutes)}`);
@@ -178,11 +232,56 @@ export function createAgendaState() {
     return weeks;
   });
 
+  // True only when "now" falls within the current day's working window — the
+  // line is meaningless (and visually creates extra blank scroll space) once
+  // the clinic is closed, on holidays/exceptions or before opening.
+  const isCurrentTimeWithinExpediente = computed(() => {
+    const settings = agendaSettings.value;
+    if (!settings || !Array.isArray(settings.week_days)) return true;
+    const now = state.nowMinute;
+    const dayObj = {
+      year: now.getFullYear(),
+      month: now.getMonth(),
+      day: now.getDate(),
+    };
+    const dow = now.getDay();
+    const dayConfig = settings.week_days.find(d => d.id === DOW_MAP[dow]);
+    if (!dayConfig || !dayConfig.enabled) return false;
+
+    if (Array.isArray(settings.holidays)) {
+      const padN = n => String(n).padStart(2, '0');
+      const dm = `${padN(dayObj.day)}/${padN(dayObj.month + 1)}`;
+      if (settings.holidays.some(h => h.status === 'closed' && h.date.slice(0, 5) === dm)) {
+        return false;
+      }
+    }
+    if (Array.isArray(settings.exceptions)) {
+      const ts = new Date(dayObj.year, dayObj.month, dayObj.day).getTime();
+      const inException = settings.exceptions.some(ex => {
+        if (!ex.start || !ex.end) return false;
+        const s = new Date(ex.start); s.setHours(0, 0, 0, 0);
+        const e = new Date(ex.end); e.setHours(23, 59, 59, 999);
+        return ts >= s.getTime() && ts <= e.getTime();
+      });
+      if (inException) return false;
+    }
+
+    if (!dayConfig.start || !dayConfig.end) return true;
+    const toMin = t => {
+      const [h, m = 0] = t.split(':').map(Number);
+      return h * 60 + (m || 0);
+    };
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    return nowMin >= toMin(dayConfig.start) && nowMin < toMin(dayConfig.end);
+  });
+
   const currentTimeLineStyle = computed(() => {
-    const hours = state.now.getHours();
-    const minutes = state.now.getMinutes();
+    if (!isCurrentTimeWithinExpediente.value) return { display: 'none' };
+    const hours = state.nowMinute.getHours();
+    const minutes = state.nowMinute.getMinutes();
+    const offsetH = hours - visibleStartHour.value;
     const top =
-      hours * pixelsPerHour.value +
+      offsetH * pixelsPerHour.value +
       (minutes / 60) * pixelsPerHour.value;
     return { top: `${top}px` };
   });
@@ -196,17 +295,18 @@ export function createAgendaState() {
       return {};
     const start = parseEventDate(state.dragCurrentStartsAt);
     const end = parseEventDate(state.dragCurrentEndsAt);
-    const topOffset =
-      start.getHours() * pixelsPerHour.value +
-      (start.getMinutes() / 60) * pixelsPerHour.value;
-    const durationHours = Math.max(
-      0.5,
-      (end.getTime() - start.getTime()) / (1000 * 60 * 60)
-    );
+    const interval = agendaSettings.value?.slot_interval_minutes || 60;
+    const slotHeight = rowHeight.value;
+    const visibleStartMin = visibleStartHour.value * 60;
+    const startMin = start.getHours() * 60 + start.getMinutes();
+    const endMin = end.getHours() * 60 + end.getMinutes();
+    const snapStartSlot = Math.floor((startMin - visibleStartMin) / interval);
+    const snapEndSlot = Math.ceil((endMin - visibleStartMin) / interval);
+    const slotsOccupied = Math.max(1, snapEndSlot - snapStartSlot);
     return {
       position: 'absolute',
-      top: `${topOffset + 2}px`,
-      height: `${durationHours * pixelsPerHour.value - 4}px`,
+      top: `${snapStartSlot * slotHeight}px`,
+      height: `${Math.max(1, slotsOccupied * slotHeight - 2)}px`,
       left: '3px',
       right: '3px',
       zIndex: 100,
@@ -350,6 +450,14 @@ export function createAgendaState() {
     else state.hiddenAgents.push(id);
   }
 
+  function soloAgent(id, allAgentIds) {
+    state.hiddenAgents = allAgentIds.filter(agentId => agentId !== id);
+  }
+
+  function showAllAgents() {
+    state.hiddenAgents = [];
+  }
+
   function togglePriority(val) {
     const idx = state.hiddenPriorities.indexOf(val);
     if (idx >= 0) state.hiddenPriorities.splice(idx, 1);
@@ -366,6 +474,20 @@ export function createAgendaState() {
     const idx = state.hiddenTreatments.indexOf(val);
     if (idx >= 0) state.hiddenTreatments.splice(idx, 1);
     else state.hiddenTreatments.push(val);
+  }
+
+  function toggleCategory(id) {
+    const idx = state.hiddenCategories.indexOf(id);
+    if (idx >= 0) state.hiddenCategories.splice(idx, 1);
+    else state.hiddenCategories.push(id);
+  }
+
+  function soloCategory(id, allCategoryIds) {
+    state.hiddenCategories = allCategoryIds.filter(cid => cid !== id);
+  }
+
+  function showAllCategories() {
+    state.hiddenCategories = [];
   }
 
   // ─── Agentes ────────────────────────────────────────
@@ -407,17 +529,43 @@ export function createAgendaState() {
     return matched ? matched.color : null;
   }
 
-  function getAgentColor(event, agentList, currentUserID, treatmentOptions) {
-    if (event && event.color) return event.color;
+  // Cor da categoria — tem prioridade sobre treatment/agent quando o evento
+  // está vinculado a uma Agenda::Category. Aceita tanto o snapshot inline
+  // (`event.category.color`, vindo do jbuilder) quanto lookup por id na
+  // lista carregada do store, para o caso da categoria ter sido editada
+  // depois do fetch original do evento.
+  function getCategoryColor(event, categoryList) {
+    if (event?.category?.color) return event.category.color;
+    if (!event?.category_id || !categoryList?.length) return null;
+    const matched = categoryList.find(c => c.id === event.category_id);
+    return matched ? matched.color : null;
+  }
 
+  function getAgentColor(event, agentList, currentUserID) {
+    if (event && event.color) return event.color;
     const uid = event && event.user_id ? event.user_id : currentUserID;
     const agent = agentList.find(a => a.id === uid);
     return agent ? agent.color : agentIdToColor(uid || 1);
   }
 
-  function getEventBackground(event, agentList, currentUserID, treatmentOptions) {
+  // Cor "do card" do evento — segue a regra de produto: categoria define a cor,
+  // ausência de categoria mantém o card neutro (branco). Nunca cai pra cor do
+  // agente: a identidade do agente é comunicada pelo fundo da coluna, não
+  // pelo card. Retorna null quando o evento não tem categoria — o consumidor
+  // decide o que pintar como neutro (branco/superfície).
+  function getEventCardColor(event, categoryList) {
+    return getCategoryColor(event, categoryList);
+  }
+
+  function getEventBackground(event, agentList, currentUserID, treatmentOptions, categoryList) {
+    // Mantém retornando uma cor sólida pra usos não-timeline (ex: month view).
+    // Prefere categoria; cai pra cor do agente como último recurso pra que
+    // o evento permaneça visível (no month view não temos coluna pra fazer
+    // o "wash" do agente, então o card precisa carregar essa identidade).
+    const cat = getCategoryColor(event, categoryList);
+    if (cat) return solidEventBg(cat, state.isDarkTheme);
     return solidEventBg(
-      getAgentColor(event, agentList, currentUserID, treatmentOptions),
+      getAgentColor(event, agentList, currentUserID),
       state.isDarkTheme
     );
   }
@@ -437,6 +585,9 @@ export function createAgendaState() {
 
       const eventTreatment = e.custom_attributes?.treatment;
       if (eventTreatment && state.hiddenTreatments.includes(eventTreatment))
+        return false;
+
+      if (e.category_id && state.hiddenCategories.includes(e.category_id))
         return false;
 
       const d = parseEventDate(e.starts_at || e.start_time);
@@ -525,7 +676,7 @@ export function createAgendaState() {
     if (!actionable.includes(event.status)) return false;
     if (!event.starts_at) return false;
     const start = parseEventDate(event.starts_at);
-    const diffMs = state.now - start;
+    const diffMs = state.nowMinute - start;
     return diffMs >= 5 * 60 * 1000;
   }
 
@@ -533,7 +684,10 @@ export function createAgendaState() {
 
   function isDayInPast(dayObj) {
     if (!dayObj) return false;
-    const now = state.now || new Date();
+    if (!agendaSettings.value?.block_past_dates) return false;
+    // Granularidade de dia: lê nowDay (atualizado só na virada do dia) para
+    // não re-renderizar headers/month-view 1x/min.
+    const now = state.nowDay || new Date();
     const current = new Date(dayObj.year, dayObj.month, dayObj.day, 23, 59, 59, 999);
     return current < now;
   }
@@ -589,13 +743,24 @@ export function createAgendaState() {
     const dayConfig =
       settings.week_days && settings.week_days.find(d => d.id === dayId);
 
-    const [h] = hourStr.split(':').map(Number);
+    const [h, mRaw] = hourStr.split(':').map(Number);
+    const m = mRaw || 0;
+    // Cell time expressed in minutes-from-midnight, used for precise comparisons
+    // against working hours / lunch break (which can have non-zero minutes).
+    const cellMinutes = h * 60 + m;
+    const toMinutes = str => {
+      if (!str) return null;
+      const [hh, mm = 0] = str.split(':').map(Number);
+      return hh * 60 + (mm || 0);
+    };
 
-    // 0. Passado
-    const now = state.now || new Date();
-    const m = Number(hourStr.split(':')[1] || 0);
-    const cellTime = new Date(dayObj.year, dayObj.month, dayObj.day, h, m);
-    if (cellTime < now) return 'Passado';
+    // 0. Passado — precisão de minuto (slot transiciona para "Passado" assim
+    // que o relógio cruza a borda; necessário para validação no save também).
+    if (settings.block_past_dates) {
+      const now = state.nowMinute || new Date();
+      const cellTime = new Date(dayObj.year, dayObj.month, dayObj.day, h, m);
+      if (cellTime < now) return 'Passado';
+    }
 
     // 1. Feriados
     if (settings.holidays && settings.holidays.length) {
@@ -627,21 +792,29 @@ export function createAgendaState() {
     // 3. Fechado no dia (ex: Domingo)
     if (!dayConfig || !dayConfig.enabled) return 'Fechado';
 
-    // 4. Fora do horário de funcionamento
+    // 4. Fora do horário de funcionamento (compara em minutos)
     if (settings.block_outside_working_hours) {
       if (dayConfig.start && dayConfig.end) {
-        const openH = Number(dayConfig.start.split(':')[0]);
-        const closeH = Number(dayConfig.end.split(':')[0]);
-        if (h < openH || h >= closeH) return 'Fora do expediente';
+        const openMin = toMinutes(dayConfig.start);
+        const closeMin = toMinutes(dayConfig.end);
+        if (openMin !== null && closeMin !== null) {
+          if (cellMinutes < openMin || cellMinutes >= closeMin) {
+            return 'Fora do expediente';
+          }
+        }
       }
     }
 
-    // 4. Horário de almoço
+    // 5. Horário de almoço (compara em minutos)
     if (settings.block_lunch_break && dayConfig && dayConfig.enabled) {
       if (dayConfig.lunchStart && dayConfig.lunchEnd) {
-        const lunchStartH = Number(dayConfig.lunchStart.split(':')[0]);
-        const lunchEndH = Number(dayConfig.lunchEnd.split(':')[0]);
-        if (h >= lunchStartH && h < lunchEndH) return 'Almoço';
+        const lunchStartMin = toMinutes(dayConfig.lunchStart);
+        const lunchEndMin = toMinutes(dayConfig.lunchEnd);
+        if (lunchStartMin !== null && lunchEndMin !== null) {
+          if (cellMinutes >= lunchStartMin && cellMinutes < lunchEndMin) {
+            return 'Almoço';
+          }
+        }
       }
     }
 
@@ -650,14 +823,15 @@ export function createAgendaState() {
 
   function getBlockedMessage(dayObj, hourStr, useAlertFn) {
     const [h, m] = hourStr.split(':').map(Number);
-    const now = state.now || new Date();
-    const cellTime = new Date(dayObj.year, dayObj.month, dayObj.day, h, m || 0);
-    if (cellTime < now) {
-      useAlertFn('Não é possível criar agendamentos no passado.');
-      return true;
-    }
-
     const settings = agendaSettings.value;
+    if (settings && settings.block_past_dates) {
+      const now = state.nowMinute || new Date();
+      const cellTime = new Date(dayObj.year, dayObj.month, dayObj.day, h, m || 0);
+      if (cellTime < now) {
+        useAlertFn('Não é possível criar agendamentos no passado.');
+        return true;
+      }
+    }
     const dayDate = new Date(dayObj.year, dayObj.month, dayObj.day);
     const dow = dayDate.getDay();
     const dayConfig =
@@ -797,7 +971,18 @@ export function createAgendaState() {
     window.addEventListener('resize', _handleResize);
 
     _timer = setInterval(() => {
-      state.now = new Date();
+      const n = new Date();
+      state.nowMinute = n;
+      // Só atualiza nowDay se a data realmente mudou — evita invalidar
+      // headers de dia / month-view 1x/min.
+      const d = state.nowDay;
+      if (
+        n.getDate() !== d.getDate() ||
+        n.getMonth() !== d.getMonth() ||
+        n.getFullYear() !== d.getFullYear()
+      ) {
+        state.nowDay = n;
+      }
     }, 60000);
 
     _themeObserver = new MutationObserver(() => {
@@ -824,6 +1009,7 @@ export function createAgendaState() {
     rowHeight,
     pixelsPerHour,
     dayHours,
+    visibleStartHour,
     currentMonth,
     currentYear,
     today,
@@ -851,9 +1037,14 @@ export function createAgendaState() {
     // Filters
     toggleFilter,
     toggleAgent,
+    soloAgent,
+    showAllAgents,
     togglePriority,
     toggleEventType,
     toggleTreatment,
+    toggleCategory,
+    soloCategory,
+    showAllCategories,
 
     // Agents
     buildAgentList,
@@ -862,6 +1053,9 @@ export function createAgendaState() {
 
     // Events
     getAgentColor,
+    getTreatmentColor,
+    getCategoryColor,
+    getEventCardColor,
     getEventBackground,
     getEventsForDay,
     calculateOverlaps,

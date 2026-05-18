@@ -27,10 +27,10 @@ export default {
   },
   setup() {
     const { agentsList } = useAgentsList();
-    const { can } = usePermissions();
+    const { can: klivyCan } = usePermissions();
     return {
       agentsList,
-      can,
+      klivyCan,
     };
   },
   data() {
@@ -70,14 +70,14 @@ export default {
       currentUser: 'getCurrentUser',
       teams: 'teams/getTeams',
     }),
-    canAssignConversation() {
-      return this.can('chat', 'assign_conversation');
-    },
-    canChangeStatus() {
-      return this.can('chat', 'reply');
-    },
     hasAnAssignedTeam() {
       return !!this.currentChat?.meta?.team;
+    },
+    canAssignConversation() {
+      return this.klivyCan('chat', 'assign_conversation');
+    },
+    canChangeStatus() {
+      return this.klivyCan('chat', 'reply');
     },
     teamsList() {
       if (this.hasAnAssignedTeam) {

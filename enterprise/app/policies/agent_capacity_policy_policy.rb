@@ -1,25 +1,21 @@
 class AgentCapacityPolicyPolicy < ApplicationPolicy
   def index?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :users_view)
-  end
-
-  def show?
-    index?
+    @account_user.administrator?
   end
 
   def create?
-    return true if @account_user.administrator?
+    @account_user.administrator?
+  end
 
-    beclinic_can?(:settings, :users_edit)
+  def show?
+    @account_user.administrator?
   end
 
   def update?
-    create?
+    @account_user.administrator?
   end
 
   def destroy?
-    create?
+    @account_user.administrator?
   end
 end

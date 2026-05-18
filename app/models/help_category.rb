@@ -1,7 +1,7 @@
 class HelpCategory < ApplicationRecord
-  validates :name, :slug, presence: true
-  validates :slug, uniqueness: true
+  validates :name, presence: true
+  validates :slug, presence: true, uniqueness: true
 
-  scope :ordered, -> { order(:position, :name) }
+  scope :ordered, -> { order(:position, :id) }
   scope :visible, -> { where(hidden: false) }
 end

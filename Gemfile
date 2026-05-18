@@ -277,3 +277,6 @@ group :development, :test do
 end
 
 gem "mini_racer", "~> 0.20.0"
+
+# AI Agent (Bea) — text extraction for PDF documents fed to RAG.
+gem 'pdf-reader', '~> 2.12'

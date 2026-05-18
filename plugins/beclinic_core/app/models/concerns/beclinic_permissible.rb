@@ -15,16 +15,26 @@ module BeclinicPermissible
          .first
   end
 
-  # Returns the KlivyRole assigned to this user in the given account, if any.
-  # Custom Roles take precedence over Team-based RBAC.
+  # Returns the KlivyRole assigned to this user via account_users.klivy_role_id.
   def klivy_role_for(account)
-    return nil unless defined?(KlivyRole)
+    au = account_users.find_by(account_id: account.id)
+    au&.klivy_role
+  end
 
-    account_users.find_by(account_id: account.id)&.klivy_role
+  # Returns true if the user is a Chatwoot administrator in the given account.
+  def beclinic_admin_in?(account)
+    au = account_users.find_by(account_id: account.id)
+    au&.administrator? || false
   end
 
   # Primary permission check method.
-  # Resolution order: super admin → admin role → user's KlivyRole → team RBAC.
+  # Precedence:
+  #   1. SuperAdmin (BeClinic) -> bypass total
+  #   2. Chatwoot administrator -> bypass total
+  #   3. Klivy Role attached to account_user -> consult its permissions
+  #   4. Team with beclinic_role 'dono' -> bypass
+  #   5. Team permissions (legacy) -> consult
+  #   6. No team -> false
   # @param account [Account]
   # @param module_name [Symbol] e.g. :patients, :agenda, :financial
   # @param action [Symbol] e.g. :view, :create, :delete
@@ -32,8 +42,8 @@ module BeclinicPermissible
     return true if beclinic_super_admin?
     return true if beclinic_admin_in?(account)
 
-    role = klivy_role_for(account)
-    return role.can?(module_name, action) if role
+    klivy_role = klivy_role_for(account)
+    return klivy_role.can?(module_name, action) if klivy_role
 
     team = beclinic_team_for(account)
     return true if team&.dono?
@@ -43,24 +53,19 @@ module BeclinicPermissible
   end
 
   # Returns the scope ('all' or 'own') for a given module.
-  # KlivyRole takes precedence; admins and dono teams always get 'all'.
+  # Admins and dono teams always get 'all'.
   def beclinic_scope(account, module_name)
     return 'all' if beclinic_super_admin?
     return 'all' if beclinic_admin_in?(account)
 
-    role = klivy_role_for(account)
-    return role.scope_for(module_name) if role
+    klivy_role = klivy_role_for(account)
+    return klivy_role.scope_for(module_name) if klivy_role
 
     team = beclinic_team_for(account)
     return 'all' if team&.dono?
     return 'own' unless team
 
     team.scope_for(module_name)
-  end
-
-  # Native Chatwoot administrator role on the account — full bypass.
-  def beclinic_admin_in?(account)
-    account_users.find_by(account_id: account.id)&.administrator? || false
   end
 
   # Returns the beclinic_role string from the user's team.
@@ -72,8 +77,13 @@ module BeclinicPermissible
   end
 
   # Returns all permissions hash for the user's team.
+  # Klivy Role takes precedence over Team for source of truth.
   def beclinic_permissions_for(account)
     return full_permissions_hash if beclinic_super_admin?
+    return full_permissions_hash if beclinic_admin_in?(account)
+
+    klivy_role = klivy_role_for(account)
+    return klivy_role.permissions || {} if klivy_role
 
     team = beclinic_team_for(account)
     return full_permissions_hash if team&.dono?

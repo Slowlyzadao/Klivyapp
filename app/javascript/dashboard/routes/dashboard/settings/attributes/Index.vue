@@ -17,26 +17,23 @@ import {
   useMapGetter,
 } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
-import { useAdmin } from 'dashboard/composables/useAdmin';
 import { usePermissions } from 'dashboard/composables/usePermissions';
 
 const { t } = useI18n();
+const { isAdmin, can: klivyCan } = usePermissions();
+const canCreateAttribute = computed(
+  () => isAdmin.value || klivyCan('settings', 'custom_attributes_create')
+);
+const canEditAttribute = computed(
+  () => isAdmin.value || klivyCan('settings', 'custom_attributes_edit')
+);
+const canDeleteAttribute = computed(
+  () => isAdmin.value || klivyCan('settings', 'custom_attributes_delete')
+);
 
 const getters = useStoreGetters();
 const store = useStore();
 const { currentAccount } = useAccount();
-const { isAdmin } = useAdmin();
-const { can } = usePermissions();
-
-const canCreateAttribute = computed(
-  () => isAdmin.value || can('settings', 'custom_attributes_create')
-);
-const canEditAttribute = computed(
-  () => isAdmin.value || can('settings', 'custom_attributes_edit')
-);
-const canDeleteAttribute = computed(
-  () => isAdmin.value || can('settings', 'custom_attributes_delete')
-);
 const inboxes = useMapGetter('inboxes/getInboxes');
 
 const [showAddPopup, toggleAddPopup] = useToggle(false);

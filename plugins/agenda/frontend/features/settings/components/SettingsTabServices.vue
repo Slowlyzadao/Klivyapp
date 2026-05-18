@@ -234,6 +234,27 @@
               </div>
             </div>
 
+            <!-- Categoria padrão (preenche AgendaEvent.category_id quando esse serviço é agendado) -->
+            <div class="svc-field">
+              <label class="svc-label">Categoria padrão</label>
+              <select
+                v-model="serviceDraft.default_category_id"
+                class="svc-input"
+              >
+                <option :value="null">— Nenhuma (recepção escolhe na hora) —</option>
+                <option
+                  v-for="cat in agendaCategoriesList"
+                  :key="cat.id"
+                  :value="cat.id"
+                >
+                  {{ cat.name }}
+                </option>
+              </select>
+              <span class="svc-sublabel">
+                Quando esse serviço for agendado (por você ou pela Bea), a categoria já vem preenchida com essa opção. Você pode trocar manualmente em cada consulta.
+              </span>
+            </div>
+
             <!-- Exige sala -->
             <div class="svc-field svc-toggle-field">
               <div class="svc-toggle-info">
@@ -313,12 +334,23 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onUnmounted } from 'vue';
+import { ref, watch, nextTick, onUnmounted, computed } from 'vue';
 import { useStore } from 'vuex';
 import { useSettingsServices } from '../composables/useSettingsServices';
 import ColorPicker from '../../../routes/settings/ColorPicker.vue';
 
 const store = useStore();
+
+// Categorias da agenda — usadas pra escolher a categoria default que o
+// evento herda quando ESSE serviço é agendado (UI + Bea). Já carregadas
+// na inicialização do dashboard (useAgendaInit). Se ainda não tiverem
+// chegado, dispara fetch on-demand.
+const agendaCategoriesList = computed(
+  () => store.getters['agendaCategories/allCategories'] || []
+);
+if (agendaCategoriesList.value.length === 0) {
+  store.dispatch('agendaCategories/fetch');
+}
 
 const {
   serviceModal,

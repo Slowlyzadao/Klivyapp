@@ -180,26 +180,33 @@
         </div>
       </div>
 
-      <!-- Coluna Direita: Campos do Formulário -->
+      <!-- Coluna Direita: Campos do Formulário (preview / em breve) -->
+      <!-- Esta seção é apenas informativa: a edição/reordenação/criação de
+           campos personalizados está prevista para a v1.1. Por isso a
+           lista é renderizada com aparência "lock" (sem hover, sem drag
+           ativo, badge "Em breve") para o admin não tentar interagir. -->
       <div class="online-col">
-        <div class="online-card">
+        <div class="online-card online-card--preview">
           <div class="flex justify-between items-center mb-2">
             <h3 class="online-card-title mb-0">Campos do formulário</h3>
-            <span class="nc-badge nc-badge-type">Padrão Beclinic</span>
+            <span class="nc-badge nc-badge-soon">
+              <i class="i-lucide-lock size-[10px] mr-1" />
+              Em breve · v1.1
+            </span>
           </div>
           <p class="online-card-sub text-sm">
             Estes são os campos que o paciente preencherá ao solicitar o
-            agendamento.
+            agendamento. Hoje são fixos — em breve você poderá personalizar.
           </p>
 
-          <div class="fields-list">
+          <div class="fields-list fields-list--locked" aria-disabled="true">
             <div
               v-for="field in onlineConfig.form_fields"
               :key="field.id"
-              class="field-item"
+              class="field-item field-item--locked"
             >
               <div class="field-drag">
-                <i class="i-lucide-grip-vertical size-[14px] opacity-30" />
+                <i class="i-lucide-grip-vertical size-[14px] opacity-20" />
               </div>
               <div class="field-main">
                 <span class="field-label-text">{{ field.label }}</span>
@@ -207,9 +214,9 @@
               </div>
               <div class="field-actions">
                 <span
-v-if="field.required" class="field-req-badge"
-                  >Obrigatório</span
-                >
+                  v-if="field.required"
+                  class="field-req-badge"
+                >Obrigatório</span>
                 <i
                   v-if="field.system"
                   class="i-lucide-lock size-[12px] opacity-40 ml-2"
@@ -494,6 +501,48 @@ onMounted(() => {
 .field-drag {
   color: rgb(var(--slate-9));
   cursor: grab;
+}
+
+/* Preview / Em-breve state — sinaliza que o card é informativo, sem
+   interatividade real. Mantém o conteúdo legível mas remove qualquer
+   sugestão de "posso clicar/arrastar/editar". */
+.online-card--preview {
+  position: relative;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgb(var(--slate-2)),
+    rgb(var(--slate-2)) 10px,
+    rgba(var(--slate-3), 0.6) 10px,
+    rgba(var(--slate-3), 0.6) 12px
+  );
+  border-style: dashed;
+  border-color: rgb(var(--slate-5));
+}
+.fields-list--locked {
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.78;
+}
+.field-item--locked {
+  background: rgba(var(--slate-2), 0.7);
+  border-style: dashed;
+  border-color: rgb(var(--slate-5));
+}
+.field-item--locked .field-drag {
+  cursor: not-allowed;
+}
+.nc-badge-soon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(var(--amber-9), 0.12);
+  color: rgb(var(--amber-11));
+  border: 1px solid rgba(var(--amber-9), 0.25);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 .field-main {
   flex: 1;

@@ -330,14 +330,38 @@
   color: rgba(185, 28, 28, 0.7) !important;
 }
 
+/* Badge de tipo de mídia (vídeo) — canto sup. direito */
+.exams-thumb-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #f8fafc;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
 /* Overlay de hover (eye icon) */
 .exams-thumb-overlay {
   background: rgba(0, 0, 0, 0.35) !important;
 }
 .exams-thumb-eye {
   background: rgba(255, 255, 255, 0.9) !important;
-  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  border: 0 !important;
   color: #1e293b !important;
+}
+.exams-card:hover .exams-thumb-eye {
+  background: rgba(37, 99, 235, 0.95) !important;
+  color: #fff !important;
 }
 
 /* Footer do card */
@@ -2177,3 +2201,644 @@ button[class*="bg-blue-"]:disabled {
   line-height: 1.5;
   flex: 1;
 }
+
+/* ════════════════════════════════════════════════════════════════
+   FORMULÁRIOS COMPARTILHADOS — `.reg-*`, `.form-*`, `.check-item*`
+   Layout shared entre todas as abas de prontuário (Record.vue +
+   tabs/AnamnesisTab.vue + tabs/RegistrationTab.vue + ...).
+   Cores/temas continuam em scoped (overrides com !important acima).
+   ════════════════════════════════════════════════════════════════ */
+
+/* Header genérico das abas (botões à direita) */
+.reg-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Layout das seções */
+.reg-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Seção: layout (cores já definidas em .reg-section acima) */
+.reg-section {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Seção colapsável */
+.reg-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  transition: background 0.15s;
+}
+
+.reg-section-toggle:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.reg-section-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.reg-section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.reg-icon-blue   { background: rgba(59, 130, 246, 0.12); color: #60a5fa; }
+.reg-icon-green  { background: rgba(34, 197, 94, 0.10);  color: #4ade80; }
+.reg-icon-amber  { background: rgba(251, 191, 36, 0.10); color: #fbbf24; }
+.reg-icon-purple { background: rgba(168, 85, 247, 0.10); color: #c084fc; }
+.reg-icon-cyan   { background: rgba(6, 182, 212, 0.10);  color: #22d3ee; }
+.reg-icon-red    { background: rgba(239, 68, 68, 0.10);  color: #f87171; }
+.reg-icon-orange { background: rgba(249, 115, 22, 0.10); color: #fb923c; }
+
+.reg-section-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.reg-section-subtitle {
+  display: block;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Corpo expandido da seção */
+.reg-section-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Grids de campos */
+.reg-field-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.reg-field-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.reg-field-grid-cep {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 768px) {
+  .reg-field-grid-2,
+  .reg-field-grid-3,
+  .reg-field-grid-cep {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Required asterisk */
+.reg-required {
+  color: #f87171;
+  margin-left: 2px;
+}
+
+/* Form labels e inputs */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label,
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--slate-11));
+  margin-bottom: 0;
+}
+
+.form-input {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.form-input::placeholder {
+  color: #475569;
+}
+
+select.form-input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 40px;
+}
+
+/* Checkbox customizado (.check-item) */
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.check-item input[type='checkbox'] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.check-item-box {
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid rgb(var(--slate-3));
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.check-item:hover .check-item-box {
+  border-color: rgb(var(--slate-4));
+}
+
+.check-item input[type='checkbox']:checked + .check-item-box {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 5l3 3 7-7' stroke='white' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 10px;
+}
+
+.check-item input[type='checkbox']:disabled + .check-item-box {
+  background: rgb(var(--slate-2));
+  border-color: rgb(var(--slate-3));
+  cursor: not-allowed;
+}
+
+.check-item input[type='checkbox']:checked:disabled + .check-item-box {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  opacity: 0.7;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 5l3 3 7-7' stroke='white' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 10px;
+}
+
+.check-item-label {
+  font-size: 14px;
+  color: rgb(var(--slate-11));
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.check-item input[type='checkbox']:disabled ~ .check-item-label {
+  color: rgb(var(--slate-8));
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PROC + DOCS — tabela compartilhada entre tabs/ProceduresTab,
+   tabs/DocumentsTab e tabs/TreatmentPlanTab.
+   ════════════════════════════════════════════════════════════════ */
+.proc-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 20px;
+  padding: 0 6px;
+  background: rgba(100, 116, 139, 0.2);
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 10px;
+}
+.proc-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+.proc-empty-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.proc-empty-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0;
+}
+.proc-empty-hint {
+  font-size: 12px;
+  color: #475569;
+  margin: 6px 0 0;
+}
+.proc-table-wrap {
+  overflow-x: auto;
+  border-radius: 0 0 14px 14px;
+}
+.proc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.proc-table-cell {
+  padding: 14px 16px;
+  vertical-align: top;
+}
+.proc-product-item + .proc-product-item {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+.proc-cell-resultado {
+  max-width: 260px;
+}
+.proc-result-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-bottom: 5px;
+}
+.proc-result-row:last-child {
+  margin-bottom: 0;
+}
+.proc-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.proc-action-btn:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   DOCS — exclusivo de tabs/DocumentsTab (mas mantido global pra
+   permitir uso em outras abas se necessário).
+   ════════════════════════════════════════════════════════════════ */
+.docs-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.docs-modal {
+  background: #111318;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+}
+.docs-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+.docs-modal-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: rgba(168, 85, 247, 0.12);
+  color: #c084fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.docs-modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.docs-modal-close:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #94a3b8;
+}
+.docs-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+.docs-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+
+/* Aba "Geral" — banner crítico, nota fixada, ações, jornada de consultas, meta-info do paciente.
+   Restaurado depois do refactor f6813bc5 que extraiu RegistrationTab/FinancialTab e dropou
+   o <style scoped> original do Record.vue, deixando todas as classes .geral-* sem definição. */
+.geral-alert-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(239, 68, 68, 0.07);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.geral-alert-icon {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.13);
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.geral-alert-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.geral-alert-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f87171;
+}
+
+.geral-alert-text {
+  font-size: 13px;
+  color: #fca5a5;
+}
+
+.geral-pinned-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(251, 191, 36, 0.05);
+  border: 1px solid rgba(251, 191, 36, 0.15);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+.geral-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background 0.15s,
+    border-color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.geral-action-btn:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.geral-header-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--slate-12));
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: none !important;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.geral-header-btn:hover {
+  background: rgb(var(--slate-3));
+  border-color: rgb(var(--slate-5));
+}
+
+.geral-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.geral-plan-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e2e8f0;
+  line-height: 1.3;
+}
+
+.geral-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 16px 0;
+}
+
+.geral-prof-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.geral-prof-avatar {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.geral-meta-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.geral-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.geral-meta-label {
+  font-size: 12px;
+  color: #475569;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.geral-meta-value {
+  font-size: 14px;
+}
+
+.geral-visit-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.geral-visit-icon {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.geral-visit-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.geral-visit-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.geral-visit-date {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.geral-visit-date--highlight {
+  color: #4ade80;
+}
+
+.geral-visit-time {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.geral-visit-empty {
+  font-size: 13px;
+  color: #475569;
+  font-style: italic;
+}
+
+

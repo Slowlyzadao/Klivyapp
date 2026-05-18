@@ -1141,3 +1141,57 @@
   .hp-form-row { grid-template-columns: 1fr; }
   .hp-form-card { padding: 22px 18px; }
 }
+
+/* ── Empty state (drawer / categoria sem artigos) ─────────────── */
+.hp-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 36px 24px 28px;
+  border: 1px dashed rgba(var(--slate-7), 1);
+  border-radius: 12px;
+  background: rgba(var(--slate-2), 0.6);
+  margin-top: 12px;
+}
+.hp-empty-state-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(var(--color-woot), 0.08);
+  color: rgb(var(--color-woot));
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+}
+.hp-empty-state-title {
+  font-size: 15.5px;
+  font-weight: 600;
+  color: rgb(var(--slate-12));
+  margin: 0 0 6px;
+}
+.hp-empty-state-text {
+  font-size: 13.5px;
+  color: rgb(var(--slate-10));
+  max-width: 320px;
+  line-height: 1.55;
+  margin: 0 0 18px;
+}
+.hp-empty-state-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(var(--color-woot), 0.4);
+  background: rgb(var(--color-woot));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.hp-empty-state-btn:hover {
+  background: rgb(var(--color-woot-hover, var(--color-woot)));
+  filter: brightness(0.95);
+}

@@ -20,7 +20,6 @@ module Billing
       # Whitelist - Never block the following routes
       if request.path.start_with?('/api/v1/billing/onboarding') || 
          request.path.start_with?('/api/v1/billing/webhooks') ||
-         request.path.start_with?('/api/v1/billing/subscription') ||
          request.path.start_with?('/auth')
         return
       end

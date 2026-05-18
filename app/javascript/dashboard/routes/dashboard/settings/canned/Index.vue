@@ -9,6 +9,7 @@ import { useI18n } from 'vue-i18n';
 import { useStoreGetters, useStore } from 'dashboard/composables/store';
 import { picoSearch } from '@scmmishra/pico-search';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
@@ -17,8 +18,6 @@ import {
   BaseTableRow,
   BaseTableCell,
 } from 'dashboard/components-next/table';
-import { useAdmin } from 'dashboard/composables/useAdmin';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 
 defineOptions({
   name: 'CannedResponseSettings',
@@ -27,17 +26,15 @@ defineOptions({
 const getters = useStoreGetters();
 const store = useStore();
 const { t } = useI18n();
-const { isAdmin } = useAdmin();
-const { can } = usePermissions();
-
+const { isAdmin, can: klivyCan } = usePermissions();
 const canCreateCanned = computed(
-  () => isAdmin.value || can('settings', 'canned_create')
+  () => isAdmin.value || klivyCan('settings', 'canned_create')
 );
 const canEditCanned = computed(
-  () => isAdmin.value || can('settings', 'canned_edit')
+  () => isAdmin.value || klivyCan('settings', 'canned_edit')
 );
 const canDeleteCanned = computed(
-  () => isAdmin.value || can('settings', 'canned_delete')
+  () => isAdmin.value || klivyCan('settings', 'canned_delete')
 );
 
 const { getPlainText } = useMessageFormatter();

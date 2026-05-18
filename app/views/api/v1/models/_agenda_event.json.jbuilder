@@ -8,9 +8,18 @@ json.event_type resource.event_type
 json.custom_attributes resource.custom_attributes
 json.user_id resource.user_id
 json.contact_id resource.contact_id
+json.category_id resource.category_id
 json.account_id resource.account_id
 json.created_at resource.created_at
 json.updated_at resource.updated_at
+
+if resource.category.present?
+  json.category do
+    json.id resource.category.id
+    json.name resource.category.name
+    json.color resource.category.color
+  end
+end
 
 if resource.contact.present?
   json.contact do

@@ -11,8 +11,8 @@ import '../financial.css';
 
 const { t } = useI18n();
 const { exportReportsCsv } = useExportCsv();
-const { can } = usePermissions();
-const canExportData = computed(() => can('financial', 'export_data'));
+const { can: klivyCan } = usePermissions();
+const canExportData = computed(() => klivyCan('financial', 'export_data'));
 
 /* ── Tabs ─────────────────────────────────────────────────────── */
 const TABS = [

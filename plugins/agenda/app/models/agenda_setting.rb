@@ -5,6 +5,7 @@ class AgendaSetting < ApplicationRecord
 
   validates :account_id, presence: true, uniqueness: true
   validates :slot_interval_minutes, inclusion: { in: [15, 30, 60] }
+  validates :visible_hours_buffer, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 6 }
 
   # Default weekday config matching what the frontend used to hardcode
   DEFAULT_WEEK_DAYS = [

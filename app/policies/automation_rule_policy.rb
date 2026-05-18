@@ -1,33 +1,25 @@
 class AutomationRulePolicy < ApplicationPolicy
   def index?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :automation_view)
-  end
-
-  def show?
-    index?
+    @account_user.administrator?
   end
 
   def create?
-    return true if @account_user.administrator?
+    @account_user.administrator?
+  end
 
-    beclinic_can?(:settings, :automation_create)
+  def show?
+    @account_user.administrator?
   end
 
   def update?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :automation_edit)
+    @account_user.administrator?
   end
 
   def clone?
-    create?
+    @account_user.administrator?
   end
 
   def destroy?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :automation_delete)
+    @account_user.administrator?
   end
 end

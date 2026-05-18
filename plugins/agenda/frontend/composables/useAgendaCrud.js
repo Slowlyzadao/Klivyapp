@@ -10,17 +10,20 @@ export function useAgendaCrud({ agenda, store, router, route, newEvent, wlSchedu
     const date = dayObj
       ? `${dayObj.year}-${padZ(dayObj.month + 1)}-${padZ(dayObj.day)}`
       : `${now.getFullYear()}-${padZ(now.getMonth() + 1)}-${padZ(now.getDate())}`;
-    const timeStart = hourStr || '09:00';
-    const [h, m] = timeStart.split(':').map(Number);
-    const endMinutes = h * 60 + m + 60;
-    const timeEnd = `${padZ(Math.floor(endMinutes / 60) % 24)}:${padZ(endMinutes % 60)}`;
 
-    newEvent.value = createDefaultNewEvent({
-      date,
-      time_start: timeStart,
-      time_end: timeEnd,
-      user_id: agent?.id || currentUserID(),
-    });
+    const opts = { date, user_id: agent?.id || currentUserID() };
+    // Only seed start/end when the user actually clicked a specific cell.
+    // Opening from "+ Novo Evento" / FAB / month-view leaves the slot grid
+    // empty so the user picks a time deliberately (per spec: "Ao abrir o
+    // modal → nenhum slot selecionado").
+    if (hourStr) {
+      const [h, m] = hourStr.split(':').map(Number);
+      const endMinutes = h * 60 + m + 60;
+      opts.time_start = hourStr;
+      opts.time_end = `${padZ(Math.floor(endMinutes / 60) % 24)}:${padZ(endMinutes % 60)}`;
+    }
+
+    newEvent.value = createDefaultNewEvent(opts);
     agenda.state.isEditing = false;
     agenda.state.editingEventId = null;
     agenda.state.showNewEventModal = true;
@@ -40,6 +43,7 @@ export function useAgendaCrud({ agenda, store, router, route, newEvent, wlSchedu
       event_type: event.event_type || 'consultation',
       priority: event.custom_attributes?.priority || 'medium',
       treatment: event.custom_attributes?.treatment || '',
+      category_id: event.category_id || null,
       date: `${startDate.getFullYear()}-${padZ(startDate.getMonth() + 1)}-${padZ(startDate.getDate())}`,
       time_start: `${padZ(startDate.getHours())}:${padZ(startDate.getMinutes())}`,
       time_end: `${padZ(endDate.getHours())}:${padZ(endDate.getMinutes())}`,
@@ -69,13 +73,35 @@ export function useAgendaCrud({ agenda, store, router, route, newEvent, wlSchedu
 
   const saveEvent = async () => {
     if (!newEvent.value.title) return;
+    if (!newEvent.value.time_start || !newEvent.value.time_end) {
+      useAlert('Selecione um horário antes de confirmar.');
+      return;
+    }
 
-    // Validate required custom attributes
+    // Validate custom attributes — required + format checks (CPF, phone)
+    // Format checks run only when the field has content; the required check
+    // catches the empty case independently.
     for (const attr of agenda.state.customAttributesConfig) {
-      if (attr.required) {
-        const val = newEvent.value.custom_values[`attr_${attr.id}`];
-        if (!val || (attr.type === 'cpf' && !String(val).replace(/\D/g, ''))) {
-          useAlert(`O campo '${attr.name}' é obrigatório.`);
+      const rawVal = newEvent.value.custom_values?.[`attr_${attr.id}`];
+      const hasValue = rawVal !== undefined && rawVal !== null && String(rawVal).trim() !== '';
+
+      if (attr.required && !hasValue) {
+        useAlert(`O campo '${attr.name}' é obrigatório.`);
+        return;
+      }
+      if (!hasValue) continue;
+
+      if (attr.type === 'cpf' && attr.validate_cpf !== false) {
+        const digits = String(rawVal).replace(/\D/g, '');
+        if (digits.length !== 11) {
+          useAlert(`O campo '${attr.name}' contém um CPF inválido.`);
+          return;
+        }
+      }
+      if (attr.type === 'phone') {
+        const digits = String(rawVal).replace(/\D/g, '');
+        if (digits.length < 10 || digits.length > 11) {
+          useAlert(`O campo '${attr.name}' contém um telefone inválido.`);
           return;
         }
       }
@@ -112,8 +138,16 @@ export function useAgendaCrud({ agenda, store, router, route, newEvent, wlSchedu
         ends_at: toLocalDatetimeString(endsAtDate),
         user_id: newEvent.value.user_id,
         contact_id: newEvent.value.contact_id,
+        category_id: newEvent.value.category_id || null,
         custom_attributes: {
           priority: newEvent.value.priority,
+          // Nome legado: o usuário vê "Serviço" na UI desde 1.5.1.30, mas a
+          // chave JSONB continua `treatment` por compat com milhares de
+          // eventos antigos em produção. Não renomear sem migração
+          // coordenada (custom_attributes.treatment → .service nos eventos
+          // existentes + janela de duplo-write). Variáveis frontend
+          // (`newEvent.treatment`, `getTreatmentColor`, `hiddenTreatments`,
+          // etc.) seguem o nome do JSONB pra evitar tradutor intermediário.
           treatment: newEvent.value.treatment,
           patient_id: newEvent.value.patient_id || null,
           patient_name: newEvent.value.selectedPatientName || null,

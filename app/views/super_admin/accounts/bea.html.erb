@@ -1,0 +1,217 @@
+<% content_for(:title) { "Bea — #{@account.name}" } %>
+
+<header class="main-content__header">
+  <h1 class="main-content__page-title">Bea — Conta #<%= @account.id %> <%= @account.name %></h1>
+  <div>
+    <%= link_to 'Documentos', super_admin_account_ai_agent_documents_path(@account), class: 'button button--secondary' %>
+    <%= link_to 'Voltar para conta', super_admin_account_path(@account), class: 'button button--secondary' %>
+  </div>
+</header>
+
+<section class="main-content__body">
+  <div style="max-width: 760px;">
+
+    <%# ── Card: uso do mês ───────────────────────────────────────────── %>
+    <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;">
+      <h3 style="font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 12px;">Uso do mês corrente</h3>
+      <div style="display: flex; gap: 32px; font-size: 13px; color: #374151;">
+        <div>
+          <div style="color: #6b7280; font-size: 12px;">Tokens consumidos</div>
+          <div style="font-size: 18px; font-weight: 600; margin-top: 2px;"><%= number_with_delimiter(@month_tokens) %></div>
+        </div>
+        <div>
+          <div style="color: #6b7280; font-size: 12px;">Custo (centavos)</div>
+          <div style="font-size: 18px; font-weight: 600; margin-top: 2px;"><%= number_with_delimiter(@month_cost_cents) %></div>
+        </div>
+        <div>
+          <div style="color: #6b7280; font-size: 12px;">Teto global</div>
+          <div style="font-size: 18px; font-weight: 600; margin-top: 2px;">
+            <%= @global.unlimited_monthly_cost? ? '∞' : number_with_delimiter(@global.max_monthly_cost_per_account_cents) %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p style="color: #6b7280; font-size: 13.5px; margin-bottom: 20px; line-height: 1.5;">
+      Configurações da Bea exclusivas desta conta. Valores em branco herdam do global.
+      Limites por conta nunca podem exceder os tetos globais (clamp aplicado no save).
+    </p>
+
+    <%= form_with url: bea_super_admin_account_path(@account), method: :patch, local: true do |f| %>
+
+      <%# ── Status ──────────────────────────────────────────────────── %>
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="bea_enabled">Bea ativa nesta conta</label>
+        </div>
+        <div class="field-unit__field">
+          <%# hidden + checkbox para enviar 0 quando desmarcado %>
+          <input type="hidden" name="bea[enabled]" value="0">
+          <input type="checkbox" id="bea_enabled" name="bea[enabled]" value="1" <%= 'checked' if @setting.enabled %>>
+          <label for="bea_enabled" style="margin-left: 8px; color: #374151; font-size: 14px;">Habilitada</label>
+        </div>
+      </div>
+
+      <%# ── Modelo override ─────────────────────────────────────────── %>
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="bea_chat_model">Modelo de Chat (override)</label>
+        </div>
+        <div class="field-unit__field">
+          <input type="text" id="bea_chat_model" name="bea[chat_model]"
+                 value="<%= @setting.chat_model %>"
+                 placeholder="<%= @global.chat_model.presence || 'herda do global' %>"
+                 autocomplete="off"
+                 style="font-family: ui-monospace, Menlo, monospace; font-size: 13.5px;">
+          <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px;">
+            Em branco usa o modelo global. Útil pra testar um modelo novo só nesta conta antes de promover global.
+          </p>
+        </div>
+      </div>
+
+      <%# ── Budget ──────────────────────────────────────────────────── %>
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="bea_monthly_token_budget">Budget mensal (tokens)</label>
+        </div>
+        <div class="field-unit__field">
+          <input type="number" id="bea_monthly_token_budget" name="bea[monthly_token_budget]"
+                 value="<%= @setting.monthly_token_budget %>"
+                 placeholder="ilimitado se em branco"
+                 min="1"
+                 style="width: 220px;">
+        </div>
+      </div>
+
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="bea_max_tokens_per_conversation">Tokens máx por conversa</label>
+        </div>
+        <div class="field-unit__field">
+          <input type="number" id="bea_max_tokens_per_conversation" name="bea[max_tokens_per_conversation]"
+                 value="<%= @setting.max_tokens_per_conversation %>"
+                 placeholder="<%= @global.max_tokens_per_conversation %> (global)"
+                 min="1" max="<%= @global.max_tokens_per_conversation %>"
+                 style="width: 220px;">
+          <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px;">
+            Será reduzido automaticamente para o teto global (<%= @global.max_tokens_per_conversation %>) se for maior.
+          </p>
+        </div>
+      </div>
+
+      <%# ── Persona ─────────────────────────────────────────────────── %>
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="bea_persona_id">Persona</label>
+        </div>
+        <div class="field-unit__field">
+          <select name="bea[persona_id]" id="bea_persona_id">
+            <option value="">— herdar default global —</option>
+            <% @personas.each do |p| %>
+              <option value="<%= p.id %>" <%= 'selected' if @setting.persona_id == p.id %>>
+                <%= p.name %> (<%= p.vertical %>)
+              </option>
+            <% end %>
+          </select>
+          <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px;">
+            Templates de persona são gerenciados em <a href="<%= super_admin_bea_url %>" style="color: #1f93ff;">Bea Global → Personas</a>.
+          </p>
+        </div>
+      </div>
+
+      <%# ── System prompt prefix ───────────────────────────────────── %>
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="bea_system_prompt_prefix">Prefixo de System Prompt</label>
+        </div>
+        <div class="field-unit__field">
+          <textarea name="bea[system_prompt_prefix]" id="bea_system_prompt_prefix" rows="4"
+                    placeholder="Instruções adicionais que serão prepended ao prompt da persona."
+                    style="width: 100%; font-family: ui-monospace, Menlo, monospace; font-size: 13px;"><%= @setting.system_prompt_prefix %></textarea>
+        </div>
+      </div>
+
+      <%# ── Responsável técnico (CFM 2.454/2026) ────────────────────── %>
+      <fieldset style="margin-top: 24px; padding: 16px 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <legend style="font-size: 13px; font-weight: 600; color: #111827; padding: 0 8px;">Responsável técnico (LGPD / CFM 2.454/2026)</legend>
+        <p style="color: #6b7280; font-size: 12.5px; margin: 4px 0 14px; line-height: 1.5;">
+          Identifica o profissional de saúde responsável por esta clínica. A Bea cita esses dados quando o paciente perguntar quem é o(a) responsável. Obrigatório em produção pra atender exigência regulatória.
+        </p>
+
+        <div class="field-unit">
+          <div class="field-unit__label">
+            <label for="bea_responsible_physician_id">Profissional</label>
+          </div>
+          <div class="field-unit__field">
+            <select name="bea[responsible_physician_id]" id="bea_responsible_physician_id">
+              <option value="">— não informado —</option>
+              <% @account.users.order(:name).each do |u| %>
+                <option value="<%= u.id %>" <%= 'selected' if @setting.responsible_physician_id == u.id %>>
+                  <%= u.name %> (<%= u.email %>)
+                </option>
+              <% end %>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-unit">
+          <div class="field-unit__label">
+            <label for="bea_responsible_physician_council">Conselho</label>
+          </div>
+          <div class="field-unit__field">
+            <input type="text" id="bea_responsible_physician_council" name="bea[responsible_physician_council]"
+                   value="<%= @setting.responsible_physician_council %>"
+                   placeholder="CRM, CRO, CRP, COREN..."
+                   maxlength="8"
+                   style="width: 160px; text-transform: uppercase;">
+            <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px;">Sigla do conselho profissional (maiúsculas).</p>
+          </div>
+        </div>
+
+        <div class="field-unit">
+          <div class="field-unit__label">
+            <label for="bea_responsible_physician_crm">Número do conselho</label>
+          </div>
+          <div class="field-unit__field">
+            <input type="text" id="bea_responsible_physician_crm" name="bea[responsible_physician_crm]"
+                   value="<%= @setting.responsible_physician_crm %>"
+                   placeholder="123456/SP"
+                   style="width: 220px;">
+            <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px;">Formato: número/UF (ex: 123456/SP).</p>
+          </div>
+        </div>
+      </fieldset>
+
+      <%# ── Tools whitelist ─────────────────────────────────────────── %>
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label>Ferramentas habilitadas</label>
+        </div>
+        <div class="field-unit__field">
+          <% if @available_tools.empty? %>
+            <p style="color: #6b7280; font-size: 13px;">Nenhuma tool registrada ainda. Cadastre em <a href="<%= super_admin_bea_url %>" style="color: #1f93ff;">Bea Global → Tools</a>.</p>
+          <% else %>
+            <input type="hidden" name="bea[enabled_tools][]" value="">
+            <% @available_tools.each do |tool| %>
+              <%
+                checked = @setting.enabled_tools.blank? || @setting.enabled_tools.include?(tool.key)
+              %>
+              <label style="display: flex; align-items: center; gap: 8px; padding: 6px 0;">
+                <input type="checkbox" name="bea[enabled_tools][]" value="<%= tool.key %>" <%= 'checked' if checked %>>
+                <span style="font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: #111827;"><%= tool.key %></span>
+                <span style="color: #6b7280; font-size: 12.5px;">— <%= tool.name %></span>
+              </label>
+            <% end %>
+            <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px;">
+              Sem nenhuma marcada = todas as tools globais habilitadas (default).
+            </p>
+          <% end %>
+        </div>
+      </div>
+
+      <div style="margin-top: 32px;">
+        <%= f.submit 'Salvar', class: 'button' %>
+      </div>
+    <% end %>
+  </div>
+</section>

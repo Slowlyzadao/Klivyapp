@@ -1,0 +1,79 @@
+<% content_for(:title) { 'Widget de Suporte' } %>
+
+<header class="main-content__header">
+  <h1 class="main-content__page-title">Widget de Suporte</h1>
+</header>
+
+<section class="main-content__body">
+  <div style="max-width: 720px;">
+    <p style="color: #6b7280; font-size: 14px; margin-bottom: 20px; line-height: 1.55;">
+      Configure o bubble de suporte que aparece no canto inferior direito de
+      todas as páginas do dashboard. Mudanças tomam efeito no próximo refresh
+      da página, sem precisar reiniciar o servidor.
+    </p>
+
+    <%= form_with url: super_admin_klivy_widget_url, method: :patch, local: true do |f| %>
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="widget_klivy_support_widget_enabled">Ativar widget</label>
+        </div>
+        <div class="field-unit__field">
+          <%
+            enabled_value = @widget_settings['KLIVY_SUPPORT_WIDGET_ENABLED'].to_s == 'true'
+          %>
+          <select name="widget[klivy_support_widget_enabled]" id="widget_klivy_support_widget_enabled">
+            <option value="true"  <%= 'selected' if enabled_value %>>Ativado</option>
+            <option value="false" <%= 'selected' unless enabled_value %>>Desativado</option>
+          </select>
+          <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px;">
+            Quando desativado, o bubble some de todas as páginas.
+          </p>
+        </div>
+      </div>
+
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="widget_klivy_support_widget_token">Website Token</label>
+        </div>
+        <div class="field-unit__field">
+          <input
+            type="text"
+            id="widget_klivy_support_widget_token"
+            name="widget[klivy_support_widget_token]"
+            value="<%= @widget_settings['KLIVY_SUPPORT_WIDGET_TOKEN'] %>"
+            placeholder="Ex.: RroQdfAJ1m2m93Fx43sUMSNZ"
+            autocomplete="off"
+            style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13.5px;"
+          >
+          <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px;">
+            Token do canal Web Widget no Chatwoot/WAHA. Trocar aqui aponta o widget pra outra inbox.
+          </p>
+        </div>
+      </div>
+
+      <div class="field-unit">
+        <div class="field-unit__label">
+          <label for="widget_klivy_support_widget_url">Base URL</label>
+        </div>
+        <div class="field-unit__field">
+          <input
+            type="url"
+            id="widget_klivy_support_widget_url"
+            name="widget[klivy_support_widget_url]"
+            value="<%= @widget_settings['KLIVY_SUPPORT_WIDGET_URL'] %>"
+            placeholder="Ex.: https://waha-chatwoot.efqhwo.easypanel.host"
+            autocomplete="off"
+            style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13.5px;"
+          >
+          <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px;">
+            URL da instância que serve o sdk.js (sem barra no final).
+          </p>
+        </div>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <%= f.submit 'Salvar', class: 'button' %>
+      </div>
+    <% end %>
+  </div>
+</section>

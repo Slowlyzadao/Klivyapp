@@ -6,13 +6,6 @@ const props = defineProps({
   clinicalNotes: { type: Array, default: () => [] },
   isSavingNote: { type: Boolean, default: false },
   formatDate: { type: Function, required: true },
-  canCreate: { type: Boolean, default: false },
-  canSign: { type: Boolean, default: false },
-  canDelete: { type: Boolean, default: false },
-  noCreateMsg: {
-    type: String,
-    default: 'Você não tem permissão para criar evoluções',
-  },
 });
 
 const emit = defineEmits([
@@ -40,23 +33,10 @@ const canSubmit = computed(
 
 <template>
   <div class="evo-root">
-    <!-- Banner de bloqueio quando o usuário não pode criar evoluções -->
-    <div
-      v-if="!canCreate"
-      class="mb-4 px-3 py-2 rounded-md border border-dashed border-n-slate-5 bg-n-slate-2 text-xs text-n-slate-11 flex items-center gap-2"
-    >
-      <i class="i-lucide-lock w-3.5 h-3.5" />
-      {{ noCreateMsg }}
-    </div>
-
     <!-- ══════════════════════════════════════
          SEÇÃO 1 — FORMULÁRIO DE ATENDIMENTO
     ══════════════════════════════════════ -->
-    <div
-      class="evo-form-card"
-      :inert="!canCreate"
-      :class="{ 'opacity-60': !canCreate }"
-    >
+    <div class="evo-form-card">
       <!-- Cabeçalho do card -->
       <div class="evo-form-card-head">
         <div class="evo-form-card-head-info">
@@ -206,7 +186,6 @@ const canSubmit = computed(
 
           <div class="evo-form-actions">
             <button
-              v-if="canCreate"
               class="evo-btn evo-btn--ghost"
               :disabled="isSavingNote"
               @click="emit('save', false)"
@@ -215,7 +194,7 @@ const canSubmit = computed(
               Salvar Rascunho
             </button>
             <button
-              v-if="canSign"
+              v-can="['patients', 'sign_clinical_notes']"
               class="evo-btn evo-btn--primary"
               :disabled="!canSubmit"
               @click="emit('save', true)"
@@ -329,12 +308,8 @@ const canSubmit = computed(
                   }}
                 </span>
               </div>
-              <div
-                v-if="!note.signed_at && (canCreate || canDelete)"
-                class="evo-note-card-actions"
-              >
+              <div v-if="!note.signed_at" class="evo-note-card-actions">
                 <button
-                  v-if="canCreate"
                   class="evo-note-action-btn"
                   title="Editar evolução"
                   @click="emit('edit-note', note)"
@@ -342,7 +317,6 @@ const canSubmit = computed(
                   <i class="i-lucide-pencil" />
                 </button>
                 <button
-                  v-if="canDelete"
                   class="evo-note-action-btn evo-note-action-btn--danger"
                   title="Excluir evolução"
                   @click="emit('request-delete', note.id)"

@@ -509,8 +509,8 @@
       },
       "EDIT": {
         "TITLE": "Atualizar o assistente",
-        "SUCCESS_MESSAGE": "O assistente foi criado com sucesso",
-        "ERROR_MESSAGE": "Ocorreu um erro ao criar o assistente, por favor tente novamente.",
+        "SUCCESS_MESSAGE": "Configurações da Beatriz salvas",
+        "ERROR_MESSAGE": "Não foi possível salvar as configurações. Tente novamente.",
         "NOT_FOUND": "Não foi possível encontrar o assistente. Tente novamente."
       },
       "SETTINGS": {

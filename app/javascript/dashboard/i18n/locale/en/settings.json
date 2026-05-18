@@ -313,6 +313,10 @@
     "AGENDA": "Schedule",
     "PATIENTS": "Patients",
     "FINANCIAL": "Financial",
+    "AJUDA": "Help",
+    "AJUDA_ARTICLES": "Articles",
+    "AJUDA_REPORT_BUG": "Report a bug",
+    "AJUDA_FEATURE_REQUEST": "Request improvement",
     "FINANCIAL_DASHBOARD": "Dashboard",
     "FINANCIAL_CASH_FLOW": "Cash Flow",
     "FINANCIAL_RECEIVABLES": "Receivables",
@@ -322,7 +326,8 @@
     "FINANCIAL_CASH_REGISTER": "Cash Register",
     "FINANCIAL_SETTINGS": "Settings",
     "CALENDAR": "Calendar",
-    "CAPTAIN": "Captain",
+    "AGENDA_CATEGORIES": "Categories",
+    "CAPTAIN": "Bea",
     "CAPTAIN_ASSISTANTS": "Assistants",
     "CAPTAIN_DOCUMENTS": "Documents",
     "CAPTAIN_RESPONSES": "FAQs",
@@ -393,16 +398,15 @@
     },
     "DOCS": "Read docs",
     "SECURITY": "Security",
-    "CAPTAIN_AI": "Captain",
-    "CONVERSATION_WORKFLOW": "Conversation Workflow",
-    "AJUDA": "Help"
+    "CAPTAIN_AI": "Bea",
+    "CONVERSATION_WORKFLOW": "Conversation Workflow"
   },
   "CAPTAIN_SETTINGS": {
-    "TITLE": "Captain Settings",
-    "DESCRIPTION": "Configure your AI models and features for Captain. Captain follows a credit based billing, you will be charged credits for every action Captain takes based on the model selected.",
-    "LOADING": "Loading Captain configuration...",
-    "LINK_TEXT": "Learn more about Captain Credits",
-    "NOT_ENABLED": "Captain is not enabled for your account. Please upgrade your plan to access Captain features.",
+    "TITLE": "Bea Settings",
+    "DESCRIPTION": "Configure your AI models and features for Bea. Bea follows a credit-based billing — you will be charged credits for every action Bea takes based on the model selected.",
+    "LOADING": "Loading Bea configuration...",
+    "LINK_TEXT": "Learn more about Bea Credits",
+    "NOT_ENABLED": "Bea is not enabled for your account. Please upgrade your plan to access Bea features.",
     "MODEL_CONFIG": {
       "TITLE": "Model Configuration",
       "DESCRIPTION": "Select AI models for different features.",
@@ -441,8 +445,8 @@
       }
     },
     "API": {
-      "SUCCESS": "Captain settings updated successfully.",
-      "ERROR": "Failed to update Captain settings. Please try again."
+      "SUCCESS": "Bea settings updated successfully.",
+      "ERROR": "Failed to update Bea settings. Please try again."
     }
   },
   "BILLING_SETTINGS": {
@@ -461,12 +465,12 @@
       "BUTTON_TXT": "Go to the billing portal"
     },
     "CAPTAIN": {
-      "TITLE": "Captain",
-      "DESCRIPTION": "Manage usage and credits for Captain AI.",
+      "TITLE": "Bea",
+      "DESCRIPTION": "Manage usage and credits for Bea AI.",
       "BUTTON_TXT": "Buy more credits",
       "DOCUMENTS": "Documents",
       "RESPONSES": "Credits",
-      "UPGRADE": "Captain is not available on the free plan, upgrade now to get access to assistants, copilot and more.",
+      "UPGRADE": "Bea is not available on the free plan — upgrade now to access assistants, copilot and more.",
       "REFRESH_CREDITS": "Refresh"
     },
     "CHAT_WITH_US": {
@@ -478,7 +482,7 @@
     "TOPUP": {
       "BUY_CREDITS": "Buy more credits",
       "MODAL_TITLE": "Buy AI Credits",
-      "MODAL_DESCRIPTION": "Purchase additional credits for Captain AI.",
+      "MODAL_DESCRIPTION": "Purchase additional credits for Bea AI.",
       "CREDITS": "CREDITS",
       "ONE_TIME": "one-time",
       "POPULAR": "Most Popular",
@@ -971,7 +975,7 @@
       "AGENTS": "AGENTS",
       "PRIORITY": "PRIORITY",
       "EVENT_TYPE": "EVENT TYPE",
-      "TREATMENTS": "TREATMENTS"
+      "TREATMENTS": "SERVICES"
     },
     "MODAL": {
       "TITLE": "New Event",
@@ -984,12 +988,12 @@
       "FIELD_STATUS": "Status",
       "FIELD_TYPE": "Type",
       "FIELD_PRIORITY": "Priority",
-      "FIELD_TREATMENT": "Treatment",
+      "FIELD_TREATMENT": "Service",
       "FIELD_AGENT": "Responsible Agent",
       "FIELD_CONTACT": "Contact (Patient)",
       "PLACEHOLDER_TITLE": "Ex: Appointment with Dr. Silva",
       "PLACEHOLDER_DESC": "Event description...",
-      "TREATMENT_PLACEHOLDER": "Select treatment",
+      "TREATMENT_PLACEHOLDER": "Select service",
       "AGENT_PLACEHOLDER": "Select agent",
       "CONTACT_PLACEHOLDER": "Select contact",
       "CONTACT_SEARCH_PLACEHOLDER": "Search contact by name or phone...",

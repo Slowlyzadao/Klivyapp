@@ -29,6 +29,14 @@ class ExamMediasAPI extends ApiClient {
     });
   }
 
+  // PATCH metadados (mover entre pastas, renomear, (un)lock).
+  // Não troca o blob — para isso, faça delete + new upload.
+  update(patientId, mediaId, payload) {
+    return axios.patch(`${this.buildUrl(patientId)}/${mediaId}`, {
+      exam_media: payload,
+    });
+  }
+
   delete(patientId, mediaId) {
     return axios.delete(`${this.buildUrl(patientId)}/${mediaId}`);
   }

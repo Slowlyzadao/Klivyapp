@@ -1,23 +1,31 @@
 class RecurringExpensePolicy < ApplicationPolicy
-  # Despesas recorrentes aparecem em "A Pagar" e em Configurações.
   def index?
-    beclinic_can?(:financial, :view_payables) ||
+    administrator? ||
+      beclinic_can?(:financial, :view_payables) ||
       beclinic_can?(:financial, :manage_settings)
   end
 
   def show?
-    index?
+    administrator? ||
+      beclinic_can?(:financial, :view_payables) ||
+      beclinic_can?(:financial, :manage_settings)
   end
 
   def create?
-    beclinic_can?(:financial, :manage_settings)
+    administrator? || beclinic_can?(:financial, :manage_settings)
   end
 
   def update?
-    create?
+    administrator? || beclinic_can?(:financial, :manage_settings)
   end
 
   def destroy?
-    create?
+    administrator? || beclinic_can?(:financial, :manage_settings)
+  end
+
+  private
+
+  def administrator?
+    @account_user&.administrator?
   end
 end

@@ -1,5 +1,4 @@
 <script>
-import { computed } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required } from '@vuelidate/validators';
 import { mapGetters } from 'vuex';
@@ -7,7 +6,6 @@ import { useAlert } from 'dashboard/composables';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useConfig } from 'dashboard/composables/useConfig';
 import { useAccount } from 'dashboard/composables/useAccount';
-import { useAdmin } from 'dashboard/composables/useAdmin';
 import { usePermissions } from 'dashboard/composables/usePermissions';
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import WithLabel from 'v3/components/Form/WithLabel.vue';
@@ -36,13 +34,8 @@ export default {
     const { updateUISettings, uiSettings } = useUISettings();
     const { enabledLanguages } = useConfig();
     const { accountId } = useAccount();
+    const { isAdmin, can: klivyCan } = usePermissions();
     const v$ = useVuelidate();
-    // Klivy: gate "Salvar conta" por settings.account_manage; admin/dono passa.
-    const { isAdmin } = useAdmin();
-    const { can } = usePermissions();
-    const canManageAccount = computed(
-      () => isAdmin.value || can('settings', 'account_manage')
-    );
 
     return {
       updateUISettings,
@@ -50,7 +43,8 @@ export default {
       v$,
       enabledLanguages,
       accountId,
-      canManageAccount,
+      isAdmin,
+      klivyCan,
     };
   },
   data() {
@@ -72,6 +66,9 @@ export default {
     },
   },
   computed: {
+    canManageAccount() {
+      return this.isAdmin || this.klivyCan('settings', 'account_manage');
+    },
     ...mapGetters({
       getAccount: 'accounts/getAccount',
       uiFlags: 'accounts/getUIFlags',
@@ -238,8 +235,13 @@ export default {
               "
             />
           </WithLabel>
-          <div v-if="canManageAccount">
-            <NextButton blue :is-loading="isUpdating" type="submit">
+          <div>
+            <NextButton
+              v-if="canManageAccount"
+              blue
+              :is-loading="isUpdating"
+              type="submit"
+            >
               {{ $t('GENERAL_SETTINGS.SUBMIT') }}
             </NextButton>
           </div>

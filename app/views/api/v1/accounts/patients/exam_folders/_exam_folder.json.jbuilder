@@ -1,0 +1,9 @@
+json.id exam_folder.id
+json.account_id exam_folder.account_id
+json.patient_id exam_folder.patient_id
+json.parent_id exam_folder.parent_id
+json.name exam_folder.name
+json.color exam_folder.color
+json.position exam_folder.position
+json.created_at exam_folder.created_at
+json.updated_at exam_folder.updated_at

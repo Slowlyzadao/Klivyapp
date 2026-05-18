@@ -1,15 +1,14 @@
 /* global axios */
 import ApiClient from 'dashboard/api/ApiClient';
 
-export const buildPatientParams = (page, sortAttr, search, status) => {
-  let params = `page=${page}&sort=${sortAttr}`;
-  if (search) {
-    params = `${params}&q=${search}`;
-  }
-  if (status && status !== 'Todos') {
-    params = `${params}&status=${status}`;
-  }
-  return params;
+export const buildPatientParams = ({ page, perPage, sort, search, status }) => {
+  const params = new URLSearchParams();
+  params.set('page', page);
+  params.set('per_page', perPage);
+  if (sort) params.set('sort', sort);
+  if (search) params.set('q', search);
+  if (status && status !== 'Todos') params.set('status', status);
+  return params.toString();
 };
 
 class PatientsAPI extends ApiClient {
@@ -21,13 +20,20 @@ class PatientsAPI extends ApiClient {
     return axios.post(this.url, { patient: data });
   }
 
-  get(page = 1, sortAttr = 'name', search = '', status = '') {
-    let requestURL = `${this.url}?${buildPatientParams(
+  get({
+    page = 1,
+    perPage = 25,
+    sort = 'name_asc',
+    search = '',
+    status = '',
+  } = {}) {
+    const requestURL = `${this.url}?${buildPatientParams({
       page,
-      sortAttr,
+      perPage,
+      sort,
       search,
-      status
-    )}&per_page=50000`;
+      status,
+    })}`;
     return axios.get(requestURL);
   }
 

@@ -10,9 +10,8 @@ export default {
     getDayBlockInfo: { type: Function, default: () => [] },
     isDayBlocked: { type: Function, default: () => false },
     isDayInPast: { type: Function, default: () => false },
-    canCreate: { type: Boolean, default: true },
   },
-  emits: ['click-day', 'click-event'],
+  emits: ['click-day', 'click-event', 'view-day'],
   methods: {
     formatEventTime,
     isToday(dayObj) {
@@ -34,7 +33,6 @@ export default {
       return this.dayHeaders[date.getDay()] || '';
     },
     handleDayClick(dayObj) {
-      if (!this.canCreate) return;
       if (this.isDayBlocked(dayObj) || this.isDayInPast(dayObj)) return;
       this.$emit('click-day', dayObj);
     }
@@ -49,6 +47,7 @@ export default {
         v-for="(day, index) in dayHeaders"
         :key="index"
         class="day-header"
+        :class="{ 'is-weekend': index === 0 || index === 6 }"
       >
         {{ day }}
       </div>
@@ -60,12 +59,13 @@ export default {
         class="calendar-week"
       >
         <div
-          v-for="dayObj in week"
+          v-for="(dayObj, dIdx) in week"
           :key="`${dayObj.year}-${dayObj.month}-${dayObj.day}`"
           class="calendar-cell"
           :class="{
             'other-month': !dayObj.isCurrentMonth,
             'is-today': isToday(dayObj),
+            'is-weekend': dIdx === 0 || dIdx === 6,
             'cell-blocked': isDayBlocked(dayObj) || isDayInPast(dayObj)
           }"
           @click="handleDayClick(dayObj)"
@@ -85,7 +85,7 @@ export default {
               {{ dayObj.day }}
             </span>
             <button
-              v-if="canCreate && !isDayBlocked(dayObj) && !isDayInPast(dayObj)"
+              v-if="!isDayBlocked(dayObj) && !isDayInPast(dayObj)"
               class="cell-add-btn"
               @click.stop="handleDayClick(dayObj)"
             >
@@ -106,43 +106,21 @@ export default {
               v-for="event in getDayEvents(dayObj).slice(0, 3)"
               :key="event.id"
               class="event-chip"
-              :style="{
-                borderLeftColor: event._borderColor,
-                background: event._bg,
-              }"
+              :style="{ '--dot-color': event._borderColor }"
               @click.stop="$emit('click-event', { event, $event })"
             >
-              <span class="event-time">{{
-                formatEventTime(event.starts_at)
-              }}</span>
+              <span class="event-dot" />
               <span class="event-title">{{ event.title }}</span>
-              <span
-                v-if="event.custom_attributes?.treatment"
-                class="event-title event-treatment"
-              >
-                {{ event.custom_attributes.treatment }}
-              </span>
-              <svg
-                v-if="
-                  event.custom_attributes?.treatment === 'Avaliação' ||
-                  event.icon
-                "
-                class="event-star-icon-svg"
-                viewBox="0 -10 511.98685 511"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="m510.652344 185.902344c-3.351563-10.367188-12.546875-17.730469-23.425782-18.710938l-147.773437-13.417968-58.433594-136.769532c-4.308593-10.023437-14.121093-16.511718-25.023437-16.511718s-20.714844 6.488281-25.023438 16.535156l-58.433594 136.746094-147.796874 13.417968c-10.859376 1.003906-20.03125 8.34375-23.402344 18.710938-3.371094 10.367187-.257813 21.738281 7.957031 28.90625l111.699219 97.960937-32.9375 145.089844c-2.410156 10.667969 1.730468 21.695313 10.582031 28.09375 4.757813 3.4375 10.324219 5.1875 15.9375 5.1875 4.839844 0 9.640625-1.304687 13.949219-3.882813l127.46875-76.183593 127.421875 76.183593c9.324219 5.609376 21.078125 5.097657 29.910156-1.304687 8.855469-6.417969 12.992187-17.449219 10.582031-28.09375l-32.9375-145.089844 111.699219-97.941406c8.214844-7.1875 11.351563-18.539063 7.980469-28.925781z"
-                  fill="#ffc107"
-                />
-              </svg>
             </div>
-            <div
+            <button
               v-if="getDayEvents(dayObj).length > 3"
+              type="button"
               class="event-more"
+              :title="`Ver todos os ${getDayEvents(dayObj).length} eventos do dia`"
+              @click.stop="$emit('view-day', dayObj)"
             >
               {{ `+${getDayEvents(dayObj).length - 3} ${$t('AGENDA.MORE')}` }}
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -176,6 +154,15 @@ export default {
   letter-spacing: 0.5px;
 }
 
+/* Weekend headers in red — matches reference */
+.day-header.is-weekend {
+  color: #dc2626;
+}
+
+.calendar-cell.is-weekend .day-number:not(.today) {
+  color: #dc2626;
+}
+
 .calendar-grid {
   display: flex;
   flex-direction: column;
@@ -204,10 +191,10 @@ export default {
 .calendar-cell.cell-blocked {
   background: repeating-linear-gradient(
     -45deg,
-    transparent,
-    transparent 10px,
-    rgba(var(--slate-12), 0.06) 10px,
-    rgba(var(--slate-12), 0.06) 11px
+    rgb(var(--slate-2)),
+    rgb(var(--slate-2)) 7px,
+    rgb(var(--slate-3)) 7px,
+    rgb(var(--slate-3)) 9px
   ) !important;
   cursor: not-allowed;
 }
@@ -215,10 +202,10 @@ export default {
 .calendar-cell.cell-blocked:hover {
   background: repeating-linear-gradient(
     -45deg,
-    transparent,
-    transparent 10px,
-    rgba(var(--slate-12), 0.09) 10px,
-    rgba(var(--slate-12), 0.09) 11px
+    rgb(var(--slate-2)),
+    rgb(var(--slate-2)) 7px,
+    rgb(var(--slate-4)) 7px,
+    rgb(var(--slate-4)) 9px
   ) !important;
 }
 
@@ -234,8 +221,12 @@ export default {
   color: rgb(var(--slate-8));
 }
 
+.calendar-cell {
+  transition: background 0.15s ease-in-out;
+}
+
 .calendar-cell:hover {
-  background: rgb(var(--slate-2));
+  background: rgba(59, 130, 246, 0.10);
 }
 
 .calendar-cell.other-month {
@@ -367,51 +358,41 @@ export default {
   flex: 1;
 }
 
+/* List-style minimal: colored dot + title, no background pill */
 .event-chip {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 6px;
+  gap: 6px;
+  padding: 2px 6px;
   border-radius: 4px;
-  @apply text-sm;
   cursor: pointer;
-  border-left: 3px solid transparent;
   white-space: nowrap;
   overflow: hidden;
-  transition: box-shadow 0.12s;
-  min-height: 22px;
+  transition: background 0.12s;
+  min-height: 20px;
 }
 
 .event-chip:hover {
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.05);
 }
 
-.event-time {
-  color: rgba(255, 255, 255, 0.9);
-  @apply text-sm;
-  font-weight: 600;
+.event-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dot-color, rgb(var(--blue-9)));
   flex-shrink: 0;
 }
 
 .event-title {
-  color: #fff;
-  font-weight: 600;
+  color: rgb(var(--slate-12));
+  font-weight: 500;
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
-  @apply text-sm;
-}
-
-.event-treatment {
-  opacity: 0.9;
-  font-weight: 400;
-  margin-top: -2px;
-}
-
-.event-star-icon-svg {
-  width: 12px;
-  height: 12px;
-  margin-left: 4px;
-  flex-shrink: 0;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .event-more {
@@ -423,10 +404,19 @@ export default {
   cursor: pointer;
   font-weight: 600;
   transition: background 0.12s;
+  background: transparent;
+  border: none;
+  width: 100%;
+  font-family: inherit;
 }
 
 .event-more:hover {
   background: rgba(var(--blue-9), 0.08);
+}
+
+.event-more:focus-visible {
+  outline: 2px solid rgb(var(--blue-9));
+  outline-offset: 1px;
 }
 
 /* Mobile responsive */

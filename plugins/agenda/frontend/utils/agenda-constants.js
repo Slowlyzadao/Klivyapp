@@ -48,9 +48,9 @@ export const TREATMENTS = [
 ];
 
 export const EVENT_TYPES = [
-  { value: 'consultation', label: 'Consulta' },
-  { value: 'agenda_block', label: 'Bloqueio de Agenda' },
-  { value: 'appointment', label: 'Compromisso' },
+  { value: 'consultation', label: 'Consulta', color: '#3b82f6' },
+  { value: 'agenda_block', label: 'Bloqueio de Agenda', color: '#ef4444' },
+  { value: 'appointment', label: 'Compromisso', color: '#10b981' },
 ];
 
 export const PRIORITIES = [
@@ -61,6 +61,11 @@ export const PRIORITIES = [
 ];
 
 export const STATUS_CONFIGS = {
+  pending_confirmation: {
+    label: 'Aguardando confirmação',
+    color: '#f59e0b',
+    border: '#d97706',
+  },
   scheduled: { label: 'Agendado', color: '#9ca3af', border: '#6b7280' },
   confirmed: { label: 'Confirmado', color: '#22c55e', border: '#16a34a' },
   arrived: { label: 'Chegou', color: '#eab308', border: '#ca8a04' },
@@ -75,6 +80,7 @@ export const STATUS_CONFIGS = {
 };
 
 export const STATUS_OPTIONS = [
+  { key: 'pending_confirmation', label: 'Aguardando confirmação' },
   { key: 'scheduled', label: 'Agendado' },
   { key: 'confirmed', label: 'Confirmado' },
   { key: 'arrived', label: 'Chegou' },

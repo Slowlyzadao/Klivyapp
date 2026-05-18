@@ -15,10 +15,8 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import { mapGetters } from 'vuex';
 import { convertSecondsToTimeUnit } from '@chatwoot/utils';
 import { useAlert } from 'dashboard/composables';
-import { useAdmin } from 'dashboard/composables/useAdmin';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 import { picoSearch } from '@scmmishra/pico-search';
-import { computed } from 'vue';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 export default {
   components: {
@@ -34,15 +32,8 @@ export default {
     NextButton,
   },
   setup() {
-    const { isAdmin } = useAdmin();
-    const { can } = usePermissions();
-    const canCreateSla = computed(
-      () => isAdmin.value || can('settings', 'sla_create')
-    );
-    const canDeleteSla = computed(
-      () => isAdmin.value || can('settings', 'sla_delete')
-    );
-    return { canCreateSla, canDeleteSla };
+    const { isAdmin, can: klivyCan } = usePermissions();
+    return { isAdmin, klivyCan };
   },
   data() {
     return {
@@ -54,6 +45,12 @@ export default {
     };
   },
   computed: {
+    canCreateSla() {
+      return this.isAdmin || this.klivyCan('settings', 'sla_create');
+    },
+    canDeleteSla() {
+      return this.isAdmin || this.klivyCan('settings', 'sla_delete');
+    },
     ...mapGetters({
       isOnChatwootCloud: 'globalConfig/isOnChatwootCloud',
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',

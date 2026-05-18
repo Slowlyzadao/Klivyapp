@@ -31,7 +31,8 @@ export const validateAuthenticateRoutePermission = (to, next) => {
     return next(frontendURL(`accounts/${accountId}/dashboard`));
   }
 
-  const klivyPermissions = store.getters['beclinicPermissions/getPermissions'];
+  const klivyPermissions =
+    store.getters['beclinicPermissions/getPermissions'];
   const nextRoute = validateLoggedInRoutes(
     to,
     store.getters.getCurrentUser,
@@ -43,23 +44,13 @@ export const validateAuthenticateRoutePermission = (to, next) => {
 export const initalizeRouter = () => {
   const userAuthentication = store.dispatch('setUser');
 
-  // Garante que as permissões Klivy estejam carregadas antes do guard rodar.
-  // Sem isso, um reload em rotas restritas (BEA, /mentions, /unattended)
-  // pega `klivyPermissions = {}` e cai em `/forbidden` mesmo com permissão
-  // total. Reusa a mesma promise pra todas as transições da sessão.
-  const ensureKlivyPermissions = () => {
-    if (!store.getters.isLoggedIn) return Promise.resolve();
-    if (store.getters['beclinicPermissions/isLoaded']) return Promise.resolve();
-    return store.dispatch('beclinicPermissions/fetch');
-  };
-
   router.beforeEach((to, _from, next) => {
     AnalyticsHelper.page(to.name || '', {
       path: to.path,
       name: to.name,
     });
 
-    userAuthentication.then(() => ensureKlivyPermissions()).then(() => {
+    userAuthentication.then(() => {
       // RBAC navigation guard: check meta.rbac on routes
       if (to.meta?.rbac && store.getters.isLoggedIn) {
         const { module: mod, action } = to.meta.rbac;

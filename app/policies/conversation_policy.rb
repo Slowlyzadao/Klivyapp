@@ -11,10 +11,6 @@ class ConversationPolicy < ApplicationPolicy
     administrator? || agent_bot? || agent_can_view_conversation?
   end
 
-  # Klivy Custom Roles fallback for conversation actions. Each method returns
-  # true for admins, agent bots, or users whose KlivyRole grants the matching
-  # `chat.<action>` permission. The Conversation*Controllers call `authorize`
-  # against these so the backend matches the frontend visibility.
   def reply?
     administrator? || agent_bot? || beclinic_can?(:chat, :reply)
   end

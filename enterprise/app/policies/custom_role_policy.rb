@@ -1,29 +1,21 @@
 class CustomRolePolicy < ApplicationPolicy
   def index?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :roles_view)
-  end
-
-  def show?
-    index?
-  end
-
-  def create?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :roles_create)
+    @account_user.administrator?
   end
 
   def update?
-    return true if @account_user.administrator?
+    @account_user.administrator?
+  end
 
-    beclinic_can?(:settings, :roles_edit)
+  def show?
+    @account_user.administrator?
+  end
+
+  def create?
+    @account_user.administrator?
   end
 
   def destroy?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :roles_delete)
+    @account_user.administrator?
   end
 end

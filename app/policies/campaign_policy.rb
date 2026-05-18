@@ -1,58 +1,50 @@
 class CampaignPolicy < ApplicationPolicy
-  # Visualização exige `campaigns.view`. Operações de escrita exigem o
-  # `manage_*` específico do canal da inbox: Website → manage_live_chat,
-  # SMS/Twilio SMS → manage_sms, Whatsapp → manage_whatsapp.
-  # Quando o controller passa a classe Campaign (sem instância — caso do
-  # create), aceita se o usuário tem qualquer manage_*.
-  def index?
-    return true if @account_user.administrator?
+  CHANNEL_PERM_MAP = {
+    'Website' => :manage_live_chat,
+    'Sms' => :manage_sms,
+    'Twilio SMS' => :manage_sms,
+    'Whatsapp' => :manage_whatsapp
+  }.freeze
 
-    beclinic_can?(:campaigns, :view) ||
-      beclinic_can?(:campaigns, :manage_live_chat) ||
-      beclinic_can?(:campaigns, :manage_sms) ||
-      beclinic_can?(:campaigns, :manage_whatsapp)
+  def index?
+    administrator? || beclinic_can?(:campaigns, :view)
   end
 
   def show?
-    index?
-  end
-
-  def create?
-    return true if @account_user.administrator?
-
-    if record.is_a?(Class)
-      beclinic_can?(:campaigns, :manage_live_chat) ||
-        beclinic_can?(:campaigns, :manage_sms) ||
-        beclinic_can?(:campaigns, :manage_whatsapp)
-    else
-      can_manage_campaign_channel?
-    end
+    administrator? || beclinic_can?(:campaigns, :view)
   end
 
   def update?
-    return true if @account_user.administrator?
+    administrator? || channel_manage_permitted?
+  end
 
-    can_manage_campaign_channel?
+  def create?
+    administrator? || channel_manage_permitted?
   end
 
   def destroy?
-    update?
+    administrator? || channel_manage_permitted?
   end
 
   private
 
-  def can_manage_campaign_channel?
-    return false unless record.respond_to?(:inbox)
+  def administrator?
+    @account_user&.administrator?
+  end
 
-    case record.inbox&.inbox_type
-    when 'Website'
-      beclinic_can?(:campaigns, :manage_live_chat)
-    when 'Sms', 'Twilio SMS'
-      beclinic_can?(:campaigns, :manage_sms)
-    when 'Whatsapp'
-      beclinic_can?(:campaigns, :manage_whatsapp)
-    else
-      false
-    end
+  # When `record` is a Campaign instance, check the channel-specific perm.
+  # When `record` is the Campaign class (no instance — happens on Pundit's
+  # `authorize Campaign` for new), accept any of the three manage perms.
+  def channel_manage_permitted?
+    return any_manage_permission? unless record.is_a?(Campaign) && record.inbox
+
+    perm = CHANNEL_PERM_MAP[record.inbox.inbox_type]
+    return false unless perm
+
+    beclinic_can?(:campaigns, perm)
+  end
+
+  def any_manage_permission?
+    CHANNEL_PERM_MAP.values.uniq.any? { |perm| beclinic_can?(:campaigns, perm) }
   end
 end

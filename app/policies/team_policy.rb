@@ -1,29 +1,21 @@
 class TeamPolicy < ApplicationPolicy
   def index?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :teams_view)
-  end
-
-  def show?
-    index?
-  end
-
-  def create?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :teams_create)
+    true
   end
 
   def update?
-    return true if @account_user.administrator?
+    @account_user.administrator?
+  end
 
-    beclinic_can?(:settings, :teams_edit)
+  def show?
+    true
+  end
+
+  def create?
+    @account_user.administrator?
   end
 
   def destroy?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :teams_delete)
+    @account_user.administrator?
   end
 end

@@ -1,54 +1,56 @@
 class TransactionPolicy < ApplicationPolicy
-  # Mesma lógica do AccountTransactionPolicy: index/show passam se o usuário
-  # tiver qualquer perm de visualização financeira; ações específicas usam
-  # as suas próprias keys.
   FINANCIAL_VIEW_PERMS = %i[
-    view_dashboard
-    view_cashflow
-    view_receivables
-    view_payables
-    view_dre
-    view_reports
-    view_cash_register
+    view_dashboard view_cashflow view_receivables view_payables view_dre
+    view_reports view_cash_register
   ].freeze
 
   def index?
-    FINANCIAL_VIEW_PERMS.any? { |perm| beclinic_can?(:financial, perm) }
+    administrator? || any_view_perm?
   end
 
   def show?
-    index?
+    administrator? || any_view_perm?
   end
 
   def create?
-    beclinic_can?(:financial, :create_transaction)
+    administrator? || beclinic_can?(:financial, :create_transaction)
   end
 
   def update?
-    beclinic_can?(:financial, :edit_transaction)
+    administrator? || beclinic_can?(:financial, :edit_transaction)
   end
 
   def destroy?
-    beclinic_can?(:financial, :delete_transaction)
+    administrator? || beclinic_can?(:financial, :delete_transaction)
   end
 
   def approve?
-    beclinic_can?(:financial, :approve_estimate)
+    administrator? || beclinic_can?(:financial, :approve_estimate)
   end
 
   def cancel?
-    beclinic_can?(:financial, :edit_transaction)
+    administrator? || beclinic_can?(:financial, :edit_transaction)
   end
 
   def pay?
-    beclinic_can?(:financial, :create_transaction)
+    administrator? || beclinic_can?(:financial, :create_transaction)
   end
 
   def refund?
-    beclinic_can?(:financial, :delete_transaction)
+    administrator? || beclinic_can?(:financial, :delete_transaction)
   end
 
   def financial_summary?
-    index?
+    administrator? || any_view_perm?
+  end
+
+  private
+
+  def administrator?
+    @account_user&.administrator?
+  end
+
+  def any_view_perm?
+    FINANCIAL_VIEW_PERMS.any? { |perm| beclinic_can?(:financial, perm) }
   end
 end

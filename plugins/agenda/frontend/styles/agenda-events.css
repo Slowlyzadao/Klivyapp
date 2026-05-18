@@ -7,22 +7,56 @@
 /* ── Timeline Event Card ────────────────────────── */
 .timeline-evt {
   position: absolute;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 4px 10px 4px 8px;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  border-left: 3px solid transparent;
+  border-left: 4px solid transparent;
   overflow: hidden;
-  transition: box-shadow 0.15s, opacity 0.15s, transform 0.15s;
+  transition: box-shadow 0.15s ease-in-out, opacity 0.15s ease-in-out, transform 0.15s ease-in-out;
   pointer-events: auto;
   user-select: none;
   z-index: 5;
+  /* Pastel cards: subtle outer outline + minimal shadow */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  /* Estabelece container query — usado abaixo pra esconder a hora em cards
+     muito estreitos (overlap de 2-3 eventos no mesmo horário) e priorizar
+     o título do paciente. */
+  container-type: inline-size;
+}
+
+/* Em cards muito estreitos (~90px ou menos) o título compete por espaço com
+   a hora nos tiers pill/small e perde a queda-de-braço (a hora tem
+   flex-shrink: 0). Esconde a hora completamente abaixo desse threshold —
+   o título fica em foco; a hora ainda é visível pelo tooltip nativo do
+   card e/ou abrindo o popup de detalhes. */
+@container (max-width: 90px) {
+  .timeline-evt .evt-pill-time,
+  .timeline-evt .evt-pill-sep,
+  .timeline-evt .evt-small-time {
+    display: none;
+  }
+}
+
+/* Mobile (< 768px): mesmo padrão. Em viewport estreita, mesmo um card
+   "single-column" tem largura limitada e nomes em pt-BR (sobrenome
+   composto comum) cortam pra "Je...", "Br..." quando a hora ocupa
+   ~70px do espaço. Prioriza o título escondendo hora/separador no
+   pill e a hora no small em qualquer largura de card. Hora segue
+   acessível pelo popup de detalhes. */
+@media (max-width: 767px) {
+  .timeline-evt .evt-pill-time,
+  .timeline-evt .evt-pill-sep,
+  .timeline-evt .evt-small-time {
+    display: none;
+  }
 }
 
 .timeline-evt:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
   z-index: 10 !important;
 }
 
@@ -50,91 +84,142 @@
   border-radius: 8px;
   opacity: 0.85;
   pointer-events: none;
+  /* Override --evt-text-color so descendant text (.evt-sbs-*, etc.) is readable
+     against the translucent purple/red bg */
+  --evt-text-color: rgba(67, 56, 202, 0.95);
+  box-shadow: none;
 }
 
 .drag-ghost-title {
-  color: rgba(99, 102, 241, 0.9) !important;
+  color: var(--evt-text-color);
+}
+
+/* Blocked state: red ghost when proposed slot is invalid */
+.drag-ghost.drag-ghost--blocked {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.55) !important;
+  border-left-color: rgba(239, 68, 68, 0.85) !important;
+  cursor: not-allowed;
+  --evt-text-color: rgba(185, 28, 28, 0.95);
+}
+
+.drag-ghost.drag-ghost--blocked .drag-ghost-title {
+  text-decoration: line-through;
+}
+
+.drag-ghost-blocked-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgb(239, 68, 68);
+  background: rgba(239, 68, 68, 0.12);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-top: 2px;
+  align-self: flex-start;
+}
+
+.drag-ghost-blocked-label i {
+  width: 12px;
+  height: 12px;
 }
 
 /* ── Event Size Tiers ─────────────────────────────── */
 
-/* MICRO (≤15min) */
-.timeline-evt.evt-micro {
-  padding: 2px 6px;
-  border-radius: 4px;
+/* PILL (≤32px) — tag horizontal linha única */
+.timeline-evt.evt-pill {
+  padding: 4px 8px;
+  border-radius: 6px;
   gap: 0;
 }
 
-.evt-micro-body {
+.evt-pill-body {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   overflow: hidden;
+  width: 100%;
+  line-height: 1.3;
 }
 
-.evt-micro-time {
-  font-size: 9px;
-  font-weight: 700;
-  color: rgb(var(--slate-10));
-  flex-shrink: 0;
-}
-
-.evt-micro-name {
-  @apply text-sm;
+.evt-pill-name {
+  font-size: 12px;
   font-weight: 600;
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
-/* COMPACT (≤29min) */
-.timeline-evt.evt-compact {
+.evt-pill-sep {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.evt-pill-time {
+  font-size: 11px;
+  font-weight: 500;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* SMALL (27–44px) — nome dominante + hora início */
+.timeline-evt.evt-small {
   padding: 3px 6px;
   border-radius: 6px;
   gap: 0;
 }
 
-.evt-compact-body {
+.evt-small-body {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: nowrap;
+  gap: 5px;
   overflow: hidden;
+  width: 100%;
 }
 
-.evt-compact-time {
-  @apply text-sm;
-  font-weight: 700;
-  color: rgb(var(--slate-10));
-  flex-shrink: 0;
-}
-
-.evt-compact-title {
+.evt-small-name {
   @apply text-sm;
   font-weight: 600;
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
-.evt-compact-treatment {
+.evt-small-time {
   @apply text-sm;
-  color: rgb(var(--slate-10));
+  font-weight: 500;
+  flex-shrink: 0;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+/* MEDIUM (45–68px) — fonte ligeiramente menor para caber título + range */
+.timeline-evt.evt-medium {
+  padding: 3px 8px;
+  gap: 1px;
+}
+
+.timeline-evt.evt-medium .evt-sbs-title {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.timeline-evt.evt-medium .evt-sbs-time {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+/* Título medium em UMA linha (line-clamp:2 não cabe em cards próximos de 45px) */
+.evt-sbs-title--clamp {
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  flex-shrink: 1;
-}
-
-.evt-compact-star {
-  width: 10px;
-  height: 10px;
-  flex-shrink: 0;
-}
-
-/* MEDIUM (≤39min) */
-.timeline-evt.evt-medium {
-  padding: 4px 8px;
 }
 
 /* ── Event Common Elements ────────────────────────── */
@@ -154,17 +239,28 @@
 }
 
 .evt-sbs-title {
-  @apply text-sm;
+  font-size: 13px;
+  line-height: 1.4;
   font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* Reserve right side so text doesn't run under absolute action buttons */
+  padding-right: 22px;
+}
+
+/* Restore center alignment with explicit min-height so line-box never clips */
+.evt-title-wrap {
+  align-items: center;
+  min-height: 18px;
 }
 
 .evt-sbs-time-row {
   display: flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .evt-sbs-time {
@@ -174,12 +270,55 @@
   @apply text-sm;
   color: rgb(var(--slate-10));
   font-weight: 500;
+  /* Em colunas estreitas (week view com 2-3 agentes por dia) o range
+     "15:00 - 15:45" quebrava em 3 linhas. Trunca em ellipsis igual ao
+     título — horário não é informação crítica que justifique 3 linhas. */
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .evt-sbs-treatment {
   @apply text-sm;
   font-weight: 600;
   color: rgb(var(--slate-11));
+}
+
+/* Pushes treatment to the very bottom of the card via flex spacer */
+.evt-sbs-treatment--bottom {
+  margin-top: auto;
+  padding-top: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.evt-treatment-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  /* Mesma estratégia do `.evt-status-dot-sm`: border interna pra evitar
+     clipping em cards estreitos. Mesmo tamanho do status dot pra
+     consistência visual. */
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  box-sizing: border-box;
+}
+
+.dark .evt-treatment-dot {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.evt-treatment-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .evt-sbs-sep {
@@ -195,10 +334,21 @@
 
 /* ── Status Dot ──────────────────────────────────── */
 .evt-status-dot-sm {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+  /* Borda DENTRO da box (box-sizing: border-box), não box-shadow externa.
+     Box-shadow extendia 1.5–2px pra fora e era clipado pelos parents
+     `.evt-title-wrap` / `.evt-pill-body` (overflow: hidden), deformando
+     o dot em cards estreitos. Com border interna o tamanho visível total
+     é firme, sem extensão externa. */
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  box-sizing: border-box;
+}
+
+.dark .evt-status-dot-sm {
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 /* ── Late Indicator ──────────────────────────────── */
@@ -212,11 +362,11 @@
 /* ── Action Buttons ──────────────────────────────── */
 .evt-normal-actions {
   position: absolute;
-  top: 4px;
+  top: 3px;
   right: 4px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   z-index: 5;
 }
 
@@ -224,15 +374,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   border: none;
-  background: rgba(255, 255, 255, 0.08);
+  /* Vermelho sólido + ícone branco — visível em qualquer pastel de
+     categoria/agente, light ou dark, sem depender da cor de texto do
+     card. Aparece só no hover do card pra não poluir. */
+  background: #ef4444;
   border-radius: 4px;
-  color: rgb(var(--slate-10));
+  color: #ffffff;
   cursor: pointer;
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.12s, transform 0.1s;
   opacity: 0;
+  flex-shrink: 0;
 }
 
 .timeline-evt:hover .evt-info-btn-hover {
@@ -240,8 +394,9 @@
 }
 
 .evt-info-btn-hover:hover {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
+  background: #dc2626;
+  color: #ffffff;
+  transform: scale(1.05);
 }
 
 .evt-info-btn-inline {
@@ -249,13 +404,13 @@
   align-items: center;
   justify-content: center;
   border: none;
-  background: rgb(var(--slate-1));
-  color: rgb(var(--slate-8));
+  background: #ef4444;
+  color: #ffffff;
   cursor: pointer;
-  padding: 1px 2px;
+  padding: 2px 4px;
   border-radius: 3px;
   opacity: 0;
-  transition: opacity 0.12s, color 0.12s;
+  transition: background 0.12s, opacity 0.12s, transform 0.1s;
   flex-shrink: 0;
 }
 
@@ -264,7 +419,34 @@
 }
 
 .evt-info-btn-inline:hover {
-  color: #ef4444;
+  background: #dc2626;
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+/* Container absoluto do botão de excluir na tier pill (cards 15min).
+   Mesma posição usada por `.evt-normal-actions` em medium/full pra
+   consistência visual entre os tiers. */
+.evt-pill-actions {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  z-index: 5;
+}
+
+/* Garantia explícita do ícone do trash dentro dos botões — em alguns
+   tiers o `i-lucide-trash-2` da utility (mask-image) ficava sem dimensão
+   visível por conflito de ordem de regras. Força width/height/cor aqui
+   pra renderizar consistente em pill, small, medium e full. */
+.evt-info-btn-hover .i-lucide-trash-2,
+.evt-info-btn-inline .i-lucide-trash-2 {
+  width: 12px;
+  height: 12px;
+  background-color: #ffffff;
+  display: inline-block;
 }
 
 /* ── Star Icon ───────────────────────────────────── */
@@ -681,10 +863,23 @@
 }
 
 .cs-svc-dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
+  /* White ring keeps colored dots visible on light/dark dropdown surfaces */
+  box-shadow: 0 0 0 1.5px #fff, 0 0 0 2px rgba(0, 0, 0, 0.08);
+}
+
+/* Lets the trigger button show: [dot] [label] horizontally */
+.cs-trigger-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cs-svc-name {
@@ -755,35 +950,266 @@
 }
 
 .custom-scroll::-webkit-scrollbar-thumb {
-  background: rgba(var(--slate-8), 0.3);
+  background-color: rgb(var(--slate-8) / 0.4);
   border-radius: 4px;
 }
 
 .custom-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(var(--slate-8), 0.5);
+  background-color: rgb(var(--slate-8) / 0.6);
 }
 
-/* ── Solid Event Background Overrides ────────────── */
+/* ── Modal Scrollbar (always visible to indicate scroll) ─
+   Note: must use modern slash syntax `rgb(R G B / A)` — legacy
+   `rgba(var(--token), A)` is invalid and the thumb renders invisible. */
+.modal-scroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--slate-8) / 0.45) transparent;
+}
+.modal-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+.modal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+.modal-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--slate-8) / 0.45);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  min-height: 40px;
+}
+.modal-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(var(--slate-8) / 0.7);
+  background-clip: padding-box;
+}
+
+/* ── Slot Button (Time slot grid in event modal) ─────── */
+.slot-btn {
+  padding: 0.5rem 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(var(--slate-5));
+  background: rgb(var(--slate-1));
+  color: rgb(var(--slate-12));
+  cursor: pointer;
+  transition: all 150ms ease;
+  outline: none;
+}
+.slot-btn:hover {
+  border-color: rgb(var(--blue-9));
+  background: rgb(var(--blue-2));
+  color: rgb(var(--blue-11));
+}
+.slot-btn:focus-visible {
+  box-shadow: 0 0 0 2px rgba(var(--blue-9), 0.4);
+}
+.slot-btn--in-range {
+  background: rgb(var(--blue-3));
+  border-color: rgb(var(--blue-7));
+  color: rgb(var(--blue-12));
+}
+.slot-btn--in-range:hover {
+  background: rgb(var(--blue-4));
+  border-color: rgb(var(--blue-8));
+  color: rgb(var(--blue-12));
+}
+.slot-btn--start {
+  background: rgb(var(--blue-9));
+  border-color: rgb(var(--blue-9));
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+.slot-btn--start:hover {
+  background: rgb(var(--blue-10));
+  border-color: rgb(var(--blue-10));
+  color: #fff;
+}
+.slot-btn--blocked,
+.slot-btn--blocked:hover {
+  background: repeating-linear-gradient(
+    -45deg,
+    rgb(var(--slate-2)),
+    rgb(var(--slate-2)) 4px,
+    rgb(var(--slate-3)) 4px,
+    rgb(var(--slate-3)) 8px
+  );
+  border-color: rgb(var(--slate-4));
+  color: rgb(var(--slate-9));
+  cursor: not-allowed;
+  text-decoration: line-through;
+  text-decoration-color: rgba(var(--slate-9), 0.5);
+}
+
+/* ── DatePicker (vue-datepicker-next) inside modal ──── */
+.modal-datepicker {
+  width: 100%;
+}
+.modal-datepicker .mx-input {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+  border-radius: 0.75rem !important;
+  height: 2.5rem !important;
+  color: rgb(var(--slate-12)) !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+  padding-left: 0.75rem;
+}
+.modal-datepicker .mx-input:focus,
+.modal-datepicker .mx-input:hover {
+  border-color: rgba(var(--blue-9), 0.5) !important;
+  background: rgb(var(--slate-1)) !important;
+  box-shadow: 0 0 0 1px rgba(var(--blue-9), 0.5) !important;
+}
+.modal-datepicker .mx-icon-calendar,
+.modal-datepicker .mx-icon-clear {
+  color: rgb(var(--slate-9)) !important;
+}
+
+/* "Hoje" shortcut button next to the DatePicker */
+.datepicker-today-btn {
+  height: 2.5rem;
+  padding: 0 0.875rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--slate-4));
+  background: rgb(var(--slate-2));
+  color: rgb(var(--slate-12));
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.datepicker-today-btn:hover:not(:disabled) {
+  background: rgba(var(--blue-9), 0.1);
+  border-color: rgba(var(--blue-9), 0.5);
+  color: rgb(var(--blue-11));
+}
+.datepicker-today-btn--active,
+.datepicker-today-btn:disabled {
+  background: rgba(var(--blue-9), 0.15);
+  border-color: rgba(var(--blue-9), 0.6);
+  color: rgb(var(--blue-11));
+  cursor: default;
+}
+
+/* ── Popup (rendered to body via append-to-body) ─────────
+   Uses semantic slate/blue tokens so it inverts cleanly between light
+   and dark mode with no per-mode overrides. */
+.mx-datepicker-main {
+  background-color: rgb(var(--slate-1)) !important;
+  color: rgb(var(--slate-12)) !important;
+  border: 1px solid rgb(var(--slate-5)) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25) !important;
+  font-family: inherit;
+  z-index: 2000 !important;
+}
+.mx-datepicker-main .mx-calendar {
+  background-color: transparent !important;
+  color: rgb(var(--slate-12)) !important;
+}
+.mx-datepicker-main .mx-calendar-content .cell {
+  color: rgb(var(--slate-12)) !important;
+  font-weight: 500 !important;
+  border-radius: 6px;
+  transition: background 0.12s, color 0.12s;
+}
+.mx-datepicker-main .mx-calendar-content .cell:hover {
+  background-color: rgba(var(--blue-9), 0.15) !important;
+  color: rgb(var(--blue-11)) !important;
+}
+.mx-datepicker-main .mx-calendar-content .cell.active {
+  background-color: rgb(var(--blue-9)) !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+}
+/* "today" gets a clear ring instead of just a color tint so it's visible
+   in both light and dark mode regardless of selection state. */
+.mx-datepicker-main .mx-calendar-content .cell.today:not(.active) {
+  color: rgb(var(--blue-11)) !important;
+  font-weight: 700 !important;
+  box-shadow: inset 0 0 0 1px rgb(var(--blue-9)) !important;
+}
+.mx-datepicker-main .mx-calendar-content .cell.not-current-month {
+  color: rgb(var(--slate-9)) !important;
+  font-weight: normal !important;
+  opacity: 0.7;
+}
+.mx-datepicker-main .mx-calendar-content .cell.disabled {
+  background-color: transparent !important;
+  color: rgb(var(--slate-8)) !important;
+  cursor: not-allowed !important;
+}
+.mx-datepicker-main .mx-datepicker-header,
+.mx-datepicker-main .mx-calendar-header {
+  color: rgb(var(--slate-12)) !important;
+  border-bottom: 1px solid rgb(var(--slate-5)) !important;
+}
+.mx-datepicker-main .mx-btn,
+.mx-datepicker-main .mx-calendar-header-label,
+.mx-datepicker-main .mx-btn-icon-double-left,
+.mx-datepicker-main .mx-btn-icon-left,
+.mx-datepicker-main .mx-btn-icon-double-right,
+.mx-datepicker-main .mx-btn-icon-right {
+  color: rgb(var(--slate-12)) !important;
+}
+.mx-datepicker-main .mx-btn:hover,
+.mx-datepicker-main .mx-btn-icon-double-left:hover,
+.mx-datepicker-main .mx-btn-icon-left:hover,
+.mx-datepicker-main .mx-btn-icon-double-right:hover,
+.mx-datepicker-main .mx-btn-icon-right:hover {
+  color: rgb(var(--blue-11)) !important;
+}
+.mx-datepicker-main .mx-calendar-header-label {
+  font-weight: 600 !important;
+}
+.mx-datepicker-main .mx-table th {
+  color: rgb(var(--slate-10)) !important;
+  font-weight: 600 !important;
+}
+
+/* ── Text Color via Auto-Contrast (CSS variable from JS) ─ */
+/* `--evt-text-color` is set inline by getEventTimelineStyle() via
+   getContrastColor(bg). Fallback to white for safety. */
 .timeline-evt {
-  color: #fff !important;
+  color: var(--evt-text-color, #fff);
 }
 
-.evt-micro-name,
-.evt-compact-title,
+/* Primary text (patient name): full strength, weight 600 (visual hierarchy) */
+.evt-pill-name,
+.evt-small-name,
 .evt-sbs-title {
-  color: #fff !important;
+  color: var(--evt-text-color, #fff);
+  font-weight: 600;
 }
 
-.evt-micro-time,
-.evt-compact-time,
-.evt-compact-treatment,
+/* Secondary text (time, treatment): same hue, ~88% opacity */
+.evt-pill-sep,
+.evt-pill-time,
+.evt-small-time,
 .evt-sbs-time,
-.evt-sbs-treatment,
+.evt-sbs-treatment {
+  color: var(--evt-text-color, #fff);
+  opacity: 0.88;
+}
+
+/* Botões de ação (excluir): cor branca fixa. Antes herdavam --evt-text-color,
+   o que dava ícone "azulado" sobre o fundo vermelho — ilegível. Agora
+   sempre branco em ambos os temas. */
 .evt-info-btn-hover,
 .evt-info-btn-inline {
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: #ffffff;
 }
 
+/* Tertiary (separator): more muted */
 .evt-sbs-sep {
-  color: rgba(255, 255, 255, 0.5) !important;
+  color: var(--evt-text-color, #fff);
+  opacity: 0.5;
 }

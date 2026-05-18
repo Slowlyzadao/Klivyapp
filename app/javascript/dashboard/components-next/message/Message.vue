@@ -155,7 +155,7 @@ const isFromPhone = computed(() => !!props.contentAttributes?.fromPhone);
 
 /**
  * Detects if the message was sent via API (external integration, n8n, etc.)
- * Used to display "BEA" avatar instead of the user's initials
+ * Used to display "Bea" avatar instead of the user's initials
  */
 const isFromApi = computed(() => !!props.contentAttributes?.sent_via_api);
 
@@ -470,10 +470,10 @@ const avatarInfo = computed(() => {
     };
   }
 
-  // Mensagens enviadas via API externa → avatar "BEA"
+  // Mensagens enviadas via API externa → avatar "Bea"
   if (isFromApi.value) {
     return {
-      name: 'BEA',
+      name: 'Bea',
       src: '',
     };
   }

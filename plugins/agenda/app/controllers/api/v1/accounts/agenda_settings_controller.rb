@@ -19,6 +19,9 @@ class Api::V1::Accounts::AgendaSettingsController < Api::V1::Accounts::BaseContr
     {
       block_outside_working_hours: @setting.block_outside_working_hours,
       block_lunch_break: @setting.block_lunch_break,
+      block_past_dates: @setting.block_past_dates,
+      show_only_working_hours: @setting.show_only_working_hours,
+      visible_hours_buffer: @setting.visible_hours_buffer,
       slot_interval_minutes: @setting.slot_interval_minutes,
       week_days: @setting.week_days,
       exceptions: @setting.exceptions,
@@ -30,6 +33,9 @@ class Api::V1::Accounts::AgendaSettingsController < Api::V1::Accounts::BaseContr
     params.require(:agenda_setting).permit(
       :block_outside_working_hours,
       :block_lunch_break,
+      :block_past_dates,
+      :show_only_working_hours,
+      :visible_hours_buffer,
       :slot_interval_minutes,
       week_days: [:id, :label, :enabled, :start, :end, :lunchStart, :lunchEnd],
       exceptions: [:title, :type, :icon, :color, :start, :end],

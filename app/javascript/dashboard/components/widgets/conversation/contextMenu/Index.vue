@@ -81,10 +81,10 @@ export default {
   ],
   setup() {
     const { isAdmin } = useAdmin();
-    const { can } = usePermissions();
+    const { can: klivyCan } = usePermissions();
     return {
       isAdmin,
-      can,
+      klivyCan,
     };
   },
   data() {
@@ -220,19 +220,19 @@ export default {
       return this.status === wootConstants.STATUS_TYPE.OPEN;
     },
     canChangeStatus() {
-      return this.can('chat', 'reply');
+      return this.klivyCan('chat', 'reply');
     },
     canAssignPriority() {
-      return this.can('chat', 'reply');
+      return this.klivyCan('chat', 'reply');
     },
     canAssignLabel() {
-      return this.can('chat', 'reply');
+      return this.klivyCan('chat', 'reply');
     },
     canAssignAgent() {
-      return this.can('chat', 'assign_conversation');
+      return this.klivyCan('chat', 'assign_conversation');
     },
     canAssignTeam() {
-      return this.can('chat', 'assign_conversation');
+      return this.klivyCan('chat', 'assign_conversation');
     },
   },
   mounted() {
@@ -335,10 +335,7 @@ export default {
       <hr class="m-1 rounded border-b border-n-weak dark:border-n-weak" />
     </template>
     <template
-      v-if="
-        (canAssignPriority || canAssignLabel || canAssignAgent || canAssignTeam) &&
-        isAllowed([MENU.PRIORITY, MENU.LABEL, MENU.AGENT, MENU.TEAM])
-      "
+      v-if="isAllowed([MENU.PRIORITY, MENU.LABEL, MENU.AGENT, MENU.TEAM])"
     >
       <MenuItemWithSubmenu
         v-if="canAssignPriority && isAllowed([MENU.PRIORITY])"

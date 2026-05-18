@@ -1,12 +1,12 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useMapGetter, useStore } from 'dashboard/composables/store.js';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useCaptain } from 'dashboard/composables/useCaptain';
-import { useMapGetter, useStore } from 'dashboard/composables/store.js';
-import { useAdmin } from 'dashboard/composables/useAdmin';
 import { usePermissions } from 'dashboard/composables/usePermissions';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import sessionStorage from 'shared/helpers/sessionStorage';
 
 import BillingMeter from './components/BillingMeter.vue';
 import BillingCard from './components/BillingCard.vue';
@@ -17,13 +17,11 @@ import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import ButtonV4 from 'next/button/Button.vue';
 
-const store = useStore();
-const { accountId } = useAccount();
-const { isAdmin } = useAdmin();
-const { can } = usePermissions();
-
+const router = useRouter();
+const { currentAccount, isOnChatwootCloud } = useAccount();
+const { isAdmin, can: klivyCan } = usePermissions();
 const canManageBilling = computed(
-  () => isAdmin.value || can('settings', 'billing_manage')
+  () => isAdmin.value || klivyCan('settings', 'billing_manage')
 );
 const {
   captainEnabled,
@@ -34,86 +32,105 @@ const {
   isFetchingLimits,
 } = useCaptain();
 
-const isLoading = ref(true);
-const subscription = ref(null);
-const error = ref(null);
+const uiFlags = useMapGetter('accounts/getUIFlags');
+const store = useStore();
+
+const BILLING_REFRESH_ATTEMPTED = 'billing_refresh_attempted';
+
+// State for handling refresh attempts and loading
+const isWaitingForBilling = ref(false);
 const purchaseCreditsModalRef = ref(null);
 
-const PLAN_LABELS = {
-  standard: 'Standard',
-  premium: 'Premium',
-  enterprise: 'Enterprise',
-};
-
-const STATUS_LABELS = {
-  trial: 'Trial',
-  pending: 'Pagamento pendente',
-  active: 'Ativa',
-  overdue: 'Em atraso',
-  canceled: 'Cancelada',
-  lead: 'Lead Comercial',
-};
-
-const STATUS_COLORS = {
-  trial: 'text-yellow-600 bg-yellow-50',
-  pending: 'text-orange-600 bg-orange-50',
-  active: 'text-green-600 bg-green-50',
-  overdue: 'text-red-600 bg-red-50',
-  canceled: 'text-slate-500 bg-slate-100',
-  lead: 'text-blue-600 bg-blue-50',
-};
-
-const planLabel = computed(() =>
-  subscription.value ? PLAN_LABELS[subscription.value.plan] || subscription.value.plan : '-'
-);
-
-const statusLabel = computed(() =>
-  subscription.value ? STATUS_LABELS[subscription.value.status] || subscription.value.status : '-'
-);
-
-const statusColor = computed(() =>
-  subscription.value ? STATUS_COLORS[subscription.value.status] || 'text-slate-600 bg-slate-100' : ''
-);
-
-const formattedPrice = computed(() => {
-  if (!subscription.value?.price) return '-';
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-    subscription.value.price
-  );
+const customAttributes = computed(() => {
+  return currentAccount.value.custom_attributes || {};
 });
 
-const couponExpiresLabel = computed(() => {
-  if (!subscription.value?.coupon_expires_at) return null;
-  return format(new Date(subscription.value.coupon_expires_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+/**
+ * Computed property for plan name
+ * @returns {string|undefined}
+ */
+const planName = computed(() => {
+  return customAttributes.value.plan_name;
 });
 
-// Permite comprar créditos quando o usuário pode gerenciar faturamento.
-const canPurchaseCredits = computed(() => canManageBilling.value);
+const canPurchaseCredits = computed(() => {
+  const plan = planName.value?.toLowerCase();
+  return plan && plan !== 'hacker';
+});
 
-const fetchSubscription = async () => {
-  isLoading.value = true;
-  error.value = null;
-  try {
-    const response = await window.axios.get(`/api/v1/billing/subscription`, {
-      params: {
-        account_id: accountId.value,
-      },
-    });
-    subscription.value = response.data;
-  } catch (e) {
-    error.value = 'Não foi possível carregar os dados da assinatura.';
-  } finally {
-    isLoading.value = false;
+/**
+ * Computed property for subscribed quantity
+ * @returns {number|undefined}
+ */
+const subscribedQuantity = computed(() => {
+  return customAttributes.value.subscribed_quantity;
+});
+
+const subscriptionRenewsOn = computed(() => {
+  if (!customAttributes.value.subscription_ends_on) return '';
+  const endDate = new Date(customAttributes.value.subscription_ends_on);
+  // return date as 12 Jan, 2034
+  return format(endDate, 'dd MMM, yyyy');
+});
+
+/**
+ * Computed property indicating if user has a billing plan
+ * @returns {boolean}
+ */
+const hasABillingPlan = computed(() => {
+  return !!planName.value;
+});
+
+const fetchAccountDetails = async () => {
+  if (!hasABillingPlan.value) {
+    await store.dispatch('accounts/subscription');
+  }
+  // Always fetch limits for billing page to show credit usage
+  fetchLimits();
+};
+
+const handleBillingPageLogic = async () => {
+  // If self-hosted, redirect to dashboard
+  if (!isOnChatwootCloud.value) {
+    router.push({ name: 'home' });
+    return;
+  }
+
+  // Check if we've already attempted a refresh for billing setup
+  const billingRefreshAttempted = sessionStorage.get(BILLING_REFRESH_ATTEMPTED);
+
+  // If cloud user, fetch account details first
+  await fetchAccountDetails();
+
+  // If still no billing plan after fetch
+  if (!hasABillingPlan.value) {
+    // If we haven't attempted refresh yet, do it once
+    if (!billingRefreshAttempted) {
+      isWaitingForBilling.value = true;
+      sessionStorage.set(BILLING_REFRESH_ATTEMPTED, true);
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 5000);
+    } else {
+      // We've already tried refreshing, so just show the no billing message
+      // Clear the flag for future visits
+      sessionStorage.remove(BILLING_REFRESH_ATTEMPTED);
+    }
+  } else {
+    // Billing plan found, clear any existing refresh flag
+    sessionStorage.remove(BILLING_REFRESH_ATTEMPTED);
   }
 };
 
 const onClickBillingPortal = () => {
-  // If we have an Asaas implementation, we can redirect. For now, trigger original
   store.dispatch('accounts/checkout');
 };
 
 const onToggleChatWindow = () => {
-  if (window.$chatwoot) window.$chatwoot.toggle();
+  if (window.$chatwoot) {
+    window.$chatwoot.toggle();
+  }
 };
 
 const openPurchaseCreditsModal = () => {
@@ -121,78 +138,69 @@ const openPurchaseCreditsModal = () => {
 };
 
 const handleTopupSuccess = () => {
+  // Refresh limits to show updated credit balance
   fetchLimits();
 };
 
-const initialize = async () => {
-  await fetchSubscription();
-  fetchLimits();
-};
-
-onMounted(initialize);
+onMounted(handleBillingPageLogic);
 </script>
 
 <template>
   <SettingsLayout
-    :is-loading="isLoading"
-    :loading-message="$t('ATTRIBUTES_MGMT.LOADING')"
-    :no-records-found="!!error"
-    :no-records-message="error || ''"
+    :is-loading="uiFlags.isFetchingItem || isWaitingForBilling"
+    :loading-message="
+      isWaitingForBilling
+        ? $t('BILLING_SETTINGS.NO_BILLING_USER')
+        : $t('ATTRIBUTES_MGMT.LOADING')
+    "
+    :no-records-found="!hasABillingPlan && !isWaitingForBilling"
+    :no-records-message="$t('BILLING_SETTINGS.NO_BILLING_USER')"
   >
     <template #header>
       <BaseSettingsHeader
         :title="$t('BILLING_SETTINGS.TITLE')"
         :description="$t('BILLING_SETTINGS.DESCRIPTION')"
+        :link-text="$t('BILLING_SETTINGS.VIEW_PRICING')"
         feature-name="billing"
       />
     </template>
     <template #body>
       <section class="grid gap-4">
-        <!-- Status do Plano (Klivy) -->
         <BillingCard
           :title="$t('BILLING_SETTINGS.MANAGE_SUBSCRIPTION.TITLE')"
           :description="$t('BILLING_SETTINGS.MANAGE_SUBSCRIPTION.DESCRIPTION')"
         >
+          <template #action>
+            <ButtonV4
+              v-if="canManageBilling"
+              sm
+              solid
+              blue
+              @click="onClickBillingPortal"
+            >
+              {{ $t('BILLING_SETTINGS.MANAGE_SUBSCRIPTION.BUTTON_TXT') }}
+            </ButtonV4>
+          </template>
           <div
-            v-if="subscription"
+            v-if="planName || subscribedQuantity || subscriptionRenewsOn"
             class="grid lg:grid-cols-4 sm:grid-cols-3 grid-cols-1 gap-2 divide-x divide-n-weak"
           >
             <DetailItem
               :label="$t('BILLING_SETTINGS.CURRENT_PLAN.TITLE')"
-              :value="planLabel"
+              :value="planName"
             />
             <DetailItem
-              label="Status"
-              :value="statusLabel"
-            >
-              <template #value>
-                <span
-                  class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                  :class="statusColor"
-                >
-                  {{ statusLabel }}
-                </span>
-              </template>
-            </DetailItem>
-            <DetailItem
-              v-if="subscription.price"
-              label="Mensalidade"
-              :value="formattedPrice"
+              v-if="subscribedQuantity"
+              :label="$t('BILLING_SETTINGS.CURRENT_PLAN.SEAT_COUNT')"
+              :value="subscribedQuantity"
             />
             <DetailItem
-              v-if="subscription.coupon_code"
-              label="Cupom aplicado"
-              :value="subscription.coupon_code"
-            />
-            <DetailItem
-              v-if="couponExpiresLabel"
-              label="Desconto válido até"
-              :value="couponExpiresLabel"
+              v-if="subscriptionRenewsOn"
+              :label="$t('BILLING_SETTINGS.CURRENT_PLAN.RENEWS_ON')"
+              :value="subscriptionRenewsOn"
             />
           </div>
         </BillingCard>
-
-        <!-- Seção do Copilot (Captain) -->
         <BillingCard
           v-if="captainEnabled"
           :title="$t('BILLING_SETTINGS.CAPTAIN.TITLE')"
@@ -211,7 +219,7 @@ onMounted(initialize);
                 {{ $t('BILLING_SETTINGS.CAPTAIN.REFRESH_CREDITS') }}
               </ButtonV4>
               <ButtonV4
-                v-if="canPurchaseCredits"
+                v-if="canPurchaseCredits && canManageBilling"
                 sm
                 solid
                 blue
@@ -252,7 +260,6 @@ onMounted(initialize);
           </template>
         </BillingCard>
 
-        <!-- Suporte -->
         <BillingHeader
           class="px-1 mt-5"
           :title="$t('BILLING_SETTINGS.CHAT_WITH_US.TITLE')"
@@ -269,7 +276,6 @@ onMounted(initialize);
           </ButtonV4>
         </BillingHeader>
       </section>
-
       <PurchaseCreditsModal
         ref="purchaseCreditsModalRef"
         @success="handleTopupSuccess"

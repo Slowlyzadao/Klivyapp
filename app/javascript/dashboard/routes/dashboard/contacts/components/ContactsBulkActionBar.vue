@@ -2,15 +2,11 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { vOnClickOutside } from '@vueuse/components';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import BulkSelectBar from 'dashboard/components-next/captain/assistant/BulkSelectBar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import LabelActions from 'dashboard/components/widgets/conversation/conversationBulkActions/LabelActions.vue';
-
-const { can } = usePermissions();
-const canDeleteContacts = computed(() => can('contacts', 'delete'));
-const canManageTags = computed(() => can('contacts', 'manage_tags'));
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 const props = defineProps({
   visibleContactIds: {
@@ -35,6 +31,13 @@ const emit = defineEmits([
 ]);
 
 const { t } = useI18n();
+const { isAdmin, can: klivyCan } = usePermissions();
+const canDeleteContact = computed(
+  () => isAdmin.value || klivyCan('contacts', 'delete')
+);
+const canManageTags = computed(
+  () => isAdmin.value || klivyCan('contacts', 'manage_tags')
+);
 
 const selectedCount = computed(() => props.selectedContactIds.length);
 const totalVisibleContacts = computed(() => props.visibleContactIds.length);
@@ -151,7 +154,7 @@ const handleAssignLabels = labels => {
             </transition>
           </div>
           <Button
-            v-if="canDeleteContacts"
+            v-if="canDeleteContact"
             v-tooltip.bottom="t('CONTACTS_BULK_ACTIONS.DELETE_CONTACTS')"
             sm
             faded

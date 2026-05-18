@@ -4,38 +4,27 @@
 import draggable from 'vuedraggable';
 import AgendaCustomAttributesAPI from '@plugins/agenda/frontend/api/agendaCustomAttributes';
 import ModernSelect from '../../components/ModernSelect.vue';
-import PermissionDenied from '@plugins/custom_roles/frontend/components/PermissionDenied.vue';
-import { usePermissions } from 'dashboard/composables/usePermissions';
+import DeleteModal from 'dashboard/components/widgets/modal/DeleteModal.vue';
 
 export default {
   name: 'AgendaCustomAttributes',
   components: {
     draggable,
     ModernSelect,
-    PermissionDenied,
-  },
-  setup() {
-    const { can } = usePermissions();
-    return { can };
-  },
-  computed: {
-    canManage() {
-      return this.can('agenda', 'manage_custom_attributes');
-    },
+    DeleteModal,
   },
   data() {
     return {
-      attributes: [
-        {
-          id: 1,
-          name: 'Observação',
-          type: 'textarea',
-          required: false,
-          options: '',
-        },
-      ],
+      // Custom attributes ONLY. The "Observação" / description field is a
+      // fixed system field rendered separately above this list — never
+      // included here, so it never disappears when the API returns custom
+      // attrs and never collides with their IDs.
+      attributes: [],
       isModalOpen: false,
       editingId: null,
+      isSavingOrder: false,
+      isDeleting: false,
+      attrToDelete: null,
       draft: {
         name: '',
         type: 'text',
@@ -61,9 +50,9 @@ export default {
   async mounted() {
     try {
       const { data } = await AgendaCustomAttributesAPI.getAll();
-      if (data && data.length) this.attributes = data;
+      this.attributes = Array.isArray(data) ? data : [];
     } catch (e) {
-      // keep default
+      this.attributes = [];
     }
   },
   methods: {
@@ -116,12 +105,43 @@ export default {
       }
       this.closeModal();
     },
-    async deleteAttribute(id) {
+    requestDelete(attr) {
+      // Open the confirmation modal — the actual delete only happens on
+      // confirm. Storing the full attr (not just id) so the modal can show
+      // the field name in its message.
+      this.attrToDelete = attr;
+    },
+    cancelDelete() {
+      if (this.isDeleting) return;
+      this.attrToDelete = null;
+    },
+    async confirmDelete() {
+      if (!this.attrToDelete) return;
+      this.isDeleting = true;
+      const id = this.attrToDelete.id;
       try {
         await AgendaCustomAttributesAPI.delete(id);
         this.attributes = this.attributes.filter(a => a.id !== id);
+        this.attrToDelete = null;
       } catch (e) {
-        // silently fail
+        // silently fail — modal stays open so user knows it didn't work
+      } finally {
+        this.isDeleting = false;
+      }
+    },
+    async onDragEnd() {
+      // Persist new order to backend so it survives reload. The local
+      // array is already updated by vuedraggable's v-model; we just
+      // mirror its IDs to the API.
+      if (this.attributes.length < 2) return;
+      this.isSavingOrder = true;
+      try {
+        const ids = this.attributes.map(a => a.id);
+        await AgendaCustomAttributesAPI.reorder(ids);
+      } catch (e) {
+        // silently fail — local order remains; next reload will sync.
+      } finally {
+        this.isSavingOrder = false;
       }
     },
   },
@@ -130,18 +150,13 @@ export default {
 
 <template>
   <div class="settings-root">
-    <PermissionDenied
-      v-if="!canManage"
-      title="Atributos personalizados restritos"
-      message="Você não tem permissão para gerenciar os atributos personalizados da agenda. Fale com o administrador da conta caso precise de acesso."
-    />
-    <template v-else>
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <div>
         <h2 class="section-title mb-0">Atributos Personalizados da Agenda</h2>
         <p class="section-sub-title">
-          Crie novos campos para enriquecer o cadastro de agendamentos.
+          O campo "Observação" é nativo do agendamento. Crie campos adicionais
+          abaixo para enriquecer o cadastro.
         </p>
       </div>
       <button class="add-btn-premium" @click="openNewModal">
@@ -150,67 +165,120 @@ export default {
       </button>
     </div>
 
+    <!-- ── CAMPO DO SISTEMA (Observação) ────────────────────
+         Fixo: representa a textarea "Observações" do modal de evento
+         (newEvent.description). Não pode ser editado, removido ou
+         reordenado para fora desta posição. -->
+    <div class="section-label">
+      <i class="i-lucide-shield-check size-3.5" />
+      <span>Campo do sistema</span>
+    </div>
+    <div class="rule-item rule-item--system">
+      <div class="rule-main">
+        <div class="rule-info">
+          <div class="rule-icon-sq bg-slate-500/10 text-slate-400">
+            <i class="i-lucide-align-left size-4" />
+          </div>
+          <div class="rule-details">
+            <div class="rule-header-row">
+              <span class="rule-name">Observação</span>
+              <div class="rule-badges">
+                <span class="badge-type">Área de Texto</span>
+                <span class="badge-system">Padrão</span>
+              </div>
+            </div>
+            <div class="rule-sub-info">
+              Aparece como "Observações" no modal de novo evento. Nativo do
+              sistema — não pode ser editado nem removido.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ATRIBUTOS PERSONALIZADOS ───────────────────────── -->
+    <div class="section-label section-label--custom">
+      <i class="i-lucide-layers size-3.5" />
+      <span>Atributos personalizados</span>
+      <span v-if="isSavingOrder" class="saving-indicator">
+        <i class="i-lucide-loader-2 size-3 spin" />
+        Salvando ordem…
+      </span>
+    </div>
+
     <!-- Empty state -->
     <div v-if="attributes.length === 0" class="empty-state">
       <i class="i-lucide-layers empty-ico" />
-      <p class="empty-title">Nenhum atributo criado ainda</p>
+      <p class="empty-title">Nenhum atributo personalizado ainda</p>
       <p class="empty-sub">
         Clique em "+ Adicionar atributo" para criar o primeiro campo
         personalizado.
       </p>
     </div>
 
-    <!-- Grid de cards -->
-    <draggable v-else v-model="attributes" item-key="id" class="cards-list" handle=".drag-handle" :animation="200">
+    <!-- Drag list -->
+    <draggable
+      v-else
+      v-model="attributes"
+      item-key="id"
+      class="cards-list"
+      handle=".drag-handle"
+      :animation="220"
+      ghost-class="drag-ghost-card"
+      drag-class="drag-active-card"
+      chosen-class="drag-chosen-card"
+      @end="onDragEnd"
+    >
       <template #item="{ element: attr }">
         <div class="rule-item">
           <div class="rule-main">
-            <!-- Ícone de Drag e Info principal -->
             <div class="rule-info">
-              <div class="drag-handle" style="cursor: grab; margin-right: 12px; display: flex; align-items: center; color: rgb(var(--slate-8));">
+              <button
+                type="button"
+                class="drag-handle"
+                title="Arrastar para reordenar"
+                aria-label="Arrastar para reordenar"
+              >
                 <i class="i-lucide-grip-vertical size-5" />
-              </div>
+              </button>
               <div class="rule-icon-sq bg-blue-500/10 text-blue-400">
                 <i :class="getTypeIcon(attr.type)" class="size-4" />
               </div>
               <div class="rule-details">
                 <div class="rule-header-row">
                   <span class="rule-name">{{ attr.name }}</span>
-                <div class="rule-badges">
-                  <span class="badge-type">
-                    {{ getTypeLabel(attr.type) }}
-                  </span>
-                  <span v-if="attr.required" class="badge-required">
-                    Obrigatório
-                  </span>
+                  <div class="rule-badges">
+                    <span class="badge-type">{{ getTypeLabel(attr.type) }}</span>
+                    <span v-if="attr.required" class="badge-required">
+                      Obrigatório
+                    </span>
+                  </div>
+                </div>
+                <div v-if="attr.type === 'select'" class="rule-sub-info">
+                  Opções: {{ attr.options || 'Nenhuma opção definida' }}
                 </div>
               </div>
-              <div v-if="attr.type === 'select'" class="rule-sub-info">
-                Opções: {{ attr.options || 'Nenhuma opção definida' }}
-              </div>
+            </div>
+
+            <!-- Ações -->
+            <div class="rule-actions">
+              <button
+                class="action-icon"
+                title="Editar"
+                @click="openEditModal(attr)"
+              >
+                <i class="i-lucide-pencil size-4" />
+              </button>
+              <button
+                class="action-icon action-icon--danger"
+                title="Excluir"
+                @click="requestDelete(attr)"
+              >
+                <i class="i-lucide-trash-2 size-4" />
+              </button>
             </div>
           </div>
-
-          <!-- Ações -->
-          <div class="rule-actions">
-            <button
-              class="action-icon"
-              title="Editar"
-              @click="openEditModal(attr)"
-            >
-              <i class="i-lucide-pencil size-4.5" />
-            </button>
-            <div class="divider" />
-            <button
-              class="action-icon text-red-400 hover:bg-red-500/10"
-              title="Excluir"
-              @click="deleteAttribute(attr.id)"
-            >
-              <i class="i-lucide-trash-2 size-4.5" />
-            </button>
-          </div>
         </div>
-      </div>
       </template>
     </draggable>
 
@@ -304,7 +372,18 @@ style="margin-top: 14px"
         </div>
       </div>
     </teleport>
-    </template>
+
+    <!-- Confirmação de exclusão (reutiliza componente compartilhado do dashboard) -->
+    <DeleteModal
+      :show="!!attrToDelete"
+      :title="'Excluir atributo personalizado'"
+      :message="'Tem certeza que deseja excluir o campo'"
+      :message-value="attrToDelete ? `“${attrToDelete.name}”?` : ''"
+      :confirm-text="isDeleting ? 'Excluindo…' : 'Excluir'"
+      :reject-text="'Cancelar'"
+      :on-confirm="confirmDelete"
+      :on-close="cancelDelete"
+    />
   </div>
 </template>
 
@@ -384,12 +463,45 @@ style="margin-top: 14px"
   max-width: 320px;
 }
 
+/* ───────── SECTION LABELS ───────── */
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgb(var(--slate-9));
+  margin: 16px 0 8px;
+}
+.section-label--custom {
+  margin-top: 28px;
+}
+.saving-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgb(var(--blue-11));
+  text-transform: none;
+  letter-spacing: normal;
+}
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ───────── CARDS LIST ───────── */
 .cards-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 10px;
+  gap: 10px;
+  margin-top: 4px;
 }
 
 .rule-item {
@@ -397,11 +509,86 @@ style="margin-top: 14px"
   border: 1px solid rgb(var(--slate-4));
   border-radius: 12px;
   padding: 14px 18px;
-  transition: all 0.2s ease;
+  transition: border-color 0.18s ease, background 0.18s ease,
+    transform 0.18s ease, box-shadow 0.18s ease;
 }
 .rule-item:hover {
   border-color: rgb(var(--slate-6));
   background: rgb(var(--slate-3));
+}
+
+/* Sistema (não draggable, sem ações) */
+.rule-item--system {
+  background: rgba(var(--slate-4), 0.4);
+  border-style: dashed;
+  border-color: rgb(var(--slate-5));
+  cursor: default;
+}
+.rule-item--system:hover {
+  background: rgba(var(--slate-4), 0.5);
+  border-color: rgb(var(--slate-6));
+}
+.rule-item--system .rule-info {
+  padding-left: 2px;
+}
+
+.badge-system {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(var(--blue-9), 0.12);
+  color: rgb(var(--blue-11));
+  border: 1px solid rgba(var(--blue-9), 0.25);
+}
+
+/* ───────── DRAG VISUAL FEEDBACK ───────── */
+.drag-handle {
+  cursor: grab;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: rgb(var(--slate-8));
+  background: transparent;
+  border: none;
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.drag-handle:hover {
+  background: rgb(var(--slate-4));
+  color: rgb(var(--slate-12));
+}
+.drag-handle:active {
+  cursor: grabbing;
+  background: rgb(var(--slate-5));
+}
+
+/* Item sendo arrastado (clone visual seguindo o cursor) */
+.drag-active-card {
+  cursor: grabbing !important;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(var(--blue-9), 0.4) !important;
+  transform: rotate(0.5deg);
+  background: rgb(var(--slate-1)) !important;
+  border-color: rgba(var(--blue-9), 0.5) !important;
+}
+
+/* Placeholder na posição original (espaço fantasma) */
+.drag-ghost-card {
+  opacity: 0.35;
+  background: rgb(var(--slate-3)) !important;
+  border-style: dashed !important;
+  border-color: rgb(var(--blue-9)) !important;
+}
+
+/* Item escolhido (no momento do click antes do drag começar) */
+.drag-chosen-card {
+  border-color: rgba(var(--blue-9), 0.45) !important;
+  background: rgb(var(--slate-3)) !important;
 }
 
 .rule-main {
@@ -477,32 +664,29 @@ style="margin-top: 14px"
 .rule-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
 }
 
 .action-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  display: flex;
+  padding: 0;
+  width: auto;
+  height: auto;
+  border: none;
+  background: transparent;
+  color: rgb(var(--slate-9));
+  cursor: pointer;
+  transition: color 0.15s, transform 0.12s;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: rgb(var(--slate-9));
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: all 0.15s;
 }
 .action-icon:hover {
-  background: rgb(var(--slate-4));
+  background: transparent;
   color: rgb(var(--slate-12));
+  transform: scale(1.08);
 }
-
-.divider {
-  width: 1px;
-  height: 16px;
-  background: rgb(var(--slate-5));
-  margin: 0 4px;
+.action-icon--danger:hover {
+  color: #ef4444;
 }
 
 /* ───────── MODAL ───────── */

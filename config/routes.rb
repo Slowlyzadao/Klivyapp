@@ -105,6 +105,79 @@ Rails.application.routes.draw do
               post :reauthorize_page
             end
           end
+          # AiAgent (Bea) plugin — user-facing knowledge base endpoints.
+          # Controllers + policies + views live in plugins/ai_agent/.
+          # The fully-qualified controller path keeps the plugin namespace
+          # intact (AiAgent::Api::V1::Accounts::DocumentsController).
+          resources :ai_agent_documents,
+                    path: 'ai_agent/documents',
+                    only: [:index, :show, :create, :destroy],
+                    controller: '/ai_agent/api/v1/accounts/documents'
+          resources :ai_agent_follow_up_rules,
+                    path: 'ai_agent/follow_up_rules',
+                    only: [:index, :show, :create, :update, :destroy],
+                    controller: '/ai_agent/api/v1/accounts/follow_up_rules'
+
+          resources :ai_agent_internal_notification_templates,
+                    path: 'ai_agent/internal_notification_templates',
+                    only: [:index, :show, :create, :update, :destroy],
+                    controller: '/ai_agent/api/v1/accounts/internal_notification_templates' do
+            collection do
+              get :catalog
+            end
+            member do
+              post :reset
+            end
+          end
+
+          # InternalChat plugin — chat interno entre profissionais.
+          # Controllers, models, policies em plugins/internal_chat/.
+          namespace :internal_chat do
+            resources :rooms, only: [:index, :show, :create, :update, :destroy] do
+              collection do
+                get :unread_summary
+              end
+              member do
+                patch :archive
+                patch :unarchive
+                patch :mute
+                delete :mute, action: :unmute
+                patch :avatar, action: :update_avatar
+                delete :avatar, action: :remove_avatar
+              end
+              resources :messages, only: [:index, :create, :update, :destroy] do
+                collection do
+                  post :mark_read
+                  get :favorites
+                end
+                member do
+                  post :favorite
+                  delete :favorite, action: :unfavorite
+                  post :react
+                  delete :react, action: :unreact
+                end
+              end
+              resources :memberships, only: [:index, :create, :update, :destroy]
+              resources :typing, only: [:create]
+              resources :attachments, only: [:index] do
+                member do
+                  get :download
+                end
+              end
+            end
+            resources :mentions, only: [:index] do
+              collection do
+                post :mark_read
+                get :unread_count
+              end
+            end
+            resources :stickers, only: [:index, :create, :destroy] do
+              member do
+                post :favorite
+                delete :favorite, action: :unfavorite
+              end
+            end
+          end
           resources :canned_responses, only: [:index, :create, :update, :destroy]
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
@@ -200,7 +273,11 @@ Rails.application.routes.draw do
                   get :compare
                 end
               end
-              resources :exam_folders, only: [:index, :update]
+              resources :exam_folders, only: [:index, :create, :update, :destroy] do
+                collection do
+                  put :reorder
+                end
+              end
               resources :documents, only: [:index, :show, :destroy] do
                 collection do
                   post :generate
@@ -256,6 +333,11 @@ Rails.application.routes.draw do
             end
           end
           resources :agenda_services, only: [:index, :create, :show, :update, :destroy] do
+            collection do
+              patch :reorder
+            end
+          end
+          resources :agenda_categories, only: [:index, :create, :show, :update, :destroy] do
             collection do
               patch :reorder
             end
@@ -550,6 +632,9 @@ Rails.application.routes.draw do
               post   'register',   to: 'bridges#register'
               post   'migrate',    to: 'bridges#migrate'
             end
+            # "Iniciar conversa com número" estilo WhatsApp Web — valida no
+            # WhatsApp e cria contato/conversa de uma vez.
+            post 'start_conversation', to: 'start_conversations#create'
           end
 
           resources :webhooks, only: [:index, :create, :update, :destroy]
@@ -612,6 +697,9 @@ Rails.application.routes.draw do
 
           resources :upload, only: [:create]
           resource :beclinic_permissions, only: [:show], controller: 'beclinic_permissions'
+          # Busca híbrida (conversas + contatos) usada pelo input "Buscar por contato..."
+          # da lista de conversas. Estende o módulo de busca atual sem mexer em core.
+          get 'beclinic_unified_search', to: 'beclinic_unified_search#index'
         end
       end
       # end of account scoped api routes
@@ -795,16 +883,12 @@ Rails.application.routes.draw do
           post ':public_id/book', to: 'public#book'
         end
 
-        # API pública dos artigos da Central de Ajuda (sem autenticação)
         resources :help_articles, only: [:index, :show] do
           collection do
             get :categories
             get :faqs
           end
         end
-
-        # API pública de planos para o checkout dinâmico (sem autenticação)
-        resources :subscription_plans, only: [:show], param: :slug
       end
     end
   end
@@ -828,6 +912,14 @@ Rails.application.routes.draw do
   end
 
   # ----------------------------------------------------------------------
+  # Bea health endpoint (público, pro uptime checker externo).
+  # 200 ok/degraded/idle; 503 down. Não autenticado por design.
+  get 'api/v1/ai_agent/health', to: 'api/v1/ai_agent/health#show'
+
+  # Bea feedback público (👍/👎 do paciente sobre uma resposta).
+  # Autenticação via HMAC token gerado por TokenSigner — sem login.
+  post 'api/v1/ai_agent/feedback', to: 'api/v1/ai_agent/feedbacks#create'
+
   # Routes for channel integrations
   mount Facebook::Messenger::Server, at: 'bot'
   get 'webhooks/twitter', to: 'api/v1/webhooks#twitter_crc'
@@ -895,6 +987,11 @@ Rails.application.routes.draw do
       resources :accounts, only: [:index, :new, :create, :show, :edit, :update, :destroy] do
         post :seed, on: :member
         post :reset_cache, on: :member
+        member do
+          get  :bea
+          patch :bea, action: :update_bea
+        end
+        resources :ai_agent_documents, only: [:index, :create, :destroy], controller: 'ai_agent_documents'
       end
       resources :users, only: [:index, :new, :create, :show, :edit, :update, :destroy] do
         delete :avatar, on: :member, action: :destroy_avatar
@@ -906,19 +1003,6 @@ Rails.application.routes.draw do
         delete :avatar, on: :member, action: :destroy_avatar
       end
       resources :platform_apps, only: [:index, :new, :create, :show, :edit, :update, :destroy]
-
-      # Artigos, Categorias e FAQs da Central de Ajuda — gerenciados via plugin ajuda
-      resources :help_articles,   only: [:index, :new, :create, :show, :edit, :update, :destroy]
-      resources :help_categories, only: [:index, :new, :create, :show, :edit, :update, :destroy]
-      resources :help_faqs,       only: [:index, :new, :create, :show, :edit, :update, :destroy]
-
-      # Planos de Assinatura e Cupons de Desconto — gerenciados via plugin assinatura
-      resources :subscription_plans, only: [:index, :create, :update, :destroy]
-      resources :discount_coupons,   only: [:index, :create, :update, :destroy]
-
-      # Migração de dados de outras plataformas (Clinicorp etc.) — plugin migration
-      resources :migrations, only: [:index, :create, :show]
-
       resource :instance_status, only: [:show]
 
       resource :settings, only: [:show] do
@@ -927,6 +1011,31 @@ Rails.application.routes.draw do
 
       # resources that doesn't appear in primary navigation in super admin
       resources :account_users, only: [:new, :create, :show, :destroy]
+
+      # ── Beclinic / Klivy custom modules ─────────────────────────────────────
+      # Módulos customizados ficam agrupados no fim da sidebar do Super Admin
+      # para separar visualmente do que é Chatwoot OSS.
+
+      # Central de Ajuda — plugin `ajuda` (CMS de artigos/categorias/FAQs).
+      resources :help_categories, only: [:index, :new, :create, :show, :edit, :update, :destroy]
+      resources :help_articles, only: [:index, :new, :create, :show, :edit, :update, :destroy]
+      resources :help_faqs, only: [:index, :new, :create, :show, :edit, :update, :destroy]
+
+      # Widget de suporte (bubble do canto inferior direito) — UI dedicada
+      # com 3 campos (enabled/token/url). Lê e grava em InstallationConfig.
+      resource :klivy_widget, only: [:show, :update]
+
+      # Bea — agente de IA da Klivy. UI dedicada para o super admin
+      # configurar provider (OpenAI/Gemini), modelos e chaves. Lê/grava
+      # em InstallationConfig (CAPTAIN_*).
+      resource :bea, only: [:show, :update], controller: 'bea'
+
+      # Migração de dados de outras plataformas (Clinicorp etc.) — plugin migration.
+      resources :migrations, only: [:index, :create, :show] do
+        collection do
+          post :preview
+        end
+      end
     end
 
     authenticated :super_admin do

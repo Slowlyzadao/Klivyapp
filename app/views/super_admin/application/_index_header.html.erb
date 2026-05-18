@@ -1,0 +1,54 @@
+<%#
+# Index header — override do partial do gem Administrate
+# (administrate-0.20.1/app/views/administrate/application/_index_header.html.erb).
+#
+# Diferenças em relação ao original:
+# 1. Usa I18n.exists? para detectar uma chave customizada
+#    `administrate.actions.new_<resource_path>` (ex: `new_help_categories`)
+#    e renderizá-la como label do botão "novo". Permite gênero correto
+#    ("Nova Categoria", "Novo Artigo") sem depender do fallback genérico
+#    `administrate.actions.new_resource` ("Adicionar X").
+# 2. Quando cai no fallback, NÃO faz `.downcase` no nome do recurso —
+#    o nome capitalizado já vem do I18n (`activerecord.models.<x>.one`).
+#    O original do gem chamava `.downcase` resultando em
+#    "Adicionar categoria de ajuda".
+%>
+
+<% content_for(:title) do %>
+  <%= display_resource_name(page.resource_name) %>
+<% end %>
+
+<header class="main-content__header">
+  <h1 class="main-content__page-title" id="page-title">
+    <%= content_for(:title) %>
+  </h1>
+
+  <% if show_search_bar %>
+    <%= render(
+      "search",
+      search_term: search_term,
+      resource_name: display_resource_name(page.resource_name)
+    ) %>
+  <% end %>
+
+  <div>
+    <% if accessible_action?(new_resource, :new) %>
+      <%
+        custom_new_key = "administrate.actions.new_#{page.resource_path}"
+        new_label = if I18n.exists?(custom_new_key)
+                      t(custom_new_key)
+                    else
+                      t(
+                        "administrate.actions.new_resource",
+                        name: display_resource_name(page.resource_name, singular: true)
+                      )
+                    end
+      %>
+      <%= link_to(
+        new_label,
+        [:new, namespace, page.resource_path.to_sym],
+        class: "button"
+      ) %>
+    <% end %>
+  </div>
+</header>

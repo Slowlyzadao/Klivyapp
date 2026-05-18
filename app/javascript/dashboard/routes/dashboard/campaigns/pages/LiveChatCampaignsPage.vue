@@ -3,7 +3,6 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useToggle } from '@vueuse/core';
 import { useStoreGetters, useMapGetter } from 'dashboard/composables/store';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import CampaignLayout from 'dashboard/components-next/Campaigns/CampaignLayout.vue';
@@ -12,11 +11,14 @@ import LiveChatCampaignDialog from 'dashboard/components-next/Campaigns/Pages/Ca
 import EditLiveChatCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/LiveChatCampaign/EditLiveChatCampaignDialog.vue';
 import ConfirmDeleteCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/ConfirmDeleteCampaignDialog.vue';
 import LiveChatCampaignEmptyState from 'dashboard/components-next/Campaigns/EmptyState/LiveChatCampaignEmptyState.vue';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 const { t } = useI18n();
 const getters = useStoreGetters();
-const { can } = usePermissions();
-const canManage = computed(() => can('campaigns', 'manage_live_chat'));
+const { isAdmin, can: klivyCan } = usePermissions();
+const canManage = computed(
+  () => isAdmin.value || klivyCan('campaigns', 'manage_live_chat')
+);
 
 const editLiveChatCampaignDialogRef = ref(null);
 const confirmDeleteCampaignDialogRef = ref(null);

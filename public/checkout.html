@@ -256,14 +256,10 @@
 
       <div class="summary-card">
         <div class="plan-row">
-          <div class="plan-badge">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"></path></svg>
-            <span id="planNameLabel">Carregando plano…</span>
-          </div>
-          <div id="planPriceLabel">—</div>
+          <div class="plan-badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"></path></svg> Plano Standard</div>
+          <div>R$ 397,00</div>
         </div>
-        <div class="total-row"><span>Total da assinatura</span><span id="totalAssinaturaValue">—</span></div>
-        <div id="planLoadError" style="display: none; margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: #fef3c7; color: #92400e; border-radius: 6px; font-size: 0.75rem; line-height: 1.4;"></div>
+        <div class="total-row"><span>Total da assinatura</span><span id="totalAssinaturaValue"><span style="text-decoration: line-through; color: var(--text-muted); font-size: 0.9rem; margin-right: 0.5rem; font-weight: 400;">R$ 397,00</span>R$ 197,00 <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mês</span></span></div>
       </div>
 
       <div style="font-size: 0.65rem; color: var(--text-muted); text-align: center; margin-top: -1rem; margin-bottom: 2rem;">
@@ -287,9 +283,9 @@
           <div id="payTodaySubtext" style="font-size: 0.75rem; color: var(--text-muted);">Implantação e treinamento</div>
         </div>
         <div style="text-align: right;">
-           <div id="payTodayBadge" style="display: none; position: absolute; right: 20px; top: -14px; background: #dcfce7; color: #166534; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;"></div>
-           <div id="payTodayOriginal" style="display: none; font-size: 0.8rem; color: var(--text-muted); text-decoration: line-through; margin-bottom: 2px;"></div>
-           <div id="payTodayFinal" class="pay-today-price" style="line-height: 1;">—</div>
+           <div id="payTodayBadge" style="position: absolute; right: 20px; top: -14px; background: #dcfce7; color: #166534; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">50% OFF</div>
+           <div id="payTodayOriginal" style="font-size: 0.8rem; color: var(--text-muted); text-decoration: line-through; margin-bottom: 2px;">R$ 397,00</div>
+           <div id="payTodayFinal" class="pay-today-price" style="line-height: 1;">R$ 197,00</div>
         </div>
       </div>
     </div>
@@ -820,63 +816,9 @@ Para os fins deste instrumento, as expressões abaixo terão os seguintes signif
       document.getElementById('couponCode').focus();
     }
 
-    // ===== Plano selecionado =====
-    // Carregado dinamicamente em loadSelectedPlan() a partir de ?plan=<slug>.
-    // Sem ?plan, usa o legado "standard" para retrocompatibilidade.
-    let PLAN_PRICE = 197.00;
-    let PLAN_NAME  = 'Plano Standard';
-    let PLAN_SLUG  = 'standard';
-    let PLAN_LOAD_ERROR = null;
-
-    function formatBRLAt(value) {
-      return 'R$ ' + Number(value).toFixed(2).replace('.', ',');
-    }
-
-    function renderPlanSummary() {
-      document.getElementById('planNameLabel').textContent = PLAN_NAME;
-      document.getElementById('planPriceLabel').textContent = formatBRLAt(PLAN_PRICE);
-      document.getElementById('totalAssinaturaValue').innerHTML =
-        `${formatBRLAt(PLAN_PRICE)} <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mês</span>`;
-      document.getElementById('payTodayFinal').textContent = formatBRLAt(PLAN_PRICE);
-      document.getElementById('payTodaySubtext').textContent = 'Implantação e treinamento';
-      document.getElementById('payTodayOriginal').style.display = 'none';
-      document.getElementById('payTodayBadge').style.display = 'none';
-
-      const errBox = document.getElementById('planLoadError');
-      if (errBox) {
-        if (PLAN_LOAD_ERROR) {
-          errBox.style.display = 'block';
-          errBox.textContent = PLAN_LOAD_ERROR;
-        } else {
-          errBox.style.display = 'none';
-        }
-      }
-    }
-
-    async function loadSelectedPlan() {
-      const slug = new URLSearchParams(window.location.search).get('plan');
-      if (!slug) { renderPlanSummary(); return; }
-
-      try {
-        const res = await fetch(`/public/api/v1/subscription_plans/${encodeURIComponent(slug)}`, {
-          headers: { 'Accept': 'application/json' },
-        });
-        if (res.status === 404) throw new Error(`Plano "${slug}" não existe ou está inativo.`);
-        if (!res.ok) throw new Error(`Falha ao buscar plano (HTTP ${res.status}).`);
-        const plan = await res.json();
-        PLAN_PRICE = Number(plan.price_monthly) || PLAN_PRICE;
-        PLAN_NAME  = `Plano ${plan.name}`;
-        PLAN_SLUG  = plan.slug || slug;
-      } catch (e) {
-        console.error('[checkout] Falha ao carregar plano:', e);
-        PLAN_SLUG  = slug;
-        PLAN_NAME  = `Plano ${slug}`;
-        PLAN_LOAD_ERROR = `⚠️ ${e.message} Os valores exibidos podem estar incorretos.`;
-      }
-      renderPlanSummary();
-    }
-
-    document.addEventListener('DOMContentLoaded', loadSelectedPlan);
+    // ===== Catálogo de cupons =====
+    // Preço base do plano: R$ 197,00 (o "de R$ 397" é apenas âncora de marketing)
+    const PLAN_PRICE = 197.00;
 
     const COUPONS = {
       // Período grátis (trial)
@@ -935,8 +877,6 @@ Para os fins deste instrumento, as expressões abaixo terão os seguintes signif
       const totalAssinaturaValue = document.getElementById('totalAssinaturaValue');
       const badge = document.getElementById('payTodayBadge');
 
-      badge.style.display = 'inline-block';
-
       if (coupon.kind === 'trial') {
         payTodayFinal.textContent = 'R$ 0,00';
         payTodayOriginal.style.display = 'none';
@@ -947,7 +887,7 @@ Para os fins deste instrumento, as expressões abaixo terão os seguintes signif
 
         payTodaySubtext.innerHTML = `Avalie grátis por ${coupon.description.replace(' grátis', '')}<br><span style="font-size: 0.65rem; color: var(--primary);">Cobrança de ${formatBRL(PLAN_PRICE)}/mês após o período</span>`;
 
-        totalAssinaturaValue.innerHTML = `${formatBRL(PLAN_PRICE)} <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mês</span>`;
+        totalAssinaturaValue.innerHTML = `<span style="text-decoration: line-through; color: var(--text-muted); font-size: 0.9rem; margin-right: 0.5rem; font-weight: 400;">R$ 397,00</span>${formatBRL(PLAN_PRICE)} <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mês</span>`;
 
       } else if (coupon.kind === 'percent') {
         const discounted = PLAN_PRICE * (1 - coupon.percent / 100);
@@ -961,21 +901,6 @@ Para os fins deste instrumento, as expressões abaixo terão os seguintes signif
 
         const durText = coupon.months === 1 ? 'no primeiro mês' : `pelos primeiros ${coupon.months} meses`;
         payTodaySubtext.innerHTML = `${coupon.percent}% OFF ${durText}<br><span style="font-size: 0.65rem; color: var(--primary);">Renovação por ${formatBRL(PLAN_PRICE)}/mês após o desconto</span>`;
-
-        totalAssinaturaValue.innerHTML = `<span style="text-decoration: line-through; color: var(--text-muted); font-size: 0.9rem; margin-right: 0.5rem; font-weight: 400;">${formatBRL(PLAN_PRICE)}</span>${formatBRL(discounted)} <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mês por ${coupon.months}m</span>`;
-
-      } else if (coupon.kind === 'fixed_value') {
-        const discounted = Math.max(PLAN_PRICE - Number(coupon.amount || 0), 0);
-        payTodayFinal.textContent = formatBRL(discounted);
-        payTodayOriginal.style.display = 'block';
-        payTodayOriginal.textContent = formatBRL(PLAN_PRICE);
-
-        badge.style.background = '#dcfce7';
-        badge.style.color = '#166534';
-        badge.textContent = coupon.label;
-
-        const durText = coupon.months === 1 ? 'no primeiro mês' : `pelos primeiros ${coupon.months} meses`;
-        payTodaySubtext.innerHTML = `${formatBRL(coupon.amount)} OFF ${durText}<br><span style="font-size: 0.65rem; color: var(--primary);">Renovação por ${formatBRL(PLAN_PRICE)}/mês após o desconto</span>`;
 
         totalAssinaturaValue.innerHTML = `<span style="text-decoration: line-through; color: var(--text-muted); font-size: 0.9rem; margin-right: 0.5rem; font-weight: 400;">${formatBRL(PLAN_PRICE)}</span>${formatBRL(discounted)} <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mês por ${coupon.months}m</span>`;
 
@@ -998,7 +923,18 @@ Para os fins deste instrumento, as expressões abaixo terão os seguintes signif
     function removeCoupon() {
       appliedCoupon = null;
 
-      renderPlanSummary();
+      document.getElementById('payTodayFinal').textContent = 'R$ 197,00';
+      document.getElementById('payTodayOriginal').style.display = 'block';
+      document.getElementById('payTodayOriginal').textContent = 'R$ 397,00';
+
+      const badge = document.getElementById('payTodayBadge');
+      badge.style.background = '#dcfce7';
+      badge.style.color = '#166534';
+      badge.textContent = '50% OFF';
+
+      document.getElementById('payTodaySubtext').textContent = 'Implantação e treinamento';
+
+      document.getElementById('totalAssinaturaValue').innerHTML = '<span style="text-decoration: line-through; color: var(--text-muted); font-size: 0.9rem; margin-right: 0.5rem; font-weight: 400;">R$ 397,00</span>R$ 197,00 <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mês</span>';
 
       document.getElementById('couponInputBox').innerHTML = `\n        <input type="text" id="couponCode" placeholder="Insira seu cupom" style="padding: 0.5rem 0.75rem; flex: 1; text-transform: uppercase; border: 1px solid var(--border-color); border-radius: 6px;">\n        <button type="button" class="btn-primary" style="padding: 0.5rem 1rem;" onclick="applyCoupon()">Aplicar</button>\n      `;
     }
@@ -1356,7 +1292,7 @@ Para os fins deste instrumento, as expressões abaixo terão os seguintes signif
 
       // Assemble payload including CC and dynamically using the Address info!
       const payload = {
-        selected_plan: PLAN_SLUG,
+        selected_plan: 'standard',
         coupon: appliedCoupon,
         turnstile_token: turnstileToken,
         password: 'Klivy@123456', 

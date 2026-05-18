@@ -39,7 +39,11 @@ const props = defineProps({
         <div
           v-for="(item, idx) in run.errors_log"
           :key="idx"
-          :class="['mig-error-list__item', item.level === 'info' && 'mig-error-list__item--info']"
+          :class="[
+            'mig-error-list__item',
+            item.level === 'info' && 'mig-error-list__item--info',
+            item.level === 'warning' && 'mig-error-list__item--warning',
+          ]"
         >
           <strong>Linha {{ item.line }}:</strong> {{ item.message }}
         </div>

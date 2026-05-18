@@ -4,6 +4,7 @@ class SuperAdmin::HelpFaqsController < SuperAdmin::ApplicationController
   end
 
   def resource_params
-    params.require(:help_faq).permit(:question, :answer, :category, :position, :active)
+    params.require(resource_class.model_name.param_key)
+          .permit(dashboard.permitted_attributes(action_name))
   end
 end

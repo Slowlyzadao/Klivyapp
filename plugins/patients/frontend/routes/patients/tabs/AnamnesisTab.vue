@@ -1,4 +1,266 @@
 <!-- eslint-disable @intlify/vue-i18n/no-raw-text, vue/no-bare-strings-in-template -->
+<script setup>
+/**
+ * AnamnesisTab — Aba "Anamnese / Questionário Clínico" do prontuário.
+ *
+ * Histórico de saúde, queixa principal, alergias, medicamentos, hábitos.
+ * Suporta rascunho ("Salvar") e finalização ("Assinar e Finalizar" → torna
+ * o registro imutável e gera PDF assinado).
+ *
+ * Auto-suficiente: lê patientId da rota e faz seu próprio fetch ao montar.
+ *
+ * Componente extraído de Record.vue (Fase 5 do refactor — ver CHANGELOG).
+ */
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { useAlert } from 'dashboard/composables';
+import { formatDateBR } from '@plugins/beclinic_core/frontend/helpers/dateHelpers';
+import AnamnesisAPI from '@plugins/patients/frontend/api/patients/anamnesis';
+
+const route = useRoute();
+
+const formatDate = dateStr => {
+  if (!dateStr) return '—';
+  return formatDateBR(dateStr) || '—';
+};
+
+// ── Defaults ──────────────────────────────────────────────
+const EMPTY_ANAMNESIS = () => ({
+  id: null,
+  specialty: 'Odontologia Geral',
+  chief_complaint: '',
+  medical_history: {
+    hypertension: false,
+    diabetes: false,
+    bleeding_disorder: false,
+    pregnant: false,
+    oncology: false,
+    hepatitis: false,
+    other: '',
+    has_recent_surgeries: false,
+    has_implants: false,
+    has_anesthesia_complications: false,
+  },
+  allergies: [],
+  current_medications: [],
+  contraindications: [],
+  surgical_history: '',
+  family_history: '',
+  relevant_habits: {
+    smoker: 'Não',
+    alcohol: 'Não consome',
+    sports: 'Sedentário',
+  },
+  pregnancy: {},
+  additional_notes: '',
+  status: 'draft',
+});
+
+// JSON round-trip: safe com Vue Proxies (structuredClone falha em Proxies reativos);
+// os dados da anamnese são 100% JSON-seguros (sem Date/Map/Set).
+const deepCloneAnamnesis = value => JSON.parse(JSON.stringify(value));
+
+const normalizeAnamnesisFromServer = remote => {
+  const base = EMPTY_ANAMNESIS();
+  const clone = deepCloneAnamnesis(remote || {});
+  return {
+    ...base,
+    ...clone,
+    medical_history: {
+      ...base.medical_history,
+      ...(clone.medical_history ?? {}),
+    },
+    relevant_habits: {
+      ...base.relevant_habits,
+      ...(clone.relevant_habits ?? {}),
+    },
+    pregnancy: { ...base.pregnancy, ...(clone.pregnancy ?? {}) },
+    allergies: Array.isArray(clone.allergies) ? clone.allergies : [],
+    current_medications: Array.isArray(clone.current_medications)
+      ? clone.current_medications
+      : [],
+    contraindications: Array.isArray(clone.contraindications)
+      ? clone.contraindications
+      : [],
+  };
+};
+
+// ── State ──────────────────────────────────────────────────
+const anamneses = ref([]);
+const currentAnamnesis = ref(EMPTY_ANAMNESIS());
+const allergyInput = ref('');
+const medicationInput = ref('');
+const isSavingAnamnesis = ref(false);
+
+// ── Helpers / Actions ─────────────────────────────────────
+// Aplica o state de forma cirúrgica: muta propriedades in-place em vez de
+// substituir o Ref inteiro. Isso preserva a reatividade dos v-models aninhados
+// (ex: currentAnamnesis.medical_history.hypertension) após fetchAnamneses.
+const applyAnamnesisState = source => {
+  const target = currentAnamnesis.value;
+  const normalized = source
+    ? normalizeAnamnesisFromServer(source)
+    : EMPTY_ANAMNESIS();
+
+  // campos escalares no root
+  [
+    'id',
+    'specialty',
+    'chief_complaint',
+    'surgical_history',
+    'family_history',
+    'additional_notes',
+    'status',
+    'version_number',
+    'finalized_at',
+    'pdf_url',
+    'updated_at',
+  ].forEach(key => {
+    target[key] = normalized[key] ?? (key === 'id' ? null : '');
+  });
+
+  // hashes aninhados — mutar in-place
+  Object.keys(target.medical_history).forEach(key => {
+    target.medical_history[key] = normalized.medical_history[key] ?? false;
+  });
+  Object.keys(normalized.medical_history).forEach(key => {
+    target.medical_history[key] = normalized.medical_history[key];
+  });
+
+  Object.keys(target.relevant_habits).forEach(key => {
+    target.relevant_habits[key] =
+      normalized.relevant_habits[key] ?? target.relevant_habits[key];
+  });
+
+  target.pregnancy = { ...normalized.pregnancy };
+
+  // arrays — substituir referência (Vue reage bem a substituição de array)
+  target.allergies = Array.isArray(normalized.allergies)
+    ? [...normalized.allergies]
+    : [];
+  target.current_medications = Array.isArray(normalized.current_medications)
+    ? [...normalized.current_medications]
+    : [];
+  target.contraindications = Array.isArray(normalized.contraindications)
+    ? [...normalized.contraindications]
+    : [];
+};
+
+const startNewAnamnesis = () => {
+  applyAnamnesisState(null);
+};
+
+const flushAllergyInput = () => {
+  const value = allergyInput.value?.trim();
+  if (!value) return;
+  currentAnamnesis.value.allergies = [
+    ...(currentAnamnesis.value.allergies || []),
+    { name: value },
+  ];
+  allergyInput.value = '';
+};
+
+const flushMedicationInput = () => {
+  const value = medicationInput.value?.trim();
+  if (!value) return;
+  currentAnamnesis.value.current_medications = [
+    ...(currentAnamnesis.value.current_medications || []),
+    { name: value },
+  ];
+  medicationInput.value = '';
+};
+
+const removeAllergy = idx => {
+  if (currentAnamnesis.value.status === 'finalized') return;
+  currentAnamnesis.value.allergies = (
+    currentAnamnesis.value.allergies || []
+  ).filter((_, i) => i !== idx);
+};
+
+const removeMedication = idx => {
+  if (currentAnamnesis.value.status === 'finalized') return;
+  currentAnamnesis.value.current_medications = (
+    currentAnamnesis.value.current_medications || []
+  ).filter((_, i) => i !== idx);
+};
+
+const fetchAnamneses = async () => {
+  try {
+    const response = await AnamnesisAPI.get(route.params.patientId);
+    anamneses.value = response.data?.payload || response.data || [];
+    applyAnamnesisState(anamneses.value[0] || null);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error fetching anamneses', error);
+    useAlert('Não foi possível carregar a anamnese.');
+  }
+};
+
+const UNPERMITTED_ANAMNESIS_KEYS = [
+  'id',
+  'status',
+  'version_number',
+  'account_id',
+  'patient_id',
+  'professional_id',
+  'finalized_at',
+  'created_at',
+  'updated_at',
+  'pdf_url',
+];
+
+const saveAnamnesis = async (finalize = false) => {
+  if (isSavingAnamnesis.value) return;
+  try {
+    isSavingAnamnesis.value = true;
+
+    // flush inputs soltos antes de montar o payload
+    flushAllergyInput();
+    flushMedicationInput();
+
+    const payload = deepCloneAnamnesis(currentAnamnesis.value);
+    UNPERMITTED_ANAMNESIS_KEYS.forEach(key => delete payload[key]);
+
+    let response;
+    if (currentAnamnesis.value.id) {
+      response = await AnamnesisAPI.update(
+        route.params.patientId,
+        currentAnamnesis.value.id,
+        payload
+      );
+    } else {
+      response = await AnamnesisAPI.create(route.params.patientId, payload);
+    }
+
+    const persisted = response.data?.payload || response.data;
+    const savedId = persisted?.id || currentAnamnesis.value.id;
+
+    if (finalize && savedId) {
+      // ao finalizar, delegamos o sync do state apenas ao fetchAnamneses final
+      // (evita duplo-sync reativo entre save → finalize).
+      await AnamnesisAPI.finalize(route.params.patientId, savedId);
+      await fetchAnamneses();
+      useAlert('Anamnese assinada e finalizada com sucesso!');
+    } else {
+      if (persisted) {
+        applyAnamnesisState(persisted);
+      }
+      useAlert('Anamnese salva como rascunho com sucesso!');
+    }
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error saving anamnesis', error);
+    useAlert(error?.response?.data?.error || 'Erro ao salvar anamnese.');
+  } finally {
+    isSavingAnamnesis.value = false;
+  }
+};
+
+onMounted(() => {
+  fetchAnamneses();
+});
+</script>
+
 <template>
   <div class="tab-pane fade-in">
     <!-- Header -->
@@ -18,9 +280,11 @@
         </p>
       </div>
       <div class="flex items-center gap-3">
-        <span v-if="currentAnamnesis.updated_at" class="text-xs text-slate-500">
-          Última alteração:
-          {{ formatDate(currentAnamnesis.updated_at) }}
+        <span
+          v-if="currentAnamnesis.updated_at"
+          class="text-xs text-slate-500"
+        >
+          Última alteração: {{ formatDate(currentAnamnesis.updated_at) }}
         </span>
 
         <a
@@ -28,14 +292,14 @@
           :href="currentAnamnesis.pdf_url"
           target="_blank"
           rel="noopener noreferrer"
-          class="btn-secondary flex items-center gap-2"
+          class="geral-header-btn"
         >
           <i class="i-lucide-file-text" /> Visualizar PDF
         </a>
 
         <button
           v-if="currentAnamnesis.status === 'finalized'"
-          class="btn-secondary flex items-center gap-2"
+          class="geral-header-btn"
           @click="startNewAnamnesis"
         >
           <i class="i-lucide-plus" /> Nova Anamnese
@@ -43,7 +307,7 @@
 
         <button
           v-else
-          class="btn-secondary flex items-center gap-2"
+          class="geral-header-btn"
           :disabled="isSavingAnamnesis"
           @click="saveAnamnesis(false)"
         >
@@ -185,7 +449,9 @@
                 :disabled="currentAnamnesis.status === 'finalized'"
               />
               <div class="check-item-box" />
-              <span class="check-item-label">Hepatite / Doenças hepáticas</span>
+              <span class="check-item-label"
+                >Hepatite / Doenças hepáticas</span
+              >
             </label>
           </div>
           <div class="form-group">
@@ -230,6 +496,7 @@
                 class="form-input anm-input-danger"
                 placeholder="Ex: Dipirona, Iodo — separadas por vírgula"
                 :disabled="currentAnamnesis.status === 'finalized'"
+                @blur="flushAllergyInput"
               />
               <div
                 v-if="currentAnamnesis.allergies?.length"
@@ -241,6 +508,15 @@
                   class="anm-tag anm-tag--red"
                 >
                   {{ alg.name }}
+                  <button
+                    v-if="currentAnamnesis.status !== 'finalized'"
+                    type="button"
+                    class="anm-tag-remove"
+                    :aria-label="`Remover ${alg.name}`"
+                    @click="removeAllergy(idx)"
+                  >
+                    <i class="i-lucide-x w-3 h-3" />
+                  </button>
                 </span>
               </div>
             </div>
@@ -252,6 +528,7 @@
                 class="form-input"
                 placeholder="Ex: Losartana 50mg, AAS..."
                 :disabled="currentAnamnesis.status === 'finalized'"
+                @blur="flushMedicationInput"
               />
               <div
                 v-if="currentAnamnesis.current_medications?.length"
@@ -263,6 +540,15 @@
                   class="anm-tag anm-tag--blue"
                 >
                   {{ med.name }}
+                  <button
+                    v-if="currentAnamnesis.status !== 'finalized'"
+                    type="button"
+                    class="anm-tag-remove"
+                    :aria-label="`Remover ${med.name}`"
+                    @click="removeMedication(idx)"
+                  >
+                    <i class="i-lucide-x w-3 h-3" />
+                  </button>
                 </span>
               </div>
             </div>
@@ -313,7 +599,9 @@
             </label>
             <label class="check-item">
               <input
-                v-model="currentAnamnesis.medical_history.has_anesthesia_complications"
+                v-model="
+                  currentAnamnesis.medical_history.has_anesthesia_complications
+                "
                 type="checkbox"
                 :disabled="currentAnamnesis.status === 'finalized'"
               />
@@ -324,7 +612,9 @@
             </label>
           </div>
           <div class="form-group">
-            <label class="form-label">Detalhes das Intervenções Recentes</label>
+            <label class="form-label"
+              >Detalhes das Intervenções Recentes</label
+            >
             <textarea
               v-model="currentAnamnesis.surgical_history"
               class="form-input form-textarea"
@@ -344,7 +634,9 @@
               <i class="i-lucide-leaf w-4 h-4" />
             </div>
             <div>
-              <span class="reg-section-title">Hábitos e Estilo de Vida</span>
+              <span class="reg-section-title"
+                >Hábitos e Estilo de Vida</span
+              >
               <span class="reg-section-subtitle"
                 >Tabagismo, álcool, atividade física e observações</span
               >
@@ -387,9 +679,9 @@
               >
                 <option value="Sedentário">Sedentário</option>
                 <option value="Atividade moderada">Atividade moderada</option>
-                <option value="Atleta / Alta intensidade">
-                  Atleta / Alta intensidade
-                </option>
+                <option value="Atleta / Alta intensidade"
+                  >Atleta / Alta intensidade</option
+                >
               </select>
             </div>
           </div>
@@ -414,3 +706,104 @@
     </div>
   </div>
 </template>
+
+<style scoped>
+/* ── Grid de checkboxes (2 colunas para histórico de saúde) ── */
+.anm-check-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+/* ── Coluna de checkboxes (1 coluna para cirúrgico) ── */
+.anm-check-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Tags de alergias / medicamentos ── */
+.anm-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.anm-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 10px;
+  border-radius: 99px;
+  border: 1px solid transparent;
+}
+
+.anm-tag--red {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+.anm-tag-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  padding: 0;
+  width: 14px;
+  height: 14px;
+  border: none;
+  background: transparent;
+  color: currentColor;
+  opacity: 0.6;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: opacity 0.15s, background 0.15s;
+}
+.anm-tag-remove:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.anm-tag--blue {
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+/* ── Label de alerta (alergias) ── */
+.anm-label-danger {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #f87171;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+/* ── Input de alergias com borda vermelha sutil ── */
+.anm-input-danger {
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+.anm-input-danger:focus {
+  border-color: #ef4444 !important;
+}
+
+/* ── Card de observações confidenciais ── */
+.anm-notes-card {
+  background: rgba(251, 191, 36, 0.04);
+  border: 1px solid rgba(251, 191, 36, 0.15);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.anm-notes-input {
+  border-color: rgba(251, 191, 36, 0.2) !important;
+}
+
+.anm-notes-input:focus {
+  border-color: rgba(251, 191, 36, 0.5) !important;
+}
+</style>

@@ -42,7 +42,6 @@ const props = defineProps({
     type: Number,
     default: 0,
   },
-  // Gating das ações por canal — `manage_live_chat`/`manage_sms`/`manage_whatsapp`.
   canEdit: {
     type: Boolean,
     default: true,

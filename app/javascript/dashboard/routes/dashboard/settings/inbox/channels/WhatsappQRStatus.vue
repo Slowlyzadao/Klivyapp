@@ -15,6 +15,7 @@ const props = defineProps({
 });
 
 const bridgeStatus = ref('loading'); // loading | connected | awaiting_qr | disconnected | error
+const isAlive = ref(false); // resultado do liveness probe — fonte da verdade
 const ownNumber = ref(null);
 const qrCode = ref(null);
 const showQR = ref(false);
@@ -26,10 +27,19 @@ let pollInterval = null;
 // Exposto pelo jbuilder como `channel_id` no payload do inbox
 const channelId = computed(() => props.inbox.channel_id || props.inbox.id);
 
-const isConnected = computed(() => bridgeStatus.value === 'connected');
+// "Conectado" só pinta verde se o liveness probe do bridge confirmar.
+// Caso contrário, mostramos "Reconectando..." mesmo que o estado interno
+// do Baileys ainda diga 'connected' — o socket pode estar zumbi.
+const isConnected = computed(
+  () => bridgeStatus.value === 'connected' && isAlive.value
+);
+const isStale = computed(
+  () => bridgeStatus.value === 'connected' && !isAlive.value
+);
 const isAwaitingQR = computed(() => bridgeStatus.value === 'awaiting_qr');
 
 const statusLabel = computed(() => {
+  if (isStale.value) return 'Reconectando...';
   switch (bridgeStatus.value) {
     case 'connected':
       return 'Conectado';
@@ -52,6 +62,7 @@ const fetchStatus = async () => {
       `/api/v1/accounts/${props.accountId}/whatsapp/bridge/${channelId.value}/status`
     );
     bridgeStatus.value = res.data.status || 'disconnected';
+    isAlive.value = !!res.data.alive;
     ownNumber.value = res.data.own_number || null;
   } catch (e) {
     if (e.response && e.response.status === 401) return;
@@ -147,6 +158,7 @@ onUnmounted(() => {
           class="flex items-center gap-2 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all duration-300"
           :class="{
             'bg-green-500/10 border-green-500/20 text-green-700': isConnected,
+            'bg-orange-500/10 border-orange-500/20 text-orange-700': isStale,
             'bg-yellow-500/10 border-yellow-500/20 text-yellow-700': isAwaitingQR,
             'bg-n-alpha-2 border-n-weak text-n-slate-10':
               bridgeStatus === 'disconnected' || bridgeStatus === 'loading',
@@ -157,6 +169,7 @@ onUnmounted(() => {
             class="w-2 h-2 rounded-full"
             :class="{
               'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.7)]': isConnected,
+              'bg-orange-500 animate-pulse': isStale,
               'bg-yellow-500 animate-pulse': isAwaitingQR,
               'bg-n-slate-6':
                 bridgeStatus === 'disconnected' || bridgeStatus === 'loading',

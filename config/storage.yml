@@ -28,15 +28,17 @@ microsoft:
   storage_access_key: <%= ENV.fetch('AZURE_STORAGE_ACCESS_KEY', '') %>
   container: <%= ENV.fetch('AZURE_STORAGE_CONTAINER', '') %>
 
-# s3 compatible service such as DigitalOcean Spaces, Minio.
+# s3 compatible service such as Cloudflare R2, DigitalOcean Spaces, Minio.
+# Para R2: region='auto', force_path_style=true. R2 rejeita o header x-amz-acl
+# mesmo com valor vazio, por isso a chave 'upload.acl' é deliberadamente omitida.
 s3_compatible:
   service: S3
   access_key_id: <%= ENV.fetch('STORAGE_ACCESS_KEY_ID', '') %>
   secret_access_key: <%= ENV.fetch('STORAGE_SECRET_ACCESS_KEY', '') %>
-  region: <%= ENV.fetch('STORAGE_REGION', '') %>
+  region: <%= ENV.fetch('STORAGE_REGION', 'auto') %>
   bucket: <%= ENV.fetch('STORAGE_BUCKET_NAME', '') %>
   endpoint: <%= ENV.fetch('STORAGE_ENDPOINT', '') %>
-  force_path_style: <%= ENV.fetch('STORAGE_FORCE_PATH_STYLE', false) %>
+  force_path_style: <%= ENV.fetch('STORAGE_FORCE_PATH_STYLE', true) %>
 
 # mirror:
 #   service: Mirror

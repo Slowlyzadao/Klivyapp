@@ -293,6 +293,69 @@
               <span class="toggle-thumb" />
             </button>
           </div>
+
+          <div class="rule-row-modern mt-3">
+            <div class="rule-icon-sq bg-rose-500/10 text-rose-400">
+              <i class="i-lucide-history size-4" />
+            </div>
+            <div class="rule-info-main">
+              <span class="rule-label-main">Bloquear datas passadas</span>
+              <span class="rule-sub-main">Impedir agendamentos no passado</span>
+            </div>
+            <button
+              class="toggle-switch toggle-compact"
+              :class="{ 'toggle-on toggle-rose': blockPastDates }"
+              @click="$emit('update:blockPastDates', !blockPastDates)"
+            >
+              <span class="toggle-thumb" />
+            </button>
+          </div>
+
+          <div class="rule-row-modern mt-3">
+            <div class="rule-icon-sq bg-emerald-500/10 text-emerald-400">
+              <i class="i-lucide-eye size-4" />
+            </div>
+            <div class="rule-info-main">
+              <span class="rule-label-main">Mostrar apenas horários disponíveis</span>
+              <span class="rule-sub-main">Esconder horas fora do expediente no calendário</span>
+            </div>
+            <button
+              class="toggle-switch toggle-compact"
+              :class="{ 'toggle-on toggle-emerald': showOnlyWorkingHours }"
+              @click="$emit('update:showOnlyWorkingHours', !showOnlyWorkingHours)"
+            >
+              <span class="toggle-thumb" />
+            </button>
+          </div>
+
+          <div v-if="showOnlyWorkingHours" class="rule-row-modern mt-3">
+            <div class="rule-icon-sq bg-emerald-500/10 text-emerald-400">
+              <i class="i-lucide-clock-arrow-up size-4" />
+            </div>
+            <div class="rule-info-main">
+              <span class="rule-label-main">Margem visível antes/depois</span>
+              <span class="rule-sub-main">Horas extras na grade (apenas visual)</span>
+            </div>
+            <div class="buffer-stepper">
+              <button
+                type="button"
+                class="buffer-stepper-btn"
+                :disabled="visibleHoursBuffer <= 0"
+                @click="onBufferStep(-1)"
+              >
+                <i class="i-lucide-minus size-3.5" />
+              </button>
+              <span class="buffer-stepper-value">{{ visibleHoursBuffer }}h</span>
+              <button
+                type="button"
+                class="buffer-stepper-btn"
+                :disabled="visibleHoursBuffer >= 6"
+                @click="onBufferStep(1)"
+              >
+                <i class="i-lucide-plus size-3.5" />
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- ════ FERIADOS (MINIMALISTA) ════ -->
@@ -333,16 +396,27 @@ const props = defineProps({
   holidays: Array,
   blockOutsideWorkingHours: Boolean,
   blockLunchBreak: Boolean,
+  blockPastDates: Boolean,
+  showOnlyWorkingHours: Boolean,
+  visibleHoursBuffer: { type: Number, default: 2 },
   saving: Boolean
 });
 
 const emit = defineEmits([
   'update:blockOutsideWorkingHours',
   'update:blockLunchBreak',
+  'update:blockPastDates',
+  'update:showOnlyWorkingHours',
+  'update:visibleHoursBuffer',
   'add-exception',
   'remove-exception',
   'save-changes'
 ]);
+
+const onBufferStep = (delta) => {
+  const next = Math.max(0, Math.min(6, (props.visibleHoursBuffer || 0) + delta));
+  if (next !== props.visibleHoursBuffer) emit('update:visibleHoursBuffer', next);
+};
 
 const {
   getDayStatus,
@@ -585,9 +659,6 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside));
 .status-badge-modern.closed {
   color: #ef4444;
 }
-.status-badge-modern.reduced {
-  color: #f59e0b;
-}
 
 /* ───────── UTILITIES ───────── */
 .flex-row-center {
@@ -715,12 +786,6 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside));
   color: #991b1b;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   border: 1px solid #fecaca;
-}
-.status-badge.reduced {
-  background-color: #fef3c7;
-  color: #92400e;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  border: 1px solid #fde68a;
 }
 
 /* ───────── LINK BTN ───────── */
@@ -1499,6 +1564,50 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside));
   line-height: 1.2;
 }
 
+.buffer-stepper {
+  display: inline-flex;
+  align-items: center;
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--slate-5));
+  border-radius: 8px;
+  height: 32px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.buffer-stepper-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 100%;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: rgb(var(--slate-11));
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.buffer-stepper-btn:hover:not(:disabled) {
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-12));
+}
+.buffer-stepper-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.buffer-stepper-value {
+  min-width: 32px;
+  padding: 0 4px;
+  text-align: center;
+  color: rgb(var(--slate-12));
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  border-left: 1px solid rgb(var(--slate-5));
+  border-right: 1px solid rgb(var(--slate-5));
+  line-height: 30px;
+}
+
 /* ───────── SAVING BUTTON (PREMIUM) ───────── */
 .save-btn-premium {
   display: inline-flex;
@@ -1625,6 +1734,9 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside));
 }
 .toggle-switch.toggle-on.toggle-orange {
   background: #f97316;
+}
+.toggle-switch.toggle-on.toggle-rose {
+  background: #f43f5e;
 }
 .toggle-thumb {
   position: absolute;

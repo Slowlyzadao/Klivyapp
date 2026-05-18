@@ -194,14 +194,17 @@ const actions = {
     commit(types.CLEAR_ALL_MESSAGES_LOADED, data.id);
     if (data.dataFetched === undefined) {
       try {
-        await dispatch('fetchPreviousMessages', {
-          after,
-          before: data.messages[0].id,
-          conversationId: data.id,
-        });
+        if (data.messages.length === 0) {
+          commit(types.SET_ALL_MESSAGES_LOADED, data.id);
+        } else {
+          await dispatch('fetchPreviousMessages', {
+            after,
+            before: data.messages[0].id,
+            conversationId: data.id,
+          });
+        }
+      } finally {
         commit(types.SET_CHAT_DATA_FETCHED, data.id);
-      } catch (error) {
-        // Ignore error
       }
     }
   },

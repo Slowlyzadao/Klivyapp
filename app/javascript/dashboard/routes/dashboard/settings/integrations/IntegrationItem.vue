@@ -4,7 +4,6 @@ import { useStoreGetters } from 'dashboard/composables/store';
 import { useI18n } from 'vue-i18n';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import { useBranding } from 'shared/composables/useBranding';
-import { useAdmin } from 'dashboard/composables/useAdmin';
 import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -34,11 +33,9 @@ const accountId = getters.getCurrentAccountId;
 
 const { t } = useI18n();
 const { replaceInstallationName } = useBranding();
-const { isAdmin } = useAdmin();
-const { can } = usePermissions();
-
+const { isAdmin, can: klivyCan } = usePermissions();
 const canManageIntegrations = computed(
-  () => isAdmin.value || can('settings', 'integrations_manage')
+  () => isAdmin.value || klivyCan('settings', 'integrations_manage')
 );
 
 const integrationStatus = computed(() =>

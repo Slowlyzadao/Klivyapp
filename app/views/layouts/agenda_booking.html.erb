@@ -1,9 +1,12 @@
+<%
+  brand_name = (@brand_name.presence || GlobalConfigService.load('BRAND_NAME', 'Klivy'))
+%>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Agendamento Online – Beclinic</title>
+  <title>Agendamento Online – <%= brand_name %></title>
   <meta name="description" content="Agende sua consulta online de forma rápida e fácil.">
   <%= csrf_meta_tags %>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,11 +15,15 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* Brand color matches the dashboard's primary blue (Tailwind blue-500
+       ≈ rgb(var(--blue-9))). Tokens are exposed as CSS custom properties
+       so a future per-account override can ship by injecting a single
+       <style> block from the controller without touching this file. */
     :root {
-      --brand: #4f46e5;
-      --brand-dark: #4338ca;
-      --brand-light: #eef2ff;
-      --brand-mid: #818cf8;
+      --brand: #1f6cf2;
+      --brand-dark: #1858d4;
+      --brand-light: #e8f0ff;
+      --brand-mid: #5b8dee;
       --success: #10b981;
       --error: #ef4444;
       --warning: #f59e0b;
@@ -58,14 +65,22 @@
       gap: 12px;
     }
     .booking-header-logo {
-      height: 32px;
+      height: 30px;
       width: auto;
+      display: block;
     }
     .booking-header-brand {
       font-size: 16px;
       font-weight: 700;
       color: var(--brand);
       letter-spacing: -0.02em;
+    }
+    .booking-header-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: inherit;
     }
 
     .booking-main {
@@ -246,8 +261,22 @@
     }
     .field input:focus, .field select:focus {
       border-color: var(--brand);
-      box-shadow: 0 0 0 3px rgba(79,70,229,.12);
+      box-shadow: 0 0 0 3px rgba(31, 108, 242, .15);
     }
+    .field input.is-invalid {
+      border-color: var(--error);
+    }
+    .field input.is-invalid:focus {
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, .15);
+    }
+    .field-error {
+      font-size: 12px;
+      color: var(--error);
+      font-weight: 500;
+      margin-top: 2px;
+      display: none;
+    }
+    .field-error.show { display: block; }
     .field .hint {
       font-size: 11px;
       color: var(--text-light);
@@ -401,40 +430,140 @@
     /* ─── Success ─── */
     .success-card {
       text-align: center;
-      padding: 48px 32px;
+      padding: 56px 32px 48px;
+      position: relative;
+      overflow: hidden;
     }
     .success-icon {
-      width: 72px;
-      height: 72px;
+      width: 84px;
+      height: 84px;
       background: #ecfdf5;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 20px;
+      margin: 0 auto 24px;
+      position: relative;
+      animation: successPop .55s cubic-bezier(.34,1.56,.64,1) both;
     }
-    .success-icon svg { width: 36px; height: 36px; color: var(--success); }
+    /* Soft halo ring expanding out of the icon on first paint */
+    .success-icon::before {
+      content: '';
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      border: 3px solid rgba(16, 185, 129, .35);
+      animation: successHalo 1.4s ease-out .15s both;
+    }
+    .success-icon svg { width: 44px; height: 44px; color: var(--success); }
+    .success-icon-ring {
+      stroke-dasharray: 64;
+      stroke-dashoffset: 64;
+      animation: successDraw .7s ease-out .25s forwards;
+    }
+    .success-icon-check {
+      stroke-dasharray: 32;
+      stroke-dashoffset: 32;
+      animation: successDraw .45s ease-out .55s forwards;
+    }
     .success-title {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 700;
       color: var(--text);
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+      animation: successFadeIn .4s ease-out .35s both;
+    }
+    .success-emoji {
+      display: inline-block;
+      animation: successWiggle 1s ease-in-out .9s 2;
+      transform-origin: 70% 70%;
     }
     .success-sub {
       font-size: 14px;
       color: var(--text-muted);
-      max-width: 360px;
-      margin: 0 auto 24px;
+      max-width: 380px;
+      margin: 0 auto 28px;
       line-height: 1.6;
+      animation: successFadeIn .4s ease-out .45s both;
     }
     .success-detail {
-      background: var(--brand-light);
-      border-radius: var(--radius-sm);
-      padding: 16px 24px;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--brand);
+      animation: successFadeIn .5s ease-out .6s both;
       display: inline-block;
+    }
+    /* Two-column "data + horário" pill, replacing the single text line */
+    .success-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      background: var(--brand-light);
+      border: 1px solid rgba(31, 108, 242, .15);
+      border-radius: 14px;
+      padding: 14px 22px;
+      box-shadow: 0 4px 14px rgba(31, 108, 242, .12);
+    }
+    .success-pill-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-align: left;
+      color: var(--brand);
+    }
+    .success-pill-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--brand-mid);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .success-pill-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--brand-dark);
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+    .success-pill-divider {
+      width: 1px;
+      height: 32px;
+      background: rgba(31, 108, 242, .25);
+    }
+
+    @keyframes successPop {
+      0%   { transform: scale(.4); opacity: 0; }
+      60%  { transform: scale(1.08); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes successHalo {
+      0%   { transform: scale(.6); opacity: .9; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+    @keyframes successDraw {
+      to { stroke-dashoffset: 0; }
+    }
+    @keyframes successFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes successWiggle {
+      0%, 100% { transform: rotate(0); }
+      25%      { transform: rotate(-12deg); }
+      50%      { transform: rotate(10deg); }
+      75%      { transform: rotate(-6deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .success-icon,
+      .success-icon::before,
+      .success-icon-ring,
+      .success-icon-check,
+      .success-title,
+      .success-emoji,
+      .success-sub,
+      .success-detail {
+        animation: none !important;
+        stroke-dashoffset: 0 !important;
+      }
     }
 
     /* ─── Error / Disabled ─── */
@@ -472,14 +601,33 @@
       font-size: 12px;
       color: var(--text-light);
     }
-    .booking-footer a { color: var(--brand); text-decoration: none; }
+    .booking-footer a { color: var(--brand); text-decoration: none; font-weight: 600; }
+
+    /* Visually-hidden helper for ARIA-only labels */
+    .sr-only {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0);
+      white-space: nowrap; border: 0;
+    }
 
     /* ─── Responsive ─── */
+    @media (max-width: 768px) {
+      .booking-main { padding: 24px 12px 60px; }
+      .cal-grid { grid-template-columns: 1fr; gap: 24px; }
+      .slots-grid { grid-template-columns: repeat(4, 1fr); }
+    }
     @media (max-width: 600px) {
       .form-grid { grid-template-columns: 1fr; }
-      .cal-grid { grid-template-columns: 1fr; }
-      .slots-grid { grid-template-columns: repeat(4, 1fr); }
-      .prof-card { flex-direction: column; text-align: center; }
+      .slots-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+      .prof-card { flex-direction: column; text-align: center; padding: 20px; }
+      .card-body { padding: 20px 16px; }
+      .step-dot { width: 32px; height: 32px; font-size: 13px; }
+      .btn { padding: 14px 20px; font-size: 15px; }
+      .btn-row { flex-direction: column-reverse; align-items: stretch; }
+      .btn-row .btn { width: 100%; justify-content: center; }
+      .btn-row > span { text-align: center; margin-top: 8px; }
     }
   </style>
 </head>
@@ -488,7 +636,7 @@
     <%= yield %>
   </div>
   <footer class="booking-footer">
-    Powered by <a href="https://beclinic.com.br" target="_blank">Beclinic</a>
+    Powered by <a href="<%= GlobalConfigService.load('BRAND_URL', 'https://klivy.com.br') %>" target="_blank" rel="noopener"><%= brand_name %></a>
   </footer>
 </body>
 </html>

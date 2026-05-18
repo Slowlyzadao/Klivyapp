@@ -34,9 +34,7 @@ export function fetchRun(id) {
   return jsonRequest(`/super_admin/migrations/${id}.json`);
 }
 
-// kind=patients: aceita até 3 arquivos (Patient + PatientAnamnesis + Anamnesis).
-// outros kinds: arquivo único via campo `csv`.
-export function uploadCsv({ accountId, kind, source, file, files }) {
+function buildFormData({ accountId, kind, source, file, files }) {
   const fd = new FormData();
   fd.append('account_id', accountId);
   fd.append('kind', kind);
@@ -49,6 +47,18 @@ export function uploadCsv({ accountId, kind, source, file, files }) {
   } else if (file) {
     fd.append('csv', file);
   }
+  return fd;
+}
 
-  return jsonRequest('/super_admin/migrations', { method: 'POST', body: fd });
+// kind=patients: aceita até 3 arquivos (Patient + PatientAnamnesis + Anamnesis).
+// outros kinds: arquivo único via campo `csv`.
+export function uploadCsv(payload) {
+  return jsonRequest('/super_admin/migrations', { method: 'POST', body: buildFormData(payload) });
+}
+
+// Read-only preview — runs same parse/match logic as upload, but returns a
+// summary (would_create / would_update / would_skip) and a sample of rows
+// without touching the database.
+export function previewCsv(payload) {
+  return jsonRequest('/super_admin/migrations/preview', { method: 'POST', body: buildFormData(payload) });
 }

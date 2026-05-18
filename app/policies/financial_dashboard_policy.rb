@@ -1,5 +1,5 @@
 class FinancialDashboardPolicy < ApplicationPolicy
   def show?
-    beclinic_can?(:financial, :view_dashboard)
+    @account_user&.administrator? || beclinic_can?(:financial, :view_dashboard)
   end
 end

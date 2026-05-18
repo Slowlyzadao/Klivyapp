@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { uploadCsv } from '../api/migrationApi.js';
+import { uploadCsv, previewCsv } from '../api/migrationApi.js';
 
 const props = defineProps({
   accounts: { type: Array, required: true },
@@ -19,8 +19,10 @@ const patientsFile         = ref(null);
 const patientAnamnesisFile = ref(null);
 const anamnesisFile        = ref(null);
 
+const previewing = ref(false);
 const submitting = ref(false);
-const errorMsg  = ref('');
+const preview    = ref(null); // { summary, rows, warnings, anamneses? }
+const errorMsg   = ref('');
 const successMsg = ref('');
 
 const KINDS = [
@@ -36,6 +38,12 @@ const SOURCES = [
 
 const isPatients = computed(() => kind.value === 'patients');
 
+const canPreview = computed(() => {
+  if (!accountId.value || !kind.value || previewing.value || submitting.value) return false;
+  if (!isPatients.value) return false; // preview only implemented for patients
+  return !!patientsFile.value;
+});
+
 const canSubmit = computed(() => {
   if (!accountId.value || !kind.value || submitting.value) return false;
   if (isPatients.value) return !!patientsFile.value;
@@ -49,6 +57,37 @@ function pickFile(e, slot) {
   else if (slot === 'patients') patientsFile.value = f;
   else if (slot === 'patientAnamnesis') patientAnamnesisFile.value = f;
   else if (slot === 'anamnesis') anamnesisFile.value = f;
+  // Any file change invalidates a previously-computed preview
+  preview.value = null;
+}
+
+function buildArgs() {
+  const args = { accountId: accountId.value, kind: kind.value, source: source.value };
+  if (isPatients.value) {
+    args.files = {
+      patients: patientsFile.value,
+      patientAnamnesis: patientAnamnesisFile.value,
+      anamnesis: anamnesisFile.value,
+    };
+  } else {
+    args.file = file.value;
+  }
+  return args;
+}
+
+async function runPreview() {
+  errorMsg.value = '';
+  successMsg.value = '';
+  preview.value = null;
+  if (!canPreview.value) return;
+  previewing.value = true;
+  try {
+    preview.value = await previewCsv(buildArgs());
+  } catch (err) {
+    errorMsg.value = err.message || 'Falha ao gerar pré-visualização.';
+  } finally {
+    previewing.value = false;
+  }
 }
 
 async function submit() {
@@ -57,22 +96,13 @@ async function submit() {
   if (!canSubmit.value) return;
   submitting.value = true;
   try {
-    const args = { accountId: accountId.value, kind: kind.value, source: source.value };
-    if (isPatients.value) {
-      args.files = {
-        patients: patientsFile.value,
-        patientAnamnesis: patientAnamnesisFile.value,
-        anamnesis: anamnesisFile.value,
-      };
-    } else {
-      args.file = file.value;
-    }
-    const run = await uploadCsv(args);
+    const run = await uploadCsv(buildArgs());
     successMsg.value = `Migração #${run.id} enfileirada — ${run.csv_filename}.`;
     file.value = null;
     patientsFile.value = null;
     patientAnamnesisFile.value = null;
     anamnesisFile.value = null;
+    preview.value = null;
     emit('runCreated', run);
   } catch (err) {
     errorMsg.value = err.message || 'Falha ao enviar planilha.';
@@ -84,6 +114,13 @@ async function submit() {
 function fmtSize(f) {
   return f ? `${f.name} · ${(f.size / 1024).toFixed(1)} KB` : '';
 }
+
+const ACTION_LABEL = {
+  create: 'Criar',
+  update: 'Atualizar',
+  skip:   'Pular',
+  error:  'Erro',
+};
 </script>
 
 <template>
@@ -165,9 +202,72 @@ function fmtSize(f) {
     <div v-if="errorMsg" class="mig-error">{{ errorMsg }}</div>
     <div v-if="successMsg" class="mig-success">{{ successMsg }}</div>
 
+    <div v-if="preview" class="mig-preview">
+      <h3 style="font-size: 13px; font-weight: 700; margin: 16px 0 8px; color: #374151;">
+        Pré-visualização — nada foi gravado ainda
+      </h3>
+      <div class="mig-preview__summary">
+        <span class="mig-preview__chip">Total: {{ preview.summary.total }}</span>
+        <span class="mig-preview__chip mig-preview__chip--create">Criar: {{ preview.summary.would_create }}</span>
+        <span class="mig-preview__chip mig-preview__chip--update">Atualizar: {{ preview.summary.would_update }}</span>
+        <span class="mig-preview__chip mig-preview__chip--skip">Pular: {{ preview.summary.would_skip }}</span>
+        <span v-if="preview.summary.warnings" class="mig-preview__chip mig-preview__chip--warn">
+          Avisos: {{ preview.summary.warnings }}
+        </span>
+        <span v-if="preview.summary.errors" class="mig-preview__chip mig-preview__chip--err">
+          Linhas inválidas: {{ preview.summary.errors }}
+        </span>
+      </div>
+
+      <div v-if="preview.anamneses" class="mig-help" style="margin-bottom: 8px;">
+        Anamneses: {{ preview.anamneses.total }} no CSV ·
+        {{ preview.anamneses.linked }} serão vinculadas ·
+        {{ preview.anamneses.unlinked }} sem vínculo (ID truncado pelo Excel).
+      </div>
+
+      <div class="mig-preview__rows">
+        <div v-for="(row, idx) in preview.rows" :key="idx" class="mig-preview__row">
+          <span :class="['mig-preview__action', `mig-preview__action--${row.action}`]">
+            {{ ACTION_LABEL[row.action] || row.action }}
+          </span>
+          <div>
+            <div class="mig-preview__row-name">
+              {{ row.name || '(sem nome)' }}
+              <span v-if="row.cpf" style="color:#6b7280; font-weight:400;"> · CPF {{ row.cpf }}</span>
+            </div>
+            <div class="mig-preview__row-meta">
+              Linha {{ row.line }}
+              <span v-if="row.fields.email"> · {{ row.fields.email }}</span>
+              <span v-if="row.fields.phone"> · {{ row.fields.phone }}</span>
+              <span v-if="row.fields.city"> · {{ row.fields.city }}</span>
+              <span v-if="row.fields.insurance_plan"> · plano: {{ row.fields.insurance_plan }}</span>
+            </div>
+            <div v-if="row.fields.notes_preview" class="mig-preview__row-meta">
+              📝 {{ row.fields.notes_preview }}
+            </div>
+            <div v-if="row.reason" class="mig-preview__row-reason">{{ row.reason }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="preview.warnings && preview.warnings.length" style="margin-top: 12px;">
+        <h4 style="font-size: 12px; font-weight: 600; margin: 0 0 6px; color: #78350f;">
+          Avisos ({{ preview.warnings.length }})
+        </h4>
+        <div class="mig-error-list">
+          <div v-for="(w, idx) in preview.warnings" :key="idx" class="mig-error-list__item mig-error-list__item--warning">
+            <strong>Linha {{ w.line }}:</strong> {{ w.message }}
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="mig-actions">
+      <button v-if="isPatients" class="mig-btn mig-btn--ghost" :disabled="!canPreview" @click="runPreview">
+        {{ previewing ? 'Analisando…' : (preview ? 'Regerar pré-visualização' : 'Pré-visualizar') }}
+      </button>
       <button class="mig-btn mig-btn--primary" :disabled="!canSubmit" @click="submit">
-        {{ submitting ? 'Enviando…' : 'Iniciar migração' }}
+        {{ submitting ? 'Enviando…' : (preview ? 'Confirmar e iniciar' : 'Iniciar migração') }}
       </button>
     </div>
   </div>

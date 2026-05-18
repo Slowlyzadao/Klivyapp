@@ -5,20 +5,13 @@ class Api::V1::Accounts::BeclinicPermissionsController < Api::V1::Accounts::Base
   def show
     render json: {
       beclinic_role: current_user.beclinic_role_for(current_account),
-      permissions: effective_permissions,
+      permissions: current_user.beclinic_permissions_for(current_account),
       team: current_team_data,
       klivy_role: current_klivy_role_data
     }, status: :ok
   end
 
   private
-
-  def effective_permissions
-    role = current_user.klivy_role_for(current_account)
-    return role.permissions if role
-
-    current_user.beclinic_permissions_for(current_account)
-  end
 
   def current_team_data
     team = current_user.beclinic_team_for(current_account)
@@ -36,10 +29,6 @@ class Api::V1::Accounts::BeclinicPermissionsController < Api::V1::Accounts::Base
     role = current_user.klivy_role_for(current_account)
     return nil unless role
 
-    {
-      id: role.id,
-      name: role.name,
-      preset_key: role.preset_key
-    }
+    { id: role.id, name: role.name, preset_key: role.preset_key }
   end
 end

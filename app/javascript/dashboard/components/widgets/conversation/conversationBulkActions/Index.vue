@@ -16,6 +16,7 @@ import LabelActions from './LabelActions.vue';
 import TeamActions from './TeamActions.vue';
 import CustomSnoozeModal from 'dashboard/components/CustomSnoozeModal.vue';
 import { usePermissions } from 'dashboard/composables/usePermissions';
+
 export default {
   components: {
     AgentSelector,
@@ -60,21 +61,21 @@ export default {
     'resolveConversations',
   ],
   setup() {
-    const { can } = usePermissions();
-    return { can };
+    const { can: klivyCan } = usePermissions();
+    return { klivyCan };
   },
   computed: {
     canBulkAssignLabel() {
-      return this.can('chat', 'reply');
+      return this.klivyCan('chat', 'reply');
     },
     canBulkChangeStatus() {
-      return this.can('chat', 'reply');
+      return this.klivyCan('chat', 'reply');
     },
     canBulkAssignAgent() {
-      return this.can('chat', 'assign_conversation');
+      return this.klivyCan('chat', 'assign_conversation');
     },
     canBulkAssignTeam() {
-      return this.can('chat', 'assign_conversation');
+      return this.klivyCan('chat', 'assign_conversation');
     },
   },
   data() {

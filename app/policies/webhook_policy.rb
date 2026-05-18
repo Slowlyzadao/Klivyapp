@@ -1,21 +1,17 @@
 class WebhookPolicy < ApplicationPolicy
   def index?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :integrations_view)
-  end
-
-  def create?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :integrations_manage)
+    @account_user.administrator?
   end
 
   def update?
-    create?
+    @account_user.administrator?
   end
 
   def destroy?
-    create?
+    @account_user.administrator?
+  end
+
+  def create?
+    @account_user.administrator?
   end
 end

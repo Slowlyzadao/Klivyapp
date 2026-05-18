@@ -7,18 +7,19 @@ const formatCustomDomain = customDomain =>
   customDomain.startsWith('https') ? customDomain : `https://${customDomain}`;
 
 /**
- * Gets the default base URL from configuration. Falls back to the current
- * window origin when chatwootConfig is missing (typical em dev local).
+ * Gets the default base URL from configuration
  * @returns {string} The default base URL
+ * @throws {Error} If no valid base URL is found
  */
 const getDefaultBaseURL = () => {
   const { hostURL, helpCenterURL } = window.chatwootConfig || {};
-  if (helpCenterURL) return helpCenterURL;
-  if (hostURL) return hostURL;
-  if (typeof window !== 'undefined' && window.location?.origin) {
-    return window.location.origin;
+  const baseURL = helpCenterURL || hostURL || '';
+
+  if (!baseURL) {
+    throw new Error('No valid base URL found in configuration');
   }
-  return '';
+
+  return baseURL;
 };
 
 /**

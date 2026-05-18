@@ -1,5 +1,5 @@
 <script>
-import { ref, provide, computed } from 'vue';
+import { ref, provide } from 'vue';
 // composable
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useLabelSuggestions } from 'dashboard/composables/useLabelSuggestions';
@@ -68,8 +68,7 @@ export default {
 
     provide('contextMenuElementTarget', conversationPanelRef);
 
-    const { can } = usePermissions();
-    const canReply = computed(() => can('chat', 'reply'));
+    const { can: klivyCan } = usePermissions();
 
     return {
       isPopOutReplyBox,
@@ -77,7 +76,7 @@ export default {
       getLabelSuggestions,
       isLabelSuggestionFeatureEnabled,
       conversationPanelRef,
-      canReply,
+      klivyCan,
     };
   },
   data() {
@@ -101,6 +100,9 @@ export default {
     }),
     isOpen() {
       return this.currentChat?.status === wootConstants.STATUS_TYPE.OPEN;
+    },
+    canReplyToConversation() {
+      return this.klivyCan('chat', 'reply');
     },
     shouldShowLabelSuggestions() {
       return (
@@ -526,16 +528,18 @@ export default {
         </div>
       </div>
       <ReplyBox
-        v-if="canReply"
+        v-if="canReplyToConversation"
         :pop-out-reply-box="isPopOutReplyBox"
         @update:pop-out-reply-box="isPopOutReplyBox = $event"
       />
       <div
         v-else
-        class="flex items-center justify-center gap-2 px-4 py-3 mx-3 mb-3 text-xs font-medium rounded-lg bg-n-slate-2 text-n-slate-11 border border-n-weak"
+        class="flex items-center gap-2 mx-3 mb-3 px-4 py-3 rounded-lg bg-n-slate-2 text-n-slate-11 border border-n-weak"
       >
-        <i class="i-lucide-lock w-3.5 h-3.5" />
-        Você não tem permissão para responder conversas.
+        <span class="i-lucide-lock size-4 flex-shrink-0" />
+        <span class="text-sm">
+          Você não tem permissão para responder conversas.
+        </span>
       </div>
     </div>
   </div>

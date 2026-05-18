@@ -53,6 +53,8 @@ jobs:
   # Backend tests with parallelization
   backend-tests:
     runs-on: ubuntu-latest
+    env:
+      RAILS_ENV: test
     strategy:
       fail-fast: false
       matrix:

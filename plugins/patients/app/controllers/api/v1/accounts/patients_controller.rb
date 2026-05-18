@@ -7,9 +7,9 @@ class Api::V1::Accounts::PatientsController < Api::V1::Accounts::BaseController
     @patients = policy_scope(Patient)
                 .active
                 .includes(:critical_alerts, :responsible_professional, :patient_appointments)
-                .order(:name)
 
     @patients = filter_patients(@patients)
+    @patients = apply_sort(@patients, params[:sort])
     @patients = @patients.page(page_number).per(page_size)
 
     # Pre-compute last AgendaEvent per contact_id in one query (avoids N+1)
@@ -223,12 +223,14 @@ class Api::V1::Accounts::PatientsController < Api::V1::Accounts::BaseController
 
   def patient_params
     params.require(:patient).permit(
-      :name, :phone, :email, :cpf, :rg, :birthdate, :sex, :marital_status,
-      :patient_status, :pinned_note, :origin, :unit,
+      :name, :social_name, :phone, :email, :cpf, :rg, :birthdate, :sex, :marital_status,
+      :patient_status, :pinned_note, :notes, :origin, :unit,
+      :has_guardian,
       :responsible_professional_id, :contact_id, :avatar_url, :avatar,
       :no_show_count, :needs_recall, :recall_dismissed_at,
       address: [:street, :number, :complement, :neighborhood, :city, :state, :zip_code, :country],
       emergency_contact: [:name, :phone, :relationship],
+      guardian: [:name, :cpf, :phone, :relationship],
       insurance: [:name, :number, :plan, :validity],
       billing_info: {},
       contact_preferences: {},
@@ -239,11 +241,39 @@ class Api::V1::Accounts::PatientsController < Api::V1::Accounts::BaseController
   end
 
   def filter_patients(scope)
-    scope = scope.where('patients.name ILIKE ?', "%#{params[:q]}%") if params[:q].present?
+    scope = apply_search(scope, params[:q]) if params[:q].present?
     scope = scope.where(patient_status: params[:status]) if params[:status].present?
     scope = scope.where(responsible_professional_id: params[:professional_id]) if params[:professional_id].present?
     scope = scope.needs_recall if params[:needs_recall] == 'true'
     scope
+  end
+
+  SORT_OPTIONS = {
+    'name_asc'        => { name: :asc },
+    'name_desc'       => { name: :desc },
+    'created_at_desc' => { created_at: :desc },
+    'created_at_asc'  => { created_at: :asc }
+  }.freeze
+
+  def apply_sort(scope, sort_param)
+    scope.order(SORT_OPTIONS.fetch(sort_param, name: :asc))
+  end
+
+  # Busca por nome (ILIKE) e — se a query contém >= 3 dígitos — também por
+  # telefone e CPF. Usada pelo dropdown de "Telefone Principal" da Ficha
+  # Cadastral para detectar pacientes existentes ao digitar um número.
+  def apply_search(scope, query)
+    q = query.to_s.strip
+    digits = q.gsub(/\D/, '')
+
+    if digits.length >= 3
+      scope.where(
+        'patients.name ILIKE :name OR patients.phone LIKE :digits OR patients.cpf LIKE :digits',
+        name: "%#{q}%", digits: "%#{digits}%"
+      )
+    else
+      scope.where('patients.name ILIKE ?', "%#{q}%")
+    end
   end
 
   def log_patient_view
@@ -299,6 +329,6 @@ class Api::V1::Accounts::PatientsController < Api::V1::Accounts::BaseController
   end
 
   def page_size
-    [params[:per_page].to_i, 50_000].min.then { |n| n.zero? ? 25 : n }
+    [params[:per_page].to_i, 500].min.then { |n| n.zero? ? 25 : n }
   end
 end

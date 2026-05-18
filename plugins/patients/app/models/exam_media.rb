@@ -31,13 +31,17 @@ class ExamMedia < ApplicationRecord
     outro
   ].freeze
 
-  ALLOWED_CONTENT_TYPES = %w[
-    image/jpeg image/png image/gif image/webp image/heic image/heif
-    application/pdf
-    video/mp4 video/quicktime video/x-msvideo video/webm
-    application/dicom image/dicom
-    application/octet-stream
-  ].freeze
+  IMAGE_TYPES = %w[image/jpeg image/png image/gif image/webp image/heic image/heif].freeze
+  PDF_TYPES   = %w[application/pdf].freeze
+  VIDEO_TYPES = %w[video/mp4 video/quicktime video/webm].freeze
+  ALLOWED_CONTENT_TYPES = (IMAGE_TYPES + PDF_TYPES + VIDEO_TYPES).freeze
+
+  # Limites por tipo (alinhado com requisito do produto)
+  SIZE_LIMITS = {
+    image: 5.megabytes,
+    pdf:   10.megabytes,
+    video: 20.megabytes
+  }.freeze
 
   validates :patient_id, presence: true
   validates :account_id, presence: true
@@ -46,6 +50,7 @@ class ExamMedia < ApplicationRecord
   validate :file_content_type_and_size, if: :file_attached?
 
   # Callbacks
+  before_validation :derive_category_from_file, on: :create
   before_create :capture_file_metadata
   after_create_commit :record_timeline_exam_uploaded
 
@@ -56,38 +61,76 @@ class ExamMedia < ApplicationRecord
   scope :xrays, -> { where(category: 'rx') }
   scope :with_session, ->(id) { where(session_log_id: id) }
 
+  # Janela de retenção antes do purge físico (blob + record).
+  # Usuário pode restaurar manualmente nesse intervalo (admin tools).
+  PURGE_AFTER = 30.days
+
   def soft_delete!
     update!(deleted_at: Time.current)
+    ::Patients::ExamMediaPurgeJob.set(wait: PURGE_AFTER).perform_later(id)
   end
 
   def deleted?
     deleted_at.present?
   end
 
-  # Retorna URL assinada com expiração de 15 minutos (NUNCA URL pública)
-  def signed_url(expires_in: 15.minutes, disposition: :inline)
+  # Retorna URL assinada com expiração de 1 hora (NUNCA URL pública)
+  # Host vem de config.active_storage.default_url_options — não usar fallback localhost.
+  def signed_url(expires_in: 1.hour, disposition: :inline)
     return nil unless file.attached?
 
     Rails.application.routes.url_helpers.rails_blob_url(
       file,
       expires_in: expires_in,
-      disposition: disposition,
-      host: Rails.application.config.action_mailer.default_url_options&.dig(:host) || 'localhost:3000'
+      disposition: disposition
     )
   rescue StandardError
     nil
   end
 
+  # Thumbnail otimizado para a galeria (somente para imagens).
+  # Para vídeo/PDF retorna nil e o frontend usa o ícone genérico.
+  # Variants são geradas sob demanda e cacheadas pelo ActiveStorage (1ª request lenta, demais rápidas).
+  # NOTE: ActiveStorage só aceita métodos da whitelist `supported_image_processing_methods`;
+  # `saver: { quality: ... }` não está nela — para baixar peso da imagem o caminho seria via
+  # processor custom ou um `format: :webp` (também whitelisted). 400px já dá compressão suficiente.
+  def thumbnail_url(expires_in: 1.hour)
+    return nil unless file.attached?
+    return nil unless file_kind == :image
+    return nil unless file.variable?
+
+    variant = file.variant(resize_to_limit: [400, 400])
+    Rails.application.routes.url_helpers.rails_representation_url(
+      variant,
+      expires_in: expires_in,
+      disposition: :inline
+    )
+  rescue StandardError
+    nil
+  end
+
+  # Classifica o arquivo pelo content_type real do blob (não pela categoria informada)
+  def file_kind
+    return :unknown unless file.attached?
+
+    ct = file.content_type.to_s
+    return :image if IMAGE_TYPES.include?(ct)
+    return :pdf   if PDF_TYPES.include?(ct)
+    return :video if VIDEO_TYPES.include?(ct)
+
+    :unknown
+  end
+
   def image?
-    %w[foto_clinica antes_depois intraoral rx tomografia laudo].include?(category)
+    file_kind == :image || %w[foto_clinica antes_depois intraoral rx tomografia].include?(category)
   end
 
   def video?
-    category == 'video'
+    file_kind == :video || category == 'video'
   end
 
   def pdf?
-    category == 'laudo' && mime_type&.include?('pdf')
+    file_kind == :pdf || mime_type&.include?('pdf')
   end
 
   private
@@ -131,10 +174,31 @@ class ExamMedia < ApplicationRecord
   def file_content_type_and_size
     return unless file.attached?
 
-    errors.add(:file, :invalid, message: 'formato de arquivo não suportado') unless ALLOWED_CONTENT_TYPES.include?(file.content_type)
-    return unless file.byte_size > 500.megabytes
+    unless ALLOWED_CONTENT_TYPES.include?(file.content_type)
+      errors.add(:file, "formato não suportado (#{file.content_type}). Aceitos: imagem (JPG/PNG/WEBP/HEIC), PDF, vídeo (MP4/MOV/WEBM)")
+      return
+    end
 
-    errors.add(:file, :too_large, message: 'arquivo muito grande (máximo 500MB)')
+    kind  = file_kind
+    limit = SIZE_LIMITS[kind]
+    return unless limit && file.byte_size > limit
+
+    human_limit = ActiveSupport::NumberHelper.number_to_human_size(limit)
+    errors.add(:file, "arquivo muito grande para #{kind} (máximo #{human_limit})")
+  end
+
+  # Define automaticamente a categoria a partir do tipo real do arquivo,
+  # evitando confiar em string vinda do client (HEIC do iPhone vinha como 'outro').
+  def derive_category_from_file
+    return unless file.attached?
+    return if category.present? && category != 'outro'
+
+    self.category = case file_kind
+                    when :video then 'video'
+                    when :pdf   then 'laudo'
+                    when :image then 'foto_clinica'
+                    else             'outro'
+                    end
   end
 
   def record_timeline_exam_uploaded

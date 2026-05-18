@@ -1,12 +1,12 @@
 <script setup>
 import { computed } from 'vue';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import ContactSortMenu from './components/ContactSortMenu.vue';
 import ContactMoreActions from './components/ContactMoreActions.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 defineProps({
   showSearch: { type: Boolean, default: true },
@@ -21,9 +21,6 @@ defineProps({
   isActiveView: { type: Boolean, default: false },
 });
 
-const { can } = usePermissions();
-const canManageSegments = computed(() => can('contacts', 'manage_segments'));
-
 const emit = defineEmits([
   'search',
   'filter',
@@ -34,6 +31,11 @@ const emit = defineEmits([
   'createSegment',
   'deleteSegment',
 ]);
+
+const { isAdmin, can: klivyCan } = usePermissions();
+const canManageSegments = computed(
+  () => isAdmin.value || klivyCan('contacts', 'manage_segments')
+);
 </script>
 
 <template>

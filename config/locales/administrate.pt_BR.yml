@@ -6,8 +6,13 @@ pt_BR:
       edit: "Editar"
       edit_resource: "Editar %{name}"
       show_resource: "Ver %{name}"
-      new_resource: "Novo(a) %{name}"
+      new_resource: "Adicionar %{name}"
       back: "Voltar"
+      # Labels customizados por resource (consultados pelo override de _index_header.html.erb).
+      # Permitem usar gênero correto sem cair no fallback genérico "Adicionar X".
+      new_help_categories: "Nova Categoria"
+      new_help_articles: "Novo Artigo"
+      new_help_faqs: "Nova Pergunta Frequente"
     controller:
       create:
         success: "%{resource} foi criado(a) com sucesso."
@@ -47,6 +52,15 @@ pt_BR:
       platform_app:
         one: "App da Plataforma"
         other: "Platform Apps"
+      help_category:
+        one: "Categoria"
+        other: "Ajuda - Categorias"
+      help_article:
+        one: "Artigo"
+        other: "Ajuda - Artigos"
+      help_faq:
+        one: "Pergunta Frequente"
+        other: "Ajuda - Perguntas Frequentes"
     attributes:
       account:
         name: "Nome"
@@ -56,6 +70,30 @@ pt_BR:
         email: "Email"
         accounts: "Contas"
         type: "Tipo"
+      help_category:
+        name: "Nome"
+        slug: "Slug"
+        description: "Descrição"
+        icon_class: "Ícone (Lucide)"
+        icon_svg: "Ícone (SVG bruto)"
+        position: "Ordem"
+        hidden: "Oculta"
+      help_article:
+        title: "Título"
+        body: "Conteúdo"
+        category: "Categoria"
+        status: "Status"
+        video_url: "URL do vídeo"
+        next_steps: "Próximos passos"
+        position: "Ordem"
+        deleted_at: "Excluído em"
+      help_faq:
+        question: "Pergunta"
+        answer: "Resposta"
+        category: "Categoria"
+        tags: "Tags (separadas por vírgula)"
+        position: "Ordem"
+        hidden: "Oculta"
   super_admin:
     navigation:
       dashboard: "Painel de Controle"

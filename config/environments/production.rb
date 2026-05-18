@@ -42,6 +42,11 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options)
   config.active_storage.service = ENV.fetch('ACTIVE_STORAGE_SERVICE', 'local').to_sym
 
+  # Host usado por Active Storage helpers (rails_blob_url) quando chamados fora de
+  # contexto de request — ex: Sidekiq jobs gerando notificações com link pra um blob.
+  # Sem isso, o helper levanta ArgumentError("Missing host to link to!").
+  config.active_storage.default_url_options = { host: ENV['FRONTEND_URL'] } if ENV['FRONTEND_URL'].present?
+
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
   config.force_ssl = ActiveModel::Type::Boolean.new.cast(ENV.fetch('FORCE_SSL', false))
 

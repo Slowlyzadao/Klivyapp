@@ -32,6 +32,10 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = ENV.fetch('ACTIVE_STORAGE_SERVICE', 'local').to_sym
 
+  # Container dev não tem libvips42 instalado (só ImageMagick); produção tem ambos.
+  # Manter consistente com gems disponíveis evita 500 ao gerar variants/thumbnails.
+  config.active_storage.variant_processor = :mini_magick
+
   config.active_job.queue_adapter = :sidekiq
 
   Rails.application.routes.default_url_options = { host: ENV.fetch('FRONTEND_URL', 'http://localhost:3000') }

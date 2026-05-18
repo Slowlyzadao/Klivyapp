@@ -3,7 +3,6 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useToggle } from '@vueuse/core';
 import { useStoreGetters, useMapGetter } from 'dashboard/composables/store';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import CampaignLayout from 'dashboard/components-next/Campaigns/CampaignLayout.vue';
@@ -11,11 +10,14 @@ import CampaignList from 'dashboard/components-next/Campaigns/Pages/CampaignPage
 import WhatsAppCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/WhatsAppCampaign/WhatsAppCampaignDialog.vue';
 import ConfirmDeleteCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/ConfirmDeleteCampaignDialog.vue';
 import WhatsAppCampaignEmptyState from 'dashboard/components-next/Campaigns/EmptyState/WhatsAppCampaignEmptyState.vue';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 const { t } = useI18n();
 const getters = useStoreGetters();
-const { can } = usePermissions();
-const canManage = computed(() => can('campaigns', 'manage_whatsapp'));
+const { isAdmin, can: klivyCan } = usePermissions();
+const canManage = computed(
+  () => isAdmin.value || klivyCan('campaigns', 'manage_whatsapp')
+);
 
 const selectedCampaign = ref(null);
 const [showWhatsAppCampaignDialog, toggleWhatsAppCampaignDialog] = useToggle();

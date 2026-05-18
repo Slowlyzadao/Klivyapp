@@ -45,6 +45,22 @@ export const actions = {
       commit(types.SET_AGENDA_EVENT_UI_FLAG, { isFetching: false });
     }
   },
+  // Carrega apenas o range visível (semana/mês/dia) e mescla por id no store.
+  // Não substitui o array — assim navegar de uma semana pra outra preserva
+  // eventos já carregados (cache implícito client-side) e evita perder um evento
+  // sendo arrastado/editado em paralelo.
+  fetchByRange: async function fetchByRange({ commit }, { startsAt, endsAt, userId } = {}) {
+    if (!startsAt || !endsAt) return;
+    commit(types.SET_AGENDA_EVENT_UI_FLAG, { isFetching: true });
+    try {
+      const response = await AgendaEventsAPI.filter({ startsAt, endsAt, userId });
+      commit(types.UPSERT_AGENDA_EVENTS, response.data);
+    } catch (error) {
+      // Ignore error
+    } finally {
+      commit(types.SET_AGENDA_EVENT_UI_FLAG, { isFetching: false });
+    }
+  },
   create: async function createAgendaEvent({ commit }, eventObj) {
     commit(types.SET_AGENDA_EVENT_UI_FLAG, { isCreating: true });
     try {
@@ -92,6 +108,12 @@ export const mutations = {
 
   [types.ADD_AGENDA_EVENT]: MutationHelpers.create,
   [types.SET_AGENDA_EVENTS]: MutationHelpers.set,
+  [types.UPSERT_AGENDA_EVENTS](_state, items) {
+    const incoming = items || [];
+    const map = new Map(_state.records.map(r => [r.id, r]));
+    incoming.forEach(it => map.set(it.id, it));
+    _state.records = Array.from(map.values());
+  },
   [types.EDIT_AGENDA_EVENT]: MutationHelpers.update,
   [types.DELETE_AGENDA_EVENT]: MutationHelpers.destroy,
 };

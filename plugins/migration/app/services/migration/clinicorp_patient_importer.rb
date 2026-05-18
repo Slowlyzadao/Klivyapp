@@ -56,7 +56,7 @@ module Migration
       @account = migration_run.account
       @errors = []
       @counters = {
-        created: 0, updated: 0, skipped: 0, errors: 0, processed: 0,
+        created: 0, updated: 0, skipped: 0, errors: 0, processed: 0, warnings: 0,
         anamneses_created: 0, anamneses_skipped: 0, anamneses_errors: 0
       }
       # exact_clinicorp_id (string) → patient_id
@@ -139,8 +139,12 @@ module Migration
       cpf = pick.call('OtherDocumentId').to_s.gsub(/\D/, '').then { |d| d.length == 11 ? d : nil }
       rg = pick.call('DocumentId')&.strip.presence
 
-      # Notes from various Clinicorp columns get concatenated into pinned_note.
-      notes = [pick.call('Notes'), pick.call('IndicationSource')].compact_blank.join(" — ").presence
+      # Notes from Clinicorp ('Notes' column) are clinical/medical history
+      # ("Plano Odonto 300092714, nega problemas de saúde, toma puran t4..."),
+      # so they go into the general `notes` field — NOT `pinned_note`, which
+      # is the visually prominent sticky-note for short reminders only.
+      # IndicationSource ("Como conheceu") is a separate flow already.
+      notes = pick.call('Notes')&.strip.presence
 
       {
         name: pick.call('Name')&.strip,
@@ -153,7 +157,7 @@ module Migration
         cpf: cpf,
         rg: rg,
         clinicorp_id: pick.call('id')&.to_s&.strip.presence,
-        pinned_note: notes,
+        notes: notes,
         address: {
           'street' => pick.call('Address')&.strip,
           'number' => pick.call('AddressNumber')&.strip,
@@ -224,14 +228,28 @@ module Migration
     def decide_merge(existing, mapped, line_number)
       existing_score = score_existing(existing)
       incoming_score = score_mapped(mapped)
+      needs_cleanup = legacy_pinned_to_migrate?(existing)
 
-      if incoming_score > existing_score
+      if incoming_score > existing_score || needs_cleanup
         existing.update!(merge_into_existing(existing, mapped))
         @counters[:updated] += 1
       else
         @counters[:skipped] += 1
         log_skip(line_number, "Já existe paciente '#{existing.name}' (id=#{existing.id}) com mais ou igual informação.")
       end
+    end
+
+    # Detects residue from the pre-fix importer: a Clinicorp-migrated patient
+    # whose pinned_note holds clinical history (the old code dumped Notes
+    # there). On re-import we move that content into notes and clear
+    # pinned_note. Idempotent — once notes already contains the pinned text,
+    # this returns false so re-running doesn't duplicate.
+    def legacy_pinned_to_migrate?(existing)
+      return false if existing.origin != 'migration_clinicorp'
+      return false if existing.pinned_note.to_s.strip.blank?
+      return false if existing.notes.to_s.include?(existing.pinned_note.to_s)
+
+      true
     end
 
     PATIENT_FIELDS = %i[name email phone cpf rg birthdate sex marital_status].freeze
@@ -268,7 +286,17 @@ module Migration
       if mapped[:emergency_contact].present?
         attrs[:emergency_contact] = (existing.emergency_contact || {}).merge(mapped[:emergency_contact]) { |_k, old, new| old.presence || new }
       end
-      attrs[:pinned_note] = mapped[:pinned_note] if existing.pinned_note.blank? && mapped[:pinned_note].present?
+
+      # Legacy cleanup: pinned_note populated by the pre-fix importer holds
+      # clinical history that belongs in notes. Consolidate (dedup-aware) and
+      # clear pinned_note so the sticky-note stops showing convênio info.
+      if legacy_pinned_to_migrate?(existing)
+        attrs[:notes] = [existing.notes, existing.pinned_note, mapped[:notes]].compact_blank.uniq.join("\n").presence
+        attrs[:pinned_note] = nil
+      elsif existing.notes.blank? && mapped[:notes].present?
+        attrs[:notes] = mapped[:notes]
+      end
+
       attrs
     end
 
@@ -286,7 +314,7 @@ module Migration
         address: mapped[:address] || {},
         insurance: mapped[:insurance] || {},
         emergency_contact: mapped[:emergency_contact] || {},
-        pinned_note: mapped[:pinned_note],
+        notes: mapped[:notes],
         origin: 'migration_clinicorp'
       )
       if patient.save
@@ -313,10 +341,15 @@ module Migration
           # Two different exact IDs collapsed to the same key. We KEEP the
           # first-seen mapping but flag both so the anamnesis pass can refuse
           # to link this key (collision detection).
+          # This is a CSV precision artifact (Excel rounds 16-digit IDs to
+          # scientific notation), not a real error — patients are imported
+          # correctly. Only the anamnesis-to-patient link can't be resolved
+          # for these specific patients.
           @clinicorp_id_to_patient[key] = :collision
-          log_error(line_number,
-                    "Colisão de clinicorp_id para chave '#{key}' (pacientes #{existing} e #{patient.id}). " \
-                    'Anamneses que apontarem pra essa chave serão ignoradas.')
+          @counters[:warnings] += 1
+          log_warning(line_number,
+                      "Chave '#{key}' colide entre 2+ pacientes (Excel arredondou IDs longos). " \
+                      'Pacientes importados normalmente; anamneses dessa chave ficam sem vínculo.')
         elsif !existing
           @clinicorp_id_to_patient[key] = patient.id
         end
@@ -375,11 +408,11 @@ module Migration
     def build_and_persist_anamnesis(anamnesis_id, patient_key, answers)
       patient_id_or_collision = @clinicorp_id_to_patient[patient_key]
       if patient_id_or_collision == :collision
-        log_error(anamnesis_id, "Anamnese ignorada — colisão de clinicorp_id para '#{patient_key}'.")
+        log_warning(anamnesis_id, "Anamnese sem vínculo — chave '#{patient_key}' aponta para 2+ pacientes (precisão do Excel).")
         return :skipped
       end
       if patient_id_or_collision.nil?
-        log_error(anamnesis_id, "Anamnese ignorada — paciente clinicorp_id='#{patient_key}' não importado.")
+        log_warning(anamnesis_id, "Anamnese sem vínculo — paciente clinicorp_id='#{patient_key}' não foi importado (provavelmente pulado por nome em branco).")
         return :skipped
       end
 
@@ -516,6 +549,10 @@ module Migration
 
     def log_error(line, message)
       @errors << { line: line, level: 'error', message: message }
+    end
+
+    def log_warning(line, message)
+      @errors << { line: line, level: 'warning', message: message }
     end
 
     def log_skip(line, message)

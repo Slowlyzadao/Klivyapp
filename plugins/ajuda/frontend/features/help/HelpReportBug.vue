@@ -3,9 +3,12 @@ import './help.css';
 import { useRouter } from 'vue-router';
 import { useAccount } from 'dashboard/composables/useAccount';
 import HelpFeedbackForm from './components/HelpFeedbackForm.vue';
+import { useChatBubble } from './composables/useChatBubble.js';
 
 const router = useRouter();
 const { accountScopedRoute } = useAccount();
+
+useChatBubble();
 
 function goToArticles() {
   router.push(accountScopedRoute('ajuda_dashboard_index'));

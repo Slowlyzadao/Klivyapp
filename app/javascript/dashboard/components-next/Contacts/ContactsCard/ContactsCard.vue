@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import CardLayout from 'dashboard/components-next/CardLayout.vue';
 import ContactsForm from 'dashboard/components-next/Contacts/ContactsForm/ContactsForm.vue';
@@ -11,9 +10,8 @@ import Flag from 'dashboard/components-next/flag/Flag.vue';
 import ContactDeleteSection from 'dashboard/components-next/Contacts/ContactsCard/ContactDeleteSection.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import countries from 'shared/constants/countries';
-
-const { can } = usePermissions();
-const canEditContact = computed(() => can('contacts', 'edit'));
+import { usePermissions } from 'dashboard/composables/usePermissions';
+import { useBeclinicStartWhatsAppConversation } from 'dashboard/composables/useBeclinicStartWhatsAppConversation';
 
 const props = defineProps({
   id: { type: Number, required: true },
@@ -38,6 +36,20 @@ const emit = defineEmits([
 ]);
 
 const { t } = useI18n();
+const { isAdmin, can: klivyCan } = usePermissions();
+const canEditContact = computed(
+  () => isAdmin.value || klivyCan('contacts', 'edit')
+);
+
+// Botão "Iniciar conversa" — só aparece quando o contato tem telefone E o
+// usuário pode responder em chats. Reusa o endpoint `whatsapp/start_conversation`
+// (cria nova ou abre conversa existente, sem duplicar contato).
+const canStartConversation = computed(
+  () => isAdmin.value || klivyCan('chat', 'reply')
+);
+const { isStarting: isStartingConversation, startConversation } =
+  useBeclinicStartWhatsAppConversation();
+const onClickStartConversation = () => startConversation(props.phoneNumber);
 
 const contactsFormRef = ref(null);
 
@@ -193,6 +205,14 @@ const handleAvatarHover = isHovered => {
               size="xs"
               @click="onClickViewDetails"
             />
+            <Button
+              v-if="phoneNumber && canStartConversation"
+              label="Iniciar conversa"
+              size="xs"
+              :is-loading="isStartingConversation"
+              :disabled="isStartingConversation"
+              @click="onClickStartConversation"
+            />
           </div>
         </div>
       </div>
@@ -222,8 +242,9 @@ const handleAvatarHover = isHovered => {
                 :contact-data="contactData"
                 @update="handleFormUpdate"
               />
-              <div v-if="canEditContact">
+              <div>
                 <Button
+                  v-if="canEditContact"
                   :label="
                     t('CONTACTS_LAYOUT.CARD.EDIT_DETAILS_FORM.UPDATE_BUTTON')
                   "

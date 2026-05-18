@@ -1,0 +1,37 @@
+/* InternalChat — estilos globais não-scoped (animações, scrollbar) */
+
+.ic-thread-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.ic-thread-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--n-slate-6));
+  border-radius: 3px;
+}
+.ic-thread-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(var(--n-slate-8));
+}
+
+@keyframes ic-fade-in-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ic-message-enter {
+  animation: ic-fade-in-up 0.18s ease-out;
+}
+
+@keyframes ic-typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.55; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}
+.ic-typing-dot {
+  animation: ic-typing-bounce 1s ease-in-out infinite;
+}
+
+@keyframes ic-flash {
+  0%, 100% { background-color: transparent; }
+  30% { background-color: rgb(var(--n-brand) / 0.18); }
+}
+.ic-msg-flash {
+  border-radius: 12px;
+  animation: ic-flash 1.4s ease-out;
+}

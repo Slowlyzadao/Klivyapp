@@ -32,43 +32,36 @@ as defined by the routes in the `admin/` namespace
     <ul class="my-4">
       <%= render partial: "nav_item", locals: { icon: 'icon-grid-line', url: super_admin_root_url, label: 'Dashboard' } %>
       <% Administrate::Namespace.new(namespace).resources.each do |resource| %>
-        <% next if ["account_users", "access_tokens", "installation_configs", "dashboard",
-                    "devise/sessions", "app_configs", "instance_statuses", "settings",
-                    "help_articles", "help_categories", "help_faqs",
-                    "subscription_plans", "discount_coupons",
-                    "migrations"].include?(resource.resource) %>
+        <% next if ["account_users", "access_tokens", "installation_configs", "dashboard", "devise/sessions", "app_configs", "instance_statuses", "settings", "migrations", "help_articles", "help_categories", "help_faqs", "klivy_widgets", "bea", "ai_agent_documents"].include?  resource.resource %>
         <%= render partial: "nav_item", locals: {
             icon: sidebar_icons[resource.resource.to_sym],
             url: resource_index_route(resource),
             label: display_resource_name(resource),
           }
         %>
+
       <% end %>
 
-      <%= render 'nav_group',
-            icon:  'icon-book-2-line',
-            label: 'Central de Ajuda',
-            items: [
-              { icon: 'icon-file-text-line',       url: super_admin_help_articles_url,   label: 'Artigos' },
-              { icon: 'icon-folder-line',           url: super_admin_help_categories_url, label: 'Categorias' },
-              { icon: 'icon-question-answer-line',  url: super_admin_help_faqs_url,       label: 'FAQs' },
-            ] %>
+      <%= render 'settings_menu', open: settings_open? %>
 
-      <%= render 'nav_group',
-            icon:  'icon-price-tag-3-line',
-            label: 'Assinatura',
-            items: [
-              { icon: 'icon-stack-line',   url: super_admin_subscription_plans_url, label: 'Planos' },
-              { icon: 'icon-coupon-3-line', url: super_admin_discount_coupons_url,  label: 'Cupons' },
-            ] %>
+      <%# ── Módulos Klivy / Beclinic custom ───────────────────────────────── %>
+      <li class="px-6 mt-6 mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        Klivy
+      </li>
+
+      <%= render partial: "nav_item", locals: {
+            icon:  'icon-robot-line',
+            url:   super_admin_bea_url,
+            label: 'Bea',
+          } %>
+
+      <%= render 'help_menu', open: help_menu_open? %>
 
       <%= render partial: "nav_item", locals: {
             icon:  'icon-database-2-line',
             url:   super_admin_migrations_url,
             label: 'Migração',
           } %>
-
-      <%= render 'settings_menu', open: settings_open? %>
     </ul>
   </div>
   <div>

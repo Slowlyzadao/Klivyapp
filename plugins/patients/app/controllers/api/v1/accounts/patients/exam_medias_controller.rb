@@ -76,9 +76,19 @@ module Api
           end
 
           # DELETE /api/v1/accounts/:account_id/patients/:patient_id/exams/:id
-          # Soft delete — nunca apaga fisicamente
+          # Soft delete (purge físico em 30 dias via ExamMediaPurgeJob).
+          # Recusa se o arquivo estiver bloqueado — a verificação client-side
+          # de `media.locked` é apenas UX; a integridade real é aqui.
           def destroy
             authorize @exam
+
+            if @exam.locked?
+              render json: {
+                errors: ['Arquivo bloqueado. Desbloqueie antes de excluir.']
+              }, status: :unprocessable_entity
+              return
+            end
+
             @exam.soft_delete!
             PatientAuditLog.log!(
               account: Current.account, patient: @patient, action: 'delete',
@@ -88,31 +98,13 @@ module Api
           end
 
           # GET /api/v1/accounts/:account_id/patients/:patient_id/exams/compare
-          # Retorna par de URLs assinadas para slider before/after
+          # Retorna par de URLs assinadas para slider before/after.
           # Params: ?left_id=X&right_id=Y
           def compare
             authorize ExamMedia, :show?
-            left  = @patient.exam_medias.active.find(params[:left_id])
-            right = @patient.exam_medias.active.find(params[:right_id])
-
-            render json: {
-              left: {
-                id: left.id,
-                file_name: left.file_name,
-                category: left.category,
-                description: left.description,
-                url: left.signed_url,
-                created_at: left.created_at
-              },
-              right: {
-                id: right.id,
-                file_name: right.file_name,
-                category: right.category,
-                description: right.description,
-                url: right.signed_url,
-                created_at: right.created_at
-              }
-            }
+            @left  = @patient.exam_medias.active.find(params[:left_id])
+            @right = @patient.exam_medias.active.find(params[:right_id])
+            render :compare
           rescue ActiveRecord::RecordNotFound
             render json: { error: 'Uma ou mais imagens não foram encontradas' }, status: :not_found
           end
@@ -137,6 +129,7 @@ module Api
               :description,
               :session_log_id,
               :appointment_id,
+              :exam_folder_id,
               :file,
               tags: []
             )
@@ -146,12 +139,32 @@ module Api
               :description,
               :session_log_id,
               :appointment_id,
+              :exam_folder_id,
               tags: []
             )
           end
 
+          # PATCH metadata: aceita renomear, mover entre pastas e (un)lock.
+          # Não troca o blob — para isso, faça delete + new upload.
           def exam_update_params
-            params.permit(:category, :description, tags: [])
+            permitted = if params[:exam_media].present?
+                          params.require(:exam_media).permit(
+                            :category, :description, :file_name, :exam_folder_id, :locked, tags: []
+                          )
+                        else
+                          params.permit(:category, :description, :file_name, :exam_folder_id, :locked, tags: [])
+                        end
+
+            permitted[:exam_folder_id] = normalize_folder_id(permitted[:exam_folder_id]) if permitted.key?(:exam_folder_id)
+            permitted
+          end
+
+          # Garante que a pasta-alvo pertence ao mesmo paciente (defesa cross-tenant).
+          # Aceita 'root', null e string vazia como "sem pasta".
+          def normalize_folder_id(value)
+            return nil if value.blank? || value.to_s == 'root'
+
+            @patient.exam_folders.where(id: value).pick(:id)
           end
         end
       end

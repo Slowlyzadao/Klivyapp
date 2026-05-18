@@ -3,9 +3,8 @@ import { useAlert } from 'dashboard/composables';
 import { computed, onBeforeMount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStoreGetters, useStore } from 'dashboard/composables/store';
-import { useAdmin } from 'dashboard/composables/useAdmin';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 import { picoSearch } from '@scmmishra/pico-search';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import AddLabel from './AddLabel.vue';
 import EditLabel from './EditLabel.vue';
@@ -21,17 +20,15 @@ import {
 const getters = useStoreGetters();
 const store = useStore();
 const { t } = useI18n();
-const { isAdmin } = useAdmin();
-const { can } = usePermissions();
-
+const { isAdmin, can: klivyCan } = usePermissions();
 const canCreateLabel = computed(
-  () => isAdmin.value || can('settings', 'labels_create')
+  () => isAdmin.value || klivyCan('settings', 'labels_create')
 );
 const canEditLabel = computed(
-  () => isAdmin.value || can('settings', 'labels_edit')
+  () => isAdmin.value || klivyCan('settings', 'labels_edit')
 );
 const canDeleteLabel = computed(
-  () => isAdmin.value || can('settings', 'labels_delete')
+  () => isAdmin.value || klivyCan('settings', 'labels_delete')
 );
 
 const loading = ref({});

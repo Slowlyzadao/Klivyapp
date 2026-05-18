@@ -4,10 +4,7 @@ export function useSettingsSchedules(props, emit) {
   // Funções Puras de UI (formatadores, metadados)
   const getDayStatus = (day) => {
     if (!day.enabled) return { label: 'Fechado', cls: 'closed' };
-    if (!day.lunchStart && day.start && day.end) return { label: 'Aberto', cls: 'open' };
-    if (day.start === '09:00' && day.end === '18:00') return { label: 'Aberto', cls: 'open' };
-    if (day.start && day.end) return { label: 'Horário reduzido', cls: 'reduced' };
-    return { label: 'Fechado', cls: 'closed' };
+    return { label: 'Aberto', cls: 'open' };
   };
 
   const getExceptionMeta = (type) => {

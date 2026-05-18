@@ -1,14 +1,16 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import { useStore } from 'vuex';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 import cashRegistersAPI from '../api/cashRegisters';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import DatePicker from '../components/DatePicker.vue';
 import '../financial.css';
 
 const store = useStore();
-const { can } = usePermissions();
-const canCreateTransaction = computed(() => can('financial', 'create_transaction'));
+const { can: klivyCan } = usePermissions();
+const canCreateTransaction = computed(() =>
+  klivyCan('financial', 'create_transaction')
+);
 
 const accountId = computed(() => store.getters.getCurrentAccountId);
 const currentUser = computed(() => store.getters.getCurrentUser);

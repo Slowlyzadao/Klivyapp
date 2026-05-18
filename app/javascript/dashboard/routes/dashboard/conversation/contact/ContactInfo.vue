@@ -50,10 +50,10 @@ export default {
   emits: ['panelClose'],
   setup() {
     const { isAdmin } = useAdmin();
-    const { can } = usePermissions();
+    const { can: klivyCan } = usePermissions();
     return {
       isAdmin,
-      can,
+      klivyCan,
     };
   },
   data() {
@@ -67,24 +67,6 @@ export default {
   },
   computed: {
     ...mapGetters({ uiFlags: 'contacts/getUIFlags' }),
-    canViewContactProfile() {
-      return this.can('chat', 'view_contact_profile');
-    },
-    canViewPatientRecord() {
-      return this.can('chat', 'view_patient_record');
-    },
-    canEditContact() {
-      return this.can('chat', 'edit_contact');
-    },
-    canMergeContact() {
-      return this.can('chat', 'merge_contact');
-    },
-    canManageWaitingList() {
-      return this.can('chat', 'manage_waiting_list');
-    },
-    canDeleteContact() {
-      return this.can('chat', 'delete_contact');
-    },
     contactProfileLink() {
       return `/app/accounts/${this.$route.params.accountId}/contacts/${this.contact.id}`;
     },
@@ -119,6 +101,21 @@ export default {
     // Delete Modal
     confirmDeleteMessage() {
       return ` ${this.contact.name}?`;
+    },
+    canViewContactProfile() {
+      return this.klivyCan('chat', 'view_contact_profile');
+    },
+    canViewPatientRecord() {
+      return this.klivyCan('chat', 'view_patient_record');
+    },
+    canEditContact() {
+      return this.klivyCan('chat', 'edit_contact');
+    },
+    canMergeContact() {
+      return this.klivyCan('chat', 'merge_contact');
+    },
+    canManageWaitingList() {
+      return this.klivyCan('chat', 'manage_waiting_list');
     },
   },
   watch: {
@@ -377,7 +374,7 @@ export default {
           @click="openWaitingListModal"
         />
         <NextButton
-          v-if="canDeleteContact"
+          v-if="isAdmin"
           v-tooltip.top-end="$t('DELETE_CONTACT.BUTTON_LABEL')"
           icon="i-ph-trash"
           slate

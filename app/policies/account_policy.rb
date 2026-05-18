@@ -4,17 +4,15 @@ class AccountPolicy < ApplicationPolicy
   end
 
   def cache_keys?
-    show?
+    @account_user.administrator? || @account_user.agent?
   end
 
   def limits?
-    show?
+    @account_user.administrator? || @account_user.agent?
   end
 
   def update?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :account_manage)
+    @account_user.administrator?
   end
 
   def update_active_at?
@@ -22,22 +20,18 @@ class AccountPolicy < ApplicationPolicy
   end
 
   def subscription?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :billing_manage)
+    @account_user.administrator?
   end
 
   def checkout?
-    subscription?
+    @account_user.administrator?
   end
 
   def toggle_deletion?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :account_manage)
+    @account_user.administrator?
   end
 
   def topup_checkout?
-    subscription?
+    @account_user.administrator?
   end
 end

@@ -6,7 +6,6 @@ Billing::Engine.routes.draw do
         post 'onboarding/finalize', to: 'onboarding#finalize'
         get  'onboarding/check_email', to: 'onboarding#check_email'
         post 'webhooks/asaas', to: 'webhooks#asaas'
-        get  'subscription', to: 'subscription#show'
       end
     end
   end

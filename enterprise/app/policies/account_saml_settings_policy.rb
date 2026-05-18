@@ -1,21 +1,17 @@
 class AccountSamlSettingsPolicy < ApplicationPolicy
   def show?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :security_view)
+    @account_user.administrator?
   end
 
   def create?
-    return true if @account_user.administrator?
-
-    beclinic_can?(:settings, :security_manage)
+    @account_user.administrator?
   end
 
   def update?
-    create?
+    @account_user.administrator?
   end
 
   def destroy?
-    create?
+    @account_user.administrator?
   end
 end

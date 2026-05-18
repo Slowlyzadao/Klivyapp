@@ -1,0 +1,33 @@
+<%#
+# Dropdown "Ajuda" — agrupa Categorias, Artigos e Perguntas Frequentes
+# do plugin `ajuda` em uma única seção colapsável da sidebar do Super Admin.
+# Mesma estrutura visual de `_settings_menu.html.erb` (<details>/<summary>).
+%>
+<li class="px-4 mb-1">
+  <details class="group" <%= 'open' if open %>>
+    <summary class="-ml-1 flex items-center px-2 py-1.5 cursor-pointer rounded-lg <%= open ? 'text-woot-500 bg-slate-25' : 'text-slate-800 hover:text-woot-500 hover:bg-slate-25' %> list-none">
+      <span class="flex items-center flex-1">
+        <svg width="16" height="16"><use xlink:href="#icon-book-2-line" /></svg>
+        <span class="ml-2 text-sm">Ajuda</span>
+      </span>
+      <svg class="ml-auto w-4 h-4 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+      </svg>
+    </summary>
+    <ul class="ml-4 mt-1">
+      <% [
+        [super_admin_help_categories_url, 'Categorias'],
+        [super_admin_help_articles_url, 'Artigos'],
+        [super_admin_help_faqs_url, 'Perguntas Frequentes'],
+        [super_admin_klivy_widget_url, 'Widget de Suporte']
+      ].each do |url, label| %>
+        <li class="px-4 mb-1">
+          <% text_class = current_page?(url) ? 'text-woot-500 bg-slate-25' : 'text-slate-800' %>
+          <%= link_to url, class: text_class + ' -ml-1 flex items-center px-2 py-1.5 hover:text-woot-500 hover:bg-slate-25 rounded-lg' do %>
+            <span class="ml-2 text-sm"><%= label %></span>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </details>
+</li>

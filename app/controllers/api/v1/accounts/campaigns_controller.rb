@@ -1,8 +1,5 @@
 class Api::V1::Accounts::CampaignsController < Api::V1::Accounts::BaseController
   before_action :campaign, except: [:index, :create]
-  # Passa a instância pra authorize quando disponível, pra policy checar
-  # o canal da inbox (Live Chat / SMS / Whatsapp). Em index/create entra
-  # a classe — policy aceita qualquer manage_* nesse caso.
   before_action :check_authorization_for_campaign
 
   def index
@@ -26,12 +23,16 @@ class Api::V1::Accounts::CampaignsController < Api::V1::Accounts::BaseController
 
   private
 
-  def check_authorization_for_campaign
-    authorize(@campaign || Campaign)
-  end
-
   def campaign
     @campaign ||= Current.account.campaigns.find_by(display_id: params[:id])
+  end
+
+  # Pass the @campaign instance to the policy when available so the policy
+  # can dispatch on inbox_type for channel-specific Klivy permissions.
+  # When @campaign is not set yet (index/create), pass the Campaign class.
+  def check_authorization_for_campaign
+    target = @campaign || Campaign
+    authorize(target)
   end
 
   def campaign_params

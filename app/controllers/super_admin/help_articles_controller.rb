@@ -1,19 +1,15 @@
 class SuperAdmin::HelpArticlesController < SuperAdmin::ApplicationController
-  def scoped_resource
-    resource_class.where(deleted_at: nil).order(:category, :position, :created_at)
-  end
-
   def destroy
     requested_resource.soft_delete!
-    redirect_to super_admin_help_articles_path,
-                notice: 'Artigo excluído com sucesso.'
+    redirect_to super_admin_help_articles_path, notice: 'Artigo excluído.'
   end
 
-  private
+  def scoped_resource
+    resource_class.visible.ordered
+  end
 
   def resource_params
-    params.require(:help_article).permit(
-      :title, :body, :next_steps, :category, :status, :video_url, :position
-    )
+    params.require(resource_class.model_name.param_key)
+          .permit(dashboard.permitted_attributes(action_name))
   end
 end

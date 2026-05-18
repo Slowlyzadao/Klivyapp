@@ -1,4 +1,206 @@
 <!-- eslint-disable @intlify/vue-i18n/no-raw-text, vue/no-bare-strings-in-template -->
+<script setup>
+/**
+ * DocumentsTab — Aba "Documentos" do prontuário.
+ *
+ * Geração de receitas, atestados, pedidos de exame, encaminhamentos, etc.
+ * Lista documentos gerados, permite download, envio via WhatsApp e exclusão.
+ * Auto-suficiente: lê patientId da rota e faz seu próprio fetch.
+ *
+ * Componente extraído de Record.vue (Fase 5 do refactor — ver CHANGELOG).
+ */
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { useAlert } from 'dashboard/composables';
+import { formatDateBR } from '@plugins/beclinic_core/frontend/helpers/dateHelpers';
+import DocumentsAPI from '@plugins/patients/frontend/api/patients/documents';
+
+const route = useRoute();
+
+const formatDate = dateStr => {
+  if (!dateStr) return '—';
+  return formatDateBR(dateStr) || '—';
+};
+
+// ── State ──────────────────────────────────────────────────
+const documents = ref([]);
+const showDocModal = ref(false);
+const docModalLoading = ref(false);
+const showDeleteDocModal = ref(false);
+const pendingDeleteDocId = ref(null);
+
+const docForm = ref({
+  document_type: 'atestado',
+  title: '',
+  cid: '',
+  dias_afastamento: '',
+  observacoes: '',
+  medicamentos: '',
+  posologia: '',
+  exames_solicitados: '',
+  encaminhado_para: '',
+  especialidade: '',
+  conteudo_livre: '',
+});
+
+const DOC_TYPE_LABELS = {
+  receita: 'Receita Médica',
+  atestado: 'Atestado Médico',
+  pedido_exame: 'Pedido de Exame',
+  declaracao: 'Declaração',
+  relatorio_clinico: 'Relatório Clínico',
+  encaminhamento: 'Encaminhamento',
+  contrato: 'Contrato',
+  orcamento: 'Orçamento',
+  instrucao_procedimento: 'Instruções de Procedimento',
+  questionario: 'Questionário',
+  outro: 'Outro',
+};
+
+const DOC_STATUS_CONFIG = {
+  gerado: {
+    label: 'Gerado',
+    cls: 'bg-blue-500/15 text-blue-400 border-blue-500/25',
+  },
+  pendente_assinatura: {
+    label: 'Aguard. Assinatura',
+    cls: 'bg-amber-500/15 text-amber-400 border-amber-500/25',
+  },
+  assinado: {
+    label: 'Assinado',
+    cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
+  },
+  enviado: {
+    label: 'Enviado',
+    cls: 'bg-purple-500/15 text-purple-400 border-purple-500/25',
+  },
+  arquivado: {
+    label: 'Arquivado',
+    cls: 'bg-slate-500/15 text-slate-400 border-slate-500/25',
+  },
+};
+
+// ── Actions ────────────────────────────────────────────────
+const openDocModal = () => {
+  docForm.value = {
+    document_type: 'atestado',
+    title: '',
+    cid: '',
+    dias_afastamento: '',
+    observacoes: '',
+    medicamentos: '',
+    posologia: '',
+    exames_solicitados: '',
+    encaminhado_para: '',
+    especialidade: '',
+    conteudo_livre: '',
+  };
+  showDocModal.value = true;
+};
+
+const fetchDocuments = async () => {
+  try {
+    const res = await DocumentsAPI.get(route.params.patientId);
+    // API responds with { data: [...], meta: { total_count, ... } }
+    documents.value = res.data?.data || res.data || [];
+  } catch (error) {
+    // ignore
+  }
+};
+
+const generateDocument = async () => {
+  docModalLoading.value = true;
+  try {
+    const form = docForm.value;
+
+    const variables = {};
+    if (form.document_type === 'atestado') {
+      if (form.cid) variables.cid = form.cid;
+      if (form.dias_afastamento)
+        variables.dias_afastamento = form.dias_afastamento;
+    } else if (form.document_type === 'receita') {
+      if (form.medicamentos) variables.medicamentos = form.medicamentos;
+      if (form.posologia) variables.posologia = form.posologia;
+    } else if (form.document_type === 'pedido_exame') {
+      if (form.exames_solicitados)
+        variables.exames_solicitados = form.exames_solicitados;
+    } else if (form.document_type === 'encaminhamento') {
+      if (form.encaminhado_para)
+        variables.encaminhado_para = form.encaminhado_para;
+      if (form.especialidade) variables.especialidade = form.especialidade;
+    } else if (form.conteudo_livre) variables.conteudo = form.conteudo_livre;
+    if (form.observacoes) variables.observacoes = form.observacoes;
+
+    const payload = {
+      document_type: form.document_type,
+      title:
+        form.title || DOC_TYPE_LABELS[form.document_type] || form.document_type,
+      variables,
+    };
+
+    const res = await DocumentsAPI.generate(route.params.patientId, payload);
+    const docData = res.data;
+
+    showDocModal.value = false;
+    await fetchDocuments();
+
+    if (docData?.url) {
+      window.open(docData.url, '_blank');
+    }
+  } catch (error) {
+    useAlert('Erro ao gerar documento. Verifique os dados e tente novamente.');
+  } finally {
+    docModalLoading.value = false;
+  }
+};
+
+const downloadDocument = async doc => {
+  if (!doc?.id) return;
+  try {
+    const res = await DocumentsAPI.download(route.params.patientId, doc.id);
+    if (res.data?.url) {
+      window.open(res.data.url, '_blank');
+    }
+  } catch {
+    useAlert('Erro ao baixar o documento.');
+  }
+};
+
+const sendWhatsAppDocument = async documentId => {
+  if (!documentId) return;
+  try {
+    await DocumentsAPI.sendWhatsApp(route.params.patientId, documentId);
+    useAlert('Documento enviado via WhatsApp com sucesso!');
+  } catch {
+    useAlert('Erro ao enviar documento via WhatsApp.');
+  }
+};
+
+const deleteDocument = documentId => {
+  if (!documentId) return;
+  pendingDeleteDocId.value = documentId;
+  showDeleteDocModal.value = true;
+};
+
+const confirmDeleteDocument = async () => {
+  const id = pendingDeleteDocId.value;
+  if (!id) return;
+  try {
+    await DocumentsAPI.delete(route.params.patientId, id);
+    documents.value = documents.value.filter(d => d.id !== id);
+  } catch {
+    useAlert('Erro ao excluir o documento.');
+  } finally {
+    showDeleteDocModal.value = false;
+    pendingDeleteDocId.value = null;
+  }
+};
+
+onMounted(() => {
+  fetchDocuments();
+});
+</script>
+
 <template>
   <div class="tab-pane fade-in">
     <!-- Header -->
@@ -11,10 +213,7 @@
         </p>
       </div>
       <div class="flex items-center gap-3">
-        <button
-          class="btn-primary flex items-center gap-2"
-          @click="openDocModal"
-        >
+        <button class="btn-primary flex items-center gap-2" @click="openDocModal">
           <i class="i-lucide-file-plus w-4 h-4" /> Gerar Documento
         </button>
       </div>
@@ -40,14 +239,16 @@
       </div>
 
       <!-- Empty state -->
-      <div v-if="!documents || documents.length === 0" class="proc-empty-state">
+      <div
+        v-if="!documents || documents.length === 0"
+        class="proc-empty-state"
+      >
         <div class="proc-empty-icon">
           <i class="i-lucide-file-x w-5 h-5" />
         </div>
         <p class="proc-empty-text">Nenhum documento gerado ainda.</p>
         <button
-          class="proc-empty-hint"
-          style="color: #60a5fa; cursor: pointer"
+          class="proc-empty-hint text-blue-400 cursor-pointer"
           @click="openDocModal"
         >
           Gerar primeiro documento →
@@ -68,7 +269,11 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="doc in documents" :key="doc.id" class="proc-table-row">
+            <tr
+              v-for="doc in documents"
+              :key="doc.id"
+              class="proc-table-row"
+            >
               <!-- Nome -->
               <td class="proc-table-cell">
                 <div class="flex items-center gap-3">
@@ -110,13 +315,15 @@
                 <span
                   class="docs-status-badge"
                   :class="
-                    (DOC_STATUS_CONFIG[doc.status] || DOC_STATUS_CONFIG.gerado)
-                      .cls
+                    (
+                      DOC_STATUS_CONFIG[doc.status] || DOC_STATUS_CONFIG.gerado
+                    ).cls
                   "
                 >
                   {{
-                    (DOC_STATUS_CONFIG[doc.status] || DOC_STATUS_CONFIG.gerado)
-                      .label
+                    (
+                      DOC_STATUS_CONFIG[doc.status] || DOC_STATUS_CONFIG.gerado
+                    ).label
                   }}
                 </span>
               </td>
@@ -351,49 +558,56 @@
     <!-- Modal: Confirmar Exclusão de Documento -->
     <div
       v-if="showDeleteDocModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md"
+      class="delete-modal-overlay flex items-center justify-center fixed inset-0 backdrop-blur-sm z-[99999]"
+      style="background: rgba(0, 0, 0, 0.4)"
       @click.self="
         showDeleteDocModal = false;
         pendingDeleteDocId = null;
       "
     >
-      <div class="docs-modal" style="max-width: 400px">
-        <div class="docs-modal-header">
-          <div class="flex items-center gap-3">
+      <div
+        class="delete-modal-card rounded-2xl w-full max-w-[420px] overflow-hidden"
+        style="
+          background: rgb(var(--slate-1));
+          border: 1px solid rgb(var(--slate-4));
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+        "
+      >
+        <div class="p-6">
+          <div class="flex items-start gap-4">
             <div
-              class="docs-modal-icon"
-              style="background: rgba(239, 68, 68, 0.12); color: #f87171"
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-500/10"
             >
-              <i class="i-lucide-trash-2 w-4 h-4" />
+              <i class="i-lucide-alert-triangle size-5 text-rose-500" />
             </div>
-            <div>
-              <h4 class="text-base font-semibold text-slate-100">
-                Excluir Documento
-              </h4>
-              <p class="text-xs text-slate-500 mt-0.5">
-                Esta ação não pode ser desfeita.
+            <div class="flex flex-col gap-2 pt-1">
+              <h3
+                class="font-medium m-0 text-lg leading-tight"
+                style="color: rgb(var(--slate-12))"
+              >
+                Excluir Documento?
+              </h3>
+              <p
+                class="m-0 text-sm leading-relaxed"
+                style="color: rgb(var(--slate-10))"
+              >
+                Tem certeza que deseja excluir este documento? O arquivo PDF
+                será removido permanentemente. Esta ação não pode ser desfeita.
               </p>
             </div>
           </div>
+        </div>
+        <div
+          class="px-6 py-4 flex justify-end gap-3"
+          style="border-top: 1px solid rgb(var(--slate-4))"
+        >
           <button
-            class="docs-modal-close"
-            @click="
-              showDeleteDocModal = false;
-              pendingDeleteDocId = null;
+            class="rounded-lg px-4 py-2 text-sm font-medium cursor-pointer"
+            style="
+              background: transparent;
+              border: 1px solid #cbd5e1;
+              color: #475569;
             "
-          >
-            <i class="i-lucide-x w-4 h-4" />
-          </button>
-        </div>
-        <div class="docs-modal-body" style="padding: 20px 24px 4px">
-          <p class="text-sm text-slate-400">
-            Tem certeza que deseja excluir este documento? O arquivo PDF será
-            removido permanentemente.
-          </p>
-        </div>
-        <div class="docs-modal-footer">
-          <button
-            class="btn-secondary"
             @click="
               showDeleteDocModal = false;
               pendingDeleteDocId = null;
@@ -402,10 +616,11 @@
             Cancelar
           </button>
           <button
-            class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-red-600 hover:bg-red-500 text-white transition-colors"
+            class="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold border-0 cursor-pointer"
+            style="background: #ef4444; color: #ffffff"
             @click="confirmDeleteDocument"
           >
-            <i class="i-lucide-trash-2 w-3.5 h-3.5" /> Excluir
+            Excluir
           </button>
         </div>
       </div>

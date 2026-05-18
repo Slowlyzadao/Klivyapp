@@ -1,0 +1,102 @@
+<% content_for(:title) { "Bea — Documentos #{@account.name}" } %>
+
+<header class="main-content__header">
+  <h1 class="main-content__page-title">Bea — Documentos da Conta #<%= @account.id %> <%= @account.name %></h1>
+  <div>
+    <%= link_to 'Voltar', super_admin_account_path(@account), class: 'button button--secondary' %>
+    <%= link_to 'Configurar Bea', bea_super_admin_account_path(@account), class: 'button button--secondary' %>
+  </div>
+</header>
+
+<section class="main-content__body">
+  <div style="max-width: 900px;">
+
+    <p style="color: #6b7280; font-size: 13.5px; margin-bottom: 20px; line-height: 1.5;">
+      Documentos PDF enviados aqui são processados em background: extração de texto,
+      chunking parent/child e geração de embeddings. A Bea consulta esta base
+      automaticamente ao responder perguntas dos pacientes.
+    </p>
+
+    <%# ── Upload form ─────────────────────────────────────────────────── %>
+    <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+      <h3 style="font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 12px;">Enviar novo documento</h3>
+      <%= form_with url: super_admin_account_ai_agent_documents_path(@account),
+                    method: :post, multipart: true, local: true do |f| %>
+        <div class="field-unit">
+          <div class="field-unit__label">
+            <label for="document_name">Nome (opcional)</label>
+          </div>
+          <div class="field-unit__field">
+            <input type="text" id="document_name" name="document[name]"
+                   placeholder="Ex.: Políticas da clínica 2026"
+                   style="width: 100%;">
+          </div>
+        </div>
+        <div class="field-unit">
+          <div class="field-unit__label">
+            <label for="document_pdf_file">Arquivo PDF</label>
+          </div>
+          <div class="field-unit__field">
+            <input type="file" id="document_pdf_file" name="document[pdf_file]" accept="application/pdf" required>
+            <p style="color: #6b7280; font-size: 12.5px; margin-top: 6px;">Tamanho máximo: 20 MB.</p>
+          </div>
+        </div>
+        <div style="margin-top: 16px;">
+          <%= f.submit 'Enviar e processar', class: 'button' %>
+        </div>
+      <% end %>
+    </div>
+
+    <%# ── Lista ──────────────────────────────────────────────────────── %>
+    <h3 style="font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 12px;">Documentos enviados (<%= @documents.size %>)</h3>
+
+    <% if @documents.empty? %>
+      <p style="color: #6b7280; font-size: 13px; padding: 16px 0;">Nenhum documento ainda. Envie o primeiro acima.</p>
+    <% else %>
+      <table class="data" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+            <th style="text-align: left; padding: 10px; font-size: 12px; color: #6b7280;">ID</th>
+            <th style="text-align: left; padding: 10px; font-size: 12px; color: #6b7280;">Nome</th>
+            <th style="text-align: left; padding: 10px; font-size: 12px; color: #6b7280;">Status</th>
+            <th style="text-align: left; padding: 10px; font-size: 12px; color: #6b7280;">Chunks</th>
+            <th style="text-align: left; padding: 10px; font-size: 12px; color: #6b7280;">Enviado</th>
+            <th style="text-align: left; padding: 10px; font-size: 12px; color: #6b7280;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @documents.each do |doc| %>
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+              <td style="padding: 10px; font-size: 13px; color: #6b7280;"><%= doc.id %></td>
+              <td style="padding: 10px; font-size: 13.5px; color: #111827;"><%= doc.name %></td>
+              <td style="padding: 10px; font-size: 13px;">
+                <%
+                  badge_color = {
+                    'pending' => '#9ca3af',
+                    'processing' => '#1f93ff',
+                    'processed' => '#10b981',
+                    'failed' => '#ef4444'
+                  }[doc.status] || '#9ca3af'
+                %>
+                <span style="background: <%= badge_color %>; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 500;"><%= doc.status %></span>
+                <% if doc.error_message.present? %>
+                  <div style="color: #ef4444; font-size: 11.5px; margin-top: 4px; font-family: ui-monospace, monospace;"><%= truncate(doc.error_message, length: 80) %></div>
+                <% end %>
+              </td>
+              <td style="padding: 10px; font-size: 13px; color: #6b7280;"><%= doc.parent_chunk_count %> / <%= doc.child_chunk_count %></td>
+              <td style="padding: 10px; font-size: 12.5px; color: #6b7280;"><%= time_ago_in_words(doc.created_at) %></td>
+              <td style="padding: 10px;">
+                <%= button_to 'Excluir',
+                              super_admin_account_ai_agent_document_path(@account, doc),
+                              method: :delete,
+                              data: { confirm: 'Confirma exclusão?' },
+                              class: 'button button--secondary',
+                              style: 'background: #fef2f2; color: #ef4444; border-color: #fecaca; padding: 4px 10px; font-size: 12px;' %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+  </div>
+</section>

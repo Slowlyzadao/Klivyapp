@@ -42,7 +42,7 @@ services:
       - RAILS_ENV=development
       - BUNDLE_WITHOUT=
       - WHATSAPP_QR_BRIDGE_URL=http://whatsapp_bridge:3002
-    entrypoint: docker/entrypoints/rails.sh
+    entrypoint: ["sh", "docker/entrypoints/rails.sh"]
     command: [ "bundle", "exec", "rails", "s", "-p", "3000", "-b", "0.0.0.0" ]
 
   sidekiq:
@@ -86,7 +86,7 @@ services:
       - NODE_ENV=development
       - RAILS_ENV=development
       - BUNDLE_WITHOUT=
-    entrypoint: docker/entrypoints/vite.sh
+    entrypoint: ["sh", "docker/entrypoints/vite.sh"]
     command: bin/vite dev
 
   postgres:
@@ -123,18 +123,32 @@ services:
       context: ./lib/whatsapp
       dockerfile: Dockerfile
     image: chatwoot-whatsapp-bridge:latest
-    restart: always
+    restart: unless-stopped
     ports:
       - "3002:3002"
+    # IMPORTANTE: o bridge persiste credenciais em /app/sessions/<inboxId>/auth_info.
+    # Esse caminho DEVE ser um volume — sem ele, `docker compose down` apaga a
+    # camada writable do container e todas as sessões WhatsApp são perdidas
+    # (sintoma: precisa reescanear o QR após cada rebuild).
     volumes:
-      - ./lib/whatsapp/auth_info:/app/auth_info
+      - ./lib/whatsapp/sessions:/app/sessions
       - ./lib/whatsapp/media_cache:/app/media_cache
     environment:
       - CHATWOOT_BASE_URL=http://rails:3000
       - BRIDGE_BASE_URL=http://whatsapp_bridge:3002
       - WHATSAPP_BRIDGE_PORT=3002
+      - WHATSAPP_SESSIONS_DIR=/app/sessions
+      - WHATSAPP_LID_MAP_PATH=/app/sessions/lid_map.json
     depends_on:
       - rails
+    healthcheck:
+      # /healthz é probe ATIVO: confirma que cada socket Baileys está vivo
+      # (não apenas que o processo Node está respondendo). Detecta zumbis.
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3002/healthz', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
   postgres:
@@ -143,4 +157,3 @@ volumes:
   node_modules:
   cache:
   bundle:
-  whatsapp_auth:

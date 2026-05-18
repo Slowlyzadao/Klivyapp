@@ -9,8 +9,6 @@ import {
   useStore,
   useMapGetter,
 } from 'dashboard/composables/store';
-import { useAdmin } from 'dashboard/composables/useAdmin';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import AddAgent from './AddAgent.vue';
 import EditAgent from './EditAgent.vue';
@@ -18,24 +16,20 @@ import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import AssignRoleButton from '@plugins/custom_roles/frontend/features/role-assignment/AssignRoleButton.vue';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 const getters = useStoreGetters();
 const store = useStore();
 const { t } = useI18n();
-const { isAdmin } = useAdmin();
-const { can } = usePermissions();
-
-// Klivy Custom Roles: admin/dono sempre veem tudo; demais são gated por
-// settings.users_invite (Adicionar), users_edit (Editar/Atribuir função) e
-// users_remove (Excluir).
-const canInviteAgents = computed(
-  () => isAdmin.value || can('settings', 'users_invite')
+const { isAdmin, can: klivyCan } = usePermissions();
+const canInviteUsers = computed(
+  () => isAdmin.value || klivyCan('settings', 'users_invite')
 );
-const canEditAgents = computed(
-  () => isAdmin.value || can('settings', 'users_edit')
+const canEditUsers = computed(
+  () => isAdmin.value || klivyCan('settings', 'users_edit')
 );
-const canRemoveAgents = computed(
-  () => isAdmin.value || can('settings', 'users_remove')
+const canRemoveUsers = computed(
+  () => isAdmin.value || klivyCan('settings', 'users_remove')
 );
 
 const loading = ref({});
@@ -78,12 +72,16 @@ const findCustomRole = agent =>
 
 const getAgentRoleName = agent => {
   if (agent.beclinic_super_admin) return 'Super Admin';
+  if (agent.klivy_role?.name) return agent.klivy_role.name;
   if (!agent.custom_role_id) {
     return t(`AGENT_MGMT.AGENT_TYPES.${agent.role.toUpperCase()}`);
   }
   const customRole = findCustomRole(agent);
   return customRole ? customRole.name : '';
 };
+
+const hasRoleBadge = agent =>
+  Boolean(agent.klivy_role?.name) || Boolean(agent.custom_role_id);
 
 const getAgentRolePermissions = agent => {
   if (!agent.custom_role_id) {
@@ -100,19 +98,24 @@ const verifiedAdministrators = computed(() => {
 });
 
 const showEditAction = agent => {
+  if (!canEditUsers.value) return false;
   return currentUserId.value !== agent.id;
 };
 
 const showDeleteAction = agent => {
-  // Não dá pra deletar a si mesmo (seria deslogado no meio da operação).
+  if (!canRemoveUsers.value) return false;
   if (currentUserId.value === agent.id) return false;
-  // Administradores e donos (super admin Klivy) são intocáveis via essa UI,
-  // mesmo que o user logado tenha `users_remove` — proteção pra conta nunca
-  // ficar sem ninguém com bypass total. Se precisar trocar admin, use o
-  // editor pra rebaixar antes.
+  // Admins (Chatwoot administrators) and Klivy super admins are untouchable
+  // by anyone — even other admins — to avoid accidental deletion of an
+  // owner account. Demote first via the agent editor, then delete.
   if (agent.role === 'administrator') return false;
   if (agent.beclinic_super_admin) return false;
   return true;
+};
+
+const showAssignRoleAction = agent => {
+  if (!canEditUsers.value) return false;
+  return currentUserId.value !== agent.id;
 };
 
 const showAlertMessage = message => {
@@ -183,7 +186,7 @@ const confirmDeletion = () => {
         </template>
         <template #actions>
           <Button
-            v-if="canInviteAgents"
+            v-if="canInviteUsers"
             :label="$t('AGENT_MGMT.HEADER_BTN_TXT')"
             size="sm"
             @click="openAddPopup"
@@ -222,17 +225,17 @@ const confirmDeletion = () => {
                 </span>
                 <div class="w-px h-3 bg-n-strong rounded-lg" />
                 <span
-                  class="block w-fit text-body-main text-n-slate-11 relative"
+                  v-if="hasRoleBadge(agent)"
+                  class="px-2 py-0.5 rounded-md bg-woot-500/10 text-[11px] font-medium text-woot-500 relative"
                   :class="{
-                    'hover:text-n-slate-12 group cursor-pointer':
-                      agent.custom_role_id,
+                    'group cursor-pointer': agent.custom_role_id,
                   }"
                 >
                   {{ getAgentRoleName(agent) }}
 
                   <div
-                    class="absolute ltr:left-0 rtl:right-0 z-10 hidden w-[300px] bg-n-alpha-3 backdrop-blur-[100px] rounded-xl outline outline-1 outline-n-container shadow-lg top-14 md:top-12"
-                    :class="{ 'group-hover:block': agent.custom_role_id }"
+                    v-if="agent.custom_role_id"
+                    class="absolute ltr:left-0 rtl:right-0 z-10 hidden w-[300px] bg-n-alpha-3 backdrop-blur-[100px] rounded-xl outline outline-1 outline-n-container shadow-lg top-8 group-hover:block"
                   >
                     <div class="flex flex-col gap-1 p-4">
                       <span class="text-heading-3 text-n-slate-12">
@@ -254,6 +257,12 @@ const confirmDeletion = () => {
                     </div>
                   </div>
                 </span>
+                <span
+                  v-else
+                  class="block w-fit text-body-main text-n-slate-11"
+                >
+                  {{ getAgentRoleName(agent) }}
+                </span>
                 <div class="w-px h-3 bg-n-strong rounded-lg" />
                 <span
                   v-if="agent.confirmed"
@@ -272,12 +281,12 @@ const confirmDeletion = () => {
           </div>
           <div class="flex justify-end gap-3">
             <AssignRoleButton
-              v-if="showEditAction(agent) && canEditAgents"
+              v-if="showAssignRoleAction(agent)"
               :user="agent"
               @assigned="store.dispatch('agents/get')"
             />
             <Button
-              v-if="showEditAction(agent) && canEditAgents"
+              v-if="showEditAction(agent)"
               v-tooltip.top="$t('AGENT_MGMT.EDIT.BUTTON_TEXT')"
               icon="i-woot-edit-pen"
               slate
@@ -285,7 +294,7 @@ const confirmDeletion = () => {
               @click="openEditPopup(agent)"
             />
             <Button
-              v-if="showDeleteAction(agent) && canRemoveAgents"
+              v-if="showDeleteAction(agent)"
               v-tooltip.top="$t('AGENT_MGMT.DELETE.BUTTON_TEXT')"
               icon="i-woot-bin"
               slate

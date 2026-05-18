@@ -56,6 +56,8 @@ class Patient < ApplicationRecord
     viuvo: 'viuvo'
   }, prefix: true
 
+  GUARDIAN_REQUIRED_FIELDS = %w[name cpf phone relationship].freeze
+
   # Validations
   validates :name, presence: true, length: { minimum: 2, maximum: 255 }
   validates :account, presence: true
@@ -64,9 +66,13 @@ class Patient < ApplicationRecord
   validates :patient_status, inclusion: { in: patient_statuses.keys }
   validates :sex, inclusion: { in: sexes.keys }, allow_blank: true
   validates :marital_status, inclusion: { in: marital_statuses.keys }, allow_blank: true
+  validate :guardian_fields_present, if: :has_guardian
+  validate :guardian_cpf_format, if: :has_guardian
 
   # Callbacks
   before_validation :strip_cpf
+  before_validation :strip_guardian_cpf
+  before_validation :clear_guardian_when_disabled
   before_save :update_needs_recall
 
   # Scopes
@@ -116,6 +122,34 @@ class Patient < ApplicationRecord
 
   def strip_cpf
     self.cpf = cpf.gsub(/\D/, '') if cpf.present?
+  end
+
+  def strip_guardian_cpf
+    return unless guardian.is_a?(Hash) && guardian['cpf'].present?
+
+    guardian['cpf'] = guardian['cpf'].gsub(/\D/, '')
+  end
+
+  # Quando has_guardian é desligado, garantimos que o jsonb do responsável
+  # seja zerado — evita que dados antigos persistam ocultos no banco.
+  def clear_guardian_when_disabled
+    return if has_guardian
+
+    self.guardian = {} if guardian.is_a?(Hash) && guardian.any?
+  end
+
+  def guardian_fields_present
+    GUARDIAN_REQUIRED_FIELDS.each do |key|
+      errors.add(:"guardian_#{key}", :blank) if guardian.is_a?(Hash) ? guardian[key].blank? : true
+    end
+  end
+
+  def guardian_cpf_format
+    cpf_value = guardian.is_a?(Hash) ? guardian['cpf'].to_s : ''
+    return if cpf_value.blank? # presence é coberta por guardian_fields_present
+    return if cpf_value.match?(/\A\d{11}\z/)
+
+    errors.add(:guardian_cpf, :invalid_cpf)
   end
 
   def update_needs_recall

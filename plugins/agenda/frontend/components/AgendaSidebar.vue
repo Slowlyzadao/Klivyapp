@@ -13,8 +13,10 @@ export default {
     hiddenPriorities: { type: Array, default: () => [] },
     hiddenEventTypes: { type: Array, default: () => [] },
     hiddenTreatments: { type: Array, default: () => [] },
+    hiddenCategories: { type: Array, default: () => [] },
     expandedFilters: { type: Object, required: true },
     treatmentOptions: { type: Array, default: () => TREATMENTS },
+    categoryOptions: { type: Array, default: () => [] },
     waitingListEntries: { type: Array, default: () => [] },
     wlInfoPopup: { type: Object, default: null },
     showMobileSidebar: { type: Boolean, default: false },
@@ -23,9 +25,14 @@ export default {
     'mini-click',
     'toggle-filter',
     'toggle-agent',
+    'solo-agent',
+    'show-all-agents',
     'toggle-priority',
     'toggle-event-type',
     'toggle-treatment',
+    'toggle-category',
+    'solo-category',
+    'show-all-categories',
     'show-wl-info',
     'close-wl-info',
     'remove-wl',
@@ -111,23 +118,31 @@ export default {
           @click="$emit('toggle-filter', 'agents')"
         >
           <span>{{ $t('AGENDA.SIDEBAR.AGENTS') }}</span>
-          <i
-            :class="
-              expandedFilters.agents
-                ? 'i-lucide-chevron-up'
-                : 'i-lucide-chevron-down'
-            "
-          />
+          <span class="sidebar-header-right">
+            <span
+              class="sidebar-all-pill"
+              :class="{ 'is-active': hiddenAgents.length === 0 }"
+              @click.stop="$emit('show-all-agents')"
+            >{{ $t('AGENDA.SIDEBAR.ALL_AGENTS') }}</span>
+            <i
+              :class="
+                expandedFilters.agents
+                  ? 'i-lucide-chevron-up'
+                  : 'i-lucide-chevron-down'
+              "
+            />
+          </span>
         </button>
         <div v-if="expandedFilters.agents" class="filter-content">
+          <!-- Individual agents: dot toggles, name solos -->
           <div
             v-for="agent in visibleAgentList"
             :key="agent.id"
             class="agent-item"
-            @click="$emit('toggle-agent', agent.id)"
+            @click="$emit('solo-agent', agent.id)"
           >
             <span
-              class="agent-dot"
+              class="agent-dot agent-dot--clickable"
               :style="{
                 backgroundColor: hiddenAgents.includes(agent.id)
                   ? 'transparent'
@@ -136,6 +151,7 @@ export default {
                 borderStyle: 'solid',
                 borderWidth: '2px',
               }"
+              @click.stop="$emit('toggle-agent', agent.id)"
             />
             <span class="agent-name">{{ agent.name }}</span>
           </div>
@@ -256,6 +272,60 @@ export default {
             <span class="agent-name">{{
               typeof tr === 'string' ? tr : tr.name
             }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Categories -->
+      <div v-if="categoryOptions.length" class="sidebar-section">
+        <button
+          class="sidebar-collapse-btn"
+          @click="$emit('toggle-filter', 'categories')"
+        >
+          <span>{{ $t('AGENDA.SIDEBAR.CATEGORIES', 'CATEGORIAS') }}</span>
+          <span class="sidebar-header-right">
+            <span
+              class="sidebar-all-pill"
+              :class="{ 'is-active': hiddenCategories.length === 0 }"
+              @click.stop="$emit('show-all-categories')"
+            >
+              {{ $t('AGENDA.SIDEBAR.ALL_CATEGORIES', 'Todos') }}
+            </span>
+            <i
+              :class="
+                expandedFilters.categories
+                  ? 'i-lucide-chevron-up'
+                  : 'i-lucide-chevron-down'
+              "
+            />
+          </span>
+        </button>
+        <div v-if="expandedFilters.categories" class="filter-content">
+          <div
+            v-for="cat in categoryOptions"
+            :key="cat.id"
+            class="agent-item"
+            @click="$emit('solo-category', cat.id)"
+          >
+            <span
+              class="agent-dot agent-dot--clickable"
+              :style="{
+                backgroundColor: hiddenCategories.includes(cat.id)
+                  ? 'transparent'
+                  : cat.color,
+                borderColor: cat.color,
+                borderStyle: 'solid',
+                borderWidth: '2px',
+              }"
+              @click.stop="$emit('toggle-category', cat.id)"
+            />
+            <span class="agent-name">{{ cat.name }}</span>
+            <span
+              v-if="cat.appointments_count != null"
+              class="cat-sidebar-count"
+            >
+              {{ cat.appointments_count }}
+            </span>
           </div>
         </div>
       </div>
@@ -426,6 +496,36 @@ export default {
   color: rgb(var(--slate-9));
 }
 
+.sidebar-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-all-pill {
+  @apply text-xs;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-11));
+  border: 1px solid rgb(var(--slate-5));
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.sidebar-all-pill:hover {
+  background: rgb(var(--slate-4));
+}
+
+.sidebar-all-pill.is-active {
+  background: rgb(var(--blue-9));
+  color: #fff;
+  border-color: rgb(var(--blue-9));
+}
+
 .filter-content {
   padding: 0 6px 8px;
 }
@@ -449,6 +549,16 @@ export default {
   height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+.agent-dot--clickable {
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.1s;
+}
+
+.agent-dot--clickable:hover {
+  transform: scale(1.3);
+  opacity: 0.85;
 }
 
 .agent-name {
@@ -523,6 +633,19 @@ export default {
   padding: 2px 6px;
   border-radius: 8px;
   margin-left: 6px;
+}
+
+.cat-sidebar-count {
+  margin-left: auto;
+  @apply text-xs;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--slate-9));
+  background: rgb(var(--slate-3));
+  padding: 1px 6px;
+  border-radius: 8px;
+  min-width: 22px;
+  text-align: center;
 }
 
 .wl-sidebar-empty {

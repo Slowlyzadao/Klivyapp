@@ -43,7 +43,7 @@ const {
   toggleSidebarUIState,
 } = useUISettings();
 
-const { can } = usePermissions();
+const { can: klivyCan } = usePermissions();
 
 const dragging = ref(false);
 const conversationSidebarItems = ref([]);
@@ -155,9 +155,9 @@ onMounted(() => {
           <div
             v-if="
               element.name === 'conversation_actions' &&
-              (can('chat', 'view_conversation_actions') ||
-                can('chat', 'assign_conversation') ||
-                can('chat', 'reply'))
+              (klivyCan('chat', 'view_conversation_actions') ||
+                klivyCan('chat', 'assign_conversation') ||
+                klivyCan('chat', 'reply'))
             "
             class="conversation--actions"
           >
@@ -177,7 +177,7 @@ onMounted(() => {
           <div
             v-else-if="
               element.name === 'conversation_participants' &&
-              can('chat', 'view_participants')
+              klivyCan('chat', 'view_participants')
             "
             class="conversation--actions"
           >
@@ -198,7 +198,7 @@ onMounted(() => {
           <div
             v-else-if="
               element.name === 'conversation_info' &&
-              can('chat', 'view_conversation_info')
+              klivyCan('chat', 'view_conversation_info')
             "
           >
             <AccordionItem
@@ -218,7 +218,7 @@ onMounted(() => {
           <div
             v-else-if="
               element.name === 'contact_attributes' &&
-              can('chat', 'view_contact_attributes')
+              klivyCan('chat', 'view_contact_attributes')
             "
           >
             <AccordionItem
@@ -243,7 +243,7 @@ onMounted(() => {
           <div
             v-else-if="
               element.name === 'previous_conversation' &&
-              can('chat', 'view_previous_conversations')
+              klivyCan('chat', 'view_previous_conversations')
             "
           >
             <AccordionItem
@@ -265,7 +265,7 @@ onMounted(() => {
           </div>
           <woot-feature-toggle
             v-else-if="
-              element.name === 'macros' && can('chat', 'use_macros')
+              element.name === 'macros' && klivyCan('chat', 'use_macros')
             "
             feature-key="macros"
           >
@@ -316,7 +316,7 @@ onMounted(() => {
           <div
             v-else-if="
               element.name === 'contact_notes' &&
-              can('chat', 'view_contact_notes')
+              klivyCan('chat', 'view_contact_notes')
             "
           >
             <AccordionItem

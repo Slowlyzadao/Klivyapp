@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
@@ -8,6 +8,7 @@ import { useMapGetter } from 'dashboard/composables/store';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useAccount } from 'dashboard/composables/useAccount';
 import Button from 'dashboard/components-next/button/Button.vue';
+import Input from 'dashboard/components-next/input/Input.vue';
 import PageLayout from 'dashboard/components-next/captain/PageLayout.vue';
 import SettingsHeader from 'dashboard/components-next/captain/pageComponents/settings/SettingsHeader.vue';
 import AssistantBasicSettingsForm from 'dashboard/components-next/captain/pageComponents/assistant/settings/AssistantBasicSettingsForm.vue';
@@ -34,6 +35,69 @@ const assistantId = computed(() => Number(route.params.assistantId));
 const assistant = computed(() =>
   store.getters['captainAssistants/getRecord'](assistantId.value)
 );
+
+const isBeatriz = computed(() => assistant.value?.name === 'Beatriz');
+
+const clinicProfileFields = [
+  { key: 'name',    label: 'Nome da clínica', placeholder: 'Ex: Clínica Olá' },
+  { key: 'address', label: 'Endereço',        placeholder: 'Rua, número — bairro, cidade/UF' },
+];
+
+const clinicProfile = reactive({
+  name: '',
+  address: '',
+});
+
+const syncClinicProfileFromAssistant = a => {
+  const profile = a?.config?.clinic_profile || {};
+  clinicProfileFields.forEach(({ key }) => {
+    clinicProfile[key] = profile[key] || '';
+  });
+};
+
+watch(
+  assistant,
+  newAssistant => {
+    if (newAssistant) syncClinicProfileFromAssistant(newAssistant);
+  },
+  { immediate: true }
+);
+
+const saveClinicProfile = () => {
+  const payload = {
+    config: {
+      ...(assistant.value?.config || {}),
+      clinic_profile: { ...clinicProfile },
+    },
+  };
+  handleSubmit(payload);
+};
+
+const isBeatrizEnabled = computed(
+  () => assistant.value?.config?.bea_enabled !== false
+);
+
+const isTogglingEnabled = ref(false);
+
+const toggleBeatrizEnabled = async () => {
+  if (isTogglingEnabled.value) return;
+  isTogglingEnabled.value = true;
+  const next = !isBeatrizEnabled.value;
+  try {
+    await store.dispatch('captainAssistants/update', {
+      id: assistantId.value,
+      config: {
+        ...(assistant.value?.config || {}),
+        bea_enabled: next,
+      },
+    });
+    useAlert(next ? 'Beatriz ativada' : 'Beatriz desativada');
+  } catch (error) {
+    useAlert('Não foi possível alterar o status da Beatriz.');
+  } finally {
+    isTogglingEnabled.value = false;
+  }
+};
 
 const controlItems = computed(() => {
   return [
@@ -118,6 +182,29 @@ const handleDeleteSuccess = () => {
         :class="{ 'grid grid-cols-2': isCaptainV2Enabled }"
       >
         <div class="flex flex-col gap-6">
+          <div v-if="isBeatriz" class="flex items-center gap-2 -mb-2">
+            <button
+              type="button"
+              role="switch"
+              :aria-checked="isBeatrizEnabled"
+              :disabled="isTogglingEnabled"
+              :title="isBeatrizEnabled
+                ? 'Beatriz está ativa — clique para desativar'
+                : 'Beatriz está desativada — clique para ativar'"
+              :class="[
+                'inline-block w-2.5 h-2.5 rounded-full transition-colors cursor-pointer border-0 p-0',
+                isBeatrizEnabled
+                  ? 'bg-n-teal-9 hover:bg-n-teal-10'
+                  : 'bg-n-ruby-9 hover:bg-n-ruby-10',
+                isTogglingEnabled ? 'opacity-50 cursor-wait' : '',
+              ]"
+              @click="toggleBeatrizEnabled"
+            />
+            <span class="text-n-slate-11 text-sm">
+              Beatriz está {{ isBeatrizEnabled ? 'ativa' : 'desativada' }}
+            </span>
+          </div>
+
           <div class="flex flex-col gap-6">
             <SettingsHeader
               :heading="t('CAPTAIN.ASSISTANTS.SETTINGS.BASIC_SETTINGS.TITLE')"
@@ -127,8 +214,28 @@ const handleDeleteSuccess = () => {
             />
             <AssistantBasicSettingsForm
               :assistant="assistant"
+              :lock-name="isBeatriz"
               @submit="handleSubmit"
             />
+          </div>
+          <span class="h-px w-full bg-n-weak mt-2" />
+          <div class="flex flex-col gap-6">
+            <SettingsHeader
+              heading="Sobre a clínica"
+              description="Beatriz usa estas informações nas respostas. Horário de atendimento e serviços ela puxa direto da Agenda — não precisa repetir aqui."
+            />
+            <div class="flex flex-col gap-4">
+              <Input
+                v-for="field in clinicProfileFields"
+                :key="field.key"
+                v-model="clinicProfile[field.key]"
+                :label="field.label"
+                :placeholder="field.placeholder"
+              />
+              <div>
+                <Button label="Salvar dados da clínica" @click="saveClinicProfile" />
+              </div>
+            </div>
           </div>
           <span class="h-px w-full bg-n-weak mt-2" />
           <div class="flex flex-col gap-6">
@@ -143,29 +250,31 @@ const handleDeleteSuccess = () => {
               @submit="handleSubmit"
             />
           </div>
-          <span class="h-px w-full bg-n-weak mt-2" />
-          <div class="flex items-end justify-between w-full gap-4">
-            <div class="flex flex-col gap-2">
-              <h6 class="text-n-slate-12 text-base font-medium">
-                {{ t('CAPTAIN.ASSISTANTS.SETTINGS.DELETE.TITLE') }}
-              </h6>
-              <span class="text-n-slate-11 text-sm">
-                {{ t('CAPTAIN.ASSISTANTS.SETTINGS.DELETE.DESCRIPTION') }}
-              </span>
+          <template v-if="!isBeatriz">
+            <span class="h-px w-full bg-n-weak mt-2" />
+            <div class="flex items-end justify-between w-full gap-4">
+              <div class="flex flex-col gap-2">
+                <h6 class="text-n-slate-12 text-base font-medium">
+                  {{ t('CAPTAIN.ASSISTANTS.SETTINGS.DELETE.TITLE') }}
+                </h6>
+                <span class="text-n-slate-11 text-sm">
+                  {{ t('CAPTAIN.ASSISTANTS.SETTINGS.DELETE.DESCRIPTION') }}
+                </span>
+              </div>
+              <div class="flex-shrink-0">
+                <Button
+                  :label="
+                    t('CAPTAIN.ASSISTANTS.SETTINGS.DELETE.BUTTON_TEXT', {
+                      assistantName: assistant.name,
+                    })
+                  "
+                  color="ruby"
+                  class="max-w-56 !w-fit"
+                  @click="handleDelete"
+                />
+              </div>
             </div>
-            <div class="flex-shrink-0">
-              <Button
-                :label="
-                  t('CAPTAIN.ASSISTANTS.SETTINGS.DELETE.BUTTON_TEXT', {
-                    assistantName: assistant.name,
-                  })
-                "
-                color="ruby"
-                class="max-w-56 !w-fit"
-                @click="handleDelete"
-              />
-            </div>
-          </div>
+          </template>
         </div>
         <div v-if="isCaptainV2Enabled" class="flex flex-col gap-6">
           <SettingsHeader

@@ -1,37 +1,44 @@
 class HelpArticle < ApplicationRecord
-  CATEGORIES = %w[conversas agenda pacientes financeiro bea configuracoes outro].freeze
-  STATUSES   = %w[published draft].freeze
+  STATUSES = %w[draft published].freeze
 
-  validates :title,  presence: true
+  validates :title, presence: true
   validates :status, inclusion: { in: STATUSES }
   validates :category, presence: true
-  validate  :category_must_be_valid
+  validate :category_must_be_valid
 
-  def category_must_be_valid
-    valid_slugs = HelpCategory.pluck(:slug)
-  rescue StandardError
-    valid_slugs = CATEGORIES
-  ensure
-    errors.add(:category, 'não é uma categoria válida') unless (valid_slugs || CATEGORIES).include?(category.to_s)
-  end
-
-  scope :published,   -> { where(status: 'published', deleted_at: nil) }
-  scope :by_category, ->(cat) { where(category: cat) }
-  scope :visible,     -> { where(deleted_at: nil) }
-  scope :ordered,     -> { order(:category, :position, :created_at) }
+  scope :visible,    -> { where(deleted_at: nil) }
+  scope :published,  -> { visible.where(status: 'published') }
+  scope :by_category, ->(slug) { where(category: slug) }
+  scope :ordered,    -> { order(:position, :id) }
 
   def self.search(query)
-    q = "%#{query.to_s.downcase}%"
-    visible.where('LOWER(title) LIKE ? OR LOWER(body) LIKE ?', q, q)
-  end
+    return all if query.blank?
 
-  def reading_time
-    words = body.to_s.gsub(/<[^>]*>/, ' ').split.length
-    minutes = (words / 200.0).ceil
-    minutes <= 1 ? 'Leitura rápida' : "#{minutes} min de leitura"
+    term = "%#{query}%"
+    where('title ILIKE :q OR body ILIKE :q OR category ILIKE :q', q: term)
   end
 
   def soft_delete!
     update!(deleted_at: Time.current)
+  end
+
+  def reading_time
+    words = body.to_s.gsub(/<[^>]*>/, ' ').split.size
+    minutes = (words / 220.0).ceil
+    minutes <= 1 ? 'Leitura rápida' : "#{minutes} min"
+  end
+
+  private
+
+  def category_must_be_valid
+    return if category.blank?
+
+    valid_slugs = HelpCategory.pluck(:slug)
+    return if valid_slugs.include?(category)
+
+    errors.add(:category, 'não é uma categoria válida')
+  rescue ActiveRecord::StatementInvalid
+    # help_categories table not yet migrated — allow any string until migration runs.
+    nil
   end
 end

@@ -6,29 +6,15 @@ import HelpCategoryGrid from './components/HelpCategoryGrid.vue';
 import HelpFaq from './components/HelpFaq.vue';
 import HelpArticleDrawer from './components/HelpArticleDrawer.vue';
 import { useHelpData } from './composables/useHelpData.js';
-import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { useChatBubble } from './composables/useChatBubble.js';
+import { ref, watch } from 'vue';
 
 const { categories, faqs } = useHelpData();
+const { show: showWidget, hide: hideWidget } = useChatBubble();
 const drawerData = ref(null);
-const isMounted  = ref(false);
-
-// ── Widget visibility helpers ──────────────────────────────
-function showWidget() { window.$chatwoot?.toggleBubbleVisibility('show'); }
-function hideWidget() { window.$chatwoot?.toggleBubbleVisibility('hide'); }
-
-onMounted(() => {
-  isMounted.value = true;
-  showWidget();
-});
-
-onUnmounted(() => {
-  isMounted.value = false;
-  hideWidget();
-});
 
 // Hide widget while drawer is open so it doesn't overlap content
 watch(drawerData, val => {
-  if (!isMounted.value) return;
   val ? hideWidget() : showWidget();
 });
 
@@ -83,6 +69,7 @@ function openChat() {
       :data="drawerData"
       @close="drawerData = null"
       @open-article="openArticle"
+      @open-chat="openChat"
     />
   </div>
 </template>

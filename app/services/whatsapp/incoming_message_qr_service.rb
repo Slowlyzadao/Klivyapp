@@ -19,6 +19,7 @@ class Whatsapp::IncomingMessageQrService
     attachment_params = message_data[:attachment]
     group_name   = message_data[:group_name]
     is_from_me   = message_data[:from_me] == true
+    sender_avatar_url = message_data[:sender_avatar_url].presence
 
     Rails.logger.info("[WHATSAPP_QR] Mensagem de #{sender_jid} (#{display_name}) | grupo=#{is_group} | from_me=#{is_from_me} | attachment=#{attachment_params&.dig(:type) || 'nenhum'}")
 
@@ -93,6 +94,14 @@ class Whatsapp::IncomingMessageQrService
       end
     end
 
+    # Sincroniza avatar de perfil (1:1). Para grupos, o avatar do contato-grupo
+    # vem do groupMetadata e o avatar individual será sincronizado mais abaixo
+    # quando criamos `actual_sender`. AvatarFromUrlJob é idempotente, rate-limita
+    # 1min e dedupe por hash da URL — seguro chamar sempre que tivermos URL.
+    if sender_avatar_url.present? && !is_group
+      Avatar::AvatarFromUrlJob.perform_later(@contact, sender_avatar_url)
+    end
+
     # Cria/encontra conversa
     @conversation = find_or_create_conversation(group_id, is_from_me)
 
@@ -141,6 +150,11 @@ class Whatsapp::IncomingMessageQrService
       # Se o nome continua genérico e temos um nome melhor, atualize
       if !is_incoming_name_generic && actual_sender.name != display_name
         actual_sender.update!(name: display_name)
+      end
+
+      # Avatar do participante individual do grupo (não do grupo em si).
+      if sender_avatar_url.present?
+        Avatar::AvatarFromUrlJob.perform_later(actual_sender, sender_avatar_url)
       end
     end
 

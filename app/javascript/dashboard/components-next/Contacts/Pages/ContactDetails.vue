@@ -4,17 +4,13 @@ import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { dynamicTime } from 'shared/helpers/timeHelper';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ContactLabels from 'dashboard/components-next/Contacts/ContactLabels/ContactLabels.vue';
 import ContactsForm from 'dashboard/components-next/Contacts/ContactsForm/ContactsForm.vue';
 import ConfirmContactDeleteDialog from 'dashboard/components-next/Contacts/ContactsForm/ConfirmContactDeleteDialog.vue';
-
-const { can } = usePermissions();
-const canEditContact = computed(() => can('contacts', 'edit'));
-const canDeleteContact = computed(() => can('contacts', 'delete'));
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 const props = defineProps({
   selectedContact: {
@@ -27,6 +23,13 @@ const emit = defineEmits(['goToContactsList']);
 
 const { t } = useI18n();
 const store = useStore();
+const { isAdmin, can: klivyCan } = usePermissions();
+const canEditContact = computed(
+  () => isAdmin.value || klivyCan('contacts', 'edit')
+);
+const canDeleteContact = computed(
+  () => isAdmin.value || klivyCan('contacts', 'delete')
+);
 
 const confirmDeleteContactDialogRef = ref(null);
 

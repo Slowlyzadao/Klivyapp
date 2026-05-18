@@ -6,9 +6,6 @@ import PatientsAPI from '@plugins/patients/frontend/api/patients/index';
 import NewPatientModal from './components/NewPatientModal.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import { useAlert } from 'dashboard/composables';
-import { usePermissions } from 'dashboard/composables/usePermissions';
-
-const { can } = usePermissions();
 
 const formatCpf = cpfStr => {
   if (!cpfStr) return '-';
@@ -22,11 +19,7 @@ const formatCpf = cpfStr => {
 
 const formatDate = dateStr => {
   if (!dateStr) return '-';
-  // Datas YYYY-MM-DD são parseadas como UTC pelo Date(); em fusos negativos
-  // (BR -3h) o toLocaleDateString volta um dia. Ancoramos ao meio-dia local.
-  const iso = String(dateStr).slice(0, 10);
-  const safe = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : dateStr;
-  return new Date(safe).toLocaleDateString('pt-BR', {
+  return new Date(dateStr).toLocaleDateString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
   });
 };
@@ -42,10 +35,12 @@ const showSortMenu = ref(false);
 const showDeleteModal = ref(false);
 const patientToDelete = ref(null);
 
-// ── Pagination ─────────────────────────────────────────────────
+// ── Pagination (server-side) ───────────────────────────────────
 const currentPage = ref(1);
-const perPage = ref(15);
-const perPageOptions = [15, 20, 50, 100];
+const perPage = ref(25);
+const perPageOptions = [25, 50, 100, 200];
+const totalCount = ref(0);
+const totalPagesFromServer = ref(1);
 
 // ── Archived ───────────────────────────────────────────────────
 const showArchived = ref(false);
@@ -96,36 +91,21 @@ const sortLabels = {
   oldest: 'Mais antigo',
 };
 
+const sortKeyToServer = {
+  az: 'name_asc',
+  za: 'name_desc',
+  newest: 'created_at_desc',
+  oldest: 'created_at_asc',
+};
+
 const setSortOrder = value => {
   sortOrder.value = value;
   showSortMenu.value = false;
+  currentPage.value = 1;
+  fetchPatients();
 };
 
-const sortedPatients = computed(() => {
-  const list = [...rawPatients.value];
-  if (sortOrder.value === 'az')
-    return list.sort((a, b) =>
-      (a.name || '').localeCompare(b.name || '', 'pt-BR')
-    );
-  if (sortOrder.value === 'za')
-    return list.sort((a, b) =>
-      (b.name || '').localeCompare(a.name || '', 'pt-BR')
-    );
-  if (sortOrder.value === 'newest')
-    return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  if (sortOrder.value === 'oldest')
-    return list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-  return list;
-});
-
-const totalPages = computed(
-  () => Math.ceil(sortedPatients.value.length / perPage.value) || 1
-);
-
-const pagedPatients = computed(() => {
-  const start = (currentPage.value - 1) * perPage.value;
-  return sortedPatients.value.slice(start, start + perPage.value);
-});
+const totalPages = computed(() => totalPagesFromServer.value || 1);
 
 const pageNumbers = computed(() => {
   const total = totalPages.value;
@@ -137,13 +117,24 @@ const pageNumbers = computed(() => {
   return [...pages].sort((a, b) => a - b);
 });
 
+const rangeStart = computed(() =>
+  totalCount.value === 0 ? 0 : (currentPage.value - 1) * perPage.value + 1
+);
+const rangeEnd = computed(() =>
+  Math.min(currentPage.value * perPage.value, totalCount.value)
+);
+
 function goToPage(n) {
-  currentPage.value = Math.max(1, Math.min(n, totalPages.value));
+  const target = Math.max(1, Math.min(n, totalPages.value));
+  if (target === currentPage.value) return;
+  currentPage.value = target;
+  fetchPatients();
 }
 
 function setPerPage(n) {
   perPage.value = n;
   currentPage.value = 1;
+  fetchPatients();
 }
 
 const filters = ['Todos', 'Novo', 'Ativo', 'Inativo', 'Faltoso', 'Alta'];
@@ -159,14 +150,19 @@ const statusMap = {
 const fetchPatients = async () => {
   try {
     isLoading.value = true;
-    const response = await PatientsAPI.get(
-      1,
-      'name',
-      searchQuery.value,
-      statusMap[activeFilter.value]
-    );
+    const response = await PatientsAPI.get({
+      page: currentPage.value,
+      perPage: perPage.value,
+      sort: sortKeyToServer[sortOrder.value] || 'name_asc',
+      search: searchQuery.value,
+      status: statusMap[activeFilter.value],
+    });
     rawPatients.value =
       response.data?.payload?.map?.(patient => ({ ...patient })) || [];
+    totalCount.value = response.data?.meta?.total_count ?? rawPatients.value.length;
+    totalPagesFromServer.value =
+      response.data?.meta?.total_pages ??
+      Math.max(1, Math.ceil(totalCount.value / perPage.value));
   } catch {
     // ignorar erro
   } finally {
@@ -191,7 +187,8 @@ watch(searchQuery, () => {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
     currentPage.value = 1;
-    showArchived.value ? fetchArchived() : fetchPatients();
+    if (showArchived.value) fetchArchived();
+    else fetchPatients();
   }, 300);
 });
 watch(activeFilter, () => {
@@ -255,6 +252,13 @@ const statusCls = patient =>
       <div>
         <h1 class="pt-title">
           Pacientes
+          <span
+            v-if="!showArchived && totalCount > 0"
+            class="pt-total-badge"
+            :title="`${totalCount} pacientes ativos cadastrados`"
+          >
+            {{ totalCount }}
+          </span>
           <span v-if="showArchived" class="pt-archived-badge">Arquivados</span>
         </h1>
         <p class="pt-subtitle">
@@ -275,7 +279,7 @@ const statusCls = patient =>
           <span>{{ showArchived ? 'Fechar Arquivo' : 'Arquivados' }}</span>
         </button>
         <button
-          v-if="!showArchived && can('patients', 'create')"
+          v-if="!showArchived"
           class="pt-btn-new hidden md:flex"
           @click="openNewPatientModal"
         >
@@ -285,7 +289,7 @@ const statusCls = patient =>
 
         <!-- FAB Mobile: Novo Paciente -->
         <button
-          v-if="!showArchived && can('patients', 'create')"
+          v-if="!showArchived"
           class="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-[0_4px_14px_rgba(37,99,235,0.4)] flex items-center justify-center z-50 transition-transform active:scale-95"
           @click="openNewPatientModal"
         >
@@ -391,7 +395,7 @@ const statusCls = patient =>
         </div>
 
         <!-- Empty -->
-        <div v-if="sortedPatients.length === 0" class="pt-empty">
+        <div v-if="rawPatients.length === 0" class="pt-empty">
           <div class="pt-empty-icon"><i class="i-lucide-users w-7 h-7" /></div>
           <p class="pt-empty-title">Nenhum paciente encontrado</p>
           <p class="pt-empty-hint">
@@ -405,7 +409,7 @@ const statusCls = patient =>
 
         <!-- Rows -->
         <div
-          v-for="patient in pagedPatients"
+          v-for="patient in rawPatients"
           :key="patient.id"
           class="pt-row"
           @click="openRecord(patient.id)"
@@ -463,7 +467,6 @@ const statusCls = patient =>
               <i class="i-lucide-file-text w-4 h-4" />
             </button>
             <button
-              v-if="can('patients', 'delete')"
               class="pt-action-btn pt-action-btn--danger"
               title="Arquivar"
               @click="openDeleteModal(patient)"
@@ -474,13 +477,9 @@ const statusCls = patient =>
         </div>
 
         <!-- Pagination footer (list view) -->
-        <div v-if="sortedPatients.length > 0" class="pt-pagination">
+        <div v-if="totalCount > 0" class="pt-pagination">
           <div class="pt-pagination__info">
-            Exibindo
-            {{ (currentPage - 1) * perPage + 1 }}–{{
-              Math.min(currentPage * perPage, sortedPatients.length)
-            }}
-            de {{ sortedPatients.length }} pacientes
+            Exibindo {{ rangeStart }}–{{ rangeEnd }} de {{ totalCount }} pacientes
           </div>
           <div class="pt-pagination__controls">
             <!-- Per-page selector -->
@@ -528,7 +527,7 @@ const statusCls = patient =>
       <!-- GRID VIEW -->
       <div v-else class="pt-grid">
         <!-- Empty -->
-        <div v-if="sortedPatients.length === 0" class="pt-empty pt-empty--grid">
+        <div v-if="rawPatients.length === 0" class="pt-empty pt-empty--grid">
           <div class="pt-empty-icon"><i class="i-lucide-users w-7 h-7" /></div>
           <p class="pt-empty-title">Nenhum paciente encontrado</p>
           <p class="pt-empty-hint">
@@ -540,7 +539,7 @@ const statusCls = patient =>
           </p>
         </div>
 
-        <div v-for="patient in pagedPatients" :key="patient.id" class="pt-card">
+        <div v-for="patient in rawPatients" :key="patient.id" class="pt-card">
           <!-- Card header: avatar + status -->
           <div class="pt-card-head">
             <Avatar
@@ -600,13 +599,9 @@ const statusCls = patient =>
         </div>
 
         <!-- Pagination footer (grid view) -->
-        <div v-if="sortedPatients.length > 0" class="pt-pagination">
+        <div v-if="totalCount > 0" class="pt-pagination">
           <div class="pt-pagination__info">
-            Exibindo
-            {{ (currentPage - 1) * perPage + 1 }}–{{
-              Math.min(currentPage * perPage, sortedPatients.length)
-            }}
-            de {{ sortedPatients.length }} pacientes
+            Exibindo {{ rangeStart }}–{{ rangeEnd }} de {{ totalCount }} pacientes
           </div>
           <div class="pt-pagination__controls">
             <select
@@ -721,7 +716,6 @@ const statusCls = patient =>
               <i class="i-lucide-file-text w-4 h-4" />
             </button>
             <button
-              v-if="can('patients', 'delete')"
               class="pt-action-btn pt-action-btn--restore"
               :disabled="isRestoring === patient.id"
               title="Restaurar paciente"

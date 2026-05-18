@@ -1,23 +1,36 @@
 class BankAccountPolicy < ApplicationPolicy
-  # Listagem usada pelos modais de pagamento (Receivables/Payables).
-  # Qualquer perm de view financeira basta; CRUD exige `manage_settings`.
+  FINANCIAL_VIEW_PERMS = %i[
+    view_dashboard view_cashflow view_receivables view_payables view_dre
+    view_reports view_cash_register
+  ].freeze
+
   def index?
-    AccountTransactionPolicy::FINANCIAL_VIEW_PERMS.any? { |perm| beclinic_can?(:financial, perm) }
+    administrator? || any_view_perm?
   end
 
   def show?
-    index?
+    administrator? || any_view_perm?
   end
 
   def create?
-    beclinic_can?(:financial, :manage_settings)
+    administrator? || beclinic_can?(:financial, :manage_settings)
   end
 
   def update?
-    create?
+    administrator? || beclinic_can?(:financial, :manage_settings)
   end
 
   def destroy?
-    create?
+    administrator? || beclinic_can?(:financial, :manage_settings)
+  end
+
+  private
+
+  def administrator?
+    @account_user&.administrator?
+  end
+
+  def any_view_perm?
+    FINANCIAL_VIEW_PERMS.any? { |perm| beclinic_can?(:financial, perm) }
   end
 end

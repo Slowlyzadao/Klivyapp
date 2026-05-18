@@ -37,11 +37,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   def show; end
 
   def create
-    # Klivy Custom Roles: starting a new conversation from the dashboard
-    # is gated by `chat.send_broadcast` (composer / new-conversation pen icon)
-    # or `chat.reply` (replying within an existing thread). Admins skip the
-    # check natively in the policy.
-    raise Pundit::NotAuthorizedError unless allowed_to_create_conversation?
+    return render json: { error: 'forbidden' }, status: :forbidden unless allowed_to_create_conversation?
 
     ActiveRecord::Base.transaction do
       @conversation = ConversationBuilder.new(params: params, contact_inbox: @contact_inbox).perform
@@ -150,13 +146,15 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
   private
 
+  # Allow conversation creation via the dashboard composer when the user has
+  # send_broadcast or reply Klivy permission. Admins and AgentBots always pass.
   def allowed_to_create_conversation?
-    return true if Current.account_user.administrator?
+    return true if Current.account_user&.administrator?
+    return true if Current.user.is_a?(AgentBot)
+    return true unless Current.user.respond_to?(:beclinic_can?)
 
-    Current.user.respond_to?(:beclinic_can?) && (
-      Current.user.beclinic_can?(Current.account, :chat, :send_broadcast) ||
+    Current.user.beclinic_can?(Current.account, :chat, :send_broadcast) ||
       Current.user.beclinic_can?(Current.account, :chat, :reply)
-    )
   end
 
   def permitted_update_params

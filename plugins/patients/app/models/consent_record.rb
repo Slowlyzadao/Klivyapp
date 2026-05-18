@@ -1,5 +1,6 @@
 class ConsentRecord < ApplicationRecord
   include TimelineTrackable
+  include BeclinicPurgeableAttachment
 
   # Soft delete
   scope :active, -> { where(deleted_at: nil) }
@@ -12,6 +13,7 @@ class ConsentRecord < ApplicationRecord
   belongs_to :created_by, class_name: 'User', optional: true
 
   has_one_attached :signature_image
+  purges_attachment_with job_class: Patients::ConsentRecordPurgeJob
 
 
   # Status enum
@@ -48,6 +50,7 @@ class ConsentRecord < ApplicationRecord
 
   def soft_delete!
     update!(deleted_at: Time.current)
+    schedule_attachment_purge!
   end
 
   def deleted?
@@ -127,13 +130,15 @@ class ConsentRecord < ApplicationRecord
     expected == integrity_hash
   end
 
+  # URL assinada via Active Storage padrão (mesma decisão de Document#signed_url —
+  # ver comentário lá para o trade-off de cross-tenant vs click-to-open).
+  # 30min é equilíbrio entre vida útil para download e janela de exposição.
   def signature_image_url
     return nil unless signature_image.attached?
 
     Rails.application.routes.url_helpers.rails_blob_url(
       signature_image,
-      host: ENV.fetch('FRONTEND_URL', 'http://localhost:3000'),
-      expires_in: 2.hours,
+      expires_in: 30.minutes,
       disposition: :inline
     )
   end

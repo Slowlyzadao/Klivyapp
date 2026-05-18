@@ -4,7 +4,6 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useRoute, useRouter } from 'vue-router';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import ContactsDetailsLayout from 'dashboard/components-next/Contacts/ContactsDetailsLayout.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
@@ -14,16 +13,12 @@ import ContactNotes from 'dashboard/components-next/Contacts/ContactsSidebar/Con
 import ContactHistory from 'dashboard/components-next/Contacts/ContactsSidebar/ContactHistory.vue';
 import ContactMerge from 'dashboard/components-next/Contacts/ContactsSidebar/ContactMerge.vue';
 import ContactCustomAttributes from 'dashboard/components-next/Contacts/ContactsSidebar/ContactCustomAttributes.vue';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 import PermissionDenied from '@plugins/custom_roles/frontend/components/PermissionDenied.vue';
 
 const store = useStore();
 const route = useRoute();
 const router = useRouter();
-const { can } = usePermissions();
-
-const canViewContactProfile = computed(() =>
-  can('chat', 'view_contact_profile')
-);
 
 const contact = useMapGetter('contacts/getContactById');
 const uiFlags = useMapGetter('contacts/getUIFlags');
@@ -39,6 +34,11 @@ const selectedContact = computed(() => contact.value(route.params.contactId));
 
 const showSpinner = computed(
   () => isFetchingItem.value || isMergingContact.value
+);
+
+const { can: klivyCan } = usePermissions();
+const canViewContactProfile = computed(() =>
+  klivyCan('chat', 'view_contact_profile')
 );
 
 const { t } = useI18n();
@@ -134,19 +134,15 @@ onMounted(() => {
 
 <template>
   <div
-    v-if="!canViewContactProfile"
-    class="flex flex-col justify-center items-center flex-1 h-full m-0 overflow-auto bg-n-background"
-  >
-    <PermissionDenied
-      title="Acesso negado"
-      message="Você não tem permissão para abrir a página do contato. Fale com o administrador da sua conta caso precise de acesso."
-    />
-  </div>
-  <div
-    v-else
     class="flex flex-col justify-between flex-1 h-full m-0 overflow-auto bg-n-surface-1"
   >
+    <PermissionDenied
+      v-if="!canViewContactProfile"
+      title="Acesso restrito"
+      message="Você não tem permissão para abrir a página do contato."
+    />
     <ContactsDetailsLayout
+      v-else
       :button-label="$t('CONTACTS_LAYOUT.HEADER.SEND_MESSAGE')"
       :selected-contact="selectedContact"
       is-detail-view

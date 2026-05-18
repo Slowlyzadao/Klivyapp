@@ -105,11 +105,12 @@ export function createDefaultNewEvent(options = {}) {
     event_type: 'consultation',
     priority: 'medium',
     treatment: '',
+    category_id: options.category_id || null,
     date:
       options.date ||
       `${now.getFullYear()}-${padZ(now.getMonth() + 1)}-${padZ(now.getDate())}`,
-    time_start: options.time_start || '09:00',
-    time_end: options.time_end || '10:00',
+    time_start: options.time_start ?? '',
+    time_end: options.time_end ?? '',
     user_id: options.user_id || null,
     contact_id: options.contact_id || null,
     patient_id: options.patient_id || null,

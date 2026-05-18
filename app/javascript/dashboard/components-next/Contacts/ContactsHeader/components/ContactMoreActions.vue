@@ -1,46 +1,49 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.vue';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 const emit = defineEmits(['add', 'import', 'export']);
 
 const { t } = useI18n();
-const { can } = usePermissions();
+const { isAdmin, can: klivyCan } = usePermissions();
+const canCreateContact = computed(
+  () => isAdmin.value || klivyCan('contacts', 'create')
+);
+const canImportExport = computed(
+  () => isAdmin.value || klivyCan('contacts', 'import_export')
+);
 
-// Filtra o menu por permissão Klivy: Adicionar exige `contacts.create`,
-// Importar/Exportar exige `contacts.import_export`.
-const contactMenuItems = computed(() => {
-  const items = [];
-  if (can('contacts', 'create')) {
-    items.push({
+const contactMenuItems = computed(() =>
+  [
+    canCreateContact.value && {
       label: t('CONTACTS_LAYOUT.HEADER.ACTIONS.CONTACT_CREATION.ADD_CONTACT'),
       action: 'add',
       value: 'add',
       icon: 'i-lucide-plus',
-    });
-  }
-  if (can('contacts', 'import_export')) {
-    items.push({
-      label: t('CONTACTS_LAYOUT.HEADER.ACTIONS.CONTACT_CREATION.EXPORT_CONTACT'),
+    },
+    canImportExport.value && {
+      label: t(
+        'CONTACTS_LAYOUT.HEADER.ACTIONS.CONTACT_CREATION.EXPORT_CONTACT'
+      ),
       action: 'export',
       value: 'export',
       icon: 'i-lucide-upload',
-    });
-    items.push({
-      label: t('CONTACTS_LAYOUT.HEADER.ACTIONS.CONTACT_CREATION.IMPORT_CONTACT'),
+    },
+    canImportExport.value && {
+      label: t(
+        'CONTACTS_LAYOUT.HEADER.ACTIONS.CONTACT_CREATION.IMPORT_CONTACT'
+      ),
       action: 'import',
       value: 'import',
       icon: 'i-lucide-download',
-    });
-  }
-  return items;
-});
-
-const hasAnyAction = computed(() => contactMenuItems.value.length > 0);
+    },
+  ].filter(Boolean)
+);
+const hasMenuItems = computed(() => contactMenuItems.value.length > 0);
 const showActionsDropdown = ref(false);
 
 const handleContactAction = ({ action }) => {
@@ -56,7 +59,7 @@ const handleContactAction = ({ action }) => {
 
 <template>
   <div
-    v-if="hasAnyAction"
+    v-if="hasMenuItems"
     v-on-clickaway="() => (showActionsDropdown = false)"
     class="relative"
   >

@@ -5,9 +5,9 @@ import { useToggle } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 import { useStore, useStoreGetters } from 'dashboard/composables/store';
 import { useEmitter } from 'dashboard/composables/emitter';
-import { usePermissions } from 'dashboard/composables/usePermissions';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useConversationRequiredAttributes } from 'dashboard/composables/useConversationRequiredAttributes';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
 import WootDropdownItem from 'shared/components/ui/dropdown/DropdownItem.vue';
 import WootDropdownMenu from 'shared/components/ui/dropdown/DropdownMenu.vue';
@@ -25,8 +25,8 @@ const store = useStore();
 const getters = useStoreGetters();
 const { t } = useI18n();
 const { checkMissingAttributes } = useConversationRequiredAttributes();
-const { can } = usePermissions();
-const canChangeStatus = computed(() => can('chat', 'reply'));
+const { can: klivyCan } = usePermissions();
+const canChangeStatus = computed(() => klivyCan('chat', 'reply'));
 
 const arrowDownButtonRef = ref(null);
 const isLoading = ref(false);
