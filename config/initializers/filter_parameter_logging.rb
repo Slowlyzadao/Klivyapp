@@ -12,3 +12,17 @@ filter_regex = /\A(?!.*\bwebsite_token\b).*token/i
 
 # Apply the regex for filtering
 Rails.application.config.filter_parameters += [filter_regex]
+
+# Telemed (audit Fase 3 — LGPD): mascara conteúdo clínico em logs de
+# request — transcrição completa, SOAP estruturado, motivo de rejeição,
+# anotações de revisor são dados sensíveis de saúde (LGPD Art. 5º II) e
+# nunca devem aparecer em production.log nem em error trackers
+# (Sentry et al — também respeitam filter_parameters).
+Rails.application.config.filter_parameters += %i[
+  transcript_text
+  transcript_segments
+  soap_structure
+  raw_markdown
+  reviewer_notes
+  attention_points
+]

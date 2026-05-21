@@ -17,6 +17,7 @@
 # Falhas — retry exponencial 3×. Esgotado, marca `failed` mas mantém os
 # arquivos (admin pode reprocessar).
 require 'tempfile'
+require 'open3'
 
 module Telemed
   class TranscribeRecordingJob < ApplicationJob
@@ -132,24 +133,24 @@ module Telemed
       return [] if storage_key.blank?
 
       tmp = Tempfile.new(['telemed-', '.ogg'], binmode: true)
+      compressed = nil
       begin
         RecordingStorage.download(storage_key, tmp.path)
 
-        # Guard pré-Whisper. API rejeita >25MB com 400 e o `retry_on` faria
-        # 2 retries inúteis pagos. Detectar localmente economiza $$$ e
-        # propaga erro semântico — caller pode logar / alertar. Em consulta
-        # longa (>1h @ 64kbps), composite pode passar 25MB; precisa de
-        # split/compress (Fase 3).
-        size = File.size(tmp.path)
-        if size > WHISPER_MAX_FILE_BYTES
-          raise Telemed::PermanentFailure,
-                "Áudio excede limite Whisper (25MB): key=#{storage_key} size=#{size} bytes. " \
-                'Implementar split/compress (Fase 3).'
+        # Audit Fase 3 — comprime quando arquivo passa do limite Whisper
+        # (25MB) antes de mandar pra API. 32 kbps mono opus mantém
+        # inteligibilidade de fala (Whisper aceita até 16kHz internamente)
+        # e reduz tamanho ~50%, cobrindo consultas até ~3h. Acima disso,
+        # PermanentFailure → recording.fail! (split por tempo fica como
+        # dívida pra Fase 4).
+        upload_path = tmp.path
+        if File.size(tmp.path) > WHISPER_MAX_FILE_BYTES
+          compressed = compress_for_whisper(tmp.path, storage_key)
+          upload_path = compressed.path
         end
 
-        tmp.rewind
         provider = TranscriptionProvider.for('whisper')
-        result   = provider.call(audio_io: File.open(tmp.path, 'rb'))
+        result   = provider.call(audio_io: File.open(upload_path, 'rb'))
 
         result.segments.map do |seg|
           AnnotatedSegment.new(
@@ -162,7 +163,51 @@ module Telemed
       ensure
         tmp.close
         tmp.unlink
+        if compressed
+          compressed.close
+          compressed.unlink
+        end
       end
+    end
+
+    # Roda `ffmpeg` pra recomprimir o áudio em 32 kbps mono opus, retornando
+    # um Tempfile novo com o arquivo reduzido. Falha → PermanentFailure
+    # (sem retry — recompressão é determinística, não vai melhorar).
+    def compress_for_whisper(input_path, storage_key)
+      out = Tempfile.new(['telemed-32k-', '.ogg'], binmode: true)
+      out.close # ffmpeg escreve direto no path
+      Rails.logger.info(
+        "[TranscribeRecordingJob] comprimindo key=#{storage_key} " \
+        "size=#{File.size(input_path)} bytes (excede limite Whisper)"
+      )
+
+      cmd = %W[
+        ffmpeg -y -hide_banner -loglevel error
+        -i #{input_path}
+        -vn -ac 1 -c:a libopus -b:a 32k
+        #{out.path}
+      ]
+      stdout_err, status = Open3.capture2e(*cmd)
+      unless status.success?
+        out.close!
+        raise Telemed::PermanentFailure,
+              "ffmpeg falhou ao recomprimir #{storage_key}: #{stdout_err.lines.last(3).join.strip}"
+      end
+
+      new_size = File.size(out.path)
+      if new_size > WHISPER_MAX_FILE_BYTES
+        out.close!
+        raise Telemed::PermanentFailure,
+              "Áudio excede limite Whisper mesmo após compressão " \
+              "(#{new_size} > #{WHISPER_MAX_FILE_BYTES}). Consulta >3h precisa " \
+              'de split por tempo (Fase 4).'
+      end
+
+      Rails.logger.info(
+        "[TranscribeRecordingJob] compressão OK key=#{storage_key} " \
+        "new_size=#{new_size} bytes"
+      )
+      out
     end
 
     def cleanup_temp_files!(recording, *keys)

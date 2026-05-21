@@ -605,6 +605,60 @@
   cursor: not-allowed;
 }
 
+/* ── Skeleton loaders (audit Fase 3) ─────────────────────────── */
+/* Cards fantasma enquanto a primeira página carrega — placeholder
+   shimmer dá feedback "algo está vindo" sem layout shift quando
+   os items reais chegam. */
+.tc-skeleton {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 20px;
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 12px;
+  min-height: 120px;
+}
+.tc-skeleton__avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, rgb(var(--slate-3)) 25%, rgb(var(--slate-2)) 50%, rgb(var(--slate-3)) 75%);
+  background-size: 200% 100%;
+  animation: tc-skeleton-shimmer 1.4s linear infinite;
+  flex-shrink: 0;
+}
+.tc-skeleton__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+.tc-skeleton__line {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgb(var(--slate-3)) 25%, rgb(var(--slate-2)) 50%, rgb(var(--slate-3)) 75%);
+  background-size: 200% 100%;
+  animation: tc-skeleton-shimmer 1.4s linear infinite;
+}
+.tc-skeleton__line--title    { width: 65%; height: 16px; }
+.tc-skeleton__line--subtitle { width: 45%; }
+.tc-skeleton__line--meta     { width: 30%; }
+
+@keyframes tc-skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Reduz movimento pra usuários que pediram (prefer-reduced-motion). */
+@media (prefers-reduced-motion: reduce) {
+  .tc-skeleton__avatar,
+  .tc-skeleton__line {
+    animation: none;
+    background: rgb(var(--slate-3));
+  }
+}
+
 /* ── Mobile (<= 768px) ──────────────────────────────────────── */
 @media (max-width: 768px) {
   .tc-page {

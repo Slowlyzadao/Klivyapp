@@ -135,7 +135,24 @@ onBeforeRouteLeave(() => {
       <span>Voltar para a lista</span>
     </button>
 
-    <div v-if="isLoading" class="tcd-state">Carregando teleconsulta…</div>
+    <!-- Skeleton (audit Fase 3): cabeçalho + 2 cards stub + painel
+         lateral. Mantém o layout estável durante o fetch — quando
+         `detail.value` chega, troca sem layout shift. -->
+    <div v-if="isLoading" class="tcd-skeleton" aria-busy="true">
+      <div class="tcd-skeleton__header">
+        <div class="tcd-skeleton__line tcd-skeleton__line--title" />
+        <div class="tcd-skeleton__line tcd-skeleton__line--subtitle" />
+      </div>
+      <div class="tcd-skeleton__grid">
+        <div class="tcd-skeleton__col">
+          <div class="tcd-skeleton__card" />
+          <div class="tcd-skeleton__card" />
+        </div>
+        <div class="tcd-skeleton__col">
+          <div class="tcd-skeleton__card tcd-skeleton__card--tall" />
+        </div>
+      </div>
+    </div>
     <div v-else-if="error" class="tcd-state tcd-state--error">Erro: {{ error }}</div>
 
     <template v-else-if="detail">

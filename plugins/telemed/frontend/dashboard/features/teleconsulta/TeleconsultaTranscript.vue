@@ -1,11 +1,17 @@
 <script setup>
 // Transcrição da teleconsulta no formato de chat (DR/PACIENTE).
-// Mostra os primeiros N segmentos e expõe "Carregar mais" — clicar
-// num segmento emite `segment-click` para o player buscar o timestamp.
-import { ref, computed } from 'vue';
+// Audit Fase 3 — virtualizada via `DynamicScroller` (vue-virtual-scroller).
+// Antes mostrava só PAGE_SIZE iniciais e tinha botão "Carregar mais";
+// consulta de 1h+ tem 200-800 segmentos → loop crescente de DOM nodes
+// degradava scroll em low-end. Agora rendera só o viewport (~10 nodes)
+// independente da contagem total.
+//
+// `DynamicScroller` (vs `RecycleScroller`) acomoda alturas variáveis
+// (mensagens curtas/longas) sem precisar declarar `item-size` fixo.
+import { computed } from 'vue';
+import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller';
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
 import { initialsFromName, formatClockSeconds } from './utils/formatters.js';
-
-const PAGE_SIZE = 6;
 
 const props = defineProps({
   segments: { type: Array, default: () => [] },
@@ -15,18 +21,18 @@ const props = defineProps({
 });
 const emit = defineEmits(['segment-click']);
 
-const visibleCount = ref(PAGE_SIZE);
-
 const hasSegments = computed(() =>
   Array.isArray(props.segments) && props.segments.length > 0
 );
 
-const visibleSegments = computed(() =>
-  hasSegments.value ? props.segments.slice(0, visibleCount.value) : []
-);
-
-const hasMore = computed(() =>
-  hasSegments.value && props.segments.length > visibleCount.value
+// DynamicScroller exige cada item com chave estável (`id`). Construímos
+// uma vez aqui em vez de recalcular no template — `start` é único na
+// prática (timestamps Whisper são monotonics por track).
+const indexedSegments = computed(() =>
+  (props.segments || []).map((seg, i) => ({
+    ...seg,
+    _id: `${seg.start ?? i}-${seg.speaker || ''}-${i}`,
+  }))
 );
 
 // Heurística de fala: o backend marca speaker como "doutor"/"paciente"
@@ -46,10 +52,6 @@ const speakerClass = seg =>
   isDoctor(seg.speaker)
     ? 'tcd-transcript__avatar--doctor'
     : 'tcd-transcript__avatar--patient';
-
-const loadMore = () => {
-  visibleCount.value = Math.min(visibleCount.value + PAGE_SIZE, props.segments.length);
-};
 </script>
 
 <template>
@@ -59,41 +61,43 @@ const loadMore = () => {
       <span>Transcrição</span>
     </h3>
 
-    <div v-if="hasSegments" class="tcd-transcript">
-      <div
-        v-for="seg in visibleSegments"
-        :key="`${seg.start}-${seg.speaker || ''}`"
-        class="tcd-transcript__msg"
-      >
-        <div :class="['tcd-transcript__avatar', speakerClass(seg)]">
-          {{ speakerInitials(seg) }}
-        </div>
-        <div class="tcd-transcript__body">
-          <div class="tcd-transcript__head">
-            <span>{{ speakerLabel(seg) }}</span>
-            <span class="tcd-transcript__timestamp">{{ formatClockSeconds(seg.start) }}</span>
+    <DynamicScroller
+      v-if="hasSegments"
+      :items="indexedSegments"
+      :min-item-size="80"
+      key-field="_id"
+      class="tcd-transcript tcd-transcript--virtual"
+    >
+      <template #default="{ item: seg, index, active }">
+        <DynamicScrollerItem
+          :item="seg"
+          :active="active"
+          :data-index="index"
+          :size-dependencies="[seg.text]"
+        >
+          <div class="tcd-transcript__msg">
+            <div :class="['tcd-transcript__avatar', speakerClass(seg)]">
+              {{ speakerInitials(seg) }}
+            </div>
+            <div class="tcd-transcript__body">
+              <div class="tcd-transcript__head">
+                <span>{{ speakerLabel(seg) }}</span>
+                <span class="tcd-transcript__timestamp">{{ formatClockSeconds(seg.start) }}</span>
+              </div>
+              <p
+                class="tcd-transcript__text"
+                role="button"
+                tabindex="0"
+                @click="emit('segment-click', seg)"
+                @keydown.enter="emit('segment-click', seg)"
+              >
+                {{ seg.text }}
+              </p>
+            </div>
           </div>
-          <p
-            class="tcd-transcript__text"
-            role="button"
-            tabindex="0"
-            @click="emit('segment-click', seg)"
-            @keydown.enter="emit('segment-click', seg)"
-          >
-            {{ seg.text }}
-          </p>
-        </div>
-      </div>
-
-      <button
-        v-if="hasMore"
-        type="button"
-        class="tcd-transcript__more"
-        @click="loadMore"
-      >
-        Carregar mais da transcrição
-      </button>
-    </div>
+        </DynamicScrollerItem>
+      </template>
+    </DynamicScroller>
 
     <p v-else-if="text" class="tcd-transcript__text">{{ text }}</p>
     <p v-else class="tcd-transcript__empty">
@@ -101,3 +105,15 @@ const loadMore = () => {
     </p>
   </section>
 </template>
+
+<style scoped>
+/* DynamicScroller precisa de altura fixa pro viewport — sem isso o
+   container colapsa e nada renderiza. 60vh dá scroll suficiente sem
+   tomar a tela inteira do detalhe. Audit Fase 3. */
+.tcd-transcript--virtual {
+  height: 60vh;
+  min-height: 320px;
+  max-height: 720px;
+  overflow-y: auto;
+}
+</style>

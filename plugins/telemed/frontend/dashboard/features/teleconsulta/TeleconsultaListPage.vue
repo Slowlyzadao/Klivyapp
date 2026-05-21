@@ -146,9 +146,24 @@ const showLoadMore = computed(() => !showPagination.value && hasMore.value);
     </nav>
 
     <section class="tc-grid">
-      <div v-if="isLoading && items.length === 0" class="tc-state">
-        Carregando teleconsultas…
-      </div>
+      <!-- Skeleton (audit Fase 3) — 3 cards fantasma enquanto carrega;
+           dá feedback de "algo está vindo" sem ainda mostrar dados,
+           reduz percepção de latência vs spinner texto-only. -->
+      <template v-if="isLoading && items.length === 0">
+        <div
+          v-for="n in 3"
+          :key="`skeleton-${n}`"
+          class="tc-skeleton"
+          aria-hidden="true"
+        >
+          <div class="tc-skeleton__avatar" />
+          <div class="tc-skeleton__lines">
+            <div class="tc-skeleton__line tc-skeleton__line--title" />
+            <div class="tc-skeleton__line tc-skeleton__line--subtitle" />
+            <div class="tc-skeleton__line tc-skeleton__line--meta" />
+          </div>
+        </div>
+      </template>
       <div v-else-if="error" class="tc-state tc-state--error">
         Erro ao carregar: {{ error }}
       </div>

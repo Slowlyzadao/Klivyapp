@@ -25,6 +25,21 @@ class TelemedRecording < ApplicationRecord
   KINDS    = %w[audio video].freeze
   MAX_RETRIES = 3
 
+  # Audit Fase 3 — LGPD (#35). `transcript_text` contém fala literal da
+  # consulta (nome do paciente, queixa, diagnóstico, medicações). Sem
+  # encryption at-rest, qualquer backup do DB expõe PII clínica.
+  #
+  # Config vive em `config/application.rb` — `encrypts` só ativa de fato
+  # quando `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY` está no ENV. Em dev sem
+  # essa ENV, atributos seguem em plaintext (comportamento atual). Em prod
+  # com a ENV setada, novos saves ficam criptografados e leituras antigas
+  # em plaintext continuam funcionando (`support_unencrypted_data = true`).
+  #
+  # `soap_structure` e `attention_points` (jsonb) não recebem `encrypts`
+  # nesta fase — tipo JSONB exige tratamento especial (perde queries dentro
+  # do JSON). Dívida pra Fase 4.
+  encrypts :transcript_text
+
   # Grafo permitido de transições. `failed` é alcançável de qualquer
   # estado (terminal). `pending → recording → uploaded → transcribing →
   # transcribed → evolving → ready` é o caminho feliz; estados intermediários
@@ -138,9 +153,16 @@ class TelemedRecording < ApplicationRecord
     retry_count >= MAX_RETRIES
   end
 
-  # Arquiva: deleta arquivo R2 + marca timestamp. Registro permanece pra
-  # audit trail. ClinicalNote derivada **não** é tocada.
+  # Arquiva: DELETA arquivos do R2 (composite + temps) e marca timestamp +
+  # zera as keys. O registro DB permanece pra audit trail (CFM exige
+  # `houve consulta` rastreável); apenas o áudio é purgado.
+  # ClinicalNote derivada **não** é tocada (clínica precisa do prontuário
+  # 20 anos independente do destino do áudio).
   # Caller (job de quota ou purge) tipicamente envolve em transaction.
+  #
+  # Nome `archive!` é mantido por consistência com `archived_at`/`archived?`/
+  # scope `archived` mesmo sendo uma operação destrutiva no R2 — o registro
+  # fica "arquivado" no sentido de "fora do storage ativo".
   def archive!(reason: nil)
     return if archived?
 

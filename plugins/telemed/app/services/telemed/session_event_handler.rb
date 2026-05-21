@@ -17,8 +17,11 @@
 #   - ambos sairam após in_progress:           in_progress → completed
 module Telemed
   class SessionEventHandler
-    MIN_BOTH_PRESENT_SECONDS = 5.minutes
-    NO_SHOW_GRACE_SECONDS    = 5.minutes
+    # Constantes proxy mantidas pra compat com callers existentes
+    # (MarkInProgressJob lê `SessionEventHandler::MIN_BOTH_PRESENT_SECONDS`).
+    # Fonte da verdade é o SessionJobScheduler.
+    MIN_BOTH_PRESENT_SECONDS = SessionJobScheduler::MIN_BOTH_PRESENT_SECONDS
+    NO_SHOW_GRACE_SECONDS    = SessionJobScheduler::NO_SHOW_GRACE_SECONDS
 
     Result = Struct.new(:event, :session, :transition, :scheduled_jobs, :recording, keyword_init: true)
 
@@ -28,7 +31,7 @@ module Telemed
       @now   = now
       @tracker    = SessionTracker.new(event)
       @transition = StatusTransition.new(event)
-      @scheduled_jobs = []
+      @scheduler  = SessionJobScheduler.new(event: @event)
       # Sprint L — injetável pra testes; default constrói o orchestrator
       # quando ambos os participantes estiverem na sala. nil → sem gravação.
       @recording_orchestrator = recording_orchestrator
@@ -46,8 +49,10 @@ module Telemed
         transition_result = @transition.mark_arrived!
       end
 
-      schedule_in_progress_job(session) if session.both_present?
-      schedule_no_show_job(session)     if doctor_alone?(session)
+      # Decisões de scheduling delegadas (audit Fase 3 — extração).
+      @scheduler.schedule_in_progress_if_both_present(session)
+      @scheduler.schedule_no_show_if_doctor_alone(session, joining_role: @role)
+
       # Sprint L — dispara gravação no momento em que ambos chegam.
       # Idempotente (RecordingOrchestrator pula se já tem gravação ativa).
       start_recording_if_needed(session)
@@ -75,33 +80,6 @@ module Telemed
 
     private
 
-    def schedule_in_progress_job(session)
-      return unless session.both_started_at
-
-      MarkInProgressJob
-        .set(wait: MIN_BOTH_PRESENT_SECONDS)
-        .perform_later(@event.id, session.both_started_at.iso8601)
-      @scheduled_jobs << :mark_in_progress
-    end
-
-    def schedule_no_show_job(session)
-      return unless session.doctor_joined_at
-
-      MarkNoShowJob
-        .set(wait: NO_SHOW_GRACE_SECONDS)
-        .perform_later(@event.id, session.doctor_joined_at.iso8601)
-      @scheduled_jobs << :mark_no_show
-    end
-
-    # Doutor entrou mas paciente ainda não chegou. Job de no_show só faz
-    # sentido nesse caso — se paciente entrou primeiro e doutor depois,
-    # já é uma consulta acontecendo, sem motivo pra agendar no_show.
-    def doctor_alone?(session)
-      @role == 'doctor' &&
-        session.doctor_present? &&
-        session.patient_joined_at.blank?
-    end
-
     def validate_role!
       return if %w[doctor patient].include?(@role)
 
@@ -118,7 +96,7 @@ module Telemed
 
       orchestrator = @recording_orchestrator || RecordingOrchestrator.new(event: @event)
       @recording_result = orchestrator.start!
-      @scheduled_jobs << :start_recording if @recording_result&.started?
+      @scheduler.scheduled << :start_recording if @recording_result&.started?
     rescue StandardError => e
       Rails.logger.error("[SessionEventHandler] start_recording_if_needed event=#{@event.id} #{e.class}: #{e.message}")
       # Engole pra não quebrar fluxo de joined! — consulta continua sem gravação.
@@ -130,7 +108,7 @@ module Telemed
 
       orchestrator = @recording_orchestrator || RecordingOrchestrator.new(event: @event)
       orchestrator.stop!(recording)
-      @scheduled_jobs << :stop_recording
+      @scheduler.scheduled << :stop_recording
     rescue StandardError => e
       Rails.logger.error("[SessionEventHandler] stop_recording_if_active event=#{@event.id} #{e.class}: #{e.message}")
     end
@@ -140,7 +118,7 @@ module Telemed
         event: @event,
         session: session,
         transition: transition_result,
-        scheduled_jobs: @scheduled_jobs.dup,
+        scheduled_jobs: @scheduler.scheduled.dup,
         recording: @recording_result
       )
     end
