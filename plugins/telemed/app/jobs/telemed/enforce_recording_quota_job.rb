@@ -15,7 +15,9 @@
 # Pode também ser disparado manualmente via Rails console.
 module Telemed
   class EnforceRecordingQuotaJob < ApplicationJob
-    queue_as :default
+    # Housekeeping — não compete com queues de UX. `:purgable` é a queue
+    # padrão Chatwoot pra deletions/archivings. Audit Fase 2.
+    queue_as :purgable
 
     DEFAULT_QUOTA = 15
 

@@ -31,11 +31,20 @@ export function useTeleconsultaList(initialTab = 'upcoming') {
     }
   };
 
+  // Sequência monotônica de requests pra resolver race quando troca de
+  // tab rapidamente (audit #25). Se o usuário clica Tab A → Tab B antes
+  // de Tab A responder, queremos garantir que Tab A não sobrescreva os
+  // resultados de Tab B (last-writer-wins clássico de UI assíncrona).
+  // Cada fetch captura um id local; só aplica resultado se ainda é o
+  // último request em curso.
+  let requestSeq = 0;
+
   const fetch = async (opts = {}) => {
     if (opts.reset) {
       page.value = 1;
       items.value = [];
     }
+    const myReq = ++requestSeq;
     isLoading.value = true;
     error.value = null;
     try {
@@ -45,6 +54,9 @@ export function useTeleconsultaList(initialTab = 'upcoming') {
         perPage: perPage.value,
         ...filters.value,
       });
+      // Resposta tardia de tab antiga — descarta silenciosamente.
+      if (myReq !== requestSeq) return;
+
       if (opts.reset) {
         items.value = data.data;
       } else {
@@ -52,9 +64,10 @@ export function useTeleconsultaList(initialTab = 'upcoming') {
       }
       hasMore.value = data.meta?.has_more ?? false;
     } catch (e) {
+      if (myReq !== requestSeq) return;
       error.value = e?.response?.data?.error || e.message;
     } finally {
-      isLoading.value = false;
+      if (myReq === requestSeq) isLoading.value = false;
     }
   };
 

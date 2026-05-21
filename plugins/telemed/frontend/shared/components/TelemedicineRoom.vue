@@ -92,8 +92,37 @@ const remoteCount = ref(0);
 // Checkbox no preflight; sem aceite, botão "Entrar agora" fica bloqueado.
 // Quando aceito, é repassado no `sessionEvent` 'joined' pro backend
 // registrar PatientPortalConsent (kind='telemedicine_recording').
-const recordingConsent = ref(false);
+//
+// Audit Fase 2 — persiste em localStorage por roomCode pra não pedir
+// aceite de novo após F5/reconnect. Aceitar uma vez vale pela sala toda.
+// Sem roomCode (legacy/dev), comportamento volta a ser session-only.
+const consentStorageKey = () =>
+  props.roomCode ? `telemed_consent:${props.roomCode}` : null;
+
+const readPersistedConsent = () => {
+  try {
+    const key = consentStorageKey();
+    return key ? window.localStorage.getItem(key) === '1' : false;
+  } catch (_) {
+    // SSR, privacy mode ou disabled storage — defaulta false (mais seguro).
+    return false;
+  }
+};
+
+const recordingConsent = ref(readPersistedConsent());
 const showConsentTerms = ref(false);
+
+watch(recordingConsent, val => {
+  try {
+    const key = consentStorageKey();
+    if (!key) return;
+    if (val) window.localStorage.setItem(key, '1');
+    else window.localStorage.removeItem(key);
+  } catch (_) {
+    // idem readPersistedConsent — falha silenciosa, comportamento degrada
+    // pra "pede de novo no F5" que é o estado anterior ao fix.
+  }
+});
 
 // ─── Pre-flight (lobby antes de entrar na sala, Google Meet pattern) ──
 // Lista de devices disponíveis + qual está selecionado. Populados em
@@ -223,6 +252,20 @@ function onRoomDisconnected() {
   emitLeaveOnce();
 }
 
+// Audit Fase 2 — UX de reconnect.
+// LiveKit SDK já tenta reconnect automático (~30s). Antes não havia
+// feedback visual: o usuário via "Connected" e de repente "Disconnected"
+// se o reconnect falhasse. Agora mostramos um estado intermediário
+// `reconnecting` enquanto o SDK tenta — se voltar, retomamos `connected`;
+// se desistir, `Disconnected` dispara o handler acima.
+function onRoomReconnecting() {
+  if (state.value === 'connected') state.value = 'reconnecting';
+}
+
+function onRoomReconnected() {
+  if (state.value === 'reconnecting') state.value = 'connected';
+}
+
 onMounted(setupPreflight);
 onUnmounted(disconnect);
 
@@ -277,6 +320,11 @@ async function connect() {
       //   (a) usuário clicou Sair (já emitimos no leave())
       //   (b) servidor encerrou (kick, network drop, room fechado)
       [RoomEvent.Disconnected, onRoomDisconnected],
+      // Reconnecting/Reconnected dão feedback visual durante reconnect
+      // automático do SDK — sem isso o user via "Connected" → "Disconnected"
+      // sem nada no meio.
+      [RoomEvent.Reconnecting, onRoomReconnecting],
+      [RoomEvent.Reconnected, onRoomReconnected],
     ];
     roomListeners.forEach(([event, handler]) => room.on(event, handler));
 

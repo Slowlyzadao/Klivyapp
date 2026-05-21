@@ -25,6 +25,28 @@ class TelemedRecording < ApplicationRecord
   KINDS    = %w[audio video].freeze
   MAX_RETRIES = 3
 
+  # Grafo permitido de transições. `failed` é alcançável de qualquer
+  # estado (terminal). `pending → recording → uploaded → transcribing →
+  # transcribed → evolving → ready` é o caminho feliz; estados intermediários
+  # não podem voltar pra trás (sem isso o audit #30 reportou que
+  # `update!(status: 'pending')` em qualquer fase era aceito silenciosamente,
+  # corrompendo a state machine).
+  #
+  # Exceções pra recovery de admin (via `retranscribe`/`reevolve`):
+  #   - `ready`     → `uploaded` (retranscribe) ou `transcribed` (reevolve)
+  #   - `failed`    → `uploaded` (retranscribe) ou `transcribed` (reevolve)
+  #   - `evolving`  → `transcribed` (reevolve forçado, admin pode insistir)
+  ALLOWED_TRANSITIONS = {
+    'pending'      => %w[recording failed],
+    'recording'    => %w[uploaded failed],
+    'uploaded'     => %w[transcribing failed],
+    'transcribing' => %w[transcribed failed],
+    'transcribed'  => %w[evolving failed],
+    'evolving'     => %w[ready failed transcribed],
+    'ready'        => %w[failed uploaded transcribed],
+    'failed'       => %w[uploaded transcribed]
+  }.freeze
+
   belongs_to :agenda_event
   belongs_to :account
   has_many   :proposed_evolutions, dependent: :destroy
@@ -32,6 +54,7 @@ class TelemedRecording < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
   validates :recording_kind, inclusion: { in: KINDS }
   validate  :at_least_one_egress_id_after_pending
+  validate  :valid_status_transition
 
   scope :ready,         -> { where(status: 'ready') }
   scope :failed,        -> { where(status: 'failed') }
@@ -46,9 +69,20 @@ class TelemedRecording < ApplicationRecord
     where('doctor_egress_id = :id OR patient_egress_id = :id OR composite_egress_id = :id', id: id)
   }
 
-  # Última proposta de evolução (UI default).
+  # Última proposta de evolução (UI default). Memoiza no record pra evitar
+  # N+1 quando chamado várias vezes pelo mesmo controller request
+  # (to_summary_hash + serialize_detail chamam 2-3x). Quando a associação
+  # já está preloaded (`.includes(:proposed_evolutions)`), sort em memória
+  # — sem hit de DB adicional.
   def latest_proposed_evolution
-    proposed_evolutions.order(created_at: :desc).first
+    return @latest_proposed_evolution if defined?(@latest_proposed_evolution)
+
+    @latest_proposed_evolution =
+      if association(:proposed_evolutions).loaded?
+        proposed_evolutions.max_by(&:created_at)
+      else
+        proposed_evolutions.order(created_at: :desc).first
+      end
   end
 
   # Helpers de estado
@@ -183,5 +217,19 @@ class TelemedRecording < ApplicationRecord
     return if [doctor_egress_id, patient_egress_id, composite_egress_id].any?(&:present?)
 
     errors.add(:base, 'Pelo menos um egress_id é obrigatório após status pending')
+  end
+
+  # Bloqueia transições inválidas (audit #30). `fail!` usa `update_columns`
+  # que NÃO dispara validações — proposital, pra que falhas terminais
+  # possam ser registradas mesmo a partir de estados "estranhos" (defesa
+  # em profundidade quando algo já está quebrado).
+  def valid_status_transition
+    return unless status_changed?
+    return if status_was.blank? # registro novo
+
+    allowed = ALLOWED_TRANSITIONS[status_was] || []
+    return if allowed.include?(status)
+
+    errors.add(:status, "transição inválida: #{status_was} → #{status}")
   end
 end

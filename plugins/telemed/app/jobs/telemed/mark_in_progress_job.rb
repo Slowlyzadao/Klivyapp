@@ -12,7 +12,8 @@
 # subsequentes).
 module Telemed
   class MarkInProgressJob < ApplicationJob
-    queue_as :default
+    # Mesmo motivo do MarkNoShowJob: timer crítico de UX, latency-sensitive.
+    queue_as :high
 
     # Tolerância: se o job rodar levemente antes dos 5min (Sidekiq pode
     # antecipar alguns segundos), aceitamos com 30s de folga.
@@ -22,22 +23,24 @@ module Telemed
       event = AgendaEvent.find_by(id: event_id)
       return unless event
 
-      tracker = SessionTracker.new(event)
-      session = tracker.session
+      # Validação + transição dentro do lock — fix do audit #32 (race).
+      event.with_lock do
+        session = SessionTracker.new(event).session
 
-      # Sessão diferente — usuário saiu e voltou, both_started_at foi
-      # renovado. Outro job (do novo ciclo) cuida agora.
-      return unless session.both_started_at == parse_time(both_started_at_iso)
+        # Sessão diferente — usuário saiu e voltou, both_started_at foi
+        # renovado. Outro job (do novo ciclo) cuida agora.
+        return unless session.both_started_at == parse_time(both_started_at_iso)
 
-      # Ambos ainda presentes? Se alguém saiu nesse meio tempo, o
-      # SessionEventHandler já cuidou (ou não — fica em arrived até voltar).
-      return unless session.both_present?
+        # Ambos ainda presentes? Se alguém saiu nesse meio tempo, o
+        # SessionEventHandler já cuidou (ou não — fica em arrived até voltar).
+        return unless session.both_present?
 
-      # Sanity: tempo mínimo decorrido. Defesa caso Sidekiq antecipe.
-      elapsed = Time.current - session.both_started_at
-      return if elapsed < (SessionEventHandler::MIN_BOTH_PRESENT_SECONDS - TOLERANCE_SECONDS.seconds)
+        # Sanity: tempo mínimo decorrido. Defesa caso Sidekiq antecipe.
+        elapsed = Time.current - session.both_started_at
+        return if elapsed < (SessionEventHandler::MIN_BOTH_PRESENT_SECONDS - TOLERANCE_SECONDS.seconds)
 
-      StatusTransition.new(event).mark_in_progress!
+        StatusTransition.new(event).mark_in_progress!
+      end
     end
 
     private

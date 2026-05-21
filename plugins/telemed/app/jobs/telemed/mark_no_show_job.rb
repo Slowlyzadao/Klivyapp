@@ -9,23 +9,31 @@
 # depois), NÃO é no-show. Só é no-show se o paciente nunca apareceu.
 module Telemed
   class MarkNoShowJob < ApplicationJob
-    queue_as :default
+    # `:high` — timer crítico de UX (5min após doutor entrar sem paciente).
+    # Não pode atrás de TranscribeJob de 10min na mesma queue `:default`.
+    # Audit Fase 2.
+    queue_as :high
 
     def perform(event_id, doctor_joined_at_iso)
       event = AgendaEvent.find_by(id: event_id)
       return unless event
 
-      tracker = SessionTracker.new(event)
-      session = tracker.session
+      # Validação + transição dentro de um único lock pessimista no event
+      # — sem isso, o session/timestamp podia ser lido fora do lock e mudar
+      # entre o check e o `mark_no_show!`, levando a no-show num evento
+      # que o paciente já entrou (race fix do audit #32).
+      event.with_lock do
+        session = SessionTracker.new(event).session
 
-      # Sessão de outro ciclo (doutor saiu e reentrou após este job ter
-      # sido enfileirado) — descarta.
-      return unless session.doctor_joined_at == parse_time(doctor_joined_at_iso)
+        # Sessão de outro ciclo (doutor saiu e reentrou após este job ter
+        # sido enfileirado) — descarta.
+        return unless session.doctor_joined_at == parse_time(doctor_joined_at_iso)
 
-      # Paciente chegou em algum momento — sai do escopo "no_show".
-      return if session.patient_joined_at.present?
+        # Paciente chegou em algum momento — sai do escopo "no_show".
+        return if session.patient_joined_at.present?
 
-      StatusTransition.new(event).mark_no_show!
+        StatusTransition.new(event).mark_no_show!
+      end
     end
 
     private

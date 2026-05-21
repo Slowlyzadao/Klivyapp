@@ -135,8 +135,21 @@ class Api::V1::Accounts::Telemed::TeleconsultasController < Api::V1::Accounts::B
     (page - 1) * per_page
   end
 
+  # Cache local por event_id pra evitar N+1 em `index`:
+  # `serialize_summary` é chamado pra cada event no loop, e dentro dele este
+  # método + `latest_proposed_evolution` eram chamados sem cache. 20 events
+  # × 3 acessos = 60 queries extras antes do cache; agora é constante.
+  # Quando a associação está preloaded (via `.includes` no index), usa
+  # `max_by` em memória; no show endpoint (sem includes), cai pro DB com
+  # `order().first`. Mesmo escopo da request — `@latest_recording` reseta
+  # entre requests (Rails recria o controller).
   def latest_recording_for(event)
-    event.telemed_recordings.order(created_at: :desc).first
+    @latest_recording ||= {}
+    @latest_recording[event.id] ||= if event.association(:telemed_recordings).loaded?
+                                      event.telemed_recordings.max_by(&:created_at)
+                                    else
+                                      event.telemed_recordings.order(created_at: :desc).first
+                                    end
   end
 
   def pick_storage_key(recording, kind)

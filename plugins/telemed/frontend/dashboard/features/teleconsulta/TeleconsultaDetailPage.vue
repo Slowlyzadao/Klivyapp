@@ -6,7 +6,7 @@
 import '@plugins/telemed/frontend/styles/teleconsulta-detail.scss';
 
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { emitter } from 'shared/helpers/mitt';
 import { teleconsultasApi } from '../../api/teleconsultas';
@@ -22,6 +22,7 @@ const detail = ref(null);
 const isLoading = ref(true);
 const error = ref(null);
 const playerRef = ref(null);
+const editorRef = ref(null);
 
 const eventId = computed(() => route.params.eventId);
 
@@ -112,6 +113,19 @@ onMounted(() => {
 onBeforeUnmount(() => {
   emitter.off(BUS_EVENTS.TELEMED_RECORDING_UPDATED, onTelemedRecordingUpdated);
 });
+
+// Audit Fase 2 — pega navegação SPA pra dentro do dashboard (Voltar pra
+// lista, ir pra outra teleconsulta, etc.). `beforeunload` no editor cobre
+// fechar aba/refresh; este cobre rotas internas (browser nativo não
+// dispara beforeunload em SPA navigation).
+onBeforeRouteLeave(() => {
+  if (editorRef.value?.hasUnsavedChanges?.value) {
+    return window.confirm(
+      'Você tem alterações não salvas na evolução. Sair mesmo assim?'
+    );
+  }
+  return true;
+});
 </script>
 
 <template>
@@ -165,6 +179,7 @@ onBeforeUnmount(() => {
         <div class="tcd-col">
           <TeleconsultaEvolutionEditor
             v-if="detail.evolution"
+            ref="editorRef"
             :evolution="detail.evolution"
             @saved="onEvolutionSaved"
             @approved="onEvolutionApproved"

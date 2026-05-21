@@ -10,7 +10,9 @@
 # evolução — dentista pode escrever manualmente).
 module Telemed
   class GenerateEvolutionJob < ApplicationJob
-    queue_as :default
+    # `:low` por motivo simétrico ao TranscribeRecordingJob — chamada Claude
+    # leva 10-60s e não pode bloquear queues de timer/notificação.
+    queue_as :low
 
     # Mesmo padrão do TranscribeRecordingJob: `retry_on` único, sem duplicar
     # exhaustion check no rescue. `bump_retry!` só registra contador.
@@ -21,6 +23,15 @@ module Telemed
       recording.fail!("Geração de evolução falhou após retries (#{exception.class}): #{exception.message}")
     end
     discard_on ActiveJob::DeserializationError
+
+    # Falhas permanentes (ex: transcript excede token cap do provider) não
+    # devem retentar — fail-fast, mantém o transcript pra dentista usar.
+    discard_on Telemed::PermanentFailure do |job, exception|
+      recording = TelemedRecording.find_by(id: job.arguments.first)
+      next if recording.nil? || recording.failed?
+
+      recording.fail!("Geração de evolução abortada (permanente): #{exception.message}")
+    end
 
     def perform(recording_id)
       recording = TelemedRecording.find_by(id: recording_id)
@@ -40,16 +51,38 @@ module Telemed
         patient_context: patient_context
       )
 
-      ProposedEvolution.create!(
-        telemed_recording: recording,
-        provider:          result.provider,
-        soap_structure:    result.soap_structure || {},
-        raw_markdown:      result.raw_markdown,
-        attention_points:  result.attention_points || [],
-        input_tokens:      result.input_tokens,
-        output_tokens:     result.output_tokens,
-        status:            'pending_review'
-      )
+      # Migration 20260521000004 adicionou partial unique index pra impedir
+      # múltiplas `pending_review` no mesmo recording. Se já existir uma
+      # (re-enqueue, retry duplicado), reaproveita ela em vez de criar
+      # outra — orfã visível pra UI seria pior que reuso silencioso.
+      begin
+        ProposedEvolution.create!(
+          telemed_recording: recording,
+          provider:          result.provider,
+          soap_structure:    result.soap_structure || {},
+          raw_markdown:      result.raw_markdown,
+          attention_points:  result.attention_points || [],
+          input_tokens:      result.input_tokens,
+          output_tokens:     result.output_tokens,
+          status:            'pending_review'
+        )
+      rescue ActiveRecord::RecordNotUnique
+        existing = recording.proposed_evolutions.where(status: 'pending_review').first
+        Rails.logger.warn(
+          "[GenerateEvolutionJob] proposed_evolution duplicada detectada " \
+          "(recording=#{recording.id}, existing=#{existing&.id}). Reaproveitando."
+        )
+        # Atualiza a existente com o conteúdo mais recente — dentista vê
+        # SOAP atualizado mesmo após retry.
+        existing&.update!(
+          provider:         result.provider,
+          soap_structure:   result.soap_structure || {},
+          raw_markdown:     result.raw_markdown,
+          attention_points: result.attention_points || [],
+          input_tokens:     result.input_tokens,
+          output_tokens:    result.output_tokens
+        )
+      end
 
       recording.update!(status: 'ready')
       recording.broadcast_status_change!

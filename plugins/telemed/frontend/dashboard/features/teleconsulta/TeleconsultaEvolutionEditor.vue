@@ -3,7 +3,7 @@
 // Modo padrão = leitura (visão do mockup); botão "Editar" abre textareas.
 // Ações: Aplicar ao Prontuário (approve) / Editar (toggle) / Recusar (reject).
 // Estilos vivem em ../../../styles/teleconsulta-detail.scss.
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onBeforeUnmount } from 'vue';
 import { proposedEvolutionsApi } from '../../api/teleconsultas';
 import { formatFullDateTimeLabel } from './utils/formatters.js';
 
@@ -84,6 +84,52 @@ const soapFields = computed(() => [
   { key: 'plano',     label: 'P — Plano'     },
 ]);
 
+// Audit Fase 2 — unsaved changes detection.
+// Compara o estado local (textareas) contra a proposta original (props).
+// Quando "dirty" E o usuário tenta fechar a aba/refresh, o navegador
+// mostra o prompt nativo. Pra navegação interna SPA, o componente pai
+// pode usar `hasUnsavedChanges()` via defineExpose se quiser confirm.
+const hasUnsavedChanges = computed(() => {
+  if (!isEditing.value) return false;
+  const origSoap = props.evolution.soap_structure || {};
+  const fields = ['subjetivo', 'objetivo', 'avaliacao', 'plano'];
+  const soapDirty = fields.some(
+    k => (localSoap.value[k] || '') !== (origSoap[k] || '')
+  );
+  const mdDirty = localMarkdown.value !== (props.evolution.raw_markdown || '');
+  return soapDirty || mdDirty;
+});
+
+// Handler do beforeunload — string retornada faz o browser mostrar
+// "Tem certeza que deseja sair?" nativo. Texto custom é ignorado em
+// navegadores modernos mas a presença do listener basta.
+const onBeforeUnload = event => {
+  if (!hasUnsavedChanges.value) return undefined;
+  event.preventDefault();
+  // Chrome/Edge ignoram a string mas precisam de returnValue setado.
+  event.returnValue = '';
+  return '';
+};
+
+// Registra/desregistra dinamicamente baseado em isEditing pra não vazar
+// listeners quando o componente não tem mudanças. Sempre limpa no unmount.
+watch(isEditing, editing => {
+  if (typeof window === 'undefined') return;
+  if (editing) {
+    window.addEventListener('beforeunload', onBeforeUnload);
+  } else {
+    window.removeEventListener('beforeunload', onBeforeUnload);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('beforeunload', onBeforeUnload);
+  }
+});
+
+defineExpose({ hasUnsavedChanges });
+
 const soapValue = key => {
   const value = props.evolution.soap_structure?.[key];
   return typeof value === 'string' ? value.trim() : '';
@@ -97,6 +143,14 @@ const startEditing = () => {
 };
 
 const cancelEditing = () => {
+  // Audit Fase 2 — confirm se tem mudanças não salvas. Antes saía
+  // silenciosamente, perdendo edição.
+  if (
+    hasUnsavedChanges.value &&
+    !window.confirm('Descartar alterações não salvas?')
+  ) {
+    return;
+  }
   isEditing.value = false;
   error.value = null;
 };
@@ -141,6 +195,16 @@ const openReject = () => {
 const reject = async () => {
   if (!rejectReason.value.trim()) {
     error.value = 'Justificativa obrigatória';
+    return;
+  }
+  // Confirmação explícita — ação destrutiva (descarta a proposta da IA);
+  // sem undo (CFM exige trilha imutável). `approve` já tem confirm;
+  // mantemos simetria pra evitar click acidental no botão.
+  if (
+    !window.confirm(
+      'Recusar esta evolução? A proposta da IA será descartada (ação irreversível).'
+    )
+  ) {
     return;
   }
   isRejecting.value = true;

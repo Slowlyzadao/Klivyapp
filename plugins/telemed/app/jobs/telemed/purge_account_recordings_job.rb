@@ -15,7 +15,9 @@
 # Pode ser cancelado antes de rodar se a clínica reativar a assinatura.
 module Telemed
   class PurgeAccountRecordingsJob < ApplicationJob
-    queue_as :default
+    # Housekeeping pesado (deleta dezenas/centenas de objetos R2) —
+    # mesma queue do EnforceRecordingQuotaJob. Audit Fase 2.
+    queue_as :purgable
 
     def perform(account_id)
       account = Account.find_by(id: account_id)

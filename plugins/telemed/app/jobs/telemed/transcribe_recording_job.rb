@@ -20,7 +20,11 @@ require 'tempfile'
 
 module Telemed
   class TranscribeRecordingJob < ApplicationJob
-    queue_as :default
+    # `:low` (priority Sidekiq) — job longo (Whisper 1-10min, download R2,
+    # upload back). NÃO pode bloquear queues `:critical`/`:high` (timers
+    # de no-show, mark-in-progress, notificações). Audit Fase 2 — antes
+    # estava em `:default` competindo com tudo.
+    queue_as :low
 
     # Mecanismo único de retry: `retry_on` controla as 3 tentativas; o bloco
     # roda quando todas esgotam e marca o recording como failed. Antes
@@ -39,11 +43,11 @@ module Telemed
     # Limite de arquivo aceito pela Whisper API.
     WHISPER_MAX_FILE_BYTES = 25 * 1024 * 1024
 
-    # Erros permanentes que NÃO devem entrar no `retry_on` (ex: arquivo
-    # >25MB — retentar 3x não muda o resultado, só desperdiça download R2).
-    class PermanentFailure < StandardError; end
-
-    discard_on PermanentFailure do |job, exception|
+    # Erros permanentes (`Telemed::PermanentFailure`) que NÃO devem entrar
+    # no `retry_on` — retentar 3x não muda o resultado, só desperdiça
+    # download R2 + Whisper. Ex: arquivo > 25MB. A classe é compartilhada
+    # com GenerateEvolutionJob (ambos descartam em fail-fast).
+    discard_on Telemed::PermanentFailure do |job, exception|
       recording = TelemedRecording.find_by(id: job.arguments.first)
       next if recording.nil? || recording.failed?
 
@@ -138,7 +142,7 @@ module Telemed
         # split/compress (Fase 3).
         size = File.size(tmp.path)
         if size > WHISPER_MAX_FILE_BYTES
-          raise PermanentFailure,
+          raise Telemed::PermanentFailure,
                 "Áudio excede limite Whisper (25MB): key=#{storage_key} size=#{size} bytes. " \
                 'Implementar split/compress (Fase 3).'
         end
