@@ -1,0 +1,49 @@
+get:
+  tags:
+    - Agenda Pública
+  summary: Horários disponíveis para um range (batch)
+  description: |
+    Variante batch de `slots`. Útil para pré-popular o mês inteiro com
+    1 request em vez de 30. Range máximo de 60 dias. O backend faz UMA
+    query de eventos cobrindo o range inteiro e calcula localmente.
+  parameters:
+    - name: public_id
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: from
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+        example: "2026-05-01"
+    - name: to
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+        example: "2026-05-31"
+    - name: service_id
+      in: query
+      schema:
+        type: integer
+  responses:
+    '200':
+      description: Mapa `data → slots`
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              slots:
+                type: object
+                description: Chaves no formato `YYYY-MM-DD`.
+                additionalProperties:
+                  type: array
+                  items:
+                    $ref: '../definitions/Slot.yml'
+    '400':
+      description: Datas inválidas, `to < from`, ou range maior que 60 dias

@@ -1,0 +1,26 @@
+type: object
+description: |
+  Resposta do `POST /api/v1/billing/onboarding`. Varia conforme o plano e
+  o cupom:
+  - **`lead`** (plano enterprise): conta criada, time comercial entra em contato
+  - **`active`** (cupom `free_forever`): conta ativa imediatamente, sem cobrança
+  - **`pending`** (caso padrão): conta criada, aguardando confirmação de pagamento Asaas
+
+  Quando há sucesso, retorna headers de autenticação (`auth`) e `user_data`
+  para o frontend logar o usuário sem nova chamada.
+properties:
+  status:
+    type: string
+    enum: [lead, active, pending]
+  account_id: { type: integer }
+  message: { type: string }
+  auth:
+    type: object
+    nullable: true
+    description: "Headers de autenticação (access-token + client + uid). Ausente em `lead`."
+    additionalProperties: { type: string }
+  user_data:
+    type: object
+    nullable: true
+    description: "Payload do `User#push_event_data` para inicializar o store. Ausente em `lead`."
+    additionalProperties: true

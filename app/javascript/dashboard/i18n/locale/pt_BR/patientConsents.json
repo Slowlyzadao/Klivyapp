@@ -1,0 +1,107 @@
+{
+  "PATIENT_CONSENTS": {
+    "HEADER": {
+      "TITLE": "Consentimentos e Assinaturas",
+      "SUBTITLE": "Gestão jurídica de termos — LGPD, autorizações de imagem, procedimentos estéticos e mais.",
+      "NEW": "Novo Consentimento",
+      "CANCEL": "Cancelar"
+    },
+    "KPI": {
+      "TOTAL": "Total",
+      "SIGNED": "Assinados",
+      "PENDING": "Pendentes",
+      "EXPIRED": "Vencidos"
+    },
+    "FORM": {
+      "TITLE": "Novo Consentimento",
+      "SUBTITLE": "Preencha os dados e o conteúdo do termo",
+      "TYPE_LABEL": "Tipo de Consentimento",
+      "TYPE_PLACEHOLDER": "Selecione o tipo...",
+      "DOCUMENT_TITLE_LABEL": "Título do Documento",
+      "DOCUMENT_TITLE_PLACEHOLDER": "Ex: Termo de Consentimento para Botox",
+      "VALIDITY_LABEL": "Validade",
+      "VALIDITY_PLACEHOLDER": "Validade",
+      "OBSERVATIONS_LABEL": "Observações Adicionais",
+      "OBSERVATIONS_OPTIONAL": "(opcional)",
+      "OBSERVATIONS_PLACEHOLDER": "Ex: Aplicação na região frontal e glabela — sessão 1/3",
+      "BODY_LABEL": "Conteúdo do Termo",
+      "BODY_HINT": "(editável — clique para personalizar)",
+      "BODY_CHARS": "{count} caracteres",
+      "BODY_PLACEHOLDER": "Selecione um tipo de consentimento acima para pré-preencher o template...",
+      "CLOSE": "Fechar",
+      "FOOTER_PREFIX": "O consentimento será criado como",
+      "FOOTER_PENDING": "pendente",
+      "FOOTER_SUFFIX": "até ser assinado",
+      "CANCEL": "Cancelar",
+      "CREATE": "Criar Consentimento",
+      "CREATING": "Criando..."
+    },
+    "EMPTY": {
+      "TITLE": "Nenhum consentimento registrado",
+      "HINT": "Clique em \"Novo Consentimento\" para adicionar o primeiro termo"
+    },
+    "TABLE": {
+      "TITLE": "Termos Registrados",
+      "SUBTITLE": "Histórico de consentimentos do paciente",
+      "DOCUMENT": "Documento",
+      "CATEGORY": "Categoria",
+      "VALIDITY": "Validade",
+      "STATUS": "Status",
+      "ACTIONS": "Ações",
+      "DEFAULT_TITLE": "Termo de Consentimento",
+      "VERSION_PREFIX": "v",
+      "HASH_PREFIX": "Hash:",
+      "VIEW": "Ver",
+      "VIEW_TITLE": "Visualizar termo",
+      "SEND": "Enviar",
+      "SEND_TITLE": "Enviar link de assinatura por WhatsApp",
+      "SIGN": "Assinar",
+      "SIGN_TITLE": "Assinar presencialmente",
+      "HASH": "Hash",
+      "HASH_TITLE": "Ver integridade",
+      "REVOKE": "Revogar",
+      "REVOKE_TITLE": "Revogar consentimento"
+    },
+    "STATUS": {
+      "PENDING": "Pendente",
+      "SIGNED": "Assinado",
+      "EXPIRED": "Vencido",
+      "REVOKED": "Revogado"
+    },
+    "SIGN_MODAL": {
+      "TITLE": "Assinatura Digital",
+      "SUBTITLE": "Assine com o dedo ou mouse no campo abaixo",
+      "PLACEHOLDER": "Assine aqui",
+      "CLEAR": "Limpar",
+      "HASH_HINT": "Hash SHA-256 gerado automaticamente",
+      "CANCEL": "Cancelar",
+      "CONFIRM": "Confirmar Assinatura"
+    },
+    "VIEW_MODAL": {
+      "DEFAULT_TITLE": "Termo de Consentimento",
+      "EMPTY_BODY": "(Conteúdo não disponível)",
+      "AUDIT_TITLE": "Auditoria Forense",
+      "SIGNED_AT": "Assinado em {date}",
+      "IP_LABEL": "IP:",
+      "SIGNATURE_LABEL": "Assinatura registrada:",
+      "SIGNATURE_ALT": "Assinatura",
+      "SIGN_NOW": "Assinar Agora",
+      "CLOSE": "Fechar"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Erro ao carregar consentimentos.",
+      "MISSING_TYPE": "Selecione o tipo de consentimento.",
+      "CREATE_SUCCESS": "Consentimento criado com sucesso!",
+      "CREATE_ERROR_PREFIX": "Erro ao criar consentimento: {detail}",
+      "CREATE_ERROR_FALLBACK": "Tente novamente.",
+      "SIGN_MISSING": "Por favor, assine no campo acima.",
+      "SIGN_SUCCESS": "Consentimento assinado com sucesso!",
+      "SIGN_ERROR_PREFIX": "Erro ao assinar: {detail}",
+      "SEND_REMOTE_SUCCESS": "Link para assinatura enviado com sucesso para o WhatsApp do paciente!",
+      "SEND_REMOTE_ERROR": "Erro ao enviar link para assinatura.",
+      "REVOKE_CONFIRM": "Tem certeza que deseja revogar este consentimento? Esta ação não pode ser desfeita.",
+      "REVOKE_SUCCESS": "Consentimento revogado.",
+      "REVOKE_ERROR": "Erro ao revogar consentimento."
+    }
+  }
+}

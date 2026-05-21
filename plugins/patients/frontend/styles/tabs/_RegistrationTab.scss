@@ -1,0 +1,642 @@
+
+.reg-dropdown-item--patient {
+  /* Sutil destaque pra deixar claro que é um paciente já cadastrado */
+  background: rgba(var(--blue-9), 0.04);
+}
+
+.reg-dropdown-item--patient:hover {
+  background: rgba(var(--blue-9), 0.1);
+}
+
+.reg-dropdown-arrow {
+  color: rgb(var(--slate-9));
+  flex-shrink: 0;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.reg-dropdown-item--patient:hover .reg-dropdown-arrow {
+  opacity: 1;
+  transform: translateX(2px);
+  color: rgb(var(--blue-9));
+}
+
+.reg-item-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.reg-item-avatar--img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.reg-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.reg-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--slate-12));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reg-item-phone {
+  font-size: 11px;
+  color: rgb(var(--slate-9));
+}
+
+/* ── Avatar Upload Premium ── */
+.reg-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 4px 0;
+}
+
+.reg-avatar-wrapper {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  cursor: pointer;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.reg-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.reg-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.reg-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.reg-avatar-wrapper:hover .reg-avatar-overlay {
+  opacity: 1;
+}
+
+.reg-avatar-info {
+  flex: 1;
+}
+
+/* ── Botões pequenos ── */
+.btn-xs {
+  padding: 5px 12px !important;
+  height: auto !important;
+  font-size: 12px !important;
+}
+
+/* ── Toggle Switch ── */
+.reg-opt-in-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .reg-opt-in-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.reg-opt-in-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.reg-opt-in-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.reg-opt-in-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reg-toggle {
+  width: 38px;
+  height: 22px;
+  border-radius: 99px;
+  background: rgb(206 206 206);
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.reg-toggle-on {
+  background: #3b82f6;
+}
+
+.reg-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.reg-toggle-on .reg-toggle-thumb {
+  transform: translateX(16px);
+}
+
+/* =====================================
+   MODAL DE CÂMERA PREMIUM (Light Mode adaptado)
+===================================== */
+.cam-modal {
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--slate-3));
+  border-radius: 20px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 420px;
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.16),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.cam-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgb(var(--slate-3));
+  background: rgb(var(--slate-2));
+}
+
+.cam-header-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cam-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--slate-2));
+  color: rgb(var(--slate-6));
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  flex-shrink: 0;
+}
+
+.cam-close-btn:hover {
+  background: rgb(var(--slate-2));
+  color: rgb(var(--slate-9));
+}
+
+/* Viewfinder: área do vídeo */
+.cam-viewfinder {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #000;
+  overflow: hidden;
+}
+
+.cam-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scaleX(-1);
+}
+
+.cam-captured {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Overlay de guia oval para o rosto */
+.cam-guide-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.cam-guide-ring {
+  width: 200px;
+  height: 240px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow:
+    0 0 0 9999px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+/* Overlay de erro */
+.cam-error-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgb(var(--slate-2));
+}
+
+/* Barra de controles */
+.cam-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  background: rgb(var(--slate-2));
+  border-top: 1px solid rgb(var(--slate-3));
+}
+
+/* Botão fantasma (Cancelar / Repetir) */
+.cam-btn-ghost {
+  min-width: 80px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--slate-6));
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+
+.cam-btn-ghost:hover {
+  color: rgb(var(--slate-9));
+  background: rgb(var(--slate-2));
+}
+
+/* Botão circular de captura (obturador) */
+.cam-btn-capture {
+  padding: 0;
+  width: 68px;
+  min-width: 68px;
+  max-width: 68px;
+  height: 68px;
+  min-height: 68px;
+  max-height: 68px;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: transparent;
+  border: 3px solid rgb(var(--slate-3));
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    transform 0.1s;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.cam-btn-capture:hover:not(:disabled) {
+  border-color: rgb(var(--slate-4));
+  transform: scale(1.04);
+}
+
+.cam-btn-capture:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.cam-btn-capture:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Disco interno do obturador */
+.cam-shutter {
+  display: block;
+  width: 52px;
+  min-width: 52px;
+  height: 52px;
+  min-height: 52px;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid rgb(var(--slate-2));
+  flex-shrink: 0;
+  transition:
+    transform 0.1s,
+    background-color 0.1s;
+}
+
+.cam-btn-capture:active:not(:disabled) .cam-shutter {
+  transform: scale(0.88);
+  background: rgb(var(--slate-1));
+}
+
+/* Botão confirmar (Usar foto) */
+.cam-btn-confirm {
+  min-width: 100px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: #10b981;
+  border: none;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.1s;
+}
+
+.cam-btn-confirm:hover {
+  background: #059669;
+  transform: scale(1.02);
+}
+
+/* ── Input com botão sobreposto (lupa do CEP) ── */
+.input-with-action {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-with-action .form-input {
+  padding-right: 36px;
+}
+.btn-icon-inside {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: rgb(var(--slate-9));
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-icon-inside:hover {
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-12));
+}
+
+/* ── Chevron rotacionado quando seção aberta ── */
+.reg-chevron-open {
+  transform: rotate(180deg);
+}
+
+/* ── Textarea (Observações) ── */
+.reg-textarea {
+  resize: vertical;
+  min-height: 84px;
+  font-family: inherit;
+  line-height: 1.45;
+}
+
+/* ── Toggle row (Possui responsável? e similares) ── */
+.reg-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+}
+.reg-toggle-row:hover {
+  background: rgb(var(--slate-3));
+  border-color: rgb(var(--slate-5));
+}
+.reg-toggle-row:focus-visible {
+  outline: 2px solid rgb(var(--blue-8));
+  outline-offset: 2px;
+}
+.reg-toggle-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.reg-toggle-row-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--slate-12));
+  margin: 0;
+}
+.reg-toggle-row-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgb(var(--slate-9));
+  margin: 0;
+}
+
+/* ── Bloco do Responsável (indentação + agrupamento visual) ── */
+.reg-guardian-block {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 16px;
+  margin-left: 6px;
+  border-left: 2px solid rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.04);
+  border-radius: 0 8px 8px 0;
+}
+
+/* ── Animação de collapse ── */
+.reg-collapse-enter-active,
+.reg-collapse-leave-active {
+  transition:
+    max-height 220ms ease,
+    opacity 180ms ease,
+    margin-top 220ms ease;
+  overflow: hidden;
+}
+.reg-collapse-enter-from,
+.reg-collapse-leave-to {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+}
+.reg-collapse-enter-to,
+.reg-collapse-leave-from {
+  max-height: 600px;
+  opacity: 1;
+}
+
+/* ── Badge WhatsApp ── */
+.reg-badge-wpp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #25d366;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.reg-badge-wpp i {
+  color: #25d366;
+}
+
+/* ── Dropdown de busca de contato ── */
+.reg-field-relative {
+  position: relative;
+}
+
+.reg-contact-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--border-strong));
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.reg-dropdown-loading {
+  padding: 12px 16px;
+  font-size: 13px;
+  color: rgb(var(--slate-9));
+  text-align: center;
+}
+
+.reg-dropdown-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.reg-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  color: rgb(var(--slate-12));
+}
+.reg-dropdown-item:hover {
+  background: rgb(var(--slate-3));
+}
+
+.reg-dropdown-section + .reg-dropdown-section {
+  margin-top: 4px;
+}
+.reg-dropdown-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgb(var(--slate-9));
+}
+.reg-dropdown-section-icon--patient {
+  color: rgb(var(--blue-9));
+}
+.reg-dropdown-section-icon--contact {
+  color: rgb(var(--slate-9));
+}
+.reg-dropdown-section-count {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgb(var(--slate-9));
+  background: rgb(var(--slate-3));
+  padding: 1px 6px;
+  border-radius: 99px;
+  letter-spacing: 0;
+}
+.reg-dropdown-divider {
+  height: 1px;
+  background: rgb(var(--border-strong));
+  margin: 4px 0;
+  opacity: 0.5;
+}

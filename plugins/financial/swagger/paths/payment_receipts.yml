@@ -1,0 +1,75 @@
+get:
+  tags:
+    - Financeiro · Recibos
+  summary: Listar recibos
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: patient_id
+      in: query
+      schema: { type: integer }
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+  responses:
+    '200':
+      description: Lista (ordem `received_at DESC, id DESC`, limit 100)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/PaymentReceipt.yml'
+post:
+  tags:
+    - Financeiro · Recibos
+  summary: Registrar pagamento (BUG-01 — multi-parcela)
+  description: |
+    Quitação de uma OU mais parcelas em uma operação. Cada item de
+    `installment_amounts` é `{ installment_id, amount_cents }`. Aceita
+    `keep_installment_open` (BUG-01) para gerar nova parcela com saldo
+    quando a soma é menor que o total das parcelas.
+
+    Requer RECEPCAO/GERENTE/ADMIN. Idempotência via header `Idempotency-Key`
+    (obrigatório).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [bank_account_id, payment_method, installment_amounts]
+          properties:
+            bank_account_id: { type: integer }
+            payment_method: { type: string }
+            received_at: { type: string, format: date, description: "Default = hoje" }
+            interest_cents: { type: integer }
+            fine_cents: { type: integer }
+            discount_cents: { type: integer }
+            apply_patient_credit_cents: { type: integer }
+            keep_installment_open: { type: boolean, default: true }
+            notes: { type: string }
+            installment_amounts:
+              type: array
+              items:
+                type: object
+                required: [installment_id, amount_cents]
+                properties:
+                  installment_id: { type: integer }
+                  amount_cents: { type: integer }
+  responses:
+    '201':
+      description: Recibo criado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PaymentReceipt.yml'
+    '422':
+      description: Erro de validação

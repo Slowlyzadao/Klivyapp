@@ -1,0 +1,53 @@
+get:
+  tags:
+    - Agendamentos
+  summary: Agregação anual por dia/status (Year View)
+  description: |
+    Agregação leve para a Year View do calendário: contagens por dia e
+    breakdown por status para um ano inteiro, em **1 query** (`GROUP BY`).
+    Não retorna eventos crus — usar `GET /agenda_events` para isso.
+    Conversão `starts_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo'`
+    garante que evento de 23h não pule pro dia seguinte por UTC offset.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: year
+      in: query
+      required: true
+      description: Ano entre 2000 e 2100.
+      schema:
+        type: integer
+        minimum: 2000
+        maximum: 2100
+        example: 2026
+    - name: user_id
+      in: query
+      description: Opcional. Filtra por profissional (paridade com `index`).
+      schema:
+        type: integer
+  responses:
+    '200':
+      description: Estatísticas agregadas
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              year:
+                type: integer
+                example: 2026
+              by_day:
+                type: object
+                description: Chaves no formato `YYYY-MM-DD`.
+                additionalProperties:
+                  type: object
+                  properties:
+                    count: { type: integer }
+                    scheduled: { type: integer }
+                    confirmed: { type: integer }
+                    arrived: { type: integer }
+                    in_progress: { type: integer }
+                    completed: { type: integer }
+                    cancelled: { type: integer }
+                    no_show: { type: integer }
+    '422':
+      description: Ano fora do range permitido (`Invalid year`).

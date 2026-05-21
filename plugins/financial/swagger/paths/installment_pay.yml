@@ -1,0 +1,45 @@
+post:
+  tags:
+    - Financeiro · Parcelas
+  summary: Baixa de parcela individual
+  description: |
+    Endpoint simplificado pra aba do paciente — paga uma parcela só
+    delegando ao service `Financial::ReceivePayment`. Aceita **baixa parcial**
+    (canon BUG-01) via `amount_cents` < `remaining`. Se `keep_installment_open=true`
+    (default), gera nova parcela com o saldo restante.
+
+    Idempotência via header `Idempotency-Key` (obrigatório).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [payment_method]
+          properties:
+            payment_method: { type: string, example: pix }
+            paid_at: { type: string, format: date, description: "Default = hoje" }
+            received_at: { type: string, format: date, description: "Alias de `paid_at`" }
+            bank_account_id: { type: integer, description: "Default = primeira conta ativa" }
+            amount_cents: { type: integer, description: "Default = `remaining_cents` (baixa total)" }
+            interest_cents: { type: integer }
+            fine_cents: { type: integer }
+            discount_cents: { type: integer }
+            apply_patient_credit_cents: { type: integer }
+            keep_installment_open:
+              type: boolean
+              default: true
+              description: BUG-01 — mantém saldo em nova parcela quando baixa é parcial.
+            notes: { type: string }
+  responses:
+    '200':
+      description: Parcela atualizada (com `receipts` inline)
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Installment.yml'
+    '422':
+      description: Erro (conta não encontrada, etc)

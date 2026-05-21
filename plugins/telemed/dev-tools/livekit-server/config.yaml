@@ -1,0 +1,55 @@
+# Sprint L — Config do LiveKit server pra DEV LOCAL.
+#
+# Por que não usar só `--dev`? Porque --dev sem config NÃO envia webhooks.
+# Sem webhook, o Rails nunca sabe quando o Egress termina a gravação →
+# TranscribeRecordingJob nunca dispara → o fluxo todo morre silenciosamente.
+#
+# Esse arquivo casa com --dev (devkey/secret hardcoded) e adiciona o que
+# faltava: a URL de webhook.
+#
+# Subir via: livekit-server --dev --config dev-tools/livekit-server/config.yaml --bind 0.0.0.0
+
+port: 7880
+
+# Mesmas chaves do --dev mode pra não quebrar nada que já funciona
+keys:
+  devkey: secret
+
+# 🔑 WebRTC config pra dev local com paciente vindo via cloudflared.
+#
+# LIMITAÇÃO REAL: cloudflared free tunela só HTTP/WSS. As portas WebRTC
+# UDP (7882) e TCP (7881) NÃO estão tuneladas. Pra paciente em rede
+# residencial (WiFi com NAT cone), o LiveKit consegue negociar via IP
+# externo + STUN público. Pra paciente em 4G/5G mobile (NAT simétrico
+# carrier-grade), pode falhar mesmo assim — solução real é LiveKit Cloud
+# free tier (tem TURN gerenciado).
+#
+# `use_external_ip: true` → LiveKit detecta IP público via STUN público
+# (default Google) e anuncia como ICE candidate.
+# `allow_tcp_fallback: true` → cliente cai pra TCP 7881 se UDP falha.
+rtc:
+  use_external_ip: true
+  allow_tcp_fallback: true
+
+# 🔑 Redis é OBRIGATÓRIO pro Egress funcionar.
+# Em `--dev` mode (single-node routing, in-memory), LiveKit não publica
+# jobs de Egress em lugar nenhum — e o Egress server fica eternamente
+# escutando no Redis sem receber nada (StartRoomCompositeEgress dá
+# timeout 503 "no response from servers" depois de 23s).
+# Com redis aqui, LiveKit usa redis-routing e os jobs chegam no Egress.
+redis:
+  address: localhost:6379
+
+# 🔑 O que estava faltando — webhooks pro backend Rails.
+# Eventos enviados: room_started, room_finished, participant_joined,
+# participant_left, egress_started, egress_updated, egress_ended.
+# O EgressController valida via JWT HS256 assinado com este api_secret
+# (mesma chave do api_key acima — LiveKit server assina, Rails decoda).
+webhook:
+  api_key: devkey
+  urls:
+    - http://localhost:3000/webhooks/livekit/egress
+
+# Logging
+logging:
+  level: info

@@ -1,0 +1,45 @@
+get:
+  tags:
+    - Financeiro · Backups
+  summary: Listar backups (local + R2)
+  description: |
+    Merge de arquivos do volume local (`FINANCIAL_BACKUP_PATH`, default
+    `/app/storage/postgres-backups`) e R2 Cloudflare. `sources` indica
+    onde cada arquivo existe (pode ser `[local, r2]` simultaneamente).
+    Requer ADMIN/AUDITOR.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Lista + meta
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/BackupFile.yml'
+              meta:
+                type: object
+                properties:
+                  local:
+                    type: object
+                    properties:
+                      path: { type: string }
+                      configured: { type: boolean }
+                      count: { type: integer }
+                  r2:
+                    type: object
+                    properties:
+                      configured: { type: boolean }
+                      bucket: { type: string }
+                      count: { type: integer }
+                      error: { type: string }
+                  total: { type: integer }
+                  oldest_days: { type: integer, nullable: true }
+                  newest_days: { type: integer, nullable: true }
+                  total_size_human: { type: string }
+    '500':
+      description: Erro ao listar

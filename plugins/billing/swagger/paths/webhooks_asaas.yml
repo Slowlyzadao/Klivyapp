@@ -1,0 +1,31 @@
+post:
+  tags:
+    - Billing · Webhooks
+  summary: Receber webhook do Asaas (billing/cobrança)
+  description: |
+    Endpoint **público** (sem CSRF/auth) que enfileira
+    `Billing::ProcessAsaasWebhookJob` para processamento assíncrono e
+    responde 200 OK **imediatamente** — evita timeout no Asaas
+    (que tem janela curta antes de marcar webhook como falho).
+
+    **Diferente do webhook financeiro** (`/webhooks/financial/asaas`): este
+    aqui é do **plano de assinatura** (subscription/cobrança da conta Klivy),
+    aquele é do **gateway de pagamento** que a clínica usa para receber dos
+    pacientes.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          description: "Payload arbitrário do Asaas (varia por `event`)."
+          additionalProperties: true
+  responses:
+    '200':
+      description: Enfileirado (sempre 200 — processamento é async)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success: { type: boolean }

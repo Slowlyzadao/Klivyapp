@@ -1,0 +1,29 @@
+type: object
+description: |
+  Estado do wizard de configuração inicial (canon F-04). Cada step é um
+  flag booleano; quando todos os obrigatórios estão `true`, o `status`
+  vira `completed` automaticamente.
+properties:
+  status:
+    type: string
+    enum: [pending, in_progress, completed]
+  progress_percent:
+    type: integer
+    minimum: 0
+    maximum: 100
+  required_steps_done:
+    type: boolean
+  all_steps_done:
+    type: boolean
+  steps:
+    type: object
+    properties:
+      categories: { type: boolean }
+      bank_accounts: { type: boolean }
+      commission_rules: { type: boolean }
+      recurring_expenses: { type: boolean }
+      revenue_goal: { type: boolean }
+  completed_at:
+    type: string
+    format: date-time
+    nullable: true

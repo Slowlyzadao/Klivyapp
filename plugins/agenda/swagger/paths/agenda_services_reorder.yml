@@ -1,0 +1,31 @@
+patch:
+  tags:
+    - Serviços da Agenda
+  summary: Reordenar serviços
+  description: |
+    Reordena serviços preservando os SLOTS de posição dos IDs enviados.
+    Reordenar a "página 2" da listagem paginada mantém os slots [10..19] —
+    só muda quem fica em cada slot, sem mexer na página 1.
+
+    Idempotente. IDs duplicados, inexistentes ou cross-tenant são ignorados.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [ids]
+          properties:
+            ids:
+              type: array
+              description: Nova ordem desejada (apenas IDs dos serviços que estão sendo reordenados — não precisa ser a lista completa).
+              items:
+                type: integer
+              example: [12, 7, 19, 3]
+  responses:
+    '200':
+      description: Reordenação aplicada (ou nada a fazer)
+    '422':
+      description: "`ids` não é array"

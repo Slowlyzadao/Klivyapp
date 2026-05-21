@@ -1,0 +1,11 @@
+pt_BR:
+  devise:
+    mailer:
+      confirmation_instructions:
+        subject: "Confirme seu e-mail para ativar sua conta Klivy"
+      reset_password_instructions:
+        subject: "Redefinição de senha - Klivy"
+      password_change:
+        subject: "Sua senha na Klivy foi alterada"
+      unlock_instructions:
+        subject: "Instruções para desbloquear sua conta Klivy"

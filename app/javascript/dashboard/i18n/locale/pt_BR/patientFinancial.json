@@ -1,0 +1,257 @@
+{
+  "PATIENT_FINANCIAL": {
+    "HEADER": {
+      "TITLE": "Financeiro do Paciente",
+      "SUBTITLE": "Orçamentos, cobranças, parcelas e pagamentos vinculados ao tratamento.",
+      "NEW_ESTIMATE": "Novo Orçamento",
+      "NEW_ENTRY": "Novo Lançamento",
+      "RECEIVE_PAYMENT": "Receber Pagamento",
+      "PRINT_STATEMENT": "Imprimir Extrato"
+    },
+    "KPI": {
+      "TOTAL_APPROVED": "Total Aprovado",
+      "TOTAL_APPROVED_HINT": "Plano principal",
+      "TOTAL_PAID": "Pago / Recebido",
+      "TOTAL_PAID_HINT": "Atualizado",
+      "TOTAL_OPEN": "Em Aberto",
+      "NEXT_DUE": "Próx: {date}",
+      "NO_PENDING": "Sem pendências",
+      "TOTAL_OVERDUE": "Devedor (Vencido)",
+      "OVERDUE_NEEDS_ATTENTION": "Exige atenção",
+      "OVERDUE_ALL_OK": "Tudo em dia",
+      "CREDIT": "Crédito",
+      "CREDIT_HINT": "Saldo de estornos"
+    },
+    "TABS": {
+      "TRANSACTIONS": "Transações",
+      "ESTIMATES": "Orçamentos",
+      "TREATMENT_PLANS": "Plano de Tratamento",
+      "RECEIPTS": "Recibos"
+    },
+    "FILTERS": {
+      "ALL": "Todos",
+      "OPEN": "Em aberto",
+      "PENDING": "Pendentes",
+      "PAID": "Recebidos",
+      "OVERDUE": "Vencidos",
+      "REFUNDED": "Estornados",
+      "ARIA_LABEL": "Filtrar lançamentos por status"
+    },
+    "TX_TABLE": {
+      "DUE_DATE": "Vencimento",
+      "DESCRIPTION": "Descrição",
+      "INSTALLMENT": "Parcela",
+      "AMOUNT": "Valor (R$)",
+      "METHOD": "Método",
+      "STATUS": "Status",
+      "ACTIONS": "Ações",
+      "EMPTY": "Nenhuma transação encontrada.",
+      "PAID_AT": "Pago em {date}",
+      "DEFAULT_DESCRIPTION": "Procedimento/Plano",
+      "MANUAL_BADGE": "Manual"
+    },
+    "TX_ACTIONS": {
+      "RECEIVE": "Receber",
+      "WHATSAPP_TITLE": "Cobrar via WhatsApp",
+      "VIEW_PROOF_TITLE": "Ver comprovante",
+      "ATTACH_PROOF_TITLE": "Anexar comprovante",
+      "REFUND_TITLE": "Estornar transação"
+    },
+    "ESTIMATES": {
+      "EMPTY": "Nenhum orçamento encontrado.",
+      "EMPTY_HINT": "Clique em \"Novo Orçamento\" para criar.",
+      "ID_PREFIX": "Orçamento #{id}",
+      "PLAN_LINKED": "Plano de Tratamento",
+      "SUBTOTAL": "Subtotal",
+      "DISCOUNT": "Desconto",
+      "TOTAL": "Total",
+      "INSTALLMENTS": "Parcelas",
+      "INSTALLMENTS_VALUE": "{count}x de {amount}",
+      "PAID": "Pago",
+      "PENDING": "Pendente",
+      "OVERDUE": "Vencido",
+      "CREATED_AT": "Criado em {date}",
+      "VALID_UNTIL": "Válido até {date}",
+      "APPROVE": "Aprovar",
+      "CANCEL": "Cancelar"
+    },
+    "RECEIPTS": {
+      "PAYMENT_DATE": "Data Pagamento",
+      "DESCRIPTION": "Descrição",
+      "AMOUNT": "Valor (R$)",
+      "METHOD": "Método",
+      "RECEIPT": "Recibo",
+      "LOADING": "Gerando...",
+      "EMPTY": "Nenhum pagamento confirmado ainda.",
+      "DEFAULT_DESCRIPTION": "Pagamento"
+    },
+    "MODALS": {
+      "PAY": {
+        "TITLE": "Registrar Pagamento",
+        "SUBTITLE": "Confirme o método e data do pagamento",
+        "SELECT_INSTALLMENT": "Selecionar Parcela *",
+        "NO_PENDING": "Nenhuma parcela pendente. Todas as parcelas estão pagas!",
+        "INSTALLMENT_LABEL": "Venc: {date} · Parcela {current}/{total}",
+        "INSTALLMENT_OF": "Parcela {current}/{total}",
+        "DUE_AT": "Vence {date}",
+        "SELECTED": "Parcela selecionada",
+        "DEFAULT_INSTALLMENT": "Parcela",
+        "CHANGE": "Trocar",
+        "PAYMENT_METHOD": "Método de Pagamento *",
+        "PAYMENT_DATE": "Data do Pagamento",
+        "BANK_ACCOUNT": "Conta de Destino",
+        "BANK_ACCOUNT_PLACEHOLDER": "— Selecionar conta —",
+        "DATE_PLACEHOLDER": "Selecione a data",
+        "CONFIRM": "Confirmar Pagamento",
+        "CANCEL": "Cancelar"
+      },
+      "ESTIMATE": {
+        "TITLE": "Novo Lançamento",
+        "SUBTITLE": "Crie um lançamento financeiro para este paciente",
+        "RECURRENCE_TYPE_LABEL": "Tipo de Lançamento",
+        "SUBTOTAL": "Subtotal (R$) *",
+        "INSTALLMENTS": "Parcelas",
+        "DISCOUNT_TYPE": "Tipo de Desconto",
+        "DISCOUNT_VALUE": "Valor Desconto",
+        "DEFAULT_METHOD": "Método Padrão",
+        "FIRST_DUE": "1º Vencimento",
+        "NOTES": "Observações",
+        "NOTES_PLACEHOLDER": "Observações sobre o lançamento...",
+        "PREVIEW_INSTALLMENTS": "{count}x de",
+        "CONFIRM": "Criar Lançamento",
+        "CANCEL": "Cancelar",
+        "DATE_PLACEHOLDER": "Selecione a data",
+        "DISCOUNT_PLACEHOLDER": "Tipo de desconto",
+        "METHOD_PLACEHOLDER": "Método de pagamento"
+      },
+      "PROOF": {
+        "TITLE": "Anexar Comprovante",
+        "SUBTITLE": "Anexe o comprovante de pagamento (PIX, boleto, etc.)",
+        "TRANSACTION": "Transação",
+        "DEFAULT_DESCRIPTION": "Pagamento",
+        "FILE_LABEL": "Arquivo (imagem ou PDF)",
+        "FILE_HINT": "Clique para selecionar ou arraste o arquivo",
+        "FILE_LIMITS": "PNG, JPG, PDF — máx. 10MB",
+        "UPLOADING": "Enviando comprovante..."
+      },
+      "PRINT": {
+        "PRINT_PDF": "Imprimir / PDF"
+      }
+    },
+    "STATUS": {
+      "TX": {
+        "PAID": "PAGO",
+        "PENDING": "EM ABERTO",
+        "OVERDUE": "VENCIDO",
+        "CANCELLED": "CANCELADO",
+        "REFUNDED": "ESTORNADO",
+        "PARTIAL": "PARCIAL"
+      },
+      "ESTIMATE": {
+        "DRAFT": "Rascunho",
+        "SENT": "Enviado",
+        "APPROVED": "Aprovado",
+        "CANCELLED": "Cancelado"
+      }
+    },
+    "DISCOUNT": {
+      "FIXED": "Valor Fixo (R$)",
+      "PERCENT": "Percentual (%)"
+    },
+    "PAYMENT_METHODS": {
+      "PIX": "PIX",
+      "CREDIT_CARD": "Cartão de Crédito",
+      "DEBIT_CARD": "Cartão de Débito",
+      "CASH": "Dinheiro",
+      "BOLETO": "Boleto",
+      "TRANSFER": "Transferência",
+      "OTHERS": "Outros",
+      "BADGE": {
+        "PIX": "PIX",
+        "CREDIT_CARD": "Crédito",
+        "DEBIT_CARD": "Débito",
+        "CASH": "Dinheiro",
+        "BOLETO": "Boleto",
+        "TRANSFER": "Transf.",
+        "OTHERS": "Outros"
+      }
+    },
+    "REFUND_MODAL": {
+      "TITLE": "Estornar pagamento",
+      "ORIGINAL_AMOUNT": "Valor original",
+      "DESCRIPTION": "Descrição",
+      "AMOUNT_LABEL": "Valor a estornar (R$)",
+      "PARTIAL_HINT": "Estorno parcial — restará {remaining} pago.",
+      "METHOD_LABEL": "Método de devolução",
+      "REASON_LABEL": "Motivo do estorno",
+      "REASON_PLACEHOLDER": "Ex: pagamento duplicado, paciente desistiu...",
+      "REASON_HINT": "Vai pra observação da nova transação de reembolso. Útil pra auditoria.",
+      "OPTIONAL": "opcional",
+      "IRREVERSIBLE_WARNING": "Esta ação não pode ser desfeita. Uma nova transação de reembolso será criada e a original ficará marcada como estornada.",
+      "ERROR_AMOUNT_REQUIRED": "Informe um valor maior que zero.",
+      "ERROR_AMOUNT_EXCEEDS": "O valor a estornar não pode ser maior que o valor original.",
+      "CANCEL": "Cancelar",
+      "CONFIRM": "Confirmar estorno"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Erro ao carregar dados financeiros.",
+      "PAY_SUCCESS": "Pagamento registrado com sucesso!",
+      "PAY_ERROR": "Erro ao registrar pagamento.",
+      "ESTIMATE_INVALID_SUBTOTAL": "Informe um subtotal válido.",
+      "ESTIMATE_CREATED": "Orçamento criado com sucesso!",
+      "ESTIMATE_CREATE_ERROR": "Erro ao criar orçamento.",
+      "ESTIMATE_APPROVED": "Orçamento aprovado!",
+      "ESTIMATE_APPROVE_ERROR": "Erro ao aprovar orçamento.",
+      "ESTIMATE_CANCELLED": "Orçamento cancelado.",
+      "ESTIMATE_CANCEL_ERROR": "Erro ao cancelar orçamento.",
+      "WHATSAPP_NO_PHONE": "Cobrança preparada — paciente sem telefone cadastrado.",
+      "WHATSAPP_ERROR": "Erro ao preparar cobrança WhatsApp.",
+      "REFUND_CONFIRM": "Confirmar estorno desta transação?",
+      "REFUND_SUCCESS": "Transação estornada com sucesso!",
+      "REFUND_ERROR": "Erro ao estornar transação.",
+      "PROOF_SUCCESS": "Comprovante anexado com sucesso!",
+      "PROOF_ERROR": "Erro ao anexar comprovante."
+    },
+    "PRINT": {
+      "STATEMENT_TITLE": "Extrato Financeiro",
+      "RECEIPT_TITLE_PREFIX": "Recibo #{number}"
+    },
+    "VIEW_MODE": {
+      "ARIA_LABEL": "Alternar entre visão clássica e timeline",
+      "CLASSIC": "Visão Clássica",
+      "TIMELINE": "Visão Timeline"
+    },
+    "TIMELINE": {
+      "LOADING": "Carregando timeline financeira...",
+      "EMPTY_TITLE": "Sem lançamentos ainda",
+      "EMPTY_HINT": "Crie um lançamento ou registre um pagamento para começar.",
+      "UNSUPPORTED_HINT": "Timeline indisponível para esta clínica no momento. Estamos trabalhando nisso — em breve estará disponível.",
+      "FEATURE_DISABLED_HINT": "O módulo financeiro do prontuário está em manutenção para esta clínica. Entre em contato com o suporte se precisar de acesso urgente.",
+      "DUE_AT": "Vence em {date}",
+      "TOGGLE_ARIA": "Expandir lançamento: {description}",
+      "NEEDS_APPROVAL": "Precisa aprovação",
+      "RECURRENCE": {
+        "AVULSO": "Avulso",
+        "PARCELAMENTO": "Parcelamento",
+        "MENSALIDADE": "Mensalidade",
+        "PLANO_TRATAMENTO": "Plano de Tratamento",
+        "MENSALIDADE_TOOLTIP": "Cobranças automáticas estarão disponíveis em versões futuras."
+      },
+      "ACTIONS": {
+        "APPROVE_ESTIMATE": "Aprovar orçamento",
+        "CANCEL_ESTIMATE": "Cancelar orçamento",
+        "RECEIPT_TITLE": "Imprimir recibo"
+      }
+    },
+    "PROGRESS": {
+      "PAID_LABEL": "pagas",
+      "OVERDUE_LABEL": "vencidas",
+      "ARIA_PAID": "{paid} de {total} parcelas pagas",
+      "ARIA_OVERDUE": "{overdue} vencidas",
+      "ARIA_OPEN": "{open} em aberto",
+      "PAID_TOOLTIP": "{count} pagas",
+      "OPEN_TOOLTIP": "{count} em aberto",
+      "OVERDUE_TOOLTIP": "{count} vencidas"
+    }
+  }
+}

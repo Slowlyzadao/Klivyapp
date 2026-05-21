@@ -1,0 +1,19 @@
+get:
+  tags:
+    - Financeiro · Paciente
+  summary: Summary financeiro do paciente (aba do prontuário)
+  description: |
+    Substitui `Patients::TransactionsController#financial_summary` legacy.
+    Retorna **2 versões dos números** — em BRL (decimal) pra compat e em
+    centavos (`_cents`) pra código novo. `overall_status`:
+    `inadimplente` > `em_aberto` > `em_dia`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  responses:
+    '200':
+      description: Summary
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PatientFinancialSummary.yml'

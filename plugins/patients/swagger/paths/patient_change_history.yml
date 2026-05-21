@@ -1,0 +1,51 @@
+get:
+  tags:
+    - Pacientes
+  summary: Histórico de mudanças do paciente
+  description: |
+    Lista os `PatientAuditLog` com `action IN (update, create)`, paginados,
+    ordem `occurred_at DESC`. Para o feed completo (`view`, `delete`, etc),
+    use [audit_logs](#tag/Audit-Logs).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+    - name: page
+      in: query
+      schema: { type: integer, default: 1 }
+    - name: per_page
+      in: query
+      schema: { type: integer, default: 25, maximum: 500 }
+  responses:
+    '200':
+      description: Histórico paginado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              payload:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    action: { type: string, enum: [create, update] }
+                    actor:
+                      type: object
+                      properties:
+                        id: { type: integer, nullable: true }
+                        name: { type: string, description: "'Sistema' quando ator nulo" }
+                    changed_fields:
+                      type: array
+                      items: { type: string }
+                    resource_type: { type: string }
+                    old_value: { type: object, additionalProperties: true }
+                    new_value: { type: object, additionalProperties: true }
+                    ip_address: { type: string, nullable: true }
+                    occurred_at: { type: string, format: date-time }
+              meta:
+                type: object
+                properties:
+                  total_count: { type: integer }
+                  current_page: { type: integer }
+                  total_pages: { type: integer }

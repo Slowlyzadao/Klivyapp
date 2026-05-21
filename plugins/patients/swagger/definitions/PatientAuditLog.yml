@@ -1,0 +1,29 @@
+type: object
+description: |
+  Log de auditoria do paciente — registra TODA mudança/visualização para
+  compliance LGPD. Inclui `view`, `create`, `update`, `delete`, `sign`,
+  `erratum`, `clinical_override`, `patient_sign_local`,
+  `patient_signature_link_sent`.
+properties:
+  id: { type: integer }
+  action:
+    type: string
+    enum: [view, create, update, delete, sign, erratum, clinical_override, patient_sign_local, patient_signature_link_sent, approve, export]
+  actor_id: { type: integer, nullable: true }
+  actor_name: { type: string, nullable: true, description: "'Sistema' quando ator nulo" }
+  actor_role: { type: string, nullable: true }
+  resource_type: { type: string, nullable: true, description: "Classe Ruby do recurso afetado" }
+  resource_id: { type: integer, nullable: true }
+  changed_fields:
+    type: array
+    items: { type: string }
+  old_value:
+    type: object
+    nullable: true
+    additionalProperties: true
+  new_value:
+    type: object
+    nullable: true
+    additionalProperties: true
+  ip_address: { type: string, nullable: true }
+  occurred_at: { type: string, format: date-time }

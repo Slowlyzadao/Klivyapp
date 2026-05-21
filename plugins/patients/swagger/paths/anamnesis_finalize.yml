@@ -1,0 +1,31 @@
+patch:
+  tags:
+    - Anamneses
+  summary: Finalizar anamnese
+  description: |
+    Marca como finalizada (imutável) via `Patients::AnamnesisFinalizerService`.
+    Pode **criar `CriticalAlert`s automaticamente** a partir de alergias e
+    condições marcadas como graves — retorna a contagem em `critical_alerts_created`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Finalizada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success: { type: boolean }
+              anamnesis:
+                type: object
+                properties:
+                  id: { type: integer }
+                  status: { type: string }
+                  version_number: { type: integer }
+                  finalized_at: { type: string, format: date-time }
+              critical_alerts_created: { type: integer }
+    '422':
+      description: Erro na finalização

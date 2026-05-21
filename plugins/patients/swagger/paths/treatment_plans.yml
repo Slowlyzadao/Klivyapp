@@ -1,0 +1,47 @@
+get:
+  tags:
+    - Planos de Tratamento
+  summary: Listar planos de tratamento
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  responses:
+    '200':
+      description: Lista ordenada por `created_at DESC` (com `treatment_items` inline)
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/TreatmentPlan.yml'
+post:
+  tags:
+    - Planos de Tratamento
+  summary: Criar plano (status inicial `proposto`)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [treatment_plan]
+          properties:
+            treatment_plan:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                estimated_duration: { type: string }
+                lock_version: { type: integer }
+  responses:
+    '201':
+      description: Plano criado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/TreatmentPlan.yml'
+    '422':
+      description: Erro de validação

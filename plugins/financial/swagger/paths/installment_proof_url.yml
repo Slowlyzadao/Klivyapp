@@ -1,0 +1,16 @@
+get:
+  tags:
+    - Financeiro · Parcelas
+  summary: URL assinada do comprovante (15min)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: URL signed (ou `null` se não há anexo)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              url: { type: string, nullable: true }

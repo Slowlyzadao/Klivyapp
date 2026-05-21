@@ -1,0 +1,19 @@
+post:
+  tags:
+    - Serviços da Agenda
+  summary: Restaurar serviço arquivado
+  description: |
+    Desfaz soft-delete (zera `deleted_at`). Idempotente: se já está vivo,
+    no-op. AuditLog registra ação `restore` via concern Auditable.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Restaurado (ou já estava vivo)
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaService.yml'
+    '404':
+      description: Serviço não encontrado

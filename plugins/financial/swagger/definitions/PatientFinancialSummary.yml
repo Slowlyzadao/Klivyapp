@@ -1,0 +1,27 @@
+type: object
+description: |
+  Summary financeiro do paciente. Devolve **2 versões dos números**:
+  campos legacy em BRL (decimal) para compat com `Patients::TransactionsController#financial_summary`,
+  e versões em centavos (`_cents`) — preferir essas em código novo.
+
+  Status overall: `inadimplente` (overdue > 0) > `em_aberto` (open > 0) > `em_dia`.
+properties:
+  total_approved:
+    type: number
+    format: float
+    description: "BRL. Σ Budget(aprovado|concluido).total"
+  total_paid: { type: number, format: float }
+  total_open: { type: number, format: float }
+  total_overdue: { type: number, format: float }
+  credit_balance: { type: number, format: float }
+  overall_status:
+    type: string
+    enum: [em_dia, em_aberto, inadimplente]
+  next_due_date: { type: string, format: date, nullable: true }
+  next_due_amount: { type: number, format: float, nullable: true }
+  total_approved_cents: { type: integer }
+  total_paid_cents: { type: integer }
+  total_open_cents: { type: integer }
+  total_overdue_cents: { type: integer }
+  credit_balance_cents: { type: integer }
+  next_due_amount_cents: { type: integer, nullable: true }

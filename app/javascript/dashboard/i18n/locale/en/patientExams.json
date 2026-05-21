@@ -1,0 +1,127 @@
+{
+  "PATIENT_EXAMS": {
+    "HEADER": {
+      "TITLE": "Exams and Images",
+      "SUBTITLE": "Clinical gallery, lab exams and X-rays with PDF and image support.",
+      "LIMITS": "Accepted: images (JPG, PNG, WEBP, HEIC) up to 5MB · PDF up to 10MB · video (MP4, MOV, WEBM) up to 20MB",
+      "NEW_FOLDER": "New Folder",
+      "UPLOAD": "Upload",
+      "UPLOAD_PROGRESS": "Uploading... {progress}%",
+      "UPLOAD_PROGRESS_LABEL": "Uploading file... {progress}%"
+    },
+    "BREADCRUMB": {
+      "ROOT": "Exams",
+      "ALL_FILES": "All files",
+      "FILE_COUNT": "({count} file(s))",
+      "DRAG_HINT": "Drag to a folder on the side"
+    },
+    "SIDEBAR": {
+      "ALL_FILES": "All files",
+      "FOLDERS_SECTION": "Folders",
+      "EMPTY": "No folders created",
+      "PROMOTE_TO_ROOT": "Move to root",
+      "RENAME_TITLE": "Rename folder",
+      "DELETE_TITLE": "Delete folder",
+      "RENAME_SUBFOLDER_TITLE": "Rename",
+      "DELETE_SUBFOLDER_TITLE": "Delete"
+    },
+    "FILTERS": {
+      "ALL": "All",
+      "IMAGES": "Images",
+      "VIDEOS": "Videos",
+      "PDFS": "PDFs",
+      "DOCUMENTS": "Documents"
+    },
+    "EMPTY": {
+      "TITLE": "This folder is empty",
+      "HINT": "Upload or drag a file from another folder"
+    },
+    "CARD": {
+      "DEFAULT_NAME": "File",
+      "LOCK_BADGE": "Locked file",
+      "VIDEO_BADGE": "VIDEO",
+      "RENAME_TITLE": "Rename",
+      "DOWNLOAD_TITLE": "Download file",
+      "LOCK_TITLE": "Lock file",
+      "UNLOCK_TITLE": "Unlock file",
+      "DELETE_TITLE": "Delete"
+    },
+    "MODALS": {
+      "CREATE_FOLDER": {
+        "TITLE": "New Folder",
+        "PLACEHOLDER": "Folder name...",
+        "CANCEL": "Cancel",
+        "CREATE": "Create Folder"
+      },
+      "RENAME_FOLDER": {
+        "TITLE": "Rename Folder",
+        "NAME_LABEL": "Name",
+        "PLACEHOLDER": "Folder name...",
+        "COLOR_LABEL": "Folder color",
+        "PREVIEW_DEFAULT": "Preview",
+        "CANCEL": "Cancel",
+        "SAVE": "Save"
+      },
+      "DELETE_FOLDER": {
+        "BLOCKED_TITLE": "Deletion Blocked",
+        "BLOCKED_OK": "Got it",
+        "TITLE": "Delete Folder",
+        "CONFIRM_PREFIX": "Are you sure you want to delete the folder",
+        "CONFIRM_SUFFIX": "? Files inside will be moved to the root.",
+        "CANCEL": "Cancel",
+        "DELETE": "Delete"
+      },
+      "LOCK_MEDIA": {
+        "LOCK_TITLE": "Lock File",
+        "UNLOCK_TITLE": "Unlock File",
+        "LOCK_MESSAGE": "The file will be protected against accidental deletion. You can unlock it anytime.",
+        "UNLOCK_MESSAGE": "The file will be deletable again. Confirm unlock?",
+        "CANCEL": "Cancel",
+        "CONFIRM": "Confirm"
+      },
+      "DELETE_MEDIA": {
+        "TITLE": "Delete File",
+        "CONFIRM_PREFIX": "Are you sure you want to delete the file",
+        "CONFIRM_SUFFIX": "? This action cannot be undone.",
+        "DEFAULT_NAME": "this file",
+        "CANCEL": "Cancel",
+        "DELETE": "Delete",
+        "DELETING": "Deleting..."
+      }
+    },
+    "LIGHTBOX": {
+      "DOWNLOAD": "Open in new tab",
+      "CLOSE": "Close",
+      "PDF_TITLE": "PDF Viewer"
+    },
+    "MESSAGES": {
+      "LOAD_MEDIA_ERROR": "Error loading exams and images.",
+      "LOAD_FOLDERS_ERROR": "Error loading exam folders.",
+      "REORDER_REVERTED": "Error reordering folders. Order was reverted.",
+      "FOLDER_NESTING_LIMIT": "Cannot create subfolders inside subfolders. Maximum of 1 nesting level allowed.",
+      "FOLDER_CIRCULAR": "Cannot create a circular hierarchy.",
+      "FOLDER_MOVED_INTO": "\"{name}\" moved into \"{target}\"",
+      "CREATE_FOLDER_ERROR": "Error creating folder.",
+      "RENAME_FOLDER_ERROR": "Error renaming folder.",
+      "DELETE_FOLDER_BLOCKED": "There are one or more locked files in this folder. Unlock them before deleting the folder.",
+      "DELETE_FOLDER_ERROR": "Error deleting folder.",
+      "MOVE_SUCCESS": "File moved successfully!",
+      "MOVE_ERROR": "Error moving file.",
+      "LOCK_SUCCESS": "File locked successfully!",
+      "UNLOCK_SUCCESS": "File unlocked successfully!",
+      "LOCK_ERROR": "Error toggling lock.",
+      "RENAME_MEDIA_ERROR": "Error renaming file.",
+      "RENAME_DUPLICATE_NAME": "A file with this name already exists in this folder. Use a different name.",
+      "DELETE_LOCKED_BLOCKED": "This file is locked and cannot be deleted. Unlock it first.",
+      "DELETE_MEDIA_SUCCESS": "File deleted successfully.",
+      "DELETE_MEDIA_ERROR": "Error deleting file.",
+      "UPLOAD_INVALID_FORMAT": "Unsupported format. Accepted: image (JPG/PNG/WEBP/HEIC), PDF or video (MP4/MOV/WEBM).",
+      "UPLOAD_TOO_LARGE": "File too large. Maximum {limit} for {kind}.",
+      "UPLOAD_KIND_IMAGE": "image",
+      "UPLOAD_KIND_PDF": "PDF",
+      "UPLOAD_KIND_VIDEO": "video",
+      "UPLOAD_SUCCESS": "Media uploaded successfully!",
+      "UPLOAD_ERROR": "Error uploading media."
+    }
+  }
+}

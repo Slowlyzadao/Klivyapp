@@ -1,0 +1,49 @@
+get:
+  tags:
+    - Regras de Notificação
+  summary: Detalhar regra
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Regra
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaNotificationRule.yml'
+patch:
+  tags:
+    - Regras de Notificação
+  summary: Atualizar regra
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [agenda_notification_rule]
+          properties:
+            agenda_notification_rule:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Regra atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaNotificationRule.yml'
+delete:
+  tags:
+    - Regras de Notificação
+  summary: Excluir regra
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Regra excluída (hard-delete)

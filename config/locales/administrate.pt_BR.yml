@@ -1,0 +1,123 @@
+pt_BR:
+  administrate:
+    actions:
+      confirm: "Tem certeza?"
+      destroy: "Excluir"
+      edit: "Editar"
+      edit_resource: "Editar %{name}"
+      show_resource: "Ver %{name}"
+      new_resource: "Adicionar %{name}"
+      back: "Voltar"
+      # Labels customizados por resource (consultados pelo override de _index_header.html.erb).
+      # Permitem usar gênero correto sem cair no fallback genérico "Adicionar X".
+      new_help_categories: "Nova Categoria"
+      new_help_articles: "Novo Artigo"
+      new_help_faqs: "Nova Pergunta Frequente"
+    controller:
+      create:
+        success: "%{resource} foi criado(a) com sucesso."
+      destroy:
+        success: "%{resource} foi excluído(a) com sucesso."
+      update:
+        success: "%{resource} foi atualizado(a) com sucesso."
+    fields:
+      has_many:
+        more: "Mostrando %{count} de %{total_count}"
+        none: "Nenhum"
+      active_storage:
+        add: "Adicionar"
+        attachment: "Anexo"
+        no_attachment: "Nenhum anexo"
+        remove: "Remover"
+        replace: "Substituir"
+    form:
+      error: "erro"
+      errors: "%{pluralized_errors} impediram que este(a) %{resource_name} fosse salvo(a):"
+    navigation:
+      back_to_app: "Voltar para o app"
+    search:
+      clear: "Limpar busca"
+      label: "Buscar %{resource}"
+  activerecord:
+    models:
+      account:
+        one: "Conta"
+        other: "Contas"
+      user:
+        one: "Usuário"
+        other: "Usuários"
+      agent_bot:
+        one: "Bot"
+        other: "Agent Bots"
+      platform_app:
+        one: "App da Plataforma"
+        other: "Platform Apps"
+      help_category:
+        one: "Categoria"
+        other: "Ajuda - Categorias"
+      help_article:
+        one: "Artigo"
+        other: "Ajuda - Artigos"
+      help_faq:
+        one: "Pergunta Frequente"
+        other: "Ajuda - Perguntas Frequentes"
+    attributes:
+      account:
+        name: "Nome"
+        locale: "Idioma"
+      user:
+        name: "Nome"
+        email: "Email"
+        accounts: "Contas"
+        type: "Tipo"
+      help_category:
+        name: "Nome"
+        slug: "Slug"
+        description: "Descrição"
+        icon_class: "Ícone (Lucide)"
+        icon_svg: "Ícone (SVG bruto)"
+        position: "Ordem"
+        hidden: "Oculta"
+      help_article:
+        title: "Título"
+        body: "Conteúdo"
+        category: "Categoria"
+        status: "Status"
+        video_url: "URL do vídeo"
+        next_steps: "Próximos passos"
+        position: "Ordem"
+        deleted_at: "Excluído em"
+      help_faq:
+        question: "Pergunta"
+        answer: "Resposta"
+        category: "Categoria"
+        tags: "Tags (separadas por vírgula)"
+        position: "Ordem"
+        hidden: "Oculta"
+  super_admin:
+    navigation:
+      dashboard: "Painel de Controle"
+      console: "Console Super Admin"
+      settings: "Configurações"
+      sidekiq_dashboard: "Painel Sidekiq"
+      instance_health: "Saúde da Instância"
+      agent_dashboard: "Painel de Atendentes"
+      logout: "Sair"
+    settings:
+      title: "Configurações"
+      subtitle: "Atualize as configurações da sua instância e acesse o portal de faturamento"
+      alert:
+        title: "Alerta!"
+        message: "Mudanças não autorizadas detectadas. Para continuar usando-as, faça o upgrade de plano. Para ajuda entre em contato:"
+      installation_identifier: "Identificador da Instalação"
+      current_plan: "Plano Atual"
+      refresh: "Atualizar"
+      manage: "Gerenciar"
+      agent_limit_warning: "Você possui %{count} atendentes. Por favor adicione mais licenças para criar mais usuários."
+      need_help:
+        title: "Precisa de ajuda?"
+        subtitle: "Está com algum problema? Nós estamos aqui para ajudar."
+        community_support: "Suporte da Comunidade"
+        chat_support: "Suporte VIP (Chat)"
+      features:
+        title: "Recursos e Módulos"

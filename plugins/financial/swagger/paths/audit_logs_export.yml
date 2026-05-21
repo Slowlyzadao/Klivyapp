@@ -1,0 +1,25 @@
+get:
+  tags:
+    - Financeiro · Auditoria
+  summary: Exportar audit logs em CSV
+  description: |
+    Stream completo do período (sem paginação). Filename:
+    `financial_audit_YYYY-MM-DD.csv`. Requer ADMIN/AUDITOR/GERENTE.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+  responses:
+    '200':
+      description: CSV
+      content:
+        text/csv:
+          schema:
+            type: string
+            format: binary
+    '403':
+      description: Sem permissão

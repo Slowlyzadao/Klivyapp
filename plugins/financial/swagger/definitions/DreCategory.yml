@@ -1,0 +1,22 @@
+type: object
+description: |
+  Categoria DRE (Demonstrativo de Resultado). Hierárquica via `parent_id`.
+  Categorias default não podem ser excluídas; categorias com lançamentos
+  vinculados precisam ser migradas antes (`has_entries?` true bloqueia
+  destroy).
+properties:
+  id: { type: integer }
+  name: { type: string }
+  kind:
+    type: string
+    description: "Tipo na DRE (ex.: receita, custo_variavel, despesa_fixa, despesa_administrativa)"
+  parent_id:
+    type: integer
+    nullable: true
+  color: { type: string, nullable: true }
+  icon: { type: string, nullable: true }
+  is_default:
+    type: boolean
+    description: Categorias system que não podem ser excluídas.
+  active: { type: boolean }
+  position: { type: integer }

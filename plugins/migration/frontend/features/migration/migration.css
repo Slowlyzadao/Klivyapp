@@ -1,0 +1,91 @@
+/* Migration — SuperAdmin */
+.mig-page { padding: 24px; max-width: 1100px; margin: 0 auto; font-family: inherit; color: #1f2937; }
+.mig-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; gap: 16px; }
+.mig-header h1 { font-size: 22px; font-weight: 700; margin: 0; }
+.mig-header p { font-size: 13px; color: #6b7280; margin: 4px 0 0; }
+
+.mig-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.mig-card + .mig-card { margin-top: 20px; }
+
+.mig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 720px) { .mig-grid { grid-template-columns: 1fr; } }
+
+.mig-label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.mig-input, .mig-select { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #fff; transition: border-color .15s; }
+.mig-input:focus, .mig-select:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+.mig-help { font-size: 12px; color: #6b7280; margin-top: 6px; }
+
+.mig-drop { border: 2px dashed #d1d5db; border-radius: 12px; padding: 28px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; background: #fafafa; }
+.mig-drop:hover, .mig-drop--active { border-color: #6366f1; background: #eef2ff; }
+.mig-drop__icon { font-size: 28px; margin-bottom: 8px; }
+.mig-drop__text { font-size: 14px; color: #374151; }
+.mig-drop__hint { font-size: 12px; color: #6b7280; margin-top: 4px; }
+.mig-drop__file { font-size: 13px; color: #4338ca; margin-top: 8px; font-weight: 600; }
+
+.mig-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+.mig-btn { padding: 10px 18px; border-radius: 8px; border: 1px solid transparent; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s; }
+.mig-btn--primary { background: #4f46e5; color: #fff; }
+.mig-btn--primary:hover:not(:disabled) { background: #4338ca; }
+.mig-btn--ghost { background: #fff; color: #374151; border-color: #d1d5db; }
+.mig-btn--ghost:hover { background: #f3f4f6; }
+.mig-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.mig-error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-top: 12px; }
+.mig-success { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-top: 12px; }
+
+.mig-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mig-table th, .mig-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #f1f5f9; }
+.mig-table th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; font-weight: 600; background: #f9fafb; }
+.mig-table tr:hover { background: #fafafa; }
+
+.mig-badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.mig-badge--pending    { background: #f3f4f6; color: #374151; }
+.mig-badge--processing { background: #dbeafe; color: #1e40af; }
+.mig-badge--completed  { background: #d1fae5; color: #065f46; }
+.mig-badge--failed     { background: #fee2e2; color: #991b1b; }
+
+.mig-progress { width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.mig-progress__bar { height: 100%; background: #6366f1; transition: width .3s; }
+
+.mig-detail { margin-top: 12px; font-size: 13px; }
+.mig-detail__row { display: flex; gap: 24px; flex-wrap: wrap; padding: 8px 0; }
+.mig-detail__row strong { color: #4338ca; }
+
+.mig-error-list { max-height: 280px; overflow-y: auto; margin-top: 8px; border: 1px solid #e5e7eb; border-radius: 8px; }
+.mig-error-list__item { padding: 8px 12px; border-bottom: 1px solid #fee2e2; font-size: 12px; color: #7f1d1d; background: #fef2f2; }
+.mig-error-list__item:last-child { border-bottom: none; }
+.mig-error-list__item--info { color: #4b5563; background: #f9fafb; border-bottom-color: #f1f5f9; }
+.mig-error-list__item--warning { color: #78350f; background: #fffbeb; border-bottom-color: #fde68a; }
+
+/* Preview */
+.mig-preview { margin-top: 16px; }
+.mig-preview__summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.mig-preview__chip { padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; background: #f3f4f6; color: #374151; }
+.mig-preview__chip--create { background: #d1fae5; color: #065f46; }
+.mig-preview__chip--update { background: #dbeafe; color: #1e40af; }
+.mig-preview__chip--skip   { background: #f3f4f6; color: #4b5563; }
+.mig-preview__chip--warn   { background: #fffbeb; color: #78350f; }
+.mig-preview__chip--err    { background: #fee2e2; color: #991b1b; }
+
+.mig-preview__rows { border: 1px solid #e5e7eb; border-radius: 8px; max-height: 380px; overflow-y: auto; }
+.mig-preview__row { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 12px; display: grid; grid-template-columns: 64px 1fr; gap: 10px; align-items: start; }
+.mig-preview__row:last-child { border-bottom: none; }
+.mig-preview__action { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; text-align: center; align-self: start; }
+.mig-preview__action--create { background: #d1fae5; color: #065f46; }
+.mig-preview__action--update { background: #dbeafe; color: #1e40af; }
+.mig-preview__action--skip   { background: #f3f4f6; color: #4b5563; }
+.mig-preview__action--error  { background: #fee2e2; color: #991b1b; }
+.mig-preview__action--create_session { background: #d1fae5; color: #065f46; }
+.mig-preview__action--update_session { background: #dbeafe; color: #1e40af; }
+.mig-preview__action--create_item    { background: #ede9fe; color: #5b21b6; }
+.mig-preview__action--update_item    { background: #fef3c7; color: #92400e; }
+
+/* Mapeamento de dentistas (treatment_operations) */
+.mig-dentist-map { margin: 16px 0; padding: 12px 14px; background: #fafafa; border: 1px solid #e5e7eb; border-radius: 10px; }
+.mig-dentist-map__list { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; }
+.mig-dentist-map__row { display: grid; grid-template-columns: 1fr 320px; gap: 12px; align-items: center; padding: 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; }
+.mig-dentist-map__name { font-size: 13px; color: #1f2937; }
+@media (max-width: 720px) { .mig-dentist-map__row { grid-template-columns: 1fr; } }
+.mig-preview__row-name { font-weight: 600; color: #1f2937; }
+.mig-preview__row-meta { color: #6b7280; font-size: 11px; margin-top: 2px; }
+.mig-preview__row-reason { color: #78350f; font-size: 11px; margin-top: 4px; font-style: italic; }

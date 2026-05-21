@@ -1,0 +1,424 @@
+@use "../variables" as *;
+
+/* ─────────────────────────────────────────────────────────────────
+   Goals Tab — Redesign limpo e minimalista (goals-*)
+   ───────────────────────────────────────────────────────────────── */
+
+/* Loading state */
+.goals-loading-state {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 3rem 1.5rem;
+  color: rgb(var(--s-500));
+  font-size: 0.875rem;
+}
+
+.goals-loading-state__icon {
+  animation: spin 1.2s linear infinite;
+  font-size: 1.125rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Layout principal: 2 colunas ─────────────────────────────── */
+.goals-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+@media (max-width: 860px) {
+  .goals-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+/* ── Coluna esquerda: Cards de meta ──────────────────────────── */
+.goals-cards-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Card individual de meta */
+.goals-goal-card {
+  background: #ffffff;
+  border: 1.5px solid #e8edf2;
+  border-radius: 0.875rem;
+  padding: 1rem 1.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.goals-goal-card:hover {
+  border-color: #c8d6e5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+body.dark .goals-goal-card {
+  background: rgb(var(--s-800));
+  border-color: rgb(var(--s-700));
+}
+
+body.dark .goals-goal-card:hover {
+  border-color: rgb(var(--s-600));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Modificadores de tipo — apenas ícone diferente, sem borda colorida */
+
+/* Header do card */
+.goals-goal-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Ícone colorido */
+.goals-goal-card__icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 0.625rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.goals-goal-card__icon-wrap--monthly {
+  background: rgba($brand-info-bright, 0.1);
+  color: $brand-info;
+}
+
+.goals-goal-card__icon-wrap--quarterly {
+  background: rgba(139, 92, 246, 0.1);
+  color: $brand-purple;
+}
+
+.goals-goal-card__icon-wrap--annual {
+  background: rgba($brand-amber-bright, 0.1);
+  color: $brand-amber;
+}
+
+body.dark .goals-goal-card__icon-wrap--monthly {
+  background: rgba($brand-info-bright, 0.15);
+  color: #93c5fd;
+}
+
+body.dark .goals-goal-card__icon-wrap--quarterly {
+  background: rgba(139, 92, 246, 0.15);
+  color: #c4b5fd;
+}
+
+body.dark .goals-goal-card__icon-wrap--annual {
+  background: rgba($brand-amber-bright, 0.15);
+  color: #fcd34d;
+}
+
+/* Textos do header */
+.goals-goal-card__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(var(--s-800));
+  margin: 0 0 0.125rem;
+  line-height: 1.3;
+}
+
+body.dark .goals-goal-card__label {
+  color: rgb(var(--s-100));
+}
+
+.goals-goal-card__hint {
+  font-size: 0.75rem;
+  color: rgb(var(--s-500));
+  margin: 0;
+  line-height: 1.3;
+}
+
+body.dark .goals-goal-card__hint {
+  color: rgb(var(--s-400));
+}
+
+/* Input de valor — limpo, branco, sem cinza escuro */
+.goals-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgb(var(--s-900));
+  background: #f8fafc;
+  border: 1.5px solid #dde3ea;
+  border-radius: 0.5rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  letter-spacing: 0.01em;
+}
+
+.goals-input:focus {
+  border-color: $brand-info-bright;
+  box-shadow: 0 0 0 3px rgba($brand-info-bright, 0.12);
+  background: #ffffff;
+}
+
+.goals-input::placeholder {
+  color: rgb(var(--s-400));
+  font-weight: 400;
+  font-size: 0.875rem;
+}
+
+body.dark .goals-input {
+  background: rgb(var(--s-900));
+  border-color: rgb(var(--s-600));
+  color: rgb(var(--s-100));
+}
+
+body.dark .goals-input:focus {
+  border-color: $brand-info-light;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+  background: rgb(var(--s-850));
+}
+
+/* Botão Salvar */
+.goals-save-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.625rem 1.25rem;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: $brand-info;
+  color: #ffffff;
+  border: none;
+  border-radius: 0.625rem;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+}
+
+.goals-save-btn:hover:not(:disabled) {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+}
+
+.goals-save-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.goals-save-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.goals-save-btn__spinner {
+  animation: spin 1.2s linear infinite;
+}
+
+/* ── Coluna direita: Painel de Projeção ──────────────────────── */
+.goals-insights-col {
+  background: #ffffff;
+  border: 1.5px solid #e8edf2;
+  border-radius: 0.875rem;
+  padding: 1.25rem 1.375rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+body.dark .goals-insights-col {
+  background: rgb(var(--s-800));
+  border-color: rgb(var(--s-700));
+}
+
+/* Cabeçalho da coluna de insights */
+.goals-insights-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 1rem;
+}
+
+.goals-insights-header__icon {
+  font-size: 1.25rem;
+  color: $brand-slate-light;
+  flex-shrink: 0;
+}
+
+.goals-insights-header__title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: rgb(var(--s-800));
+  margin: 0 0 0.125rem;
+  line-height: 1.3;
+}
+
+body.dark .goals-insights-header__title {
+  color: rgb(var(--s-100));
+}
+
+.goals-insights-header__month {
+  font-size: 0.8125rem;
+  color: rgb(var(--s-500));
+  margin: 0;
+  text-transform: capitalize;
+}
+
+body.dark .goals-insights-header__month {
+  color: rgb(var(--s-400));
+}
+
+/* Divider */
+.goals-insights-divider {
+  height: 1px;
+  background: #e8edf2;
+  margin-bottom: 1rem;
+}
+
+body.dark .goals-insights-divider {
+  background: rgb(var(--s-700));
+}
+
+/* Cards de ritmo diário */
+.goals-pace-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid #f0f4f8;
+}
+
+.goals-pace-card:last-of-type {
+  border-bottom: none;
+}
+
+body.dark .goals-pace-card {
+  border-bottom-color: rgb(var(--s-700));
+}
+
+.goals-pace-card--highlight {
+  background: rgba(37, 99, 235, 0.03);
+  border-radius: 0.5rem;
+  padding: 0.875rem 0.625rem;
+  margin: 0.25rem -0.625rem;
+}
+
+body.dark .goals-pace-card--highlight {
+  background: rgba(96, 165, 250, 0.06);
+}
+
+.goals-pace-card__left {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+/* Dot indicador */
+.goals-pace-card__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.goals-pace-card__dot--neutral {
+  background: $brand-slate-light;
+}
+
+.goals-pace-card__dot--highlight {
+  background: $brand-info;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.goals-pace-card__type {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: rgb(var(--s-700));
+  margin: 0 0 0.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.dark .goals-pace-card__type {
+  color: rgb(var(--s-300));
+}
+
+.goals-pace-card__desc {
+  font-size: 0.6875rem;
+  color: rgb(var(--s-500));
+  margin: 0;
+}
+
+body.dark .goals-pace-card__desc {
+  color: rgb(var(--s-400));
+}
+
+/* Valor diário */
+.goals-pace-card__value {
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.goals-pace-card__value--neutral {
+  color: rgb(var(--s-700));
+}
+
+.goals-pace-card__value--highlight {
+  color: $brand-info;
+}
+
+body.dark .goals-pace-card__value--neutral {
+  color: rgb(var(--s-200));
+}
+
+body.dark .goals-pace-card__value--highlight {
+  color: $brand-info-light;
+}
+
+/* Tip informativo no final */
+.goals-info-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  border: 1px solid #e8edf2;
+}
+
+body.dark .goals-info-tip {
+  background: rgb(var(--s-850, 15 23 42));
+  border-color: rgb(var(--s-700));
+}
+
+.goals-info-tip__icon {
+  font-size: 0.875rem;
+  color: $brand-slate;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.goals-info-tip__text {
+  font-size: 0.75rem;
+  color: rgb(var(--s-600));
+  margin: 0;
+  line-height: 1.5;
+}
+
+body.dark .goals-info-tip__text {
+  color: rgb(var(--s-400));
+}

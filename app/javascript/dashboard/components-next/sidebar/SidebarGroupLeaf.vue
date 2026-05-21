@@ -1,0 +1,62 @@
+<script setup>
+import { isVNode, computed } from 'vue';
+import Icon from 'next/icon/Icon.vue';
+import Policy from 'dashboard/components/policy.vue';
+import { useSidebarContext } from './provider';
+
+const props = defineProps({
+  label: { type: String, required: true },
+  to: { type: [String, Object], required: true },
+  icon: { type: [String, Object], default: null },
+  active: { type: Boolean, default: false },
+  component: { type: Function, default: null },
+  bypassPolicy: { type: Boolean, default: false },
+});
+
+const { resolvePermissions, resolveFeatureFlag } = useSidebarContext();
+
+const shouldRenderComponent = computed(() => {
+  return typeof props.component === 'function' || isVNode(props.component);
+});
+
+// When the parent already cleared this leaf via Klivy gating (bypassPolicy=true),
+// pass an empty permissions array so the inner Policy skips the meta.permissions
+// check (Chatwoot RBAC). Otherwise fall back to native Chatwoot policy resolution.
+const effectivePermissions = computed(() =>
+  props.bypassPolicy ? [] : resolvePermissions(props.to)
+);
+</script>
+
+<!-- eslint-disable-next-line vue/no-root-v-if -->
+<template>
+  <Policy
+    :permissions="effectivePermissions"
+    :feature-flag="resolveFeatureFlag(to)"
+    as="li"
+    class="py-0.5 ltr:pl-2 rtl:pr-2 rtl:mr-3 ltr:ml-3 relative text-n-slate-11 child-item before:bg-n-slate-4 after:bg-transparent after:border-n-slate-4 before:left-0 rtl:before:right-0 min-w-0"
+  >
+    <component
+      :is="to ? 'router-link' : 'div'"
+      :to="to"
+      :title="label"
+      class="flex h-8 items-center gap-2 px-2 py-1 rounded-lg hover:bg-gradient-to-r from-transparent via-n-slate-3/70 to-n-slate-3/70 group min-w-0"
+      :class="{
+        'text-n-slate-12 bg-n-alpha-2 active': active,
+      }"
+    >
+      <component
+        :is="component"
+        v-if="shouldRenderComponent"
+        :label
+        :icon
+        :active
+      />
+      <template v-else>
+        <span v-if="icon" class="size-4 grid place-content-center rounded-full">
+          <Icon :icon="icon" class="size-4 inline-block" />
+        </span>
+        <div class="flex-1 truncate min-w-0 text-sm">{{ label }}</div>
+      </template>
+    </component>
+  </Policy>
+</template>

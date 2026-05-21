@@ -1,0 +1,79 @@
+get:
+  tags:
+    - Financeiro · LGPD
+  summary: Listar solicitações LGPD
+  description: Requer ADMIN/AUDITOR/GERENTE.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: status
+      in: query
+      schema: { type: string, enum: [pending, approved, rejected, executed, cancelled] }
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+    - name: page
+      in: query
+      schema: { type: integer, default: 1 }
+    - name: per_page
+      in: query
+      schema: { type: integer, default: 25, maximum: 100 }
+  responses:
+    '200':
+      description: Lista + summary
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/LgpdRequest.yml'
+              meta:
+                type: object
+                properties:
+                  page: { type: integer }
+                  per_page: { type: integer }
+                  total: { type: integer }
+                  summary:
+                    type: object
+                    properties:
+                      pending: { type: integer }
+                      approved: { type: integer }
+                      executed: { type: integer }
+                      rejected: { type: integer }
+                      cancelled: { type: integer }
+post:
+  tags:
+    - Financeiro · LGPD
+  summary: Criar solicitação (status inicial `pending`)
+  description: Requer ADMIN/GERENTE. Idempotência via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [lgpd_request]
+          properties:
+            lgpd_request:
+              type: object
+              required: [patient_id]
+              properties:
+                patient_id: { type: integer }
+                reason: { type: string }
+                notes: { type: string }
+  responses:
+    '201':
+      description: Criada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/LgpdRequest.yml'
+    '422': { description: "Erro de validação" }
+    '403': { description: "Sem permissão" }

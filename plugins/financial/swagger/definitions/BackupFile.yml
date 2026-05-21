@@ -1,0 +1,26 @@
+type: object
+description: |
+  Arquivo de backup do banco (canon F-32). Pode estar armazenado **local**
+  (volume Easypanel) e/ou em **R2 Cloudflare** — `sources` lista de onde
+  veio. Nome obedece o pattern `klivy-YYYYMMDD-HHMMSS.sql.gz` (validado no
+  destroy para prevenir path traversal).
+properties:
+  name:
+    type: string
+    pattern: "^klivy-\\d{8}-\\d{6}\\.sql\\.gz$"
+    example: "klivy-20260517-030000.sql.gz"
+  size_bytes: { type: integer }
+  size_human:
+    type: string
+    example: "12.4 MB"
+  modified_at: { type: string, format: date-time }
+  age_days: { type: integer }
+  sources:
+    type: array
+    items:
+      type: string
+      enum: [local, r2]
+  r2_key:
+    type: string
+    nullable: true
+    description: "Caminho/key no bucket R2 (quando `sources` inclui 'r2')."

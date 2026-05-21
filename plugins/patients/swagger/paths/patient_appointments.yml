@@ -1,0 +1,83 @@
+get:
+  tags:
+    - Agenda do Paciente
+  summary: Listar agendamentos do paciente
+  description: |
+    **Inclui eventos soft-deletados** para rastreabilidade no prontuário —
+    status virtual deriva de `deletion_reason` (`deleted_user`/`deleted_patient`/
+    `deleted_reschedule`/`deleted_other`). O index combina por
+    `custom_attributes->>'patient_id'` ou fallback por `contact_id`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - name: page
+      in: query
+      schema: { type: integer, default: 1 }
+    - name: per_page
+      in: query
+      schema: { type: integer, default: 25 }
+  responses:
+    '200':
+      description: Lista paginada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              appointments:
+                type: array
+                items:
+                  $ref: '../definitions/PatientAppointment.yml'
+              meta:
+                type: object
+                properties:
+                  total_count: { type: integer }
+                  page: { type: integer }
+                  per_page: { type: integer }
+                  total_pages: { type: integer }
+post:
+  tags:
+    - Agenda do Paciente
+  summary: Criar agendamento via `Patients::AppointmentScheduler`
+  description: |
+    Cria `AgendaEvent` + `PatientAppointment` via service. Retorna
+    `402 Payment Required` quando o erro do scheduler é `patient_overdue`
+    (paciente com débito impedindo novo agendamento).
+
+    **Operações `reschedule`/`cancel`/`no_show` foram removidas** desta
+    aba em 2026-05-15 — só o calendário principal opera mudanças nesses
+    eventos. Aba do prontuário agora é read-only para histórico + recall.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [appointment]
+          properties:
+            appointment:
+              type: object
+              properties:
+                appointment_type: { type: string }
+                scheduled_at: { type: string, format: date-time }
+                ends_at: { type: string, format: date-time }
+                duration_minutes: { type: integer, minimum: 1 }
+                professional_id: { type: integer }
+                agenda_event_id: { type: integer }
+                notes: { type: string }
+                return_in_days: { type: integer, minimum: 1 }
+                treatment_plan_id: { type: integer }
+  responses:
+    '201':
+      description: Agendamento criado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PatientAppointment.yml'
+    '402':
+      description: Paciente com débito (`patient_overdue`)
+    '422':
+      description: Erro de validação

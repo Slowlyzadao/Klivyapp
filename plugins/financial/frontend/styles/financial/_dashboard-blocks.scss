@@ -1,0 +1,144 @@
+@use "../variables" as *;
+
+/* ── Grid de blocos (A Receber / A Pagar / Inadimplência / Contas) */
+.financial-blocks-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .financial-blocks-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Bloco (Receivables / Payables / etc.) ───────────────────── */
+.financial-block {
+  background: #f7f7f7;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+/* KPI Cards e blocos panorâmicos ocupam toda a largura do grid */
+.financial-block--full {
+  grid-column: 1 / -1;
+}
+
+body.dark .financial-block {
+  background: rgb(var(--s-800));
+}
+
+.financial-block__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.financial-block__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(var(--s-700));
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+body.dark .financial-block__title {
+  color: rgb(var(--s-200));
+}
+
+.financial-block__link {
+  font-size: 0.75rem;
+  color: var(--color-woot-500);
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.financial-block__link:hover {
+  text-decoration: underline;
+}
+
+.financial-block__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+}
+
+/* ── Drag & Drop ────────────────────────────────────────── */
+.financial-drag-handle {
+  cursor: grab;
+  color: rgb(var(--s-400));
+  margin-right: 0.5rem;
+}
+.financial-drag-handle:active {
+  cursor: grabbing;
+}
+.financial-block--draggable {
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.financial-block--ghost {
+  opacity: 0.5;
+  background-color: var(--s-100);
+}
+
+.financial-block__row-label {
+  color: rgb(var(--s-500));
+}
+
+.financial-block__row-value {
+  font-weight: 600;
+  color: rgb(var(--s-800));
+}
+
+body.dark .financial-block__row-value {
+  color: rgb(var(--s-100));
+}
+
+.financial-block__row-value--overdue {
+  color: $brand-danger;
+}
+
+.financial-block__row-value--today {
+  color: #ea580c;
+}
+
+.financial-block-label-truncate {
+  width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.financial-block-flex-1 {
+  flex: 1;
+  margin-left: 1rem;
+}
+
+.financial-block-flex-1--margin-x {
+  margin: 0 1rem;
+}
+
+.financial-revenue-summary--flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 2px;
+}
+
+.financial-block-row-value--right {
+  display: block;
+  text-align: right;
+  margin-bottom: 2px;
+}

@@ -1,0 +1,20 @@
+get:
+  tags:
+    - Financeiro · Relatórios · Charts
+  summary: Chart de Fluxo de Caixa (Dashboard v2)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: from
+      in: query
+      schema: { type: string, format: date, description: "Default = 29 dias atrás" }
+    - name: to
+      in: query
+      schema: { type: string, format: date, description: "Default = hoje" }
+  responses:
+    '200':
+      description: Série temporal
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

@@ -1,0 +1,26 @@
+get:
+  tags:
+    - Pacientes
+  summary: Resumo consolidado do prontuário (endpoint estrela)
+  description: |
+    Payload consolidado usado pela aba do prontuário: dados básicos +
+    último/próximo agendamento + extrato clínico (alergias, medicamentos,
+    condições) da `Anamnesis` finalizada mais recente + flags de
+    consentimentos LGPD pendentes.
+
+    Audit log `view` registrado.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Resumo do prontuário
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              payload:
+                $ref: '../definitions/PatientSummary.yml'
+    '404':
+      description: Paciente não encontrado

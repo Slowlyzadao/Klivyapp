@@ -1,0 +1,41 @@
+/* ============================================================
+   RECORD.SCSS — Prontuário do Paciente (entry point)
+
+   Dual-theme: funciona em dark E light mode.
+   REGRA: Nunca usar cores hardcoded em novos partials.
+          Sempre rgb(var(--slate-N)).
+
+   Importar no <script setup> do Record.vue:
+     import '@plugins/patients/frontend/styles/record.scss';
+
+   Cada partial cobre um domínio específico (header, sidebar,
+   tab X, etc.). A ordem de @use abaixo respeita a cascata do
+   arquivo monolítico original — mover de lugar pode afetar
+   override resolution para regras que competem.
+   ============================================================ */
+
+@use 'record/layout';
+@use 'record/animations';
+@use 'record/header-actions';
+@use 'record/profile-banner';
+@use 'record/sidebar';
+@use 'record/shared-forms';
+// 'record/evolution-tab' removido em [1.5.2.5]: 413 linhas órfãs do
+// EvolutionTab antigo (substituído pelo unificado em tabs/_EvolutionTab.scss).
+// 'record/procedures-tab' mantido — define `.proc-table-*` compartilhado por
+// Consents/Documents/Financial. Renomear pra `_shared-tables.scss` em PR futuro.
+@use 'record/procedures-tab';
+@use 'record/exams-tab';
+@use 'record/documents-tab';
+@use 'record/consents-tab';
+@use 'record/financial-tab';
+@use 'record/schedule-tab';
+@use 'record/timeline-tab';
+@use 'record/audit-tab';
+@use 'record/archived-banner';
+@use 'record/light-mode-overrides';
+@use 'record/modals';
+@use 'record/treatment-plan';
+@use 'record/shared-tables';
+@use 'record/general-tab';
+@use 'record/critical-popup';

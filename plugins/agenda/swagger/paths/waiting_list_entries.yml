@@ -1,0 +1,55 @@
+get:
+  tags:
+    - Fila de Espera
+  summary: Listar fila de espera
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Lista de entradas (ordenada por `created_at`)
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/WaitingListEntry.yml'
+post:
+  tags:
+    - Fila de Espera
+  summary: Adicionar/atualizar entrada na fila (upsert)
+  description: |
+    Upsert por `contact_id` — se já existe entrada para o contato, atualiza
+    os outros campos. Caso contrário, cria.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [waiting_list_entry]
+          properties:
+            waiting_list_entry:
+              type: object
+              required: [contact_id, period]
+              properties:
+                contact_id: { type: integer }
+                period:
+                  type: string
+                  enum: [morning, afternoon, evening]
+                specific_time: { type: string, nullable: true, example: "14:30" }
+                preferred_days:
+                  type: array
+                  items: { type: string }
+                  example: [mon, wed, fri]
+                notes: { type: string, nullable: true }
+  responses:
+    '200':
+      description: Entrada salva (criada ou atualizada)
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/WaitingListEntry.yml'
+    '422':
+      description: Erro de validação (período inválido, etc)

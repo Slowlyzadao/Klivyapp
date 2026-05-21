@@ -1,0 +1,31 @@
+post:
+  tags:
+    - Financeiro · Backups
+  summary: Disparar backup imediato (síncrono)
+  description: |
+    Executa `Financial::CreateBackup` SÍNCRONO — backups são curtos
+    (segundos a poucos minutos). Útil antes de migration arriscada.
+    Faz upload no R2 se configurado + aplica retenção (prune). Requer ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Backup criado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success: { type: boolean }
+              file: { type: string, description: "Filename apenas (sem path)" }
+              size_bytes: { type: integer }
+              duration_seconds: { type: number, format: float }
+              pruned_count_local: { type: integer }
+              pruned_count_r2: { type: integer }
+              r2_uploaded: { type: boolean }
+              r2_key: { type: string, nullable: true }
+              r2_error: { type: string, nullable: true }
+    '422':
+      description: Falha no backup
+    '403':
+      description: Sem permissão (ADMIN)

@@ -1,0 +1,32 @@
+get:
+  tags:
+    - Financeiro · Relatórios
+  summary: Preview da exportação para o contador (F-33)
+  description: |
+    Retorna counts dos 4 datasets para a UI mostrar antes do contador
+    baixar o CSV (evita CSV vazio). Requer ADMIN/AUDITOR.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+  responses:
+    '200':
+      description: Counts
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              period:
+                type: object
+                properties:
+                  from: { type: string, format: date }
+                  to: { type: string, format: date }
+              counts:
+                type: object
+                additionalProperties:
+                  type: integer

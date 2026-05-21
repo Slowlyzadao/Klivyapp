@@ -1,0 +1,104 @@
+get:
+  tags:
+    - Serviços da Agenda
+  summary: Listar serviços
+  description: |
+    **Dois modos de resposta** controlados pela presença de `page`/`per_page`:
+
+    - **Legado** (sem `page`): array simples — usado por calendário/sidebar
+      que precisam de TODOS os serviços para montar o select de tratamento.
+    - **Paginado** (com `page` ou `per_page`): `{ services: [...], meta: {...} }`,
+      com `agenda_events_count` e `treatment_items_count` por serviço
+      (subqueries) — usado pela aba Settings.
+
+    `archived=true` lista os serviços com `deleted_at` preenchido (toggle
+    "Ativos / Arquivados" na UI).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: archived
+      in: query
+      description: Quando `true`, lista os serviços soft-deletados.
+      schema:
+        type: boolean
+        default: false
+    - name: q
+      in: query
+      description: Busca por nome (LIKE case-insensitive) ou ID exato (quando `q` é só dígitos).
+      schema:
+        type: string
+    - name: page
+      in: query
+      description: Página (1-99999). Quando presente, ativa modo paginado.
+      schema:
+        type: integer
+        minimum: 1
+    - name: per_page
+      in: query
+      description: Itens por página (1-100). Default 10 no modo paginado.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+  responses:
+    '200':
+      description: Lista de serviços (legado OU paginado)
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - type: array
+                description: Modo legado (sem `page`).
+                items:
+                  $ref: '../definitions/AgendaService.yml'
+              - type: object
+                description: Modo paginado.
+                properties:
+                  services:
+                    type: array
+                    items:
+                      $ref: '../definitions/AgendaService.yml'
+                  meta:
+                    type: object
+                    properties:
+                      current_page: { type: integer }
+                      per_page: { type: integer }
+                      total_count: { type: integer }
+                      total_pages: { type: integer }
+post:
+  tags:
+    - Serviços da Agenda
+  summary: Criar serviço
+  description: |
+    Nome é case-insensitive único dentro da conta entre serviços vivos
+    (`deleted_at IS NULL`). Recriar nome de serviço arquivado é permitido.
+    `position` é atribuído pelo servidor (max+1, protegido por advisory lock).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [agenda_service]
+          properties:
+            agenda_service:
+              type: object
+              required: [name, duration_minutes]
+              properties:
+                name: { type: string }
+                duration_minutes: { type: integer, minimum: 1 }
+                price: { type: number, format: float, minimum: 0 }
+                requires_room: { type: boolean }
+                color: { type: string, description: "Hex color" }
+                position: { type: integer, description: "Opcional. Por padrão, o servidor atribui max+1." }
+  responses:
+    '201':
+      description: Serviço criado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaService.yml'
+    '422':
+      description: Erro de validação (nome duplicado, duração inválida, preço negativo)

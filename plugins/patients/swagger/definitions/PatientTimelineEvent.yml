@@ -1,0 +1,34 @@
+type: object
+description: |
+  Evento na timeline do paciente. Agrega eventos de várias origens:
+  consultas, sessões clínicas, pagamentos, documentos, consentimentos, etc.
+  Filtrado por `type` (CSV), `from`/`to` (datas) e paginado.
+properties:
+  id: { type: integer }
+  event_type:
+    type: string
+    description: |
+      Categoria livre do evento. Exemplos:
+      `appointment_scheduled`, `appointment_done`, `appointment_canceled`,
+      `appointment_no_show`, `appointment_deleted`,
+      `session_performed`, `session_signed`,
+      `clinical_note`, `consent_signed`, `consent_revoked`,
+      `document_generated`, `document_deleted`,
+      `treatment_plan_created`, `treatment_plan_approved`,
+      `treatment_plan_archived`, `exam_uploaded`.
+  label: { type: string, description: "Texto pronto para a UI" }
+  actor_name: { type: string, nullable: true }
+  actor:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+  reference_type: { type: string, nullable: true, description: "Classe do recurso referenciado (ex.: AgendaEvent, SessionLog)" }
+  reference_id: { type: integer, nullable: true }
+  metadata:
+    type: object
+    description: Payload livre por evento.
+    additionalProperties: true
+  occurred_at: { type: string, format: date-time }
+  created_at: { type: string, format: date-time }

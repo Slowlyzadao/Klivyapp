@@ -1,0 +1,43 @@
+type: object
+description: |
+  Snapshot das permissões do usuário corrente na conta. Lido pelo frontend
+  no boot para popular o store de permissões. Composto por 3 camadas
+  (canon `BeclinicPermissible`):
+
+  1. **`beclinic_role`** — super_admin/admin/agent (papel Chatwoot/RBAC base)
+  2. **`permissions`** — mapa `módulo → { ação → bool, scope? }` mesclado a
+     partir do `klivy_role` quando houver
+  3. **`klivy_role`** — referência leve à `KlivyRole` aplicada (id + nome + preset)
+properties:
+  beclinic_role:
+    type: string
+    description: "Papel base (`super_admin`, `admin`, `agent`)."
+  permissions:
+    type: object
+    description: |
+      Mapa consolidado `módulo → { ação → bool, scope? }` que o frontend
+      usa para mostrar/esconder UI. Mesmo formato do `KlivyRole.permissions`.
+
+      ⚠️ **Pra `administrator` e `super_admin` este campo retorna `{}` (vazio)
+      desde 1.6.1.25** (auditoria M-9). O frontend faz bypass via
+      `usePermissions#isAdmin` antes de consultar este hash — o payload
+      pra admin não é lido em lugar nenhum. Pra non-admin, contém o hash
+      real da `KlivyRole` atribuída.
+
+      Padrão de consumo do backend: SEMPRE usar `User#beclinic_can?(account, mod, action)`
+      em vez de ler este hash direto — o método faz o bypass corretamente
+      pra admin e SuperAdmin.
+    additionalProperties:
+      type: object
+      additionalProperties: true
+    example:
+      agenda: { view: true, view_settings: true, manage_schedules: true }
+      patients: { view: true, view_consents: true, manage_consents: true, scope: own }
+  klivy_role:
+    type: object
+    nullable: true
+    description: "Função personalizada aplicada (`null` quando não há `KlivyRole`)."
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      preset_key: { type: string, nullable: true }

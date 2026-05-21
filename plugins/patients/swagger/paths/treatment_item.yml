@@ -1,0 +1,64 @@
+get:
+  tags:
+    - Itens do Plano
+  summary: Detalhar item
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - name: treatment_plan_id
+      in: path
+      required: true
+      schema: { type: integer }
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Item
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/TreatmentItem.yml'
+patch:
+  tags:
+    - Itens do Plano
+  summary: Atualizar item
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - name: treatment_plan_id
+      in: path
+      required: true
+      schema: { type: integer }
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [treatment_item]
+          properties:
+            treatment_item:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/TreatmentItem.yml'
+delete:
+  tags:
+    - Itens do Plano
+  summary: Excluir item (soft-delete)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - name: treatment_plan_id
+      in: path
+      required: true
+      schema: { type: integer }
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204':
+      description: Excluído

@@ -1,0 +1,439 @@
+/* ── Layout principal ───────────────────────────────────────── */
+/* Container de página financeira: posicionado absoluto dentro do <main>
+   pra blindar contra inflação de altura via cascata de flex (UpdateBanner +
+   AppContainer wrapper sem `min-height: 0`). Com `inset: 0`, a página
+   ocupa exatamente o box do <main> — nada mais, nada menos. Single-source
+   de scroll vertical. Largura completa (sem max-width centralizada).
+
+   `<main>` precisa ser containing block para position: absolute funcionar,
+   por isso o `:has()` abaixo força `position: relative` quando contém
+   `.financial-page` ou `.finv2-page` (v2). */
+main:has(> .financial-page),
+main:has(> .finv2-page) {
+  position: relative;
+}
+
+.financial-page {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.financial-page > * {
+  flex-shrink: 0;
+}
+
+/* ── v2 page layout ─────────────────────────────────────────── */
+/* Mesma régua do .financial-page (single-source de scroll) mas SEM padding
+   global — cada página v2 controla seu próprio padding via .finv2-page__body
+   pra deixar o header sticky encostado nas bordas. */
+.finv2-page {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   v2 SHARED — classes premium reutilizáveis nas 6 páginas v2.
+   Usar diretamente no template (não precisa de @use no scoped):
+     <div class="finv2-page">
+       <header class="finv2-page__header">...</header>
+       <div class="finv2-page__body">
+         <div class="finv2-kpis">...</div>
+         <div class="finv2-chips">...</div>
+         <div class="finv2-table-wrap">...</div>
+         <Pagination ... />
+       </div>
+     </div>
+   ============================================================ */
+
+.finv2-page__header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 24px;
+  background: rgb(var(--slate-1) / 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgb(var(--slate-4));
+  flex-wrap: wrap;
+}
+.finv2-page__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: rgb(var(--slate-12));
+}
+.finv2-page__subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: rgb(var(--slate-9));
+}
+.finv2-page__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 24px 28px;
+}
+/* Container das ações do header (botões à direita do título). Sem ele os
+   botões ficam colados — `.finv2-page__header` tem gap entre TÍTULO e este
+   container, mas os botões internos precisam do próprio gap. */
+.finv2-page__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+@media (max-width: 640px) {
+  .finv2-page__header { padding: 14px 16px; }
+  .finv2-page__body   { padding: 16px 14px 24px; gap: 14px; }
+  .finv2-page__title  { font-size: 18px; }
+}
+
+/* ── KPIs ─────────────────────────────────────────────────────── */
+/* Desktop: grid normal (4 colunas). Mobile (<800px): vira carrossel
+   horizontal com scroll-snap — mesmo padrão usado em
+   `plugins/patients/.../FinancialKpiGrid.vue`. Mostra ~2.5 cards e
+   indica scroll com fade na borda direita. */
+.finv2-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 1280px) { .finv2-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 800px) {
+  .finv2-kpis {
+    /* `display: grid` + `grid-auto-flow: column` é mais previsível que
+       flex pra carrossel — o browser calcula largura por
+       `grid-auto-columns` sem fit-content intrínseco. */
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100% - 24px) / 2.5);
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+    scroll-padding: 0 12px;
+    /* `contain: inline-size` força o browser a calcular largura
+       horizontal pela declaração do container, não pelo conteúdo
+       — evita vazamento horizontal em pais flex/grid. */
+    contain: inline-size;
+
+    /* Fade direito indicando que tem mais conteúdo deslizar. */
+    -webkit-mask-image: linear-gradient(
+      to right, black 0, black calc(100% - 50px), transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right, black 0, black calc(100% - 50px), transparent 100%
+    );
+
+    /* Browsers modernos: fade some quando o scroll chega no fim. */
+    @supports (animation-timeline: scroll()) {
+      animation: finv2-kpis-mask-end linear both;
+      animation-timeline: scroll(self inline);
+      animation-range: 85% 100%;
+    }
+
+    &::-webkit-scrollbar { height: 4px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.35);
+      border-radius: 2px;
+    }
+  }
+  .finv2-kpi {
+    min-width: 0;
+    max-width: 100%;
+    scroll-snap-align: start;
+  }
+  @keyframes finv2-kpis-mask-end {
+    to {
+      -webkit-mask-image: linear-gradient(to right, black 100%, transparent 100%);
+      mask-image: linear-gradient(to right, black 100%, transparent 100%);
+    }
+  }
+}
+/* Em telas muito estreitas, mostrar ~1.7 cards (mais legibilidade). */
+@media (max-width: 420px) {
+  .finv2-kpis { grid-auto-columns: calc((100% - 12px) / 1.7); }
+}
+
+/* Mobile: cards estreitos. Reduz fonte/ícone/padding pra valores em
+   BRL ("R$ 2.860,83") caberem sem cortar. */
+@media (max-width: 800px) {
+  .finv2-kpi { padding: 10px 12px; gap: 10px; }
+  .finv2-kpi__icon { width: 32px; height: 32px; }
+  .finv2-kpi__label {
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    /* Permite quebrar a label longa ao invés de cortar com "...". */
+    white-space: normal;
+    line-height: 1.2;
+  }
+  .finv2-kpi__value { font-size: 15.5px; }
+}
+
+.finv2-kpi {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 14px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+  &:hover { border-color: rgb(var(--slate-6)); transform: translateY(-1px); }
+}
+.finv2-kpi__icon {
+  flex-shrink: 0;
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  &--neutral  { background: rgb(var(--slate-3)); color: rgb(var(--slate-11)); }
+  &--positive { background: rgba(16, 185, 129, 0.12); color: #047857; }
+  &--danger   { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
+}
+:root.dark .finv2-kpi__icon--positive { color: #6ee7b7; background: rgba(16, 185, 129, 0.18); }
+:root.dark .finv2-kpi__icon--danger   { color: #fca5a5; background: rgba(220, 38, 38, 0.18); }
+
+.finv2-kpi__content { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.finv2-kpi__label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: rgb(var(--slate-9)); font-weight: 500; white-space: nowrap;
+}
+.finv2-kpi__value {
+  font-size: 19px; font-weight: 600; color: rgb(var(--slate-12));
+  font-variant-numeric: tabular-nums; line-height: 1.2;
+}
+.finv2-kpi__value--positive { color: #047857; }
+:root.dark .finv2-kpi__value--positive { color: #6ee7b7; }
+.finv2-kpi__value--danger { color: #b91c1c; }
+:root.dark .finv2-kpi__value--danger { color: #fca5a5; }
+
+/* ── Chips coloridos (mesma régua do Badge faded + active solid) ── */
+.finv2-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.finv2-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12.5px; font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.finv2-chip--tone-blue    { background: rgba(37, 99, 235, 0.10); color: #1d4ed8; border-color: rgba(37, 99, 235, 0.28); &:hover { background: rgba(37, 99, 235, 0.18); } }
+.finv2-chip--tone-emerald { background: rgba(16, 185, 129, 0.10); color: #047857; border-color: rgba(16, 185, 129, 0.28); &:hover { background: rgba(16, 185, 129, 0.18); } }
+.finv2-chip--tone-ruby    { background: rgba(220, 38, 38, 0.10); color: #b91c1c; border-color: rgba(220, 38, 38, 0.32); &:hover { background: rgba(220, 38, 38, 0.18); } }
+.finv2-chip--tone-violet  { background: rgba(124, 58, 237, 0.10); color: #6d28d9; border-color: rgba(124, 58, 237, 0.28); &:hover { background: rgba(124, 58, 237, 0.18); } }
+.finv2-chip--tone-amber   { background: rgba(245, 158, 11, 0.12); color: #b45309; border-color: rgba(245, 158, 11, 0.32); &:hover { background: rgba(245, 158, 11, 0.20); } }
+.finv2-chip--tone-slate   { background: rgba(100, 116, 139, 0.10); color: #475569; border-color: rgba(100, 116, 139, 0.25); &:hover { background: rgba(100, 116, 139, 0.18); } }
+
+:root.dark .finv2-chip--tone-blue    { background: rgba(59, 130, 246, 0.18); color: #93c5fd; border-color: rgba(59, 130, 246, 0.4); &:hover { background: rgba(59, 130, 246, 0.28); } }
+:root.dark .finv2-chip--tone-emerald { background: rgba(16, 185, 129, 0.18); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.4); &:hover { background: rgba(16, 185, 129, 0.28); } }
+:root.dark .finv2-chip--tone-ruby    { background: rgba(220, 38, 38, 0.18); color: #fca5a5; border-color: rgba(220, 38, 38, 0.4); &:hover { background: rgba(220, 38, 38, 0.28); } }
+:root.dark .finv2-chip--tone-violet  { background: rgba(124, 58, 237, 0.20); color: #c4b5fd; border-color: rgba(124, 58, 237, 0.4); &:hover { background: rgba(124, 58, 237, 0.30); } }
+:root.dark .finv2-chip--tone-amber   { background: rgba(245, 158, 11, 0.18); color: #fcd34d; border-color: rgba(245, 158, 11, 0.4); &:hover { background: rgba(245, 158, 11, 0.28); } }
+:root.dark .finv2-chip--tone-slate   { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.32); &:hover { background: rgba(148, 163, 184, 0.25); } }
+
+.finv2-chip--active { color: #ffffff; border-color: transparent; }
+.finv2-chip--tone-blue.finv2-chip--active    { background: #2563eb; &:hover { background: #1d4ed8; } }
+.finv2-chip--tone-emerald.finv2-chip--active { background: #059669; &:hover { background: #047857; } }
+.finv2-chip--tone-ruby.finv2-chip--active    { background: #dc2626; &:hover { background: #b91c1c; } }
+.finv2-chip--tone-violet.finv2-chip--active  { background: #7c3aed; &:hover { background: #6d28d9; } }
+.finv2-chip--tone-amber.finv2-chip--active   { background: #d97706; &:hover { background: #b45309; } }
+.finv2-chip--tone-slate.finv2-chip--active   { background: #475569; &:hover { background: #334155; } }
+:root.dark .finv2-chip--active { color: #ffffff; }
+
+/* ── Inputs (text/search) ─────────────────────────────────────── */
+/* Geometria do campo de busca com ícone — invariante única do módulo:
+   icon-left + icon-size + gap mínimo == padding-left.
+   Se o ícone mudar de tamanho ou posição, ajustar AS TRÊS variáveis
+   abaixo juntas — nunca isoladamente. Margem mínima de 10px de respiro
+   entre o fim do ícone e o início do texto. */
+$finv2-input-icon-left: 12px;
+$finv2-input-icon-size: 14px;
+$finv2-input-icon-gap:  10px;
+$finv2-input-padding-left-with-icon: $finv2-input-icon-left + $finv2-input-icon-size + $finv2-input-icon-gap; // = 36px
+
+/* `_base.scss` do Chatwoot core aplica `@apply field-base h-10` em
+   `input[type]:not(...)` com ~12 `:not()` em cadeia, gerando especificidade
+   ~(0,11,1) — alta o suficiente pra derrotar `.finv2-input-wrap--with-icon
+   .finv2-input` (0,2,0) na cascata. Resultado sem `!important`: o
+   padding-left de 36px é sobrescrito pelo padding do core (~12px) e o
+   ícone fica sobre o placeholder.
+
+   Os `!important` abaixo são uma fronteira deliberada contra uma cascata
+   externa que não controlamos (Chatwoot core). Não usar `!important` em
+   propriedades que não estejam em conflito com o reset do core. */
+.finv2-input {
+  width: 100%;
+  padding: 9px 12px !important;
+  height: 38px !important;
+  border-radius: 8px;
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-5));
+  color: rgb(var(--slate-12));
+  font-size: 13px;
+  &:focus {
+    outline: none;
+    border-color: rgb(var(--blue-8));
+    box-shadow: 0 0 0 3px rgb(var(--blue-9) / 0.15);
+  }
+  &::placeholder { color: rgb(var(--slate-9)); }
+}
+.finv2-input-wrap { position: relative; display: flex; align-items: center; min-width: 0; }
+.finv2-input-wrap--with-icon .finv2-input { padding-left: $finv2-input-padding-left-with-icon !important; }
+.finv2-input__icon {
+  position: absolute; left: $finv2-input-icon-left; top: 50%; transform: translateY(-50%);
+  width: $finv2-input-icon-size; height: $finv2-input-icon-size;
+  color: rgb(var(--slate-9));
+  pointer-events: none; z-index: 1;
+}
+.finv2-input-wrap--date :deep(.mx-datepicker) { width: 100%; }
+.finv2-input-wrap--date :deep(.mx-input) {
+  height: 38px;
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-5));
+  border-radius: 8px;
+  color: rgb(var(--slate-12));
+  font-size: 13px;
+  &:focus, &:hover {
+    border-color: rgb(var(--blue-8));
+    box-shadow: 0 0 0 3px rgb(var(--blue-9) / 0.15);
+  }
+}
+
+/* ── Tabela ───────────────────────────────────────────────────── */
+.finv2-table-wrap {
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 14px;
+  overflow: hidden;
+}
+.finv2-table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+  th, td { padding: 12px 16px; text-align: left; vertical-align: middle; }
+  thead th {
+    background: rgb(var(--slate-2));
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+    color: rgb(var(--slate-9)); font-weight: 500;
+    border-bottom: 1px solid rgb(var(--slate-4));
+  }
+  tbody tr {
+    border-bottom: 1px solid rgb(var(--slate-3));
+    transition: background 0.1s ease;
+    &:last-child { border-bottom: 0; }
+    &:hover:not(.finv2-table__row-empty) { background: rgb(var(--slate-2) / 0.5); }
+  }
+}
+.finv2-table__th-num, .finv2-table__td-num { text-align: right; font-variant-numeric: tabular-nums; }
+.finv2-table__td-num--strong { font-weight: 600; color: rgb(var(--slate-12)); }
+.finv2-table__th-actions, .finv2-table__td-actions { width: 1%; white-space: nowrap; }
+.finv2-table__td-actions { display: flex; gap: 4px; }
+.finv2-table__td-muted { color: rgb(var(--slate-9)); }
+.finv2-table__td-date  { white-space: nowrap; }
+
+/* ── Cards (mobile alternative à tabela) ─────────────────────── */
+.finv2-cards { display: flex; flex-direction: column; gap: 10px; }
+.finv2-card {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 14px;
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 12px;
+  transition: border-color 0.15s ease;
+  &:hover { border-color: rgb(var(--slate-6)); }
+}
+
+/* ── Estados (loading / empty) ────────────────────────────────── */
+.finv2-state {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; padding: 32px 16px;
+  color: rgb(var(--slate-9)); font-size: 13px;
+  text-align: center;
+}
+.finv2-state__icon-wrap {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: rgb(var(--slate-3));
+  display: flex; align-items: center; justify-content: center;
+  color: rgb(var(--slate-9));
+}
+.finv2-state__title { margin: 0; font-size: 14px; font-weight: 600; color: rgb(var(--slate-12)); }
+.finv2-state__hint  {
+  margin: 0;
+  font-size: 12.5px;
+  color: rgb(var(--slate-9));
+  max-width: 380px;
+  line-height: 1.5;
+  text-align: center;
+  strong { color: rgb(var(--slate-12)); font-weight: 600; }
+}
+// Botão "Limpar filtros" no empty state — recuperação rápida quando
+// usuário fica preso numa combinação que retorna 0 resultados.
+.finv2-state__reset-btn {
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-12));
+  border: 1px solid rgb(var(--slate-5));
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  &:hover {
+    background: rgb(var(--slate-4));
+    border-color: rgb(var(--slate-7));
+  }
+}
+.finv2-spinner {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgb(var(--slate-9));
+  border-top-color: transparent;
+  animation: finv2-spin 0.9s linear infinite;
+}
+@keyframes finv2-spin { to { transform: rotate(360deg); } }
+
+/* ── Helpers responsivos ──────────────────────────────────────── */
+.finv2-show-mobile  { display: none; }
+.finv2-hide-mobile  { display: block; }
+@media (max-width: 800px) {
+  .finv2-show-mobile  { display: block; }
+  .finv2-hide-mobile  { display: none; }
+}
+
+/* ── Header com período selector ────────────────────────────── */
+.financial-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0;
+  flex-wrap: wrap;
+}
+
+.financial-header__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: rgb(var(--s-900));
+}

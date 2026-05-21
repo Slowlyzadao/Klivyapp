@@ -1,0 +1,56 @@
+type: object
+description: |
+  Serviço/procedimento da clínica. Soft-delete via `deleted_at`. O índice
+  parcial garante unicidade de `lower(btrim(name))` por conta apenas entre
+  registros vivos — permite recriar com o mesmo nome após arquivar.
+properties:
+  id:
+    type: integer
+    example: 1
+  account_id:
+    type: integer
+    example: 1
+  name:
+    type: string
+    example: "Limpeza dental"
+  duration_minutes:
+    type: integer
+    minimum: 1
+    example: 30
+  price:
+    type: number
+    format: float
+    minimum: 0
+    example: 120.00
+  requires_room:
+    type: boolean
+    example: false
+  color:
+    type: string
+    description: Hex color (UI).
+    example: "#3b82f6"
+  position:
+    type: integer
+    description: Ordenação dentro da conta. Atribuída pelo servidor.
+    example: 0
+  deleted_at:
+    type: string
+    format: date-time
+    nullable: true
+    description: Preenchido quando arquivado (soft-delete).
+  created_at:
+    type: string
+    format: date-time
+  updated_at:
+    type: string
+    format: date-time
+  agenda_events_count:
+    type: integer
+    description: |
+      Total de `agenda_events` vivos referenciando este serviço. Só aparece
+      na resposta paginada (`?page=…`). Calculado via subquery.
+    example: 14
+  treatment_items_count:
+    type: integer
+    description: Mesmo critério, para `treatment_items`. Só na resposta paginada.
+    example: 3

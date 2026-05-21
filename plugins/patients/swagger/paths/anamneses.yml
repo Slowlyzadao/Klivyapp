@@ -1,0 +1,85 @@
+get:
+  tags:
+    - Anamneses
+  summary: Listar anamneses do paciente
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  responses:
+    '200':
+      description: Lista ordenada por `version_number DESC`
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/Anamnesis.yml'
+post:
+  tags:
+    - Anamneses
+  summary: Criar anamnese (rascunho)
+  description: |
+    `professional` é o `current_user`. Crie como rascunho, edite, e
+    finalize via `PATCH .../finalize` quando estiver completa.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [anamnesis]
+          properties:
+            anamnesis:
+              type: object
+              properties:
+                form_template_id: { type: integer }
+                specialty: { type: string }
+                chief_complaint: { type: string }
+                surgical_history: { type: string }
+                family_history: { type: string }
+                additional_notes: { type: string }
+                medical_history:
+                  type: object
+                  additionalProperties: true
+                allergies:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name: { type: string }
+                      substance: { type: string }
+                      severity: { type: string }
+                      reaction: { type: string }
+                      description: { type: string }
+                current_medications:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name: { type: string }
+                      dosage: { type: string }
+                      frequency: { type: string }
+                      alert: { type: boolean }
+                      interaction_risk: { type: string }
+                contraindications:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name: { type: string }
+                      description: { type: string }
+                      details: { type: string }
+                pregnancy: { type: object, additionalProperties: true }
+                relevant_habits: { type: object, additionalProperties: true }
+  responses:
+    '201':
+      description: Criada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Anamnesis.yml'
+    '422':
+      description: Erro de validação

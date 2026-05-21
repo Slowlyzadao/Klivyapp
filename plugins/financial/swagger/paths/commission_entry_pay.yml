@@ -1,0 +1,29 @@
+post:
+  tags:
+    - Financeiro · Comissões
+  summary: Marcar comissão como paga (gera Expense)
+  description: |
+    `Financial::PayCommission` cria uma `Expense` vinculada
+    (`expense.financial_commission_entry_id`) + marca a comissão como
+    `pago`. Requer GERENTE/ADMIN. Idempotência via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            due_date: { type: string, format: date }
+            description: { type: string }
+  responses:
+    '200':
+      description: Comissão paga
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/CommissionEntry.yml'
+    '422':
+      description: Erro

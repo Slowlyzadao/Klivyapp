@@ -1,0 +1,70 @@
+get:
+  tags:
+    - Serviços da Agenda
+  summary: Detalhar serviço
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Detalhes do serviço
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaService.yml'
+    '404':
+      description: Serviço não encontrado ou arquivado
+patch:
+  tags:
+    - Serviços da Agenda
+  summary: Atualizar serviço
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [agenda_service]
+          properties:
+            agenda_service:
+              type: object
+              properties:
+                name: { type: string }
+                duration_minutes: { type: integer, minimum: 1 }
+                price: { type: number, format: float, minimum: 0 }
+                requires_room: { type: boolean }
+                color: { type: string }
+                position: { type: integer }
+  responses:
+    '200':
+      description: Serviço atualizado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaService.yml'
+    '422':
+      description: Erro de validação
+delete:
+  tags:
+    - Serviços da Agenda
+  summary: Arquivar serviço (hard-delete)
+  description: |
+    **Atenção:** desde o PR de simplificação 2026-05-14, este endpoint faz
+    **hard-delete** físico. A FK `agenda_events.agenda_service_id` é
+    nullificada via `ON DELETE SET NULL`; eventos antigos preservam
+    `custom_attributes['treatment']` (NAME) como audit trail histórico.
+    O concern Auditable registra o `destroy` automaticamente.
+
+    A UI exige `ConfirmDangerModal` com contagem de uso (via `usage_stats`)
+    antes de chamar este endpoint.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Serviço removido
+    '422':
+      description: Falha na remoção (constraint do banco)

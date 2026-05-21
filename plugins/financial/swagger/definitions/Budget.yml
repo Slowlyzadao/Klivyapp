@@ -1,0 +1,47 @@
+type: object
+description: |
+  Orçamento financeiro (`Financial::Budget`). Gerado a partir da aprovação
+  de um `TreatmentPlan` (rascunho) ou criado direto pela recepção. Aprovação
+  via `POST /approve` cria as `Installment`s. Cancelamento via `POST /cancel`
+  preserva o orçamento mas marca como cancelado (não deleta).
+properties:
+  id: { type: integer }
+  patient_id: { type: integer }
+  professional_id: { type: integer, nullable: true }
+  treatment_plan_id:
+    type: integer
+    nullable: true
+    description: Quando vem da aprovação de um TreatmentPlan.
+  origin:
+    type: string
+    description: "Ex.: estimate, mensalidade, treatment_plan"
+  status:
+    type: string
+    enum: [rascunho, enviado, aprovado, cancelado, concluido]
+  subtotal_cents: { type: integer }
+  discount_cents: { type: integer }
+  total_cents: { type: integer }
+  installments_count: { type: integer }
+  payment_method: { type: string, nullable: true }
+  notes: { type: string, nullable: true }
+  valid_until: { type: string, format: date, nullable: true }
+  approved_at: { type: string, format: date-time, nullable: true }
+  canceled_at: { type: string, format: date-time, nullable: true }
+  has_paid_installments:
+    type: boolean
+    description: "True se ≥1 parcela com `received_amount_cents > 0`. Trava destroy/edição."
+  deletable:
+    type: boolean
+    description: "False quando há parcela paga (use cancel em vez de destroy)."
+  created_at: { type: string, format: date-time }
+  updated_at: { type: string, format: date-time }
+  items:
+    type: array
+    description: "Embedded apenas em `show` e respostas de create."
+    items:
+      $ref: './BudgetItem.yml'
+  installments:
+    type: array
+    description: "Embedded apenas em `show` e nas respostas de approve/cancel/update_installments."
+    items:
+      $ref: './Installment.yml'

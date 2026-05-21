@@ -1,0 +1,43 @@
+post:
+  tags:
+    - Financeiro · Webhooks
+  summary: Receber webhook do Asaas
+  description: |
+    Endpoint **público** (sem autenticação Klivy) verificado por
+    `asaas-access-token` header contra `GatewaySetting.webhook_secret`
+    da conta. Processamento real é assíncrono via
+    `Financial::Webhooks::ProcessAsaasEventJob` — responde 200 OK rápido.
+
+    Idempotência por `event_id` — webhook duplicado retorna `status: "duplicate"`.
+  parameters:
+    - name: account_id
+      in: query
+      required: true
+      schema: { type: integer }
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          description: "Payload arbitrário do Asaas (varia por `event_type`)."
+          additionalProperties: true
+  responses:
+    '200':
+      description: Recebido
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              ok: { type: boolean }
+              event_id: { type: string }
+              status: { type: string, enum: [duplicate] }
+    '401':
+      description: Assinatura inválida
+    '403':
+      description: Conta sem `GatewaySetting.asaas` configurada
+    '404':
+      description: Conta não encontrada
+    '500':
+      description: Erro interno

@@ -1,0 +1,64 @@
+get:
+  tags:
+    - Sessões Clínicas
+  summary: Detalhar sessão
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Sessão
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/SessionLog.yml'
+    '404':
+      description: Não encontrada
+patch:
+  tags:
+    - Sessões Clínicas
+  summary: Atualizar sessão (só em `draft` e dentro da janela)
+  description: |
+    Bloqueia (403) se `status=signed` ou janela de edição expirou (`within_draft_window=false`).
+    Suporta optimistic locking via `lock_version`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [session_log]
+          properties:
+            session_log:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/SessionLog.yml'
+    '403':
+      description: Sessão assinada ou fora da janela de edição
+    '422':
+      description: Erro de validação
+delete:
+  tags:
+    - Sessões Clínicas
+  summary: Excluir sessão (soft-delete, só `draft`)
+  description: Bloqueia se já assinada.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204':
+      description: Excluída
+    '403':
+      description: Não pode excluir sessão assinada

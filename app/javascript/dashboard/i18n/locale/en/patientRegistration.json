@@ -1,0 +1,137 @@
+{
+  "PATIENT_REGISTRATION": {
+    "HEADER": {
+      "TITLE": "Registration Form",
+      "SUBTITLE": "Progressive fill — save anytime.",
+      "LAST_UPDATED": "Last updated: {date}",
+      "SAVE": "Save"
+    },
+    "SECTIONS": {
+      "PERSONAL": {
+        "TITLE": "Personal Data",
+        "SUBTITLE": "Name, birth date, document"
+      },
+      "CONTACT": {
+        "TITLE": "Contact and Communication",
+        "SUBTITLE": "Phone, email, preferences"
+      },
+      "ADDRESS": {
+        "TITLE": "Address",
+        "SUBTITLE": "ZIP, street, city, state"
+      },
+      "ADMIN": {
+        "TITLE": "Administrative and Insurance",
+        "SUBTITLE": "Health plan, emergency, LGPD"
+      }
+    },
+    "AVATAR": {
+      "TITLE": "Profile Photo",
+      "HINT": "JPG or PNG · max. 15MB",
+      "CAMERA": "Camera",
+      "UPLOAD": "Upload",
+      "ALT": "Patient avatar"
+    },
+    "CAMERA_MODAL": {
+      "TITLE": "Take Photo",
+      "SUBTITLE": "Position your face in the center",
+      "ERROR": "Permission denied or camera not found.",
+      "CANCEL": "Cancel",
+      "RETAKE": "Retake",
+      "USE_PHOTO": "Use photo"
+    },
+    "PERSONAL": {
+      "FIRST_NAME": "First Name",
+      "FIRST_NAME_PLACEHOLDER": "Gabriel",
+      "LAST_NAME": "Last Name",
+      "LAST_NAME_PLACEHOLDER": "Fernandes",
+      "SOCIAL_NAME": "Social Name",
+      "SOCIAL_NAME_PLACEHOLDER": "Optional",
+      "BIRTHDATE": "Birth Date",
+      "BIRTHDATE_PLACEHOLDER": "DD/MM/YYYY",
+      "SEX": "Sex",
+      "MARITAL": "Marital Status",
+      "SELECT_PLACEHOLDER": "Select",
+      "CPF": "CPF",
+      "CPF_PLACEHOLDER": "000.000.000-00",
+      "RG": "RG",
+      "RG_PLACEHOLDER": "e.g. 1234567",
+      "NOTES": "Notes",
+      "NOTES_PLACEHOLDER": "Free notes about the patient (optional)",
+      "GUARDIAN_TOGGLE_TITLE": "Has guardian?",
+      "GUARDIAN_TOGGLE_HINT": "Enable for patients who depend on a legal guardian (minors, wards, etc.)",
+      "GUARDIAN_BLOCK_TITLE": "Guardian Data",
+      "GUARDIAN_NAME": "Guardian Name",
+      "GUARDIAN_NAME_PLACEHOLDER": "Full name",
+      "GUARDIAN_RELATIONSHIP": "Relationship",
+      "GUARDIAN_RELATIONSHIP_PLACEHOLDER": "Select…",
+      "GUARDIAN_CPF": "Guardian CPF",
+      "GUARDIAN_PHONE": "Phone",
+      "GUARDIAN_PHONE_PLACEHOLDER": "(00) 00000-0000"
+    },
+    "CONTACT": {
+      "PHONE_LABEL": "Main Phone",
+      "WHATSAPP_BADGE": "WhatsApp",
+      "PHONE_PLACEHOLDER": "(00) 00000-0000",
+      "ALT_PHONE": "Alternative Phone",
+      "ALT_PHONE_PLACEHOLDER": "(11) 00000-0000",
+      "EMAIL": "Email",
+      "EMAIL_PLACEHOLDER": "patient{'@'}email.com",
+      "PREFERENCES_TITLE": "Contact preferences",
+      "WHATSAPP_TITLE": "WhatsApp",
+      "WHATSAPP_HINT": "Reminders and confirmations",
+      "EMAIL_TITLE": "Email",
+      "EMAIL_HINT": "Receipts and announcements",
+      "DROPDOWN": {
+        "SEARCHING": "Searching...",
+        "PATIENTS_HEADER": "Existing patients",
+        "CHAT_CONTACTS_HEADER": "Chat contacts",
+        "NO_NAME": "No name",
+        "NO_PHONE": "No phone"
+      }
+    },
+    "ADDRESS": {
+      "ZIP": "ZIP",
+      "ZIP_PLACEHOLDER": "00000-000",
+      "STREET": "Street",
+      "NUMBER": "Number",
+      "COMPLEMENT": "Complement",
+      "COMPLEMENT_PLACEHOLDER": "Apt, block...",
+      "NEIGHBORHOOD": "Neighborhood",
+      "CITY": "City",
+      "STATE": "State (UF)",
+      "STATE_PLACEHOLDER": "UF"
+    },
+    "ADMIN": {
+      "INSURANCE_TITLE": "Health Plan / Insurance",
+      "INSURANCE_NAME": "Insurance",
+      "INSURANCE_NAME_PLACEHOLDER": "Select",
+      "INSURANCE_NUMBER": "Card Number",
+      "INSURANCE_NUMBER_PLACEHOLDER": "000.000.000",
+      "INSURANCE_PLAN": "Plan",
+      "INSURANCE_PLAN_PLACEHOLDER": "e.g. Executive Plus",
+      "INSURANCE_VALIDITY": "Card Validity",
+      "INSURANCE_VALIDITY_PLACEHOLDER": "DD/MM/YYYY",
+      "EMERGENCY_TITLE": "Emergency Contact",
+      "EMERGENCY_NAME": "Name",
+      "EMERGENCY_PHONE": "Phone",
+      "EMERGENCY_RELATIONSHIP": "Relationship",
+      "EMERGENCY_RELATIONSHIP_PLACEHOLDER": "e.g. Spouse",
+      "LGPD_TITLE": "LGPD and Consents",
+      "LGPD_TERM": "LGPD Term",
+      "LGPD_TERM_HINT": "Storage of medical data",
+      "LGPD_IMAGE": "Image Use",
+      "LGPD_IMAGE_HINT": "Marketing and social media"
+    },
+    "MESSAGES": {
+      "AVATAR_SUCCESS": "Photo updated successfully!",
+      "AVATAR_ERROR": "Error updating photo.",
+      "PHOTO_SAVED": "Profile photo updated!",
+      "PHOTO_SAVE_ERROR": "Error saving photo.",
+      "INVALID_CPF": "Invalid patient CPF. Check the digits.",
+      "INVALID_GUARDIAN_CPF": "Invalid guardian CPF. Check the digits.",
+      "SAVE_SUCCESS": "Registration saved successfully!",
+      "SAVE_ERROR": "Error saving registration.",
+      "SAVE_ERROR_PREFIX": "Error saving registration: {errors}"
+    }
+  }
+}

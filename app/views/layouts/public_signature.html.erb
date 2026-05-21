@@ -1,0 +1,241 @@
+<%
+  brand_name = (@brand_name.presence || GlobalConfigService.load('BRAND_NAME', 'Klivy'))
+%>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Assinatura do Paciente · <%= brand_name %></title>
+  <%= csrf_meta_tags %>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --brand: #1f6cf2;
+      --brand-dark: #1858d4;
+      --brand-light: #e8f0ff;
+      --success: #10b981;
+      --error: #ef4444;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow: 0 4px 24px rgba(0,0,0,.08);
+      --transition: .2s ease;
+    }
+    html, body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .sig-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .sig-header {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .sig-header-logo {
+      height: 36px;
+      width: auto;
+      display: block;
+      max-width: 160px;
+      object-fit: contain;
+    }
+    .sig-header-brand {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--brand);
+      letter-spacing: -0.02em;
+    }
+    .sig-main {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      padding: 32px 16px 56px;
+    }
+    .sig-container {
+      width: 100%;
+      max-width: 560px;
+    }
+    .sig-card {
+      background: white;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .sig-card-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sig-card-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .sig-card-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .sig-card-body { padding: 20px 24px 24px; }
+    .sig-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 16px;
+      margin-bottom: 20px;
+    }
+    .sig-meta-item { font-size: 13px; }
+    .sig-meta-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+    }
+    .sig-meta-value { font-weight: 600; color: var(--text); }
+    .sig-canvas-wrap {
+      position: relative;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      background: #fafbfc;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+    .sig-canvas-wrap.has-signature { border-style: solid; border-color: var(--brand); }
+    .sig-canvas-wrap canvas {
+      display: block;
+      width: 100%;
+      height: 220px;
+      cursor: crosshair;
+      touch-action: none;
+    }
+    .sig-canvas-hint {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      font-size: 13px;
+      color: var(--text-light);
+      font-weight: 500;
+    }
+    .sig-canvas-wrap.has-signature .sig-canvas-hint { display: none; }
+    .sig-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .sig-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition);
+      font-family: inherit;
+    }
+    .sig-btn-primary { background: var(--brand); color: white; flex: 1 1 auto; }
+    .sig-btn-primary:hover { background: var(--brand-dark); }
+    .sig-btn-primary:disabled { background: var(--text-light); cursor: not-allowed; }
+    .sig-btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1.5px solid var(--border);
+    }
+    .sig-btn-ghost:hover { border-color: var(--brand); color: var(--brand); }
+    .sig-notice {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: var(--brand-light);
+      border-radius: var(--radius-sm);
+      line-height: 1.5;
+    }
+    .sig-notice a { color: var(--brand); font-weight: 600; }
+    .sig-state {
+      text-align: center;
+      padding: 56px 24px;
+    }
+    .sig-state-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+    }
+    .sig-state-icon.success { background: #ecfdf5; color: var(--success); }
+    .sig-state-icon.error { background: #fef2f2; color: var(--error); }
+    .sig-state-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    .sig-state-sub { font-size: 14px; color: var(--text-muted); max-width: 380px; margin: 0 auto; }
+    .sig-loading { text-align: center; padding: 64px 24px; color: var(--text-muted); }
+    .sig-spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--brand-light);
+      border-top-color: var(--brand);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block;
+      margin-bottom: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .sig-footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: var(--text-light);
+    }
+    .sig-footer a { color: var(--brand); text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="sig-page">
+    <header class="sig-header">
+      <% if @brand_logo.present? %>
+        <img class="sig-header-logo" src="<%= @brand_logo %>" alt="<%= brand_name %>" />
+      <% else %>
+        <div class="sig-header-brand"><%= brand_name %></div>
+      <% end %>
+    </header>
+    <main class="sig-main">
+      <div class="sig-container">
+        <%= yield %>
+      </div>
+    </main>
+    <footer class="sig-footer">
+      Powered by <a href="<%= GlobalConfigService.load('BRAND_URL', 'https://klivy.com.br') %>" target="_blank" rel="noopener"><%= brand_name %></a>
+    </footer>
+  </div>
+</body>
+</html>

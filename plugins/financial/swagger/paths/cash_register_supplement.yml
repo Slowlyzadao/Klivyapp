@@ -1,0 +1,35 @@
+post:
+  tags:
+    - Financeiro · Caixa
+  summary: Suprimento (colocar dinheiro no caixa)
+  description: |
+    Transfere `amount_cents` de outra conta para o caixa. Gera `CashMovement`
+    + 2 `Entry`s. Requer RECEPCAO/GERENTE/ADMIN. Idempotência via header
+    `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [from_bank_account_id, amount_cents]
+          properties:
+            from_bank_account_id: { type: integer }
+            amount_cents: { type: integer, minimum: 1 }
+            occurred_at: { type: string, format: date-time }
+            notes: { type: string }
+  responses:
+    '201':
+      description: Suprimento registrado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              movement:
+                $ref: '../definitions/CashMovement.yml'
+    '422':
+      description: Erro

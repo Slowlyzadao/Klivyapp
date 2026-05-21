@@ -1,0 +1,30 @@
+post:
+  tags:
+    - Financeiro · Parcelas
+  summary: Anexar comprovante de pagamento
+  description: Upload via `multipart/form-data`. Armazena em Active Storage.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      multipart/form-data:
+        schema:
+          type: object
+          required: [file]
+          properties:
+            file: { type: string, format: binary }
+            proof_file: { type: string, format: binary, description: "Alias de `file`" }
+  responses:
+    '200':
+      description: Anexado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              url: { type: string, description: "Signed URL (15min)" }
+              filename: { type: string }
+    '422':
+      description: Arquivo ausente

@@ -1,0 +1,16 @@
+@use "../variables" as *;
+
+/* ── Header wrapper ─────────────────────────────────── */
+.header-nav {
+  margin-bottom: 24px;
+}
+
+.hdr-divider {
+  background: rgb(var(--slate-4)) !important;
+}
+
+/*
+ * Classes de botão antigas (.btn-back, .hdr-btn, .hdr-btn--secondary/charge/primary)
+ * removidas em 2026-05-04 — substituídas por BeclinicButton (commit 1.5.1.83+).
+ * Verificado via `grep` em .vue: zero usos restantes.
+ */

@@ -1,0 +1,17 @@
+get:
+  tags:
+    - Financeiro · Relatórios · Charts
+  summary: Tendência de inadimplência
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: months
+      in: query
+      schema: { type: integer, default: 12, minimum: 3, maximum: 36 }
+  responses:
+    '200':
+      description: Série mensal
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

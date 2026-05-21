@@ -1,0 +1,318 @@
+<%# HTML editor with live preview — bootstrap em app/javascript/superadmin_pages/html_editor.js %>
+<div class="field-unit__label">
+  <%= f.label field.attribute %>
+</div>
+<div class="field-unit__field">
+  <div class="ha-html-editor" data-quill-field>
+    <div class="ha-html-toolbar" data-toolbar>
+      <div class="ha-html-toolbar-left" data-snippets>
+        <button type="button" class="ha-html-snip" data-snippet="h1">h1</button>
+        <button type="button" class="ha-html-snip" data-snippet="h2">h2</button>
+        <button type="button" class="ha-html-snip" data-snippet="h3">h3</button>
+        <button type="button" class="ha-html-snip" data-snippet="p">¶p</button>
+        <button type="button" class="ha-html-snip" data-snippet="b">b</button>
+        <button type="button" class="ha-html-snip" data-snippet="i"><em>i</em></button>
+        <button type="button" class="ha-html-snip" data-snippet="u"><u>u</u></button>
+        <button type="button" class="ha-html-snip" data-snippet="span">span</button>
+        <button type="button" class="ha-html-snip" data-snippet="link">link</button>
+        <button type="button" class="ha-html-snip" data-snippet="img">img</button>
+        <button type="button" class="ha-html-snip" data-snippet="ul">ul</button>
+        <button type="button" class="ha-html-snip" data-snippet="li">•li</button>
+      </div>
+      <div class="ha-html-toolbar-right">
+        <button type="button" class="ha-html-action ha-html-action--icon" data-action="format" title="Reindentar HTML">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
+          <span class="ha-html-action__sr">Formatar</span>
+        </button>
+        <span class="ha-html-toolbar-divider" aria-hidden="true"></span>
+        <button type="button" class="ha-html-action" data-action="view-html" title="Ver só o código HTML">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          HTML
+        </button>
+        <button type="button" class="ha-html-action" data-action="view-split" title="Código + preview lado a lado">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/></svg>
+          Split
+        </button>
+        <button type="button" class="ha-html-action" data-action="view-preview" title="Ver só o preview">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          Preview
+        </button>
+      </div>
+    </div>
+    <div class="ha-html-split" data-split>
+      <div class="ha-html-pane ha-html-pane--code">
+        <div class="ha-html-gutter" data-gutter aria-hidden="true"></div>
+        <div class="ha-html-source-wrap">
+          <pre class="ha-html-highlight" data-highlight aria-hidden="true"><code></code></pre>
+          <textarea
+            class="ha-html-source"
+            spellcheck="false"
+            autocomplete="off"
+            data-source
+          ><%= field.data %></textarea>
+        </div>
+      </div>
+      <div class="ha-html-pane ha-html-pane--preview" data-preview-pane>
+        <iframe
+          class="ha-html-preview"
+          sandbox="allow-same-origin"
+          referrerpolicy="no-referrer"
+          title="Preview"
+          data-preview
+        ></iframe>
+      </div>
+    </div>
+    <div class="ha-html-statusbar" data-statusbar>
+      <span class="ha-html-status-left">Length: <span data-length>0</span></span>
+      <span class="ha-html-status-right" data-status-msg></span>
+    </div>
+    <%= f.hidden_field field.attribute, value: field.data, class: 'ha-html-input', data: { input: true } %>
+  </div>
+</div>
+
+<style>
+  /* Cor primária Klivy. */
+  .ha-html-editor { --ha-primary: #2F6FEB; --ha-primary-dark: #1A3FA8; }
+
+  .ha-html-editor {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 760px;
+    max-height: 90vh;
+  }
+
+  .ha-html-toolbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 8px;
+    background: var(--ha-primary);
+    color: #fff;
+    border-bottom: 1px solid var(--ha-primary-dark);
+    flex-wrap: wrap;
+  }
+  .ha-html-toolbar-left, .ha-html-toolbar-right {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .ha-html-toolbar .ha-html-snip,
+  .ha-html-toolbar .ha-html-action {
+    background: transparent !important;
+    color: #fff !important;
+    border: 1px solid transparent !important;
+    border-radius: 4px !important;
+    padding: 4px 10px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
+    cursor: pointer !important;
+    text-transform: none !important;
+    box-shadow: none !important;
+    min-width: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+  .ha-html-toolbar .ha-html-snip:hover,
+  .ha-html-toolbar .ha-html-action:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.45) !important;
+  }
+  .ha-html-toolbar .ha-html-action {
+    border-color: rgba(255, 255, 255, 0.5) !important;
+  }
+  .ha-html-toolbar .ha-html-action svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+  .ha-html-toolbar .ha-html-action--icon {
+    padding: 4px 7px !important;
+  }
+  .ha-html-toolbar-divider {
+    width: 1px;
+    height: 22px;
+    background: rgba(255, 255, 255, 0.35);
+    margin: 0 6px;
+    display: inline-block;
+  }
+  .ha-html-action__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .ha-html-toolbar .ha-html-action.is-active {
+    background: #fff !important;
+    color: var(--ha-primary) !important;
+    border-color: #fff !important;
+  }
+
+  .ha-html-split {
+    display: flex;
+    flex: 1 1 0;
+    min-height: 0;
+    background: #fff;
+    overflow: hidden;
+  }
+  .ha-html-pane {
+    flex: 1 1 50%;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    background: #fff;
+    overflow: hidden;
+  }
+  .ha-html-pane--code {
+    border-right: 1px solid #e5e7eb;
+    flex-direction: row;
+  }
+  .ha-html-pane--preview {
+    flex-direction: column;
+  }
+  .ha-html-editor.ha-html--only-html .ha-html-pane--preview { display: none; }
+  .ha-html-editor.ha-html--only-html .ha-html-pane--code { border-right: 0; }
+  .ha-html-editor.ha-html--only-preview .ha-html-pane--code { display: none; }
+
+  .ha-html-gutter {
+    flex: 0 0 auto;
+    width: 44px;
+    background: #f8fafc;
+    color: #94a3b8;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    padding: 12px 6px 12px 0;
+    text-align: right;
+    user-select: none;
+    overflow: hidden;
+    border-right: 1px solid #eef2f7;
+    white-space: pre;
+  }
+
+  /* Wrap relativo que ancora o overlay de highlight + textarea */
+  .ha-html-source-wrap {
+    position: relative;
+    flex: 1 1 auto;
+    height: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* Layer de baixo (visível): syntax highlighted via JS */
+  .ha-html-highlight,
+  .ha-html-highlight code {
+    margin: 0;
+    padding: 0;
+  }
+  .ha-html-highlight {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #1f2937;
+    background: #fff;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    tab-size: 2;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .ha-html-highlight code {
+    display: block;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    white-space: inherit;
+    overflow-wrap: inherit;
+    word-break: inherit;
+  }
+
+  /* Token colors (theme inspirada no GitHub Light) */
+  .hl-doctype { color: #6f42c1; }
+  .hl-comment { color: #6a737d; font-style: italic; }
+  .hl-bracket { color: #6a737d; }
+  .hl-tag     { color: #d73a49; font-weight: 500; }
+  .hl-attr    { color: #005cc5; }
+  .hl-eq      { color: #6a737d; }
+  .hl-string  { color: #032f62; }
+  .hl-number  { color: #005cc5; }
+
+  /* Layer de cima (invisível mas funcional): textarea real */
+  .ha-html-source {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    border: 0 !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+    resize: none;
+    padding: 12px 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    background: transparent !important;
+    /* texto invisível, mas caret e seleção visíveis */
+    color: transparent !important;
+    -webkit-text-fill-color: transparent;
+    caret-color: #1f2937;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    overflow: auto;
+    tab-size: 2;
+    min-height: 0 !important;
+    z-index: 1;
+  }
+  .ha-html-source::selection { background: rgba(47, 111, 235, 0.25); }
+  .ha-html-source::-moz-selection { background: rgba(47, 111, 235, 0.25); }
+
+  .ha-html-preview {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    border: 0;
+    background: #fff;
+  }
+
+  .ha-html-statusbar {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    background: #f8fafc;
+    border-top: 1px solid #e5e7eb;
+    font-size: 12px;
+    color: #475569;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+  .ha-html-status-right { color: #64748b; }
+  .ha-html-status-right.is-warn { color: #b45309; }
+  .ha-html-status-right.is-ok { color: #047857; }
+
+  @media (max-width: 900px) {
+    .ha-html-editor { height: auto; max-height: none; }
+    .ha-html-split { flex-direction: column; flex: 0 0 auto; }
+    .ha-html-pane { flex: 0 0 auto; height: 320px; }
+    .ha-html-pane--code { border-right: 0; border-bottom: 1px solid #e5e7eb; }
+  }
+</style>

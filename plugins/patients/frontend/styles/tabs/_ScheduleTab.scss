@@ -1,0 +1,670 @@
+/* ═══════════════════════════════════════════
+   AGENDA E HISTÓRICO — estilos exclusivos
+═══════════════════════════════════════════ */
+
+/* KPI grid 4 colunas */
+.sched-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+/* KPI card base */
+.sched-kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+}
+.sched-kpi-card--green {
+  border-color: rgba(34, 197, 94, 0.2);
+  background: rgba(34, 197, 94, 0.04);
+}
+.sched-kpi-card--blue {
+  border-color: rgba(59, 130, 246, 0.2);
+  background: rgba(59, 130, 246, 0.04);
+}
+.sched-kpi-card--red {
+  border-color: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.04);
+}
+
+/* KPI ícone */
+.sched-kpi-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  color: #475569;
+  margin-bottom: 4px;
+}
+.sched-kpi-icon--green {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+}
+.sched-kpi-icon--blue {
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+}
+.sched-kpi-icon--red {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+}
+
+.sched-kpi-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #475569;
+  margin: 0;
+}
+.sched-kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Filtros pill */
+.sched-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sched-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+  transition:
+    background 0.13s,
+    color 0.13s,
+    border-color 0.13s;
+  white-space: nowrap;
+}
+.sched-filter-btn:hover {
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.06);
+}
+.sched-filter-btn--active {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.25);
+  color: #60a5fa;
+}
+.sched-filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* Alerta de retorno */
+.sched-recall-alert {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: rgba(251, 191, 36, 0.06);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 12px;
+}
+.sched-recall-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 99px;
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sched-recall-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sched-recall-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fbbf24;
+  margin: 0;
+}
+.sched-recall-desc {
+  font-size: 12px;
+  color: rgba(251, 191, 36, 0.7);
+  margin: 0;
+  line-height: 1.5;
+}
+.sched-recall-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #fbbf24;
+  color: #1e1b0e;
+  border: none;
+  cursor: pointer;
+  transition: background 0.13s;
+}
+.sched-recall-btn:hover {
+  background: #f59e0b;
+}
+.sched-recall-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.sched-recall-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  background: transparent;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+  cursor: pointer;
+  transition: background 0.13s;
+}
+.sched-recall-btn-ghost:hover {
+  background: rgba(251, 191, 36, 0.08);
+}
+.sched-recall-dismiss {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.sched-dismiss-text {
+  font-size: 10px;
+  color: rgba(251, 191, 36, 0.4);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+  transition: color 0.13s;
+  padding: 0;
+  line-height: 1.4;
+}
+.sched-dismiss-text:hover {
+  color: rgba(251, 191, 36, 0.7);
+}
+.sched-dismiss-x {
+  width: auto;
+  height: auto;
+  padding: 2px;
+  border-radius: 4px;
+  background: none;
+  border: none;
+  color: rgba(251, 191, 36, 0.45);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: color 0.13s;
+}
+.sched-dismiss-x:hover {
+  color: #fbbf24;
+}
+
+/* Empty state */
+.sched-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 56px 24px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  text-align: center;
+}
+.sched-empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sched-empty-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #94a3b8;
+  margin: 0;
+}
+.sched-empty-hint {
+  font-size: 12px;
+  color: #334155;
+  margin: 0;
+}
+
+/* Linha do tempo */
+.sched-timeline {
+  position: relative;
+  padding-left: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+/* A linha é centralizada exatamente no eixo dos dots (dot left=-28, metade=7px → 48-28+7=27px) */
+.sched-timeline-line {
+  position: absolute;
+  left: 27px;
+  top: 12px;
+  bottom: 12px;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.07) 80%,
+    transparent
+  );
+}
+
+/* Item da linha do tempo — auditoria UX 2026-05-15: gap entre cards
+   reduzido (16px → 10px) para densidade vertical. Card menor + gap
+   menor = mais consultas visíveis sem rolar. */
+.sched-apt-item {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+/* Dot — sólido, sem borda */
+.sched-apt-dot {
+  position: absolute;
+  left: -28px; /* 48px padding - 28px = dot começa no eixo certo */
+  top: 20px;
+  width: 14px;
+  height: 14px;
+  border-radius: 99px;
+  background: #334155; /* neutro para status desconhecido */
+  border: none;
+  z-index: 2;
+}
+/* Falta / Cancelado → amarelo */
+.sched-apt-dot--noshow {
+  background: #eab308;
+}
+/* Agendado / Confirmado  → verde */
+.sched-apt-dot--scheduled {
+  background: #22c55e;
+}
+/* Realizado              → cinza claro */
+.sched-apt-dot--done {
+  background: #475569;
+}
+
+/* Card de agendamento — auditoria UX 2026-05-15: padding e gap reduzidos
+   para densidade vertical. Mantém respiro interno mas elimina espaço
+   "morto" entre header/notes/actions. */
+.sched-apt-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition:
+    background 0.14s,
+    border-color 0.14s;
+}
+.sched-apt-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Header do card */
+.sched-apt-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sched-apt-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Badges padronizados (mesma altura/font/letter-spacing) — variantes
+   diferenciam só pela cor e peso. */
+.sched-status-badge,
+.sched-type-badge,
+.sched-priority-badge,
+.sched-next-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.sched-status-badge {
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* Tipo de evento — neutro, dual-theme via slate vars */
+.sched-type-badge {
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-11));
+  border-color: rgb(var(--slate-5));
+  font-weight: 600;
+}
+
+/* Prioridade — cores via cls inline (`text-X-700 dark:text-X-400`) */
+.sched-priority-badge {
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* PRÓXIMA */
+.sched-next-badge {
+  font-weight: 700;
+  text-transform: uppercase;
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #1d4ed8;
+  animation: pulse 2s ease-in-out infinite;
+}
+.dark .sched-next-badge {
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+/* Data/Hora */
+.sched-apt-datetime {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.sched-apt-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.sched-apt-time {
+  font-size: 11px;
+  color: #475569;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Info grid (profissional / tratamento) */
+.sched-apt-info {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 16px 40px;
+  align-items: start;
+}
+.sched-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sched-info-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #334155;
+  margin: 0;
+}
+.sched-info-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #cbd5e1;
+}
+.sched-info-empty {
+  font-size: 13px;
+  color: #334155;
+  font-style: italic;
+}
+
+/* Motivo (reagendamento / cancelamento) */
+.sched-reason {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.sched-reason--amber {
+  background: rgba(251, 191, 36, 0.05);
+  border: 1px solid rgba(251, 191, 36, 0.12);
+  color: rgba(251, 191, 36, 0.7);
+}
+.sched-reason--red {
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.12);
+  color: rgba(248, 113, 113, 0.7);
+}
+
+/* Banner de exclusão soft-delete: mais destacado que cancellation, com
+   tons mais escuros para light mode (WCAG AA) e nota em bloco separado. */
+.sched-reason--deleted {
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  color: #b91c1c;
+  font-weight: 500;
+}
+.dark .sched-reason--deleted {
+  color: #fca5a5;
+  border-color: rgba(220, 38, 38, 0.35);
+}
+.sched-reason-note {
+  display: block;
+  margin-top: 4px;
+  padding: 6px 8px;
+  background: rgba(220, 38, 38, 0.06);
+  border-left: 2px solid rgba(220, 38, 38, 0.35);
+  border-radius: 4px;
+  font-weight: 400;
+  color: rgb(var(--slate-11));
+}
+
+/* Card deletado: opacidade leve para indicar que é histórico, não ativo */
+.sched-apt-card:has(.sched-reason--deleted) {
+  opacity: 0.85;
+}
+.sched-apt-card:has(.sched-reason--deleted):hover {
+  opacity: 1;
+}
+
+/* Observações */
+.sched-notes {
+  font-size: 12px;
+  color: #475569;
+  font-style: italic;
+  background: rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 8px 12px;
+  line-height: 1.5;
+}
+
+/* Ações do card (footer) */
+.sched-apt-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+/* Base shared by all action buttons (mesmo size/shape; cor vem de variant) */
+.sched-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgb(var(--slate-5));
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-11));
+  transition:
+    background 0.13s,
+    color 0.13s,
+    border-color 0.13s;
+  white-space: nowrap;
+}
+.sched-action-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.sched-action-btn:not(:disabled):hover {
+  background: rgb(var(--slate-4));
+  color: rgb(var(--slate-12));
+  border-color: rgb(var(--slate-6));
+}
+
+/* Variant INFO (Reagendar Agora) — outlined azul, idle já azul */
+.sched-action-btn--info {
+  background: rgba(59, 130, 246, 0.08);
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, 0.30);
+}
+.sched-action-btn--info:not(:disabled):hover {
+  background: rgba(59, 130, 246, 0.16);
+  color: #1e3a8a;
+  border-color: rgba(59, 130, 246, 0.50);
+}
+.dark .sched-action-btn--info {
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.40);
+}
+.dark .sched-action-btn--info:not(:disabled):hover {
+  background: rgba(59, 130, 246, 0.22);
+  color: #bfdbfe;
+}
+
+/* Variant AMBER (alertas reversíveis) */
+.sched-action-btn--amber {
+  background: rgba(245, 158, 11, 0.08);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.30);
+}
+.sched-action-btn--amber:not(:disabled):hover {
+  background: rgba(245, 158, 11, 0.16);
+  color: #92400e;
+  border-color: rgba(245, 158, 11, 0.50);
+}
+.dark .sched-action-btn--amber {
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.40);
+}
+.dark .sched-action-btn--amber:not(:disabled):hover {
+  background: rgba(245, 158, 11, 0.22);
+  color: #fde68a;
+}
+
+/* Variant DANGER (Marcar Falta) — outlined vermelho, idle já vermelho */
+.sched-action-btn--danger {
+  background: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+  border-color: rgba(220, 38, 38, 0.30);
+}
+.sched-action-btn--danger:not(:disabled):hover {
+  background: rgba(220, 38, 38, 0.16);
+  color: #991b1b;
+  border-color: rgba(220, 38, 38, 0.50);
+}
+.dark .sched-action-btn--danger {
+  color: #fca5a5;
+  border-color: rgba(220, 38, 38, 0.40);
+}
+.dark .sched-action-btn--danger:not(:disabled):hover {
+  background: rgba(220, 38, 38, 0.22);
+  color: #fecaca;
+}
+
+/* Fim da linha do tempo */
+.sched-timeline-end {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  opacity: 0.35;
+}
+.sched-timeline-end-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.06), transparent);
+}
+.sched-timeline-end-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #334155;
+  white-space: nowrap;
+}
+
+/* Sentinel do progressive list — auditoria UX 2026-05-15. Aparece no
+   final dos cards renderizados enquanto há mais para carregar; quando
+   entra na viewport, o IntersectionObserver dispara o próximo batch. */
+.sched-load-more-sentinel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 0;
+  font-size: 12px;
+  color: #94a3b8;
+}

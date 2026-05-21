@@ -1,0 +1,159 @@
+version: '3'
+
+services:
+  base: &base
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+      args:
+        BUNDLE_WITHOUT: ''
+        EXECJS_RUNTIME: 'Node'
+        RAILS_ENV: 'development'
+        RAILS_SERVE_STATIC_FILES: 'false'
+    tty: true
+    stdin_open: true
+    image: chatwoot:development
+    env_file: .env
+
+  rails:
+    <<: *base
+    build:
+      context: .
+      dockerfile: ./docker/dockerfiles/rails.Dockerfile
+    image: chatwoot-rails:development
+    volumes:
+      - ./:/app:delegated
+      - node_modules:/app/node_modules
+      - packs:/app/public/packs
+      - cache:/app/tmp/cache
+      - bundle:/gems
+    depends_on:
+      - postgres
+      - redis
+      - vite
+      - mailhog
+      - sidekiq
+    ports:
+      - 3000:3000
+    env_file: .env
+    environment:
+      - VITE_DEV_SERVER_HOST=vite
+      - NODE_ENV=development
+      - RAILS_ENV=development
+      - BUNDLE_WITHOUT=
+      - WHATSAPP_QR_BRIDGE_URL=http://whatsapp_bridge:3002
+    entrypoint: ["sh", "docker/entrypoints/rails.sh"]
+    command: [ "bundle", "exec", "rails", "s", "-p", "3000", "-b", "0.0.0.0" ]
+
+  sidekiq:
+    <<: *base
+    build:
+      context: .
+      dockerfile: ./docker/dockerfiles/rails.Dockerfile
+    image: chatwoot-rails:development
+    volumes:
+      - ./:/app:delegated
+      - node_modules:/app/node_modules
+      - packs:/app/public/packs
+      - cache:/app/tmp/cache
+      - bundle:/gems
+    depends_on:
+      - postgres
+      - redis
+      - mailhog
+    environment:
+      - NODE_ENV=development
+      - RAILS_ENV=development
+      - BUNDLE_WITHOUT=
+    command: [ "bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml" ]
+
+  vite:
+    <<: *base
+    build:
+      context: .
+      dockerfile: ./docker/dockerfiles/vite.Dockerfile
+    image: chatwoot-vite:development
+    volumes:
+      - ./:/app:delegated
+      - node_modules:/app/node_modules
+      - packs:/app/public/packs
+      - cache:/app/tmp/cache
+      - bundle:/gems
+    ports:
+      - "3036:3036"
+    environment:
+      - VITE_DEV_SERVER_HOST=0.0.0.0
+      - NODE_ENV=development
+      - RAILS_ENV=development
+      - BUNDLE_WITHOUT=
+    entrypoint: ["sh", "docker/entrypoints/vite.sh"]
+    command: bin/vite dev
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: always
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=chatwoot
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=
+      - POSTGRES_HOST_AUTH_METHOD=trust
+
+  redis:
+    image: redis:alpine
+    restart: always
+    command: [ "sh", "-c", "redis-server --requirepass \"$REDIS_PASSWORD\"" ]
+    env_file: .env
+    volumes:
+      - redis:/data/redis
+    ports:
+      - '6379:6379'
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - 1025:1025
+      - 8025:8025
+
+  whatsapp_bridge:
+    build:
+      context: ./lib/whatsapp
+      dockerfile: Dockerfile
+    image: chatwoot-whatsapp-bridge:latest
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    # IMPORTANTE: o bridge persiste credenciais em /app/sessions/<inboxId>/auth_info.
+    # Esse caminho DEVE ser um volume — sem ele, `docker compose down` apaga a
+    # camada writable do container e todas as sessões WhatsApp são perdidas
+    # (sintoma: precisa reescanear o QR após cada rebuild).
+    volumes:
+      - ./lib/whatsapp/sessions:/app/sessions
+      - ./lib/whatsapp/media_cache:/app/media_cache
+    environment:
+      - CHATWOOT_BASE_URL=http://rails:3000
+      - BRIDGE_BASE_URL=http://whatsapp_bridge:3002
+      - WHATSAPP_BRIDGE_PORT=3002
+      - WHATSAPP_SESSIONS_DIR=/app/sessions
+      - WHATSAPP_LID_MAP_PATH=/app/sessions/lid_map.json
+    depends_on:
+      - rails
+    healthcheck:
+      # /healthz é probe ATIVO: confirma que cada socket Baileys está vivo
+      # (não apenas que o processo Node está respondendo). Detecta zumbis.
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3002/healthz', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres:
+  redis:
+  packs:
+  node_modules:
+  cache:
+  bundle:

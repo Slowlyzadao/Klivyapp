@@ -1,0 +1,201 @@
+@use "../variables" as *;
+
+/* ── #5 ReceivablesByWeek (recv-*) ──────────────────────── */
+.recv-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.recv-canvas-wrapper {
+  height: 220px;
+  width: 100%;
+}
+
+.recv-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-left: 4px;
+}
+
+.recv-legend__item {
+  font-size: 0.6875rem;
+  color: rgb(var(--s-500));
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.recv-legend__item::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--c);
+}
+
+/* ── #6 DelinquencyAging (aging-*) ─────────────────────── */
+.aging-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-radius: 8px;
+}
+
+.aging-wrapper--danger {
+  border: 1.5px solid $brand-danger-bright;
+  padding: 0.5rem;
+}
+
+.aging-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.aging-header__label {
+  font-size: 0.8125rem;
+  color: rgb(var(--s-600));
+}
+
+.dark .aging-header__label {
+  color: rgb(var(--s-400));
+}
+
+.aging-alert-badge {
+  font-size: 0.6875rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgb(254 226 226);
+  color: #991B1B;
+}
+
+.dark .aging-alert-badge {
+  background: rgb(127 29 29 / 50%);
+  color: #FCA5A5;
+}
+
+.aging-canvas-wrapper {
+  height: 190px;
+  width: 100%;
+}
+
+/* ── #7 DelinquencyTrend (dtrend-*) ─────────────────────── */
+.dtrend-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dtrend-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgb(254 243 199);
+  border-left: 3px solid $brand-amber-bright;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  color: #92400E;
+}
+
+.dark .dtrend-alert {
+  background: rgb(69 26 3 / 50%);
+  color: #FCD34D;
+}
+
+.dtrend-alert__icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.dtrend-canvas-wrapper {
+  height: 230px;
+  width: 100%;
+}
+
+.dtrend-legend {
+  display: flex;
+  gap: 1rem;
+  padding-left: 4px;
+}
+
+.dtrend-legend__item {
+  font-size: 0.75rem;
+  color: rgb(var(--s-500));
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dtrend-legend__item::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.dtrend-legend__item--bar::before { background: #FCA5A5; }
+.dtrend-legend__item--line::before {
+  background: $brand-danger;
+  height: 2px;
+  border-radius: 0;
+}
+.dtrend-legend__item--ref::before {
+  background: $brand-slate-light;
+  height: 2px;
+  border-radius: 0;
+  border-top: 1px dashed $brand-slate-light;
+}
+
+/* ── #8 DelinquencyByProfessional (dprof-*) ─────────────── */
+.dprof-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dprof-canvas-wrapper {
+  height: 220px;
+  width: 100%;
+}
+
+.dprof-legend {
+  display: flex;
+  gap: 1rem;
+  padding-left: 4px;
+}
+
+.dprof-legend__item {
+  font-size: 0.75rem;
+  color: rgb(var(--s-500));
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dprof-legend__item::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dprof-legend__item--ok::before { background: $brand-emerald; }
+.dprof-legend__item--medium::before { background: $brand-amber-bright; }
+.dprof-legend__item--high::before { background: $brand-danger-bright; }
+
+.sets-body {
+  margin-top: 1rem;
+}
+
+.sets-validity {
+  font-size: 0.8125rem;
+}
+

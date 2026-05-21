@@ -1,0 +1,58 @@
+get:
+  tags:
+    - Financeiro · Crédito do Paciente
+  summary: Ledger de crédito do paciente
+  description: |
+    Retorna saldo agregado + lista de movimentações (`amount_cents`
+    positivo = entrada, negativo = consumo). Filtre por `patient_id`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: patient_id
+      in: query
+      schema: { type: integer }
+  responses:
+    '200':
+      description: Ledger
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              balance_cents: { type: integer, description: "Saldo agregado." }
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/PatientCredit.yml'
+post:
+  tags:
+    - Financeiro · Crédito do Paciente
+  summary: Ajuste manual de crédito
+  description: |
+    Cria um lançamento manual no ledger (`origin=ajuste_manual`). Requer
+    GERENTE/ADMIN. Idempotência via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [patient_credit]
+          properties:
+            patient_credit:
+              type: object
+              required: [patient_id, amount_cents]
+              properties:
+                patient_id: { type: integer }
+                amount_cents:
+                  type: integer
+                  description: "Positivo = adiciona crédito; negativo = abate crédito."
+                description: { type: string }
+  responses:
+    '201':
+      description: Lançamento criado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PatientCredit.yml'

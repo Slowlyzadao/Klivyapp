@@ -1,0 +1,62 @@
+type: object
+description: |
+  Preferências da agenda interna (calendário do dashboard). Singleton por
+  conta. Governa exibição (visibilidade) e bloqueios (validações duras de
+  criação).
+properties:
+  block_outside_working_hours:
+    type: boolean
+    example: true
+  block_lunch_break:
+    type: boolean
+    example: true
+  block_past_dates:
+    type: boolean
+    example: false
+  show_only_working_hours:
+    type: boolean
+    example: false
+  visible_hours_buffer:
+    type: integer
+    minimum: 0
+    maximum: 6
+    example: 1
+  slot_interval_minutes:
+    type: integer
+    enum: [15, 30, 60]
+    description: Passo da grade de horários no calendário e no mini-site público.
+    example: 30
+  week_days:
+    type: array
+    description: Configuração por dia da semana (`id` = `sun|mon|tue|wed|thu|fri|sat`).
+    items:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string }
+        enabled: { type: boolean }
+        start: { type: string, example: "09:00" }
+        end: { type: string, example: "18:00" }
+        lunchStart: { type: string, nullable: true, example: "12:00" }
+        lunchEnd: { type: string, nullable: true, example: "13:00" }
+  exceptions:
+    type: array
+    description: Períodos especiais (folgas, congressos etc).
+    items:
+      type: object
+      properties:
+        title: { type: string }
+        type: { type: string }
+        icon: { type: string }
+        color: { type: string }
+        start: { type: string, format: date }
+        end: { type: string, format: date }
+  holidays:
+    type: array
+    description: "Feriados anuais. Quando `status: closed`, bloqueia agendamentos."
+    items:
+      type: object
+      properties:
+        name: { type: string }
+        date: { type: string, description: "DD/MM" }
+        status: { type: string, enum: [closed, open] }

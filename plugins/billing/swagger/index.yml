@@ -1,0 +1,14 @@
+openapi: '3.0.4'
+info:
+  title: Billing Module API
+  version: 1.0.0
+  description: Endpoints para faturamento.
+paths:
+  /api/v1/billing/subscriptions:
+    get:
+      tags:
+        - Billing
+      summary: Listar assinaturas
+      responses:
+        '200':
+          description: OK

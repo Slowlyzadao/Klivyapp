@@ -1,0 +1,142 @@
+@use "../variables" as *;
+
+/* ── #1 CashFlowChart (ccf-*) — Line Chart Premium ──────── */
+.ccf-chart-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+/* Status pill no topo */
+.ccf-chart-header {
+  display: flex;
+  align-items: center;
+  padding-bottom: 0.125rem;
+}
+
+.ccf-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.2rem 0.625rem;
+  border-radius: 999px;
+  letter-spacing: 0.01em;
+}
+
+.ccf-status-pill--positive {
+  background: rgba($brand-success, 0.10);
+  color: $brand-success;
+}
+
+.ccf-status-pill--negative {
+  background: rgba($brand-danger, 0.10);
+  color: $brand-danger;
+}
+
+.dark .ccf-status-pill--positive {
+  background: rgba($brand-success, 0.18);
+}
+
+.dark .ccf-status-pill--negative {
+  background: rgba($brand-danger, 0.18);
+}
+
+.ccf-status-icon {
+  width: 0.8125rem;
+  height: 0.8125rem;
+}
+
+/* Alerta saldo negativo */
+.ccf-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba($brand-danger, 0.07);
+  border-left: 3px solid $brand-danger;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  color: $brand-danger-strong;
+}
+
+.dark .ccf-alert {
+  background: rgba($brand-danger, 0.14);
+  color: #fca5a5;
+}
+
+.ccf-alert__icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+/* Canvas */
+.ccf-canvas-wrapper {
+  height: 280px;
+  width: 100%;
+}
+
+/* Legenda */
+.ccf-legend {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.5rem 0.25rem 0.125rem;
+  border-top: 1px solid rgb(var(--s-100));
+  flex-wrap: wrap;
+}
+
+.dark .ccf-legend {
+  border-color: rgb(var(--s-700));
+}
+
+.ccf-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgb(var(--s-500));
+}
+
+.ccf-legend__dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ccf-legend__dot--income { background: $brand-success; }
+.ccf-legend__dot--expense { background: $brand-danger; }
+
+.ccf-legend__line {
+  display: inline-block;
+  width: 16px;
+  height: 2.5px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+
+.ccf-legend__line--income { background: $brand-success; }
+.ccf-legend__line--expense { background: $brand-danger; }
+
+.ccf-legend__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  color: rgb(var(--s-400));
+  margin-left: auto;
+}
+
+.dark .ccf-legend__hint {
+  color: rgb(var(--s-500));
+}
+
+.ccf-hint-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+}

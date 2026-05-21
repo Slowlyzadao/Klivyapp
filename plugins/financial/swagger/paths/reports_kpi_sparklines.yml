@@ -1,0 +1,20 @@
+get:
+  tags:
+    - Financeiro · Relatórios · Charts
+  summary: Mini-séries dos KPIs do Dashboard
+  description: |
+    Substitui o endpoint legado v1 `/financial/dashboard/kpis` (que lia
+    de `account_transactions`).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: days
+      in: query
+      schema: { type: integer, default: 14, minimum: 7, maximum: 90 }
+  responses:
+    '200':
+      description: Sparklines
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

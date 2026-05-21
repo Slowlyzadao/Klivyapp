@@ -1,0 +1,22 @@
+<%#
+# Override per-resource — prioridade MÁXIMA de Rails view lookup.
+# Label hardcoded em PT-BR.
+%>
+
+<% content_for(:title) { 'Ajuda - Artigos' } %>
+
+<header class="main-content__header">
+  <h1 class="main-content__page-title" id="page-title">Ajuda - Artigos</h1>
+
+  <% if show_search_bar %>
+    <%= render("search", search_term: search_term, resource_name: 'Ajuda - Artigos') %>
+  <% end %>
+
+  <div>
+    <% if accessible_action?(new_resource, :new) %>
+      <%= link_to('Novo Artigo',
+                  [:new, namespace, page.resource_path.to_sym],
+                  class: 'button') %>
+    <% end %>
+  </div>
+</header>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      <%= @global_config['INSTALLATION_NAME'] %>
+    </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=0"/>
+    <% if @global_config['DISPLAY_MANIFEST'] %>
+      <meta name="msapplication-TileColor" content="#1f93ff">
+      <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+      <meta name="theme-color" content="#1f93ff">
+      <meta name="description" content="<%= @global_config['INSTALLATION_NAME'] %> is a customer support solution that helps companies engage customers over Messenger, Twitter, Telegram, WeChat, Whatsapp. Simply connect your channels and converse with your customers from a single place. Easily add new agents to your system and have them own and resolve conversations with customers. <%= @global_config['INSTALLATION_NAME'] %> also gives you real-time reports to measure your team's performance, canned responses to easily respond to frequently asked questions and private notes for agents to collaborate among themselves.">
+      <% if ENV['IOS_APP_IDENTIFIER'].present? %>
+        <meta name="apple-itunes-app" content='app-id=<%= ENV['IOS_APP_IDENTIFIER'] %>'>
+      <% end %>
+      <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+      <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+      <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+      <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+      <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+      <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+      <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+      <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+      <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+      <link rel="icon" type="image/png" sizes="192x192"  href="/android-icon-192x192.png">
+      <link class="favicon" rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+      <link class="favicon" rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+      <link class="favicon" rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+      <link rel="manifest" href="/manifest.json">
+    <% end %>
+    <link rel="icon" type="image/svg+xml" href="/brand-assets/logo_thumbnail.svg">
+    <link rel="icon" type="image/png" sizes="512x512" href="<%= @global_config['LOGO_THUMBNAIL'] %>">
+    <%= csrf_meta_tags %>
+    <script>
+      window.chatwootConfig = {
+        hostURL: '<%= ENV.fetch('FRONTEND_URL', '') %>',
+        helpCenterURL: '<%= ENV.fetch('HELPCENTER_URL', '') %>',
+        fbAppId: '<%= @global_config['FB_APP_ID'] %>',
+        instagramAppId: '<%= @global_config['INSTAGRAM_APP_ID'] %>',
+        tiktokAppId: '<%= @global_config['TIKTOK_APP_ID'] %>',
+        googleOAuthClientId: '<%= ENV.fetch('GOOGLE_OAUTH_CLIENT_ID', nil) %>',
+        googleOAuthCallbackUrl: '<%= ENV.fetch('GOOGLE_OAUTH_CALLBACK_URL', nil) %>',
+        allowedLoginMethods: <%= @global_config['ALLOWED_LOGIN_METHODS'].to_json.html_safe %>,
+        fbApiVersion: '<%= @global_config['FACEBOOK_API_VERSION'] %>',
+        whatsappAppId: '<%= @global_config['WHATSAPP_APP_ID'] %>',
+        whatsappConfigurationId: '<%= @global_config['WHATSAPP_CONFIGURATION_ID'] %>',
+        whatsappApiVersion: '<%= @global_config['WHATSAPP_API_VERSION'] %>',
+        signupEnabled: '<%= @global_config['ENABLE_ACCOUNT_SIGNUP'] %>',
+        isEnterprise: '<%= @global_config['IS_ENTERPRISE'] %>',
+        isMfaEnabled: '<%= Chatwoot.mfa_enabled? %>',
+        <% if @global_config['IS_ENTERPRISE'] %>
+        enterprisePlanName: '<%= @global_config['INSTALLATION_PRICING_PLAN'] %>',
+        <% end %>
+        <% if @global_config['VAPID_PUBLIC_KEY'] %>
+        vapidPublicKey: new Uint8Array(<%= Base64.urlsafe_decode64(@global_config['VAPID_PUBLIC_KEY']).bytes %>),
+        <% end %>
+        enabledLanguages: <%= available_locales_with_name.to_json.html_safe %>,
+        helpUrls: <%= feature_help_urls.to_json.html_safe %>,
+        selectedLocale: '<%= I18n.locale %>'
+      }
+      window.globalConfig = <%= raw @global_config.to_json %>
+      window.browserConfig = {
+        browser_name: '<%= browser.name %>',
+      }
+      window.errorLoggingConfig = '<%= ENV.fetch('SENTRY_FRONTEND_DSN', '') || ENV.fetch('SENTRY_DSN', '') %>'
+    </script>
+    <% if @global_config['CLOUD_ANALYTICS_TOKEN'].present? %>
+    <script>
+      window.analyticsConfig = {
+        token: '<%= @global_config['CLOUD_ANALYTICS_TOKEN'] %>',
+      }
+    </script>
+    <% end %>
+    <%= vite_client_tag %>
+    <%= vite_javascript_tag @application_pack %>
+  </head>
+  <body class="text-slate-600">
+    <div id="app"></div>
+    <noscript id="noscript">This app works best with JavaScript enabled.</noscript>
+    <%= yield %>
+    <% if @dashboard_scripts.present? %>
+      <%= @dashboard_scripts.html_safe %>
+    <% end %>
+    <%# ── Klivy support widget — controlado por InstallationConfig ──
+        Edite em /super_admin/installation_configs (KLIVY_SUPPORT_WIDGET_ENABLED/_TOKEN/_URL).
+        O bubble fica oculto por padrão (hideMessageBubble: true) e só é exibido
+        quando o usuário entra no módulo Ajuda (composable useChatBubble). %>
+    <%
+      klivy_widget_enabled = InstallationConfig.find_by(name: 'KLIVY_SUPPORT_WIDGET_ENABLED')&.value.to_s == 'true'
+      klivy_widget_token   = InstallationConfig.find_by(name: 'KLIVY_SUPPORT_WIDGET_TOKEN')&.value
+      klivy_widget_url     = InstallationConfig.find_by(name: 'KLIVY_SUPPORT_WIDGET_URL')&.value
+    %>
+    <% if klivy_widget_enabled && klivy_widget_token.present? && klivy_widget_url.present? %>
+      <style>
+        /* ── Visibilidade controlada por classe no <body> ──
+           Por padrão TUDO do widget fica display:none. O composable
+           useChatBubble adiciona `klivy-help-active` no body só dentro
+           do módulo Ajuda — então o bubble só aparece lá.
+           Mais confiável que depender de hideMessageBubble + toggleBubbleVisibility,
+           que podem falhar quando o SDK ainda não carregou ou em race conditions
+           de SPA navigation. */
+        .woot--bubble-holder,
+        .woot-widget-bubble,
+        .woot-widget-holder { display: none !important; }
+        body.klivy-help-active .woot--bubble-holder,
+        body.klivy-help-active .woot-widget-bubble:not(.woot--hide),
+        body.klivy-help-active .woot-widget-holder { display: block !important; }
+
+        /* ── Tamanho do bubble: 56x56 (alinha com o botão do Captain copilot
+           ao lado; default do SDK é 64x64). Os 3 overrides abaixo casam
+           matematicamente para o ícone 24x24 ficar centralizado:
+            - width/height = 56
+            - svg margin = (56 - 24) / 2 = 16
+            - close X bars: left = 56/2 - 1 = 27 (cruz centralizada no eixo X),
+                            top = (56 - 24) / 2 = 16 (barra de altura 24 centrada). */
+        .woot-widget-bubble:not(.woot-widget--expanded) {
+          width: 56px !important;
+          height: 56px !important;
+        }
+        .woot-widget-bubble:not(.woot-widget--expanded) svg {
+          margin: 16px !important;
+        }
+        .woot-widget-bubble.woot--close::before,
+        .woot-widget-bubble.woot--close::after {
+          left: 27px !important;
+          top: 16px !important;
+        }
+
+        /* ── Posição: sobe o bubble para evitar overlap com Captain copilot
+           (também ancorado em bottom-right). 88px = ~24px margem + ~64px
+           do botão do Captain abaixo. Seletores: .woot-widget-bubble (botão
+           visível) e .woot-widget-holder (iframe da janela). %#cw-bubble-holder
+           é só wrapper sem position fixa. */
+        .woot-widget-bubble { bottom: 88px !important; }
+        .woot-widget-bubble.woot-widget--expanded { bottom: 92px !important; }
+        .woot-widget-holder { bottom: 162px !important; }
+      </style>
+      <script>
+        (function(d,t) {
+          var BASE_URL = <%= klivy_widget_url.to_json.html_safe %>;
+          var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+          g.src=BASE_URL+"/packs/js/sdk.js";
+          g.async = true;
+          s.parentNode.insertBefore(g,s);
+          g.onload=function(){
+            window.chatwootSDK.run({
+              websiteToken: <%= klivy_widget_token.to_json.html_safe %>,
+              baseUrl: BASE_URL,
+              hideMessageBubble: true
+            })
+          }
+        })(document,"script");
+      </script>
+    <% end %>
+  </body>
+</html>

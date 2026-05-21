@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klivy - Configurando sua conta</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --primary: #1f93ff;
+      --primary-hover: #177ce6;
+      --bg-body: #f8f9fa;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --border-color: #e5e7eb;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-body);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      background: white;
+      padding: 3rem;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    .brand-logo {
+      margin-bottom: 2rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    }
+
+    .success-icon {
+      width: 64px; height: 64px; background: #dcfce7; color: #166534;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.5rem auto;
+    }
+
+    h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.75rem; color: #111827; }
+    p { color: var(--text-muted); line-height: 1.5; margin-bottom: 2.5rem; }
+
+    .form-group { text-align: left; margin-bottom: 1.5rem; }
+    label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem; }
+    input {
+      width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color);
+      border-radius: 6px; font-family: inherit; font-size: 1rem;
+      transition: all 0.2s;
+    }
+    input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(31, 147, 255, 0.1); }
+    input.input-invalid { border-color: #ef4444 !important; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important; }
+
+    .btn-finish {
+      width: 100%; background: var(--primary); color: white; border: none;
+      padding: 0.875rem; border-radius: 6px; font-weight: 600; font-size: 1rem;
+      cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    }
+    .btn-finish:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    .btn-finish:disabled { background: #9ca3af; cursor: not-allowed; }
+
+    #spinner { display: none; width: 18px; height: 18px; border: 2px solid white; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .footer-note { font-size: 0.75rem; color: var(--text-muted); margin-top: 1.5rem; }
+
+    .success-state {
+      display: none;
+      text-align: center;
+      animation: fadeIn 0.4s ease;
+    }
+    .success-state.active { display: block; }
+    .success-state .success-icon {
+      width: 80px; height: 80px;
+      background: #dcfce7; color: #166534;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.5rem auto;
+      animation: popIn 0.5s cubic-bezier(0.22, 1.2, 0.36, 1);
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .success-state h1 { color: #166534; margin-bottom: 0.5rem; }
+    .success-state .info-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin: 1.5rem 0;
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      text-align: left;
+    }
+    .success-state .info-box svg { flex-shrink: 0; color: var(--primary); margin-top: 2px; }
+    .success-state .info-box .info-text { font-size: 0.875rem; color: #1e40af; line-height: 1.5; }
+    .success-state .info-text strong { color: #1e3a8a; }
+    .success-state .redirect-note {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+    }
+    .success-state .redirect-note strong { color: var(--primary); }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="brand-logo">
+      <img src="/brand-assets/logo.svg" alt="Klivy Logo" style="height: 40px; width: auto;">
+    </div>
+
+    <div class="success-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+    </div>
+
+    <h1>Pagamento Confirmado!</h1>
+    <p>Agora, vamos configurar o acesso ao seu sistema.</p>
+
+    <div id="errorBox" style="display: none; background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; text-align: left; font-size: 0.875rem;"></div>
+
+    <form id="setupForm">
+      <div class="form-group">
+        <label>Nome da Clínica / Instituição</label>
+        <input type="text" id="clinicName" placeholder="Ex: Clínica BeClinic" required>
+      </div>
+
+      <div class="form-group">
+        <label>E-mail do Administrador (Acesso ao Sistema)</label>
+        <input type="email" id="adminEmail" placeholder="exemplo@email.com" required>
+        <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem;">Este e-mail será usado para login na plataforma.</div>
+        <div id="emailError" style="font-size: 0.75rem; color: #ef4444; margin-top: 0.5rem; display: none; align-items: center; gap: 4px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="emailErrorText"></span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Senha de acesso ao sistema</label>
+        <div style="position: relative;">
+          <input type="password" id="adminPassword" placeholder="Digite sua senha" required minlength="8">
+          <span class="toggle-password" onclick="togglePassword('adminPassword', this)" style="position: absolute; right: 12px; top: 12px; cursor: pointer; color: var(--text-muted);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </span>
+        </div>
+        <div id="passwordRules" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; display: none;">
+          <div class="rule" id="rule-length">❌ Mínimo de 8 caracteres</div>
+          <div class="rule" id="rule-upper">❌ 1 letra maiúscula</div>
+          <div class="rule" id="rule-lower">❌ 1 letra minúscula</div>
+          <div class="rule" id="rule-number">❌ 1 número</div>
+          <div class="rule" id="rule-special">❌ 1 caractere especial (!@#$%^&*)</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Confirmar senha</label>
+        <div style="position: relative;">
+          <input type="password" id="adminPasswordConfirm" placeholder="Confirme sua senha" required minlength="8">
+          <span class="toggle-password" onclick="togglePassword('adminPasswordConfirm', this)" style="position: absolute; right: 12px; top: 12px; cursor: pointer; color: var(--text-muted);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </span>
+        </div>
+        <div id="passwordMatchError" style="font-size: 0.75rem; color: #ef4444; margin-top: 0.5rem; display: none;">As senhas não coincidem.</div>
+      </div>
+
+      <button type="submit" class="btn-finish" id="submitBtn">
+        <span id="btnText">Finalizar e Acessar</span>
+        <div id="spinner"></div>
+      </button>
+    </form>
+
+    <div class="footer-note" id="footerNote">
+      Ao finalizar, você será redirecionado para o painel de controle.
+    </div>
+
+    <div class="success-state" id="successState">
+      <div class="success-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      </div>
+      <h1>Tudo pronto!</h1>
+      <p style="margin-bottom: 0;">Sua conta foi configurada com sucesso.</p>
+
+      <div class="info-box">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+        <div class="info-text">
+          <strong>Verifique seu e-mail</strong><br>
+          Enviamos um link de confirmação para <strong id="confirmEmail">seu e-mail</strong>. Clique no link para ativar o acesso.
+        </div>
+      </div>
+
+      <p class="redirect-note">Redirecionando para o login em <strong id="countdown">5</strong>s...</p>
+
+      <button type="button" class="btn-finish" onclick="goToLogin()">
+        <span>Ir para o login agora</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const authHeaders = JSON.parse(localStorage.getItem('klivy_auth'));
+    const accountId = localStorage.getItem('klivy_account_id');
+    const userEmail = localStorage.getItem('klivy_user_email');
+    const clinicName = localStorage.getItem('klivy_clinic_name');
+
+    if (!authHeaders || !accountId) {
+      window.location.href = '/checkout.html';
+    }
+
+    document.getElementById('adminEmail').value = userEmail || '';
+    document.getElementById('clinicName').value = clinicName || '';
+
+    // E-mail original (já pertence à conta criada no checkout) — não deve ser reportado como "em uso"
+    const ORIGINAL_EMAIL = (userEmail || '').trim().toLowerCase();
+
+    const adminEmailEl = document.getElementById('adminEmail');
+    const emailErrorBox = document.getElementById('emailError');
+    const emailErrorText = document.getElementById('emailErrorText');
+    let emailInUse = false;
+    let lastCheckedAdminEmail = null;
+
+    function showEmailError(msg) {
+      emailErrorText.textContent = msg;
+      emailErrorBox.style.display = 'flex';
+      adminEmailEl.classList.add('input-invalid');
+      emailInUse = true;
+    }
+
+    function hideEmailError() {
+      emailErrorBox.style.display = 'none';
+      adminEmailEl.classList.remove('input-invalid');
+      emailInUse = false;
+    }
+
+    async function checkAdminEmail(email) {
+      try {
+        const res = await fetch(`/api/v1/billing/onboarding/check_email?email=${encodeURIComponent(email)}`);
+        if (!res.ok) return { available: true };
+        return await res.json();
+      } catch (e) {
+        return { available: true };
+      }
+    }
+
+    adminEmailEl.addEventListener('input', () => {
+      // Ao editar, limpa o estado até a próxima validação
+      if (adminEmailEl.value.trim().toLowerCase() !== lastCheckedAdminEmail) hideEmailError();
+    });
+
+    adminEmailEl.addEventListener('blur', async (e) => {
+      const email = e.target.value.trim().toLowerCase();
+      if (!email) { hideEmailError(); return; }
+
+      // Mesmo e-mail do checkout → pertence ao próprio usuário que está finalizando
+      if (email === ORIGINAL_EMAIL) { hideEmailError(); return; }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showEmailError('Informe um e-mail válido');
+        return;
+      }
+
+      if (email === lastCheckedAdminEmail) return;
+      lastCheckedAdminEmail = email;
+
+      const result = await checkAdminEmail(email);
+      if (!result.available && result.reason === 'email_already_registered') {
+        showEmailError('Este e-mail já está em uso por outra conta');
+      } else {
+        hideEmailError();
+      }
+    });
+
+    function togglePassword(inputId, iconSpan) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        iconSpan.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+      } else {
+        input.type = 'password';
+        iconSpan.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+      }
+    }
+
+    const adminPassword = document.getElementById('adminPassword');
+    const adminPasswordConfirm = document.getElementById('adminPasswordConfirm');
+    const passwordRules = document.getElementById('passwordRules');
+    
+    adminPassword.addEventListener('focus', () => {
+      passwordRules.style.display = 'block';
+    });
+
+    adminPassword.addEventListener('input', () => {
+      const val = adminPassword.value;
+      const rules = {
+        'rule-length': val.length >= 8,
+        'rule-upper': /[A-Z]/.test(val),
+        'rule-lower': /[a-z]/.test(val),
+        'rule-number': /[0-9]/.test(val),
+        'rule-special': /[!@#$%^&*()_+\-=\[\]{}|']/.test(val)
+      };
+
+      for (const [id, isValid] of Object.entries(rules)) {
+        const el = document.getElementById(id);
+        if (isValid) {
+          el.innerHTML = el.innerHTML.replace('❌', '✅');
+          el.style.color = '#10b981';
+        } else {
+          el.innerHTML = el.innerHTML.replace('✅', '❌');
+          el.style.color = 'var(--text-muted)';
+        }
+      }
+    });
+
+    adminPasswordConfirm.addEventListener('input', () => {
+      const matchError = document.getElementById('passwordMatchError');
+      if (adminPasswordConfirm.value !== adminPassword.value && adminPasswordConfirm.value.length > 0) {
+        matchError.style.display = 'block';
+      } else {
+        matchError.style.display = 'none';
+      }
+    });
+
+    let redirectTimer = null;
+
+    function goToLogin() {
+      if (redirectTimer) clearInterval(redirectTimer);
+      localStorage.removeItem('klivy_auth');
+      localStorage.removeItem('klivy_account_id');
+      localStorage.removeItem('klivy_user_email');
+      localStorage.removeItem('klivy_clinic_name');
+      window.location.href = '/app/login';
+    }
+
+    function showSuccessState(email) {
+      document.querySelector('.brand-logo').style.display = 'none';
+      document.querySelector('.success-icon').style.display = 'none';
+      document.querySelector('h1').style.display = 'none';
+      document.querySelector('.container > p').style.display = 'none';
+      document.getElementById('setupForm').style.display = 'none';
+      document.getElementById('footerNote').style.display = 'none';
+      document.getElementById('errorBox').style.display = 'none';
+
+      document.getElementById('confirmEmail').textContent = email;
+      document.getElementById('successState').classList.add('active');
+
+      let remaining = 5;
+      const countdownEl = document.getElementById('countdown');
+      redirectTimer = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          clearInterval(redirectTimer);
+          goToLogin();
+        } else {
+          countdownEl.textContent = remaining;
+        }
+      }, 1000);
+    }
+
+    document.getElementById('setupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('submitBtn');
+      const btnText = document.getElementById('btnText');
+      const spinner = document.getElementById('spinner');
+
+      submitBtn.disabled = true;
+      btnText.style.display = 'none';
+      spinner.style.display = 'block';
+
+      const clinicName = document.getElementById('clinicName').value;
+      const adminEmail = document.getElementById('adminEmail').value;
+      const adminPassword = document.getElementById('adminPassword').value;
+      const adminPasswordConfirm = document.getElementById('adminPasswordConfirm').value;
+      const errorBox = document.getElementById('errorBox');
+      
+      errorBox.style.display = 'none';
+
+      const isPasswordValid = adminPassword.length >= 8 && /[A-Z]/.test(adminPassword) && /[a-z]/.test(adminPassword) && /[0-9]/.test(adminPassword) && /[!@#$%^&*()_+\-=\[\]{}|']/.test(adminPassword);
+      if (!isPasswordValid) {
+        errorBox.innerHTML = '<strong>Atenção:</strong> A senha não atende aos requisitos mínimos de segurança.';
+        errorBox.style.display = 'block';
+        submitBtn.disabled = false;
+        btnText.style.display = 'block';
+        spinner.style.display = 'none';
+        return;
+      }
+
+      if (adminPassword !== adminPasswordConfirm) {
+        errorBox.innerHTML = '<strong>Atenção:</strong> As senhas não coincidem!';
+        errorBox.style.display = 'block';
+        submitBtn.disabled = false;
+        btnText.style.display = 'block';
+        spinner.style.display = 'none';
+        return;
+      }
+
+      if (emailInUse) {
+        errorBox.innerHTML = '<strong>Atenção:</strong> Este e-mail já está em uso por outra conta. Use outro.';
+        errorBox.style.display = 'block';
+        adminEmailEl.focus();
+        submitBtn.disabled = false;
+        btnText.style.display = 'block';
+        spinner.style.display = 'none';
+        return;
+      }
+
+      try {
+        // 1. Update Account Name
+        const accountRes = await fetch(`/api/v1/accounts/${accountId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'access-token': authHeaders['access-token'],
+            'client': authHeaders['client'],
+            'uid': authHeaders['uid']
+          },
+          body: JSON.stringify({ name: clinicName })
+        });
+        if (!accountRes.ok) {
+          const errData = await accountRes.json();
+          throw new Error(errData.error || errData.errors?.join(', ') || 'Erro ao atualizar conta');
+        }
+
+        // 3. Finalize and trigger confirmation
+        const finalizeRes = await fetch(`/api/v1/billing/onboarding/finalize`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'access-token': authHeaders['access-token'],
+            'client': authHeaders['client'],
+            'uid': authHeaders['uid']
+          },
+          body: JSON.stringify({ 
+            email: adminEmail, 
+            password: adminPassword 
+          })
+        });
+
+        if (!finalizeRes.ok) {
+          const errData = await finalizeRes.json();
+          if (errData.code === 'email_already_registered') {
+            showEmailError('Este e-mail já está em uso por outra conta');
+            adminEmailEl.focus();
+          }
+          throw new Error(errData.error || errData.errors?.join(', ') || 'Erro ao configurar conta. Verifique os dados e tente novamente.');
+        }
+
+        showSuccessState(adminEmail);
+      } catch (err) {
+        const errorBox = document.getElementById('errorBox');
+        errorBox.innerHTML = `<strong>Atenção:</strong> ${err.message}`;
+        errorBox.style.display = 'block';
+        submitBtn.disabled = false;
+        btnText.style.display = 'block';
+        spinner.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

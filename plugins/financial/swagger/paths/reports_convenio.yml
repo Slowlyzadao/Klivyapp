@@ -1,0 +1,23 @@
+get:
+  tags:
+    - Financeiro · Relatórios
+  summary: Convênio vs Particular (F-30 §sub-aba 2)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+    - name: mode
+      in: query
+      schema: { type: string, enum: [all, convenio, particular] }
+  responses:
+    '200':
+      description: Composição convenio/particular
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

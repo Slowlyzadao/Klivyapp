@@ -1,0 +1,72 @@
+get:
+  tags:
+    - Exames e Mídias
+  summary: Detalhar exame/mídia
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Exame
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/ExamMedia.yml'
+patch:
+  tags:
+    - Exames e Mídias
+  summary: Atualizar metadados (categoria, descrição, pasta, lock)
+  description: |
+    **Não troca o blob** — para isso, faça delete + new upload. `exam_folder_id`
+    é validado contra cross-tenant (só aceita pastas do próprio paciente).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [exam_media]
+          properties:
+            exam_media:
+              type: object
+              properties:
+                category: { type: string }
+                description: { type: string }
+                file_name: { type: string }
+                exam_folder_id: { type: integer, nullable: true }
+                locked: { type: boolean }
+                tags:
+                  type: array
+                  items: { type: string }
+  responses:
+    '200':
+      description: Atualizado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/ExamMedia.yml'
+delete:
+  tags:
+    - Exames e Mídias
+  summary: Excluir exame/mídia (soft-delete, purge físico em 30 dias)
+  description: Bloqueia (422) se `locked=true`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Removido
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string }
+    '422':
+      description: Arquivo bloqueado — desbloqueie antes de excluir

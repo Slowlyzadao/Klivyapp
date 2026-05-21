@@ -1,0 +1,85 @@
+get:
+  tags:
+    - Financeiro · Orçamentos
+  summary: Listar orçamentos
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: status
+      in: query
+      schema: { type: string, enum: [rascunho, enviado, aprovado, cancelado, concluido] }
+    - name: patient_id
+      in: query
+      schema: { type: integer }
+    - name: origin
+      in: query
+      schema: { type: string }
+  responses:
+    '200':
+      description: Lista (ordem `created_at DESC`, limit 100)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/Budget.yml'
+post:
+  tags:
+    - Financeiro · Orçamentos
+  summary: Criar orçamento
+  description: |
+    Cria o orçamento + itens em transação. `subtotal_cents`/`total_cents`
+    são recalculados pelo backend após criar os itens (operador pode mandar
+    qualquer valor — backend ignora). Idempotência via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [budget]
+          properties:
+            budget:
+              type: object
+              required: [patient_id]
+              properties:
+                patient_id: { type: integer }
+                professional_id: { type: integer }
+                treatment_plan_id: { type: integer }
+                origin: { type: string }
+                status: { type: string }
+                discount_cents: { type: integer }
+                discount_kind: { type: string }
+                discount_basis_points: { type: integer }
+                installments_count: { type: integer }
+                payment_method: { type: string }
+                notes: { type: string }
+                valid_until: { type: string, format: date }
+                external_id: { type: string }
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      treatment_item_id: { type: integer }
+                      description: { type: string }
+                      procedure_code: { type: string }
+                      quantity: { type: integer }
+                      unit_price_cents: { type: integer }
+                      discount_cents: { type: integer }
+                      total_cents: { type: integer }
+                      professional_id: { type: integer }
+                      position: { type: integer }
+  responses:
+    '201':
+      description: Orçamento criado (com `items` inline)
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Budget.yml'
+    '422':
+      description: Erro de validação

@@ -1,0 +1,59 @@
+get:
+  tags:
+    - Financeiro · Despesas Recorrentes
+  summary: Listar despesas recorrentes
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: active
+      in: query
+      schema: { type: boolean }
+  responses:
+    '200':
+      description: Lista (ordenada por nome)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/RecurringExpense.yml'
+post:
+  tags:
+    - Financeiro · Despesas Recorrentes
+  summary: Criar despesa recorrente
+  description: Requer GERENTE/ADMIN. Idempotência via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [recurring_expense]
+          properties:
+            recurring_expense:
+              type: object
+              required: [name, frequency, due_day, start_date]
+              properties:
+                name: { type: string }
+                financial_dre_category_id: { type: integer }
+                financial_bank_account_id: { type: integer }
+                amount_cents: { type: integer }
+                variable_amount: { type: boolean }
+                frequency: { type: string, enum: [monthly, quarterly, annual] }
+                due_day: { type: integer, minimum: 1, maximum: 31 }
+                competence_rule: { type: string }
+                start_date: { type: string, format: date }
+                end_date: { type: string, format: date }
+                auto_pay: { type: boolean }
+                active: { type: boolean, default: true }
+  responses:
+    '201':
+      description: Criada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/RecurringExpense.yml'

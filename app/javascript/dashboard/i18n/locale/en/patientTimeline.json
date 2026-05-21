@@ -1,0 +1,36 @@
+{
+  "PATIENT_TIMELINE": {
+    "HEADER": {
+      "TITLE": "Patient Timeline",
+      "SUBTITLE": "Consolidated view of all interactions, records and movements.",
+      "EVENT_COUNT_SINGULAR": "{count} event",
+      "EVENT_COUNT_PLURAL": "{count} events",
+      "SORT_OLDEST": "Oldest",
+      "SORT_NEWEST": "Newest",
+      "SORT_NEWEST_FIRST": "Newest first",
+      "SORT_OLDEST_FIRST": "Oldest first"
+    },
+    "FILTERS": {
+      "ALL": "All",
+      "APPOINTMENTS": "Appointments",
+      "CLINICAL": "Clinical",
+      "FINANCIAL": "Financial",
+      "DOCUMENTS": "Documents",
+      "CLEAR": "Clear filters"
+    },
+    "LOADING": "Loading timeline...",
+    "LOADING_MORE": "Loading more…",
+    "EMPTY": {
+      "NO_DATE": "No date",
+      "TITLE": "No event found",
+      "HINT_FILTERED": "Try removing the applied filters.",
+      "HINT_ALL": "Patient interactions will appear here."
+    },
+    "TIMELINE": {
+      "HISTORY_END": "Start of history"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Error loading patient timeline."
+    }
+  }
+}

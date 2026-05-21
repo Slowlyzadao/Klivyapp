@@ -1,0 +1,105 @@
+get:
+  tags:
+    - Permissões e Funções
+  summary: Listar funções (klivy_roles)
+  description: |
+    Lista todas as `KlivyRole`s da conta, ordenadas por nome. Liberado
+    para quem tem `settings.roles_view` OU `settings.users_edit` (caso
+    típico do editor de agente).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Lista
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/KlivyRole.yml'
+    '403':
+      description: Sem permissão (`settings.roles_view` ou `settings.users_edit`)
+post:
+  tags:
+    - Permissões e Funções
+  summary: Criar função
+  description: |
+    Requer `settings.roles_create`. `permissions` é sanitizado antes de salvar
+    (auditoria C-2, desde 1.6.1.19):
+
+    - **Keys desconhecidas são silenciosamente DROPADAS** — `permissions: { foo: { bar: true } }`
+      será salvo como `{}`. Use o catálogo oficial (`shared/modules.js` /
+      `KlivyRole::PermissionsCatalog`).
+    - **Keys legacy migradas automaticamente** — `settings.manage_users: true`
+      expande pra `users_view/_invite/_edit/_remove: true` ao salvar.
+    - **Non-admin não pode delegar perm acima do próprio nível** — se requester
+      não é admin, cada perm `true` no payload é verificada contra `beclinic_can?`
+      do criador. Se faltar alguma, retorna `403 forbidden_permission_escalation`
+      com array `forbidden` indicando exatamente quais keys foram rejeitadas.
+    - Admin e SuperAdmin têm bypass total.
+
+    Nome único por conta (case-insensitive).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [klivy_role]
+          properties:
+            klivy_role:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 80 }
+                description: { type: string, maxLength: 240 }
+                preset_key:
+                  type: string
+                  description: "Chave do preset built-in (opcional)."
+                permissions:
+                  type: object
+                  description: |
+                    Mapa `módulo → { ação → bool, scope? }`. Keys desconhecidas
+                    são dropadas silenciosamente; legacy keys são migradas.
+                  additionalProperties:
+                    type: object
+                    additionalProperties: true
+  responses:
+    '201':
+      description: Criada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/KlivyRole.yml'
+    '403':
+      description: |
+        Dois cenários distintos:
+
+        1. Requester NÃO tem `settings.roles_create` — resposta simples:
+           `{ "error": "forbidden" }`.
+        2. Requester tem `roles_create` mas tenta delegar perm/scope que
+           ele próprio não tem (privilege escalation — auditoria C-2,
+           desde 1.6.1.19) — resposta detalhada:
+           `{ "error": "forbidden_permission_escalation",
+              "message": "Você não pode delegar permissões/escopos...",
+              "forbidden": ["chat.delete_message", "agenda.scope=all"] }`
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - type: object
+                properties:
+                  error: { type: string, example: "forbidden" }
+              - type: object
+                properties:
+                  error: { type: string, example: "forbidden_permission_escalation" }
+                  message: { type: string }
+                  forbidden:
+                    type: array
+                    items: { type: string }
+                    description: "Lista de keys `módulo.permissão` (ou `módulo.scope=valor`) rejeitadas."
+                    example: ["chat.delete_message"]
+    '422':
+      description: "Erro de validação (nome duplicado, name vazio, etc)"

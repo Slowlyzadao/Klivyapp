@@ -1,0 +1,32 @@
+post:
+  tags:
+    - Financeiro · Recibos
+  summary: Estorno completo do recibo
+  description: |
+    Reverte 100% do recibo: gera Entry de saída, ajusta as parcelas (volta
+    para pendente/parcial). Requer GERENTE/ADMIN. Idempotência via header
+    `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            reason: { type: string }
+            refunded_at: { type: string, format: date }
+            refund_via_gateway:
+              type: boolean
+              default: true
+              description: True = chama API do gateway pra fazer o estorno real.
+  responses:
+    '200':
+      description: Estornado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PaymentReceipt.yml'
+    '422': { description: "Erro" }

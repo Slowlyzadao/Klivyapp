@@ -1,0 +1,36 @@
+post:
+  tags:
+    - Financeiro · Lançamentos
+  summary: Reclassificar lançamentos em lote (F-28)
+  description: |
+    Atribui uma categoria a vários `entries` de uma vez. `category_id=null`
+    limpa a categoria. Funciona tanto pra entries manuais quanto automáticas.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [entry_ids]
+          properties:
+            entry_ids:
+              type: array
+              items: { type: integer }
+            category_id:
+              type: integer
+              nullable: true
+              description: "Null = limpa categoria."
+  responses:
+    '200':
+      description: Atualizados
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              updated: { type: integer }
+              category_id: { type: integer, nullable: true }
+    '422':
+      description: Selecione pelo menos 1 lançamento

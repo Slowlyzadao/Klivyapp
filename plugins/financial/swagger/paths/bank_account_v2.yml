@@ -1,0 +1,57 @@
+get:
+  tags:
+    - Financeiro · Contas Bancárias
+  summary: Detalhar conta
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Conta
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/BankAccount.yml'
+patch:
+  tags:
+    - Financeiro · Contas Bancárias
+  summary: Atualizar conta
+  description: |
+    **Saldo inicial NÃO é editável após criação** (canon §4.2). Campos
+    `initial_balance` e `initial_balance_cents` são silenciosamente ignorados.
+    Requer GERENTE/ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [bank_account]
+          properties:
+            bank_account:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/BankAccount.yml'
+delete:
+  tags:
+    - Financeiro · Contas Bancárias
+  summary: Soft-delete da conta
+  description: |
+    Bloqueia se `current_balance_cents != 0` (operador precisa transferir
+    o saldo antes). Requer ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204': { description: "Removida" }
+    '422': { description: "Conta com saldo ≠ 0" }
+    '403': { description: "Sem permissão (ADMIN)" }

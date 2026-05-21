@@ -1,0 +1,26 @@
+/* Estilo base do Portal do Paciente.
+   Reaproveita Tailwind do projeto (configurado em tailwind.config.js) +
+   tokens do core (`n-slate-*`, `woot-*`). Mantemos esse arquivo enxuto —
+   estilos componentizados ficam nos próprios .vue. */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --pp-color-primary: #2563eb;
+  --pp-color-primary-hover: #1d4ed8;
+  --pp-color-text: #0f172a;
+  --pp-color-text-muted: #64748b;
+  --pp-color-border: #e2e8f0;
+  --pp-color-surface: #ffffff;
+  --pp-color-bg: #f8fafc;
+}
+
+html, body, #patient-portal-app {
+  height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+}

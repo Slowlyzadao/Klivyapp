@@ -1,0 +1,43 @@
+type: object
+description: |
+  Entrada da lista de espera. `contact_id` é único por conta (upsert no POST).
+  Snapshot leve do contato (`contact_name`, `contact_phone`, `contact_avatar`)
+  vai inline para evitar segundo roundtrip na UI.
+properties:
+  id:
+    type: integer
+    example: 1
+  contact_id:
+    type: integer
+    example: 304
+  contact_name:
+    type: string
+    example: "Maria Silva"
+  contact_phone:
+    type: string
+    nullable: true
+    example: "+5511923652248"
+  contact_avatar:
+    type: string
+    nullable: true
+  period:
+    type: string
+    enum: [morning, afternoon, evening]
+    example: morning
+  specific_time:
+    type: string
+    nullable: true
+    description: Horário preferido em formato livre (`HH:MM`).
+    example: "14:30"
+  preferred_days:
+    type: array
+    description: Dias da semana preferidos (`mon`, `tue`, ...).
+    items:
+      type: string
+    example: ["mon", "wed", "fri"]
+  notes:
+    type: string
+    nullable: true
+  created_at:
+    type: string
+    format: date-time

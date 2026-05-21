@@ -1,0 +1,84 @@
+post:
+  tags:
+    - Agenda Pública
+  summary: Reservar agendamento pelo link público
+  description: |
+    Cria `AgendaEvent` + `Patient` + `PatientAppointment` em transação,
+    serializados por `pg_advisory_xact_lock(user_id)` para evitar double
+    booking. Validações principais:
+
+    - `agenda_online_config.enabled = true` (senão 403)
+    - `agenda_online_config.allow_new_patients` — senão paciente novo é 403
+    - Honeypot `website` preenchido = no-op com **resposta de sucesso falso**
+      (não revela detecção ao bot) — não cria nada no banco
+    - CPF validado por módulo-11 (rejeita 00000000000, dígitos repetidos, DVs errados)
+    - Janela `min_lead_time_minutes` e `future_limit_days`
+    - Slot revalidado dentro do lock (sem TOCTOU)
+
+    Resposta inclui `cancel_token` (assinado HMAC) para o paciente cancelar
+    depois sem login via `booking/:token/cancel`.
+  parameters:
+    - name: public_id
+      in: path
+      required: true
+      schema:
+        type: string
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [date, time, patient]
+          properties:
+            date:
+              type: string
+              format: date
+              example: "2026-05-20"
+            time:
+              type: string
+              description: Horário (`HH:MM`).
+              example: "14:30"
+            service_id:
+              type: integer
+              description: Opcional. Se omitido/inválido, cai no fluxo legado.
+            patient:
+              type: object
+              required: [first_name, last_name]
+              properties:
+                first_name: { type: string }
+                last_name: { type: string }
+                phone: { type: string, description: "Dígitos (vira E.164 +55…)" }
+                email: { type: string, nullable: true }
+                cpf: { type: string, description: "Dígitos (validado módulo-11)" }
+                observations: { type: string, nullable: true }
+            website:
+              type: string
+              description: |
+                **Honeypot anti-bot.** Campo invisível na ERB. NÃO preencher —
+                se vier preenchido, a resposta finge sucesso mas nada é criado.
+  responses:
+    '201':
+      description: Reserva confirmada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success: { type: boolean, example: true }
+              event_id: { type: integer }
+              cancel_token:
+                type: string
+                description: Token assinado (HMAC) para cancelamento posterior.
+              message: { type: string }
+    '403':
+      description: |
+        Booking desativado OU `allow_new_patients=false` para paciente novo
+    '409':
+      description: Slot foi tomado entre o `slots` e o `book` (race resolvida no lock)
+    '422':
+      description: Campos obrigatórios ausentes, CPF inválido, janela violada, etc
+    '503':
+      description: Erro temporário de banco (timeout, deadlock)
+    '500':
+      description: Erro inesperado (reportado para tracking)

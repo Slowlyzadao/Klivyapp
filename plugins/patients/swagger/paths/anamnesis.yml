@@ -1,0 +1,57 @@
+get:
+  tags:
+    - Anamneses
+  summary: Detalhar anamnese
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Anamnese
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Anamnesis.yml'
+patch:
+  tags:
+    - Anamneses
+  summary: Atualizar anamnese (só em rascunho)
+  description: Bloqueia (403) se já está finalizada.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [anamnesis]
+          properties:
+            anamnesis:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Anamnesis.yml'
+    '403':
+      description: Anamnese finalizada não pode ser editada
+delete:
+  tags:
+    - Anamneses
+  summary: Excluir anamnese (soft-delete, só rascunho)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204':
+      description: Excluída
+    '403':
+      description: Anamnese finalizada não pode ser excluída

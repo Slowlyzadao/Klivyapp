@@ -1,0 +1,39 @@
+<% account_name = @account&.name || @account_user&.account&.name %>
+<% inviter_name = @inviter.try(:name).presence || @inviter.try(:email) %>
+<% invite_url = frontend_url('auth/password/edit', reset_password_token: @resource.send(:set_reset_password_token)) %>
+
+<p style="margin: 0 0 16px 0; font-size: 16px; color: #111827;">
+  <%= t('klivy_mailer.common.greeting_html', name: (@resource.try(:name).presence || @resource.email)).html_safe %>
+</p>
+
+<h1 style="margin: 0 0 16px 0; font-size: 24px; line-height: 1.3; font-weight: 700; color: #0f172a; letter-spacing: -0.01em;">
+  <%= t('klivy_mailer.invitation.heading', account_name: account_name) %>
+</h1>
+
+<p style="margin: 0 0 28px 0; font-size: 16px; line-height: 1.6; color: #374151;">
+  <%= t('klivy_mailer.invitation.body', inviter_name: inviter_name, account_name: account_name).html_safe %>
+</p>
+
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 0 0 32px 0;">
+  <tr>
+    <td bgcolor="#2563eb" style="border-radius: 8px;">
+      <a href="<%= invite_url %>"
+         style="display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px; background-color: #2563eb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        <%= t('klivy_mailer.invitation.cta') %>
+      </a>
+    </td>
+  </tr>
+</table>
+
+<p style="margin: 0 0 8px 0; font-size: 13px; line-height: 1.5; color: #6b7280;">
+  <%= t('klivy_mailer.common.fallback_link_label') %>
+</p>
+<p style="margin: 0 0 28px 0; font-size: 13px; line-height: 1.5; word-break: break-all;">
+  <a href="<%= invite_url %>" style="color: #2563eb; text-decoration: underline;"><%= invite_url %></a>
+</p>
+
+<div style="margin-top: 8px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+  <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #6b7280;">
+    <%= t('klivy_mailer.common.security_note') %>
+  </p>
+</div>

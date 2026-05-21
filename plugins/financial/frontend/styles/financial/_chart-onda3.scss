@@ -1,0 +1,397 @@
+@use "../variables" as *;
+
+/* ── Onda 3 — DRE Waterfall (#9) ─────────────────────────────────── */
+.dre-wrapper {
+  padding: 0.25rem 0;
+}
+
+.dre-wrapper--negative {
+  border-color: rgb(239 68 68 / 40%);
+}
+
+.dre-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.dre-filters__label {
+  font-size: 0.75rem;
+  color: rgb(var(--s-500));
+}
+
+.dre-regime-btns {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.dre-regime-btn {
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgb(var(--s-200));
+  background: transparent;
+  color: rgb(var(--s-600));
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.dre-regime-btn--active {
+  background: rgb(var(--w-500));
+  color: #fff;
+  border-color: transparent;
+}
+
+.dre-alert,
+.ticket-alert,
+.profrev-disclaimer,
+.composition-alert,
+.expcategory-alert,
+.coststr-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
+.dre-alert,
+.expcategory-alert,
+.coststr-alert {
+  background: rgb(254 226 226);
+  color: #991B1B;
+}
+
+.dark .dre-alert,
+.dark .expcategory-alert,
+.dark .coststr-alert {
+  background: rgb(127 29 29 / 30%);
+  color: #FCA5A5;
+}
+
+.ticket-alert,
+.composition-alert {
+  background: rgb(254 243 199);
+  color: #92400E;
+}
+
+.dark .ticket-alert,
+.dark .composition-alert {
+  background: rgb(120 53 15 / 30%);
+  color: #FCD34D;
+}
+
+.profrev-disclaimer {
+  background: rgb(239 246 255);
+  color: #1E40AF;
+}
+
+.dark .profrev-disclaimer {
+  background: rgb(30 58 138 / 20%);
+  color: #93C5FD;
+}
+
+.dre-canvas-wrapper,
+.ticket-canvas-wrapper,
+.profrev-canvas-wrapper,
+.expcategory-canvas-wrapper,
+.coststr-canvas-wrapper {
+  height: 260px;
+  position: relative;
+}
+
+/* ── Onda 3 — Ticket Médio (#10) ─────────────────────────────────── */
+.ticket-wrapper {
+  padding: 0.25rem 0;
+}
+
+.ticket-canvas-wrapper {
+  height: 230px;
+}
+
+.ticket-legend,
+.profrev-legend,
+.coststr-legend {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ticket-legend__item {
+  font-size: 0.75rem;
+  color: rgb(var(--s-500));
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ticket-legend__item--main::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 3px;
+  background: $brand-info-bright;
+  border-radius: 2px;
+}
+
+.ticket-legend__item--trend::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 2px;
+  background: $brand-slate-light;
+  border-style: dashed;
+}
+
+/* ── Onda 3 — Receita por Profissional (#11) ──────────────────────── */
+.profrev-wrapper {
+  padding: 0.25rem 0;
+}
+
+.profrev-canvas-wrapper {
+  height: 240px;
+}
+
+.profrev-legend__item {
+  font-size: 0.75rem;
+  color: rgb(var(--s-600));
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.profrev-legend__item::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--c);
+}
+
+/* ── Onda 3 — Composição de Receita (#12) ────────────────────────── */
+.composition-wrapper {
+  padding: 0.25rem 0;
+}
+
+.composition-charts {
+  display: flex;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.composition-donut-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.composition-donut-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 200px;
+}
+
+.composition-donut-wrap canvas {
+  max-height: 200px;
+  z-index: 1;
+}
+
+.composition-donut-total {
+  position: absolute;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: rgb(var(--s-900));
+  pointer-events: none;
+  z-index: 10;
+}
+
+body.dark .composition-donut-total {
+  color: rgb(var(--s-50));
+}
+
+.composition-stacked-wrap {
+  flex: 1.5;
+  min-width: 0;
+  height: 220px;
+}
+
+.composition-legend {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.composition-legend__item {
+  font-size: 0.72rem;
+  color: rgb(var(--s-600));
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.composition-legend__item::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--c);
+}
+
+/* ── Onda 3 — Despesas por Categoria (#13) ───────────────────────── */
+.expcategory-wrapper {
+  padding: 0.25rem 0;
+}
+
+.expcategory-canvas-wrapper {
+  height: 260px;
+}
+
+/* ── Onda 3 — Fixo vs Variável (#14) ────────────────────────────── */
+.coststr-wrapper {
+  padding: 0.25rem 0;
+}
+
+.coststr-canvas-wrapper {
+  height: 250px;
+}
+
+.coststr-legend__item {
+  font-size: 0.75rem;
+  color: rgb(var(--s-600));
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.coststr-legend__item::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.coststr-legend__item--fixed::before { background: #FCA5A5; }
+.coststr-legend__item--variable::before { background: #FED7AA; }
+.coststr-legend__item--revenue::before { background: $brand-emerald; border-radius: 50%; }
+
+/* ── Gráfico #15: Funil de Conversão ─────────────────────── */
+.conversion-funnel-wrapper { padding: 0.25rem 0; }
+.funnel-alert { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgb(254 226 226); color: #991b1b; border-radius: 8px; font-size: 0.8rem; margin-bottom: 1rem; }
+.dark .funnel-alert { background: rgb(127 29 29 / 30%); color: #fca5a5; }
+.funnel-container { display: flex; flex-direction: column; }
+.funnel-step-wrapper { display: flex; flex-direction: column; }
+.funnel-step-connector { display: flex; justify-content: flex-end; padding-right: 50%; margin: 0.25rem 0; transform: translateX(2rem); }
+.funnel-step-rate { font-size: 0.7rem; font-weight: 600; background: rgb(var(--s-100)); color: rgb(var(--s-600)); padding: 0.15rem 0.4rem; border-radius: 12px; display: flex; align-items: center; gap: 0.2rem; }
+.funnel-step-rate--danger { background: rgb(254 226 226); color: #991b1b; }
+.dark .funnel-step-rate { background: rgb(var(--s-700)); color: rgb(var(--s-300)); }
+.dark .funnel-step-rate--danger { background: rgb(127 29 29 / 30%); color: #fca5a5; }
+.funnel-step { display: flex; align-items: center; gap: 1rem; }
+.funnel-step__label { width: 100px; text-align: right; font-size: 0.8rem; font-weight: 500; color: rgb(var(--s-700)); }
+.funnel-step__bar-container { flex: 1; background: rgb(var(--s-100)); height: 28px; border-radius: 4px; position: relative; overflow: hidden; }
+.dark .funnel-step__bar-container { background: rgb(var(--s-800)); }
+.funnel-step__bar { height: 100%; min-width: 2rem; display: flex; align-items: center; justify-content: flex-end; padding-right: 0.5rem; transition: width 0.5s ease-out; border-radius: 4px; }
+.funnel-step__value { color: #fff; font-size: 0.75rem; font-weight: 600; }
+
+/* ── Gráfico #16: Agenda Heatmap ─────────────────────────── */
+.heatmap-wrapper { padding: 0.25rem 0; }
+.heatmap-info { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgb(239 246 255); color: #1e40af; border-radius: 8px; font-size: 0.8rem; margin-bottom: 1rem; }
+.dark .heatmap-info { background: rgb(30 58 138 / 20%); color: #93c5fd; }
+.heatmap-container { display: flex; flex-direction: column; }
+.heatmap-grid { display: grid; grid-template-columns: 45px repeat(6, 1fr); gap: 2px; margin-bottom: 2px; }
+.heatmap-grid--header { margin-bottom: 4px; }
+.heatmap-col-header { font-size: 0.65rem; font-weight: 500; color: rgb(var(--s-500)); text-align: center; text-transform: uppercase; }
+.heatmap-row-header { font-size: 0.65rem; color: rgb(var(--s-500)); display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; }
+.heatmap-body { max-height: 250px; overflow-y: auto; padding-right: 4px; }
+.heatmap-body::-webkit-scrollbar { width: 4px; }
+.heatmap-body::-webkit-scrollbar-thumb { background: rgb(var(--s-200)); border-radius: 4px; }
+.heatmap-cell { height: 18px; border-radius: 2px; cursor: help; transition: opacity 0.2s; }
+.heatmap-cell:hover { opacity: 0.8; border: 1px solid rgb(var(--s-900)); }
+.heatmap-legend { display: flex; justify-content: flex-end; align-items: center; gap: 0.25rem; margin-top: 1rem; font-size: 0.7rem; color: rgb(var(--s-500)); }
+.heatmap-legend__box { width: 12px; height: 12px; border-radius: 2px; }
+.heatmap-legend__box--0 { background-color: var(--heatmap-0, rgb(var(--s-100))); }
+.heatmap-legend__box--25 { background-color: var(--heatmap-25, #dbeafe); }
+.heatmap-legend__box--50 { background-color: var(--heatmap-50, #bfdbfe); }
+.heatmap-legend__box--75 { background-color: var(--heatmap-75, $brand-info-light); }
+.heatmap-legend__box--100 { background-color: var(--heatmap-100, $brand-info); }
+.dark { --heatmap-0: rgb(var(--s-800)); --heatmap-25: #1e3a8a; --heatmap-50: #1d4ed8; --heatmap-75: $brand-info; --heatmap-100: $brand-info-light; }
+
+/* ── Gráfico #17: Novos vs Recorrentes ───────────────────── */
+.retention-wrapper { padding: 0.25rem 0; }
+.retention-alert { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgb(254 226 226); color: #991b1b; border-radius: 8px; font-size: 0.8rem; margin-bottom: 0.75rem; }
+.dark .retention-alert { background: rgb(127 29 29 / 30%); color: #fca5a5; }
+.retention-canvas-wrapper { height: 250px; position: relative; }
+.retention-legend { display: flex; gap: 1rem; justify-content: center; margin-top: 0.75rem; }
+.retention-legend__item { font-size: 0.75rem; color: rgb(var(--s-600)); display: flex; align-items: center; gap: 0.35rem; }
+.retention-legend__item::before { content: ''; display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.retention-legend__item--new::before { background: #bfdbfe; }
+.retention-legend__item--returning::before { background: #1d4ed8; }
+.retention-legend__item--pct::before { background: $brand-purple; height: 3px; border-radius: 2px; width: 16px; }
+
+/* Custom money input */
+.cr-money-input-group {
+  position: relative;
+  width: 100%;
+  max-width: 280px;
+}
+
+.cr-money-input-prefix {
+  position: absolute;
+  left: 1rem;
+  top: 49%;
+  transform: translateY(-50%);
+  color: rgb(var(--slate-9));
+  font-size: 14px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.cr-money-input {
+  width: 100%;
+  background: #fff;
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 8px;
+  padding: 0.75rem 1rem 0.75rem 2.75rem !important; /* space for prefix */
+  text-align: left !important;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: rgb(var(--slate-12));
+  font-variant-numeric: tabular-nums;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.cr-money-input:focus {
+  border-color: $brand-info-bright;
+  box-shadow: 0 0 0 3px rgba($brand-info-bright, 0.15);
+}
+
+.cr-money-input::placeholder {
+  color: rgb(var(--slate-8));
+}
+
+body.dark .cr-money-input-prefix {
+  color: rgb(var(--slate-8));
+}
+body.dark .cr-money-input {
+  background: rgb(var(--slate-2));
+  border-color: rgb(var(--slate-5));
+}
+body.dark .cr-money-input:focus {
+  border-color: $brand-info-bright;
+  box-shadow: 0 0 0 3px rgba($brand-info-bright, 0.25);
+}

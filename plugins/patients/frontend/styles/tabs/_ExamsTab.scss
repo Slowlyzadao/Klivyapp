@@ -1,0 +1,362 @@
+/* ═══════════════════════════════════════════
+   EXAMES E IMAGENS — estilos exclusivos
+═══════════════════════════════════════════ */
+
+/* Breadcrumb */
+.exams-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+.exams-breadcrumb-sep {
+  color: #334155;
+  width: 12px;
+  height: 12px;
+}
+.exams-breadcrumb-link {
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+.exams-breadcrumb-link:hover {
+  opacity: 0.75;
+}
+.exams-breadcrumb-count {
+  margin-left: 4px;
+  font-size: 11px;
+  color: #475569;
+}
+.exams-drag-hint {
+  margin-left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #60a5fa;
+  animation: pulse 1.5s infinite;
+}
+
+/* Sidebar de pastas */
+.exams-sidebar {
+  width: 196px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.exams-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  width: 100%;
+  text-align: left;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  border: 1px solid transparent;
+}
+.exams-sidebar-item--active {
+  background: rgba(59, 130, 246, 0.12);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.2);
+}
+.exams-sidebar-item--idle {
+  color: #64748b;
+}
+.exams-sidebar-item--idle:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+}
+.exams-sidebar-section-label {
+  padding: 10px 12px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #475569;
+}
+
+/* Filtros de tipo (pills) */
+.exams-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.exams-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.exams-filter-btn--on {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
+}
+.exams-filter-btn--off {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.06);
+  color: #64748b;
+}
+.exams-filter-btn--off:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+}
+
+/* Empty state da galeria */
+.exams-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 24px;
+  text-align: center;
+}
+.exams-empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(100, 116, 139, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.exams-empty-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0;
+}
+.exams-empty-hint {
+  font-size: 12px;
+  color: #475569;
+  margin: 6px 0 0;
+}
+
+/* Card de galeria */
+.exams-card {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  flex-direction: column;
+  cursor: grab;
+  transition: border-color 0.15s;
+}
+.exams-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.exams-card--locked {
+  border-color: rgba(251, 191, 36, 0.35);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.12);
+}
+.exams-lock-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 20;
+  width: 22px;
+  height: 22px;
+  border-radius: 99px;
+  background: rgba(245, 158, 11, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Thumbnail */
+.exams-thumb {
+  aspect-ratio: 1 / 1;
+  background: rgba(0, 0, 0, 0.3);
+  width: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.exams-thumb-pdf {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    160deg,
+    rgba(127, 29, 29, 0.15) 0%,
+    rgba(127, 29, 29, 0.05) 100%
+  );
+}
+.exams-thumb-pdf-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.exams-thumb-pdf-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(252, 165, 165, 0.6);
+}
+.exams-thumb-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.exams-card:hover .exams-thumb-overlay {
+  opacity: 1;
+}
+.exams-thumb-eye {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 99px;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(6px);
+  border: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition: background 0.2s;
+}
+.exams-card:hover .exams-thumb-eye {
+  background: rgba(59, 130, 246, 0.85);
+}
+
+/* ── Barra de progresso de upload ── */
+.exams-upload-progress {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.exams-upload-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  border-radius: 999px;
+  transition: width 0.15s ease-out;
+}
+.exams-upload-progress-label {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  font-size: 11px;
+  color: rgb(var(--slate-10));
+}
+
+/* Footer do card */
+.exams-card-footer {
+  padding: 10px 10px 8px;
+  background: rgba(0, 0, 0, 0.15);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+.exams-card-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.exams-card-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: #e2e8f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+.exams-card-date {
+  font-size: 10px;
+  color: #475569;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+.exams-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.exams-card-category {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: auto;
+}
+.exams-card-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+.exams-card-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+}
+.exams-card-btn--locked {
+  color: #fbbf24;
+}
+.exams-card-btn--locked:hover {
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+}
+.exams-card-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+}

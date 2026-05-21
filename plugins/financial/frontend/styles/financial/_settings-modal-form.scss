@@ -1,0 +1,192 @@
+/* ── Modal / Drawer ──────────────────────────────────────────── */
+.sets-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: setsOverlayIn 0.15s ease;
+}
+
+@keyframes setsOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+
+.sets-modal {
+  background: #ffffff;
+  border: 1px solid rgb(var(--s-100));
+  border-radius: 1rem;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.5rem;
+  animation: setsModalIn 0.2s ease;
+}
+
+body.dark .sets-modal {
+  background: rgb(var(--s-800));
+  border-color: rgb(var(--s-700));
+}
+
+@keyframes setsModalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(-8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.sets-modal__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: rgb(var(--s-800));
+  margin-bottom: 1.25rem;
+}
+
+body.dark .sets-modal__title { color: rgb(var(--s-100)); }
+
+/* ── Form ────────────────────────────────────────────────────── */
+.sets-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.sets-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.sets-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.sets-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(var(--s-600));
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+body.dark .sets-label { color: rgb(var(--s-400)); }
+
+.sets-input,
+.sets-select,
+.sets-textarea {
+  padding: 0.4375rem 0.625rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--s-200, #e2e8f0);
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  color: rgb(var(--s-800));
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+
+.sets-input:focus,
+.sets-select:focus,
+.sets-textarea:focus {
+  border-color: var(--w-400, #42a5f5);
+}
+
+body.dark .sets-input,
+body.dark .sets-select,
+body.dark .sets-textarea {
+  background: rgb(var(--s-900));
+  border-color: rgb(var(--s-600));
+  color: rgb(var(--s-100));
+}
+
+.sets-textarea { resize: vertical; min-height: 72px; }
+
+/* ── Modal footer ────────────────────────────────────────────── */
+.sets-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.625rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgb(var(--s-100));
+}
+
+body.dark .sets-modal-footer { border-color: rgb(var(--s-700)); }
+
+.sets-cancel-btn {
+  padding: 0.4375rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: rgb(var(--s-100));
+  color: rgb(var(--s-700));
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sets-cancel-btn:hover { background: rgb(var(--s-200)); }
+
+body.dark .sets-cancel-btn { background: rgb(var(--s-700)); color: rgb(var(--s-200)); }
+body.dark .sets-cancel-btn:hover { background: rgb(var(--s-600)); }
+
+.sets-save-btn {
+  padding: 0.4375rem 1.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: var(--w-500, #1f93ff);
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sets-save-btn:hover { background: var(--w-600, #197cd8); }
+.sets-save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Checkbox toggle ─────────────────────────────────────────── */
+.sets-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: rgb(var(--s-700));
+}
+
+body.dark .sets-toggle-row { color: rgb(var(--s-300)); }
+
+/* ── Empty state ─────────────────────────────────────────────── */
+.sets-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4.5rem 1rem;
+  background: transparent;
+  border: 1px dashed rgb(var(--slate-300));
+  border-radius: 0.75rem;
+  color: rgb(var(--slate-500));
+  margin-top: 1.5rem;
+}
+
+body.dark .sets-empty {
+  border-color: rgb(var(--slate-700));
+  color: rgb(var(--slate-400));
+}
+
+.sets-empty__icon {
+  font-size: 2.5rem;
+  color: rgb(var(--slate-300));
+  margin-bottom: 1rem;
+}
+
+body.dark .sets-empty__icon {
+  color: rgb(var(--slate-600));
+}
+
+.sets-empty__text {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}

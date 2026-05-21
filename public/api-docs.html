@@ -1,0 +1,3440 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Reference — Klivy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #1c2128;
+      --bg-hover: #21262d;
+      --border: #30363d;
+      --border-subtle: #21262d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #6e7681;
+      --accent-blue: #388bfd;
+      --accent-blue-bg: #1f3a5e;
+      --get: #29a745;
+      --get-bg: #0d2818;
+      --post: #0075ff;
+      --post-bg: #0a1930;
+      --patch: #d29922;
+      --patch-bg: #2e1f00;
+      --delete: #d73a49;
+      --delete-bg: #2d0a0e;
+      --sidebar-w: 270px;
+      --config-h: 72px;
+      --radius: 8px;
+      --radius-sm: 5px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    /* ── CONFIG BAR ─────────────────────────────────── */
+    #config-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      height: var(--config-h);
+      background: rgba(13,17,23,0.95);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 24px;
+    }
+
+    #config-bar .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+
+    #config-bar .logo-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, #388bfd 0%, #6e57ff 100%);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+
+    #config-bar .logo-text {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.3px;
+    }
+
+    #config-bar .logo-badge {
+      font-size: 10px;
+      font-weight: 600;
+      background: var(--accent-blue-bg);
+      color: var(--accent-blue);
+      border: 1px solid var(--accent-blue);
+      border-radius: 4px;
+      padding: 1px 6px;
+      letter-spacing: 0.5px;
+    }
+
+    #config-bar .divider {
+      width: 1px; height: 32px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    .config-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .config-group label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+
+    .config-group input {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      padding: 5px 10px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .config-group input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .config-group input::placeholder {
+      color: var(--text-muted);
+    }
+
+    #config-bar .config-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .btn-apply {
+      background: var(--accent-blue);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 7px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-apply:hover { opacity: 0.85; }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: background 0.3s;
+      flex-shrink: 0;
+    }
+
+    .status-dot.active { background: var(--get); box-shadow: 0 0 6px var(--get); }
+
+    /* ── LAYOUT ─────────────────────────────────────── */
+    #layout {
+      display: flex;
+      margin-top: var(--config-h);
+      min-height: calc(100vh - var(--config-h));
+    }
+
+    /* ── SIDEBAR ─────────────────────────────────────── */
+    #sidebar {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      position: fixed;
+      top: var(--config-h);
+      left: 0;
+      bottom: 0;
+      overflow-y: auto;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      padding: 16px 0 32px;
+    }
+
+    #sidebar::-webkit-scrollbar { width: 4px; }
+    #sidebar::-webkit-scrollbar-track { background: transparent; }
+    #sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .sidebar-section {
+      margin-bottom: 4px;
+    }
+
+    .sidebar-category {
+      padding: 8px 20px 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 20px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 400;
+      transition: background 0.1s, color 0.1s;
+      border-left: 2px solid transparent;
+    }
+
+    .sidebar-link:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .sidebar-link.active {
+      color: var(--accent-blue);
+      border-left-color: var(--accent-blue);
+      background: var(--accent-blue-bg);
+    }
+
+    .sidebar-link .method-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .sidebar-link .method-dot.get    { background: var(--get); }
+    .sidebar-link .method-dot.post   { background: var(--post); }
+    .sidebar-link .method-dot.patch  { background: var(--patch); }
+    .sidebar-link .method-dot.delete { background: var(--delete); }
+    .sidebar-link .method-dot.multi  { background: var(--accent-blue); }
+
+    /* ── MAIN CONTENT ────────────────────────────────── */
+    #main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      padding: 48px 56px;
+      max-width: 960px;
+    }
+
+    /* ── SECTION HEADERS ─────────────────────────────── */
+    .api-section {
+      margin-bottom: 64px;
+      scroll-margin-top: calc(var(--config-h) + 24px);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+
+    .section-icon.agenda   { background: rgba(88,166,255,0.12); }
+    .section-icon.patients { background: rgba(63,185,80,0.12); }
+    .section-icon.auth     { background: rgba(210,153,34,0.12); }
+    .section-icon.financial{ background: rgba(248,138,36,0.12); }
+    .section-icon.clinical { background: rgba(163,113,247,0.12); }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.3px;
+    }
+
+    .section-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* ── ENDPOINT CARD ───────────────────────────────── */
+    .endpoint-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+
+    .endpoint-card:hover {
+      border-color: #444c56;
+    }
+
+    .endpoint-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .method-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+      width: 58px;
+      text-align: center;
+    }
+
+    .method-badge.GET    { background: var(--get-bg);    color: var(--get);    border: 1px solid var(--get); }
+    .method-badge.POST   { background: var(--post-bg);   color: var(--post);   border: 1px solid var(--post); }
+    .method-badge.PATCH  { background: var(--patch-bg);  color: var(--patch);  border: 1px solid var(--patch); }
+    .method-badge.PUT    { background: var(--patch-bg);  color: var(--patch);  border: 1px solid var(--patch); }
+    .method-badge.DELETE { background: var(--delete-bg); color: var(--delete); border: 1px solid var(--delete); }
+
+    .endpoint-path {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text-primary);
+      flex: 1;
+    }
+
+    .endpoint-path .path-param {
+      color: var(--patch);
+    }
+
+    .endpoint-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .endpoint-chevron {
+      color: var(--text-muted);
+      font-size: 11px;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+
+    .endpoint-card.open .endpoint-chevron { transform: rotate(180deg); }
+
+    .endpoint-body {
+      display: none;
+      padding: 0 18px 18px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .endpoint-card.open .endpoint-body { display: block; }
+
+    /* ── TABS ─────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin: 14px 0 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      margin-bottom: -1px;
+    }
+
+    .tab-btn:hover { color: var(--text-primary); }
+    .tab-btn.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); }
+
+    .tab-panel { display: none; padding-top: 14px; }
+    .tab-panel.active { display: block; }
+
+    /* ── PARAMS TABLE ─────────────────────────────── */
+    .params-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+
+    .params-table th {
+      text-align: left;
+      padding: 6px 10px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .params-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      vertical-align: top;
+    }
+
+    .params-table tr:last-child td { border-bottom: none; }
+
+    .param-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-primary);
+    }
+
+    .param-type {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--accent-blue);
+    }
+
+    .param-required {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--delete);
+      background: var(--delete-bg);
+      border-radius: 3px;
+      padding: 1px 5px;
+    }
+
+    .param-optional {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+      padding: 1px 5px;
+    }
+
+    .param-desc { color: var(--text-secondary); font-size: 12px; }
+
+    /* ── CODE BLOCK ──────────────────────────────── */
+    .code-block {
+      position: relative;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .code-block-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .code-block-lang {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      padding: 3px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .copy-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: #444c56;
+    }
+
+    .copy-btn.copied {
+      color: var(--get);
+      border-color: var(--get);
+    }
+
+    .code-block pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      color: #c9d1d9;
+      padding: 14px 16px;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .code-block pre::-webkit-scrollbar { height: 4px; }
+    .code-block pre::-webkit-scrollbar-track { background: transparent; }
+    .code-block pre::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* syntax highlight placeholders */
+    .curl-key   { color: #79c0ff; }
+    .curl-val   { color: #a5d6ff; }
+    .curl-url   { color: #7ee787; }
+    .curl-flag  { color: #ff7b72; }
+
+    /* ── RESPONSE EXAMPLE ────────────────────────── */
+    .response-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .response-tag.ok    { background: var(--get-bg); color: var(--get); border: 1px solid var(--get); }
+    .response-tag.err   { background: var(--delete-bg); color: var(--delete); border: 1px solid var(--delete); }
+    .response-tag.warn  { background: var(--patch-bg); color: var(--patch); border: 1px solid var(--patch); }
+
+    /* ── DESCRIPTION BOX ─────────────────────────── */
+    .desc-box {
+      background: var(--bg-tertiary);
+      border-left: 3px solid var(--accent-blue);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin: 14px 0 0;
+      line-height: 1.6;
+    }
+
+    /* ── HERO ────────────────────────────────────── */
+    .hero {
+      margin-bottom: 48px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #e6edf3 0%, #8b949e 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      max-width: 600px;
+      line-height: 1.7;
+    }
+
+    .hero-meta {
+      display: flex;
+      gap: 16px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+
+    .hero-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+    }
+
+    .hero-chip .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+    }
+
+    /* ── ALERT BOX ───────────────────────────────── */
+    .alert-box {
+      display: flex;
+      gap: 10px;
+      background: rgba(56,139,253,0.08);
+      border: 1px solid rgba(56,139,253,0.25);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 13px;
+      color: #90c2ff;
+      margin-top: 14px;
+      line-height: 1.5;
+    }
+
+    .alert-box code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      background: rgba(56,139,253,0.15);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    /* ── ENUM LIST ───────────────────────────────── */
+    .enum-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .enum-chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 8px;
+      color: var(--text-secondary);
+    }
+
+    /* ── SCROLLBAR ───────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ── ENDPOINT STAR ─────────────────────────────── */
+    .star-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #e3b341;
+      background: rgba(227,179,65,0.12);
+      border: 1px solid rgba(227,179,65,0.3);
+      border-radius: 4px;
+      padding: 2px 7px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    /* ── COUNT BADGE SIDEBAR ──────────────────────── */
+    .sidebar-count {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg-tertiary);
+      border-radius: 10px;
+      padding: 1px 7px;
+      line-height: 16px;
+    }
+
+    .sidebar-link.active .sidebar-count {
+      background: var(--accent-blue-bg);
+      color: var(--accent-blue);
+    }
+
+    /* ── STATS GRID ───────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+
+    .stat-card:hover {
+      border-color: #444c56;
+      transform: translateY(-1px);
+    }
+
+    .stat-number {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+      letter-spacing: 0.3px;
+    }
+
+    .stat-card.blue  .stat-number { color: var(--accent-blue); }
+    .stat-card.green .stat-number { color: var(--get); }
+    .stat-card.purple .stat-number { color: #a371f7; }
+    .stat-card.orange .stat-number { color: var(--patch); }
+
+    /* ── CARD FADE-IN ANIMATION ───────────────────── */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .endpoint-card {
+      animation: fadeInUp 0.2s ease both;
+    }
+
+    /* ── EXPAND ALL BUTTON ────────────────────────── */
+    .section-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .btn-expand-all {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 11px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+    }
+
+    .btn-expand-all:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: #444c56;
+    }
+
+    /* ── CREDENTIAL FILL BAR ──────────────────────── */
+    #cred-bar-wrap {
+      height: 2px;
+      background: var(--border);
+      position: fixed;
+      top: var(--config-h);
+      left: 0;
+      right: 0;
+      z-index: 99;
+    }
+
+    #cred-bar {
+      height: 2px;
+      background: linear-gradient(90deg, #388bfd, #6e57ff);
+      transition: width 0.4s ease;
+      width: 0%;
+    }
+
+    /* ── TOOLTIP HINT ─────────────────────────────── */
+    .hint-text {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* ── BACK TO TOP ──────────────────────────────── */
+    #back-to-top {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      width: 36px; height: 36px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 90;
+    }
+
+    #back-to-top.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #back-to-top:hover {
+      background: var(--bg-hover);
+      border-color: #444c56;
+      color: var(--text-primary);
+      transform: translateY(-2px);
+    }
+
+    /* ── FOOTER ──────────────────────────────────── */
+    .api-footer {
+      margin-top: 80px;
+      padding: 32px 0 48px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .api-footer a {
+      color: var(--accent-blue);
+      text-decoration: none;
+    }
+
+    .api-footer a:hover { text-decoration: underline; }
+
+    /* ── RESPONSIVE ───────────────────────────────── */
+    @media (max-width: 768px) {
+      #sidebar { display: none; }
+      #main { margin-left: 0; padding: 24px 20px; }
+      #config-bar { flex-wrap: wrap; height: auto; padding: 12px 16px; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════ CONFIG BAR -->
+<div id="config-bar">
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div>
+      <div class="logo-text">API Reference</div>
+    </div>
+    <span class="logo-badge">v1</span>
+  </div>
+  <div class="divider"></div>
+
+  <div class="config-group" style="max-width:260px">
+    <label>Domínio</label>
+    <input type="text" id="cfg-domain" placeholder="https://app.suaclinica.com.br" />
+  </div>
+
+  <div class="config-group" style="max-width:100px">
+    <label>Account ID</label>
+    <input type="text" id="cfg-account" placeholder="1" />
+  </div>
+
+  <div class="config-group" style="max-width:320px">
+    <label>API Access Token</label>
+    <input type="text" id="cfg-token" placeholder="seu_access_token_aqui" />
+  </div>
+
+  <div class="config-actions">
+    <button class="btn-apply" id="btn-apply" onclick="applyConfig()">Aplicar</button>
+    <div class="status-dot" id="status-dot" title="Configure as credenciais e clique em Aplicar"></div>
+  </div>
+</div>
+<!-- Barra de progresso das credenciais -->
+<div id="cred-bar-wrap"><div id="cred-bar"></div></div>
+
+<!-- ═══════════════════════════════════════════════════ LAYOUT -->
+<div id="layout">
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-category">Início</div>
+      <a class="sidebar-link active" href="#intro">
+        <span class="method-dot multi"></span> Introdução
+      </a>
+      <a class="sidebar-link" href="#autenticacao">
+        <span class="method-dot multi"></span> Autenticação <span class="sidebar-count">1</span>
+      </a>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-category">📅 Agenda</div>
+      <a class="sidebar-link" href="#agenda-eventos">
+        <span class="method-dot multi"></span> Eventos <span class="sidebar-count">5</span>
+      </a>
+      <a class="sidebar-link" href="#agenda-servicos">
+        <span class="method-dot multi"></span> Serviços <span class="sidebar-count">5</span>
+      </a>
+      <a class="sidebar-link" href="#agenda-notificacoes">
+        <span class="method-dot multi"></span> Notificações <span class="sidebar-count">6</span>
+      </a>
+      <a class="sidebar-link" href="#agenda-config">
+        <span class="method-dot multi"></span> Config Online <span class="sidebar-count">2</span>
+      </a>
+      <a class="sidebar-link" href="#agenda-relatorios">
+        <span class="method-dot multi"></span> Relatórios <span class="sidebar-count">2</span>
+      </a>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-category">🧑‍⚕️ Pacientes</div>
+      <a class="sidebar-link" href="#pacientes-crud">
+        <span class="method-dot multi"></span> CRUD Principal <span class="sidebar-count">10</span>
+      </a>
+      <a class="sidebar-link" href="#pacientes-evolucoes">
+        <span class="method-dot multi"></span> Evoluções Clínicas <span class="sidebar-count">5</span>
+      </a>
+      <a class="sidebar-link" href="#pacientes-planos">
+        <span class="method-dot multi"></span> Planos de Tratamento <span class="sidebar-count">6</span>
+      </a>
+      <a class="sidebar-link" href="#pacientes-agendamentos">
+        <span class="method-dot multi"></span> Agendamentos <span class="sidebar-count">5</span>
+      </a>
+      <a class="sidebar-link" href="#pacientes-financeiro">
+        <span class="method-dot multi"></span> Financeiro <span class="sidebar-count">4</span>
+      </a>
+      <a class="sidebar-link" href="#pacientes-outros">
+        <span class="method-dot multi"></span> Outros Módulos <span class="sidebar-count">12</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main id="main">
+
+    <!-- HERO -->
+    <section class="hero" id="intro">
+      <h1>Klivy API Reference</h1>
+      <p>Documentação completa dos endpoints de <strong>Agenda</strong> e <strong>Pacientes</strong>. Configure suas credenciais na barra superior e os exemplos cURL serão atualizados automaticamente.</p>
+      <div class="hero-meta">
+        <div class="hero-chip">
+          <span class="dot" style="background:var(--get)"></span>
+          Base URL: <code id="display-domain" style="font-family:monospace;font-size:11px;color:var(--text-primary)">não configurado</code>
+        </div>
+        <div class="hero-chip">
+          <span class="dot" style="background:var(--accent-blue)"></span>
+          REST · JSON · Bearer Token
+        </div>
+        <div class="hero-chip">
+          <span class="dot" style="background:var(--patch)"></span>
+          API v1
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card blue">
+          <div class="stat-number">63</div>
+          <div class="stat-label">Endpoints</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-number">12</div>
+          <div class="stat-label">Módulos</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-number">100%</div>
+          <div class="stat-label">Com cURL</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-number">v1</div>
+          <div class="stat-label">Versão da API</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AUTENTICAÇÃO -->
+    <section class="api-section" id="autenticacao">
+      <div class="section-header">
+        <div class="section-icon auth">🔑</div>
+        <div>
+          <div class="section-title">Autenticação</div>
+          <div class="section-subtitle">Todos os endpoints exigem o header <code>api_access_token</code></div>
+        </div>
+      </div>
+
+      <div class="alert-box">
+        💡 Inclua o header <code>api_access_token: SEU_TOKEN</code> em todas as requisições. Você pode obter seu token em <strong>Perfil → Token de Acesso</strong> dentro da plataforma.
+      </div>
+
+      <div class="desc-box" style="margin-top:16px">
+        Todas as rotas seguem o padrão:<br/>
+        <code style="font-family:monospace;color:var(--get)">{domínio}/api/v1/accounts/{account_id}/[recurso]</code><br/><br/>
+        O <strong>Account ID</strong> pode ser encontrado na URL do navegador ao acessar a plataforma (ex: <code>/app/accounts/<strong>1</strong>/...</code>).
+      </div>
+
+      <div class="code-block" style="margin-top:16px">
+        <div class="code-block-header">
+          <span class="code-block-lang">cURL — Exemplo base</span>
+          <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+        </div>
+        <pre data-curl-template='curl -X GET "{domain}/api/v1/accounts/{account_id}/patients" \
+  -H "api_access_token: {token}" \
+  -H "Content-Type: application/json"'><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span></pre>
+      </div>
+    </section>
+
+    <!-- AGENDA EVENTOS -->
+    <section class="api-section" id="agenda-eventos">
+      <div class="section-header">
+        <div class="section-icon agenda">📅</div>
+        <div>
+          <div class="section-title">Agenda — Eventos</div>
+          <div class="section-subtitle">Criação, consulta e gerenciamento de eventos na agenda</div>
+        </div>
+      </div>
+
+      <!-- GET /agenda_events -->
+      <div class="endpoint-card" id="ep-get-events">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_events</span>
+          <span class="endpoint-desc">Listar eventos</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Parâmetros</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Parâmetro</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><span class="param-name">user_id</span></td>
+                  <td><span class="param-type">integer</span></td>
+                  <td><span class="param-optional">opcional</span></td>
+                  <td class="param-desc">Filtra eventos por especialista (ID do usuário)</td>
+                </tr>
+                <tr>
+                  <td><span class="param-name">contact_id</span></td>
+                  <td><span class="param-type">integer</span></td>
+                  <td><span class="param-optional">opcional</span></td>
+                  <td class="param-desc">Filtra eventos por paciente (contact_id)</td>
+                </tr>
+                <tr>
+                  <td><span class="param-name">status</span></td>
+                  <td><span class="param-type">string</span></td>
+                  <td><span class="param-optional">opcional</span></td>
+                  <td class="param-desc">
+                    Filtra por status do evento
+                    <div class="enum-list">
+                      <span class="enum-chip">scheduled</span>
+                      <span class="enum-chip">confirmed</span>
+                      <span class="enum-chip">arrived</span>
+                      <span class="enum-chip">in_progress</span>
+                      <span class="enum-chip">completed</span>
+                      <span class="enum-chip">cancelled</span>
+                      <span class="enum-chip">no_show</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="param-name">starts_at</span></td>
+                  <td><span class="param-type">datetime</span></td>
+                  <td><span class="param-optional">opcional</span></td>
+                  <td class="param-desc">Início do período (ISO 8601). Requer <code>ends_at</code></td>
+                </tr>
+                <tr>
+                  <td><span class="param-name">ends_at</span></td>
+                  <td><span class="param-type">datetime</span></td>
+                  <td><span class="param-optional">opcional</span></td>
+                  <td class="param-desc">Fim do período (ISO 8601). Requer <code>starts_at</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header">
+                <span class="code-block-lang">cURL</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              </div>
+              <pre data-curl-template='curl -X GET "{domain}/api/v1/accounts/{account_id}/agenda_events?starts_at=2026-03-01T00:00:00Z&ends_at=2026-03-31T23:59:59Z" \
+  -H "api_access_token: {token}"'><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_events?starts_at=2026-03-01T00:00:00Z&amp;ends_at=2026-03-31T23:59:59Z"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block">
+              <div class="code-block-header">
+                <span class="code-block-lang">JSON</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              </div>
+              <pre>[
+  {
+    "id": 42,
+    "title": "Consulta Avaliação",
+    "description": "Retorno pós-tratamento",
+    "starts_at": "2026-03-25T09:00:00.000Z",
+    "ends_at": "2026-03-25T09:30:00.000Z",
+    "status": "confirmed",
+    "event_type": "consultation",
+    "user_id": 3,
+    "contact_id": 87,
+    "account_id": 1,
+    "custom_attributes": {
+      "treatment": "Avaliação Clínica",
+      "patient_id": 15
+    },
+    "created_at": "2026-03-20T14:22:00.000Z",
+    "updated_at": "2026-03-20T14:22:00.000Z"
+  }
+]</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST /agenda_events -->
+      <div class="endpoint-card" id="ep-post-events">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge POST">POST</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_events</span>
+          <span class="endpoint-desc">Criar evento</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Body</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">title</span></td><td><span class="param-type">string</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Título do evento</td></tr>
+                <tr><td><span class="param-name">starts_at</span></td><td><span class="param-type">datetime</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Data/hora de início (ISO 8601)</td></tr>
+                <tr><td><span class="param-name">ends_at</span></td><td><span class="param-type">datetime</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Data/hora de fim (ISO 8601)</td></tr>
+                <tr><td><span class="param-name">user_id</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">ID do especialista responsável</td></tr>
+                <tr><td><span class="param-name">contact_id</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">ID do contato/paciente</td></tr>
+                <tr><td><span class="param-name">description</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Observações / motivo da consulta</td></tr>
+                <tr>
+                  <td><span class="param-name">status</span></td>
+                  <td><span class="param-type">string</span></td>
+                  <td><span class="param-optional">opcional</span></td>
+                  <td class="param-desc">
+                    Padrão: <code>scheduled</code>
+                    <div class="enum-list">
+                      <span class="enum-chip">scheduled</span>
+                      <span class="enum-chip">confirmed</span>
+                      <span class="enum-chip">arrived</span>
+                      <span class="enum-chip">in_progress</span>
+                      <span class="enum-chip">completed</span>
+                      <span class="enum-chip">cancelled</span>
+                      <span class="enum-chip">no_show</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr><td><span class="param-name">event_type</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Tipo do evento (ex: <code>consultation</code>, <code>return</code>)</td></tr>
+                <tr><td><span class="param-name">custom_attributes</span></td><td><span class="param-type">object</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Dados extras. Ex: <code>{ "treatment": "Limpeza", "patient_id": 5 }</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header">
+                <span class="code-block-lang">cURL</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              </div>
+              <pre data-curl-template='curl -X POST "{domain}/api/v1/accounts/{account_id}/agenda_events" \
+  -H "api_access_token: {token}" \
+  -H "Content-Type: application/json" \
+  -d '"'"'{"agenda_event":{"title":"Consulta Avaliação","starts_at":"2026-03-25T09:00:00Z","ends_at":"2026-03-25T09:30:00Z","user_id":3,"contact_id":87,"status":"scheduled","description":"Retorno pós-tratamento","custom_attributes":{"treatment":"Avaliação"}}}'"'"''><span class="curl-flag">curl</span> -X POST <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_events"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{"agenda_event":{"title":"Consulta Avaliação","starts_at":"2026-03-25T09:00:00Z","ends_at":"2026-03-25T09:30:00Z","user_id":3,"contact_id":87,"status":"scheduled","description":"Retorno","custom_attributes":{"treatment":"Avaliação"}}}'</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 201 Created</div>
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>{ "id": 43, "title": "Consulta Avaliação", "status": "scheduled", ... }</pre>
+            </div>
+            <div style="margin-top:10px"><div class="response-tag err">✗ 422 Unprocessable</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>{ "error": "Validation failed: Title can't be blank" }</pre>
+            </div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET /agenda_events/:id -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_events/<span class="path-param">{id}</span></span>
+          <span class="endpoint-desc">Buscar evento</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_events/42"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>{ "id": 42, "title": "...", "status": "confirmed", "starts_at": "...", ... }</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH /agenda_events/:id -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_events/<span class="path-param">{id}</span></span>
+          <span class="endpoint-desc">Atualizar evento</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Aceita os mesmos campos do POST. Envie apenas os campos a serem atualizados.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_events/42"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{"agenda_event":{"status":"confirmed"}}'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE /agenda_events/:id -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge DELETE">DELETE</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_events/<span class="path-param">{id}</span></span>
+          <span class="endpoint-desc">Excluir evento</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X DELETE <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_events/42"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 200 OK (sem body)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PLACEHOLDERS para próximos blocos -->
+    <section class="api-section" id="agenda-servicos">
+      <div class="section-header">
+        <div class="section-icon agenda">🛠️</div>
+        <div>
+          <div class="section-title">Agenda — Serviços (Tratamentos)</div>
+          <div class="section-subtitle">Gerenciamento dos tipos de serviço/tratamento oferecidos</div>
+        </div>
+      </div>
+      <!-- GET /agenda_services -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_services</span>
+          <span class="endpoint-desc">Listar serviços</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Retorna todos os serviços/tratamentos cadastrados na conta, ordenados por posição.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_services"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>[{ "id": 1, "name": "Avaliação Clínica", "duration_minutes": 30, "price": "0.0", "color": "#3b82f6", "position": 0 },
+ { "id": 2, "name": "Limpeza", "duration_minutes": 60, "price": "150.0", "color": "#10b981", "position": 1 }]</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST /agenda_services -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge POST">POST</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_services</span>
+          <span class="endpoint-desc">Criar serviço</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Body</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">name</span></td><td><span class="param-type">string</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Nome do serviço/tratamento</td></tr>
+                <tr><td><span class="param-name">duration_minutes</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Duração padrão em minutos</td></tr>
+                <tr><td><span class="param-name">price</span></td><td><span class="param-type">decimal</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Valor padrão do serviço</td></tr>
+                <tr><td><span class="param-name">color</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Cor hex para exibição no calendário (ex: <code>#3b82f6</code>)</td></tr>
+                <tr><td><span class="param-name">requires_room</span></td><td><span class="param-type">boolean</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Exige sala/consultório separado</td></tr>
+                <tr><td><span class="param-name">position</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Ordem de exibição na lista</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X POST <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_services"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{ "agenda_service": { "name": "Avaliação Clínica", "duration_minutes": 30, "price": 0, "color": "#3b82f6" } }'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH /agenda_services/:id -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_services/<span class="path-param">{id}</span></span>
+          <span class="endpoint-desc">Atualizar serviço</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_services/1"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{ "agenda_service": { "name": "Avaliação + Raio-X", "duration_minutes": 45 } }'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE /agenda_services/:id -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge DELETE">DELETE</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_services/<span class="path-param">{id}</span></span>
+          <span class="endpoint-desc">Excluir serviço</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X DELETE <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_services/1"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 200 OK (sem body)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH /agenda_services/reorder -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_services/reorder</span>
+          <span class="endpoint-desc">Reordenar serviços</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Envie um array de IDs na nova ordem desejada. A posição será atribuída sequencialmente.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_services/reorder"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{ "ids": [3, 1, 2] }'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="api-section" id="agenda-notificacoes">
+      <div class="section-header">
+        <div class="section-icon agenda">🔔</div>
+        <div>
+          <div class="section-title">Agenda — Notificações</div>
+          <div class="section-subtitle">Regras automáticas de notificação por WhatsApp</div>
+        </div>
+      </div>
+
+      <!-- GET /agenda_notification_rules -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_notification_rules</span>
+          <span class="endpoint-desc">Listar regras</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_notification_rules"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>[{
+  "id": 1,
+  "title": "Lembrete 24h antes",
+  "rule_type": "reminder",
+  "trigger_offset_hours": -24,
+  "message_template": "Olá {nome}, sua consulta é amanhã às {hora}.",
+  "enabled": true,
+  "inboxes": [{ "inbox_id": 5, "label": "WhatsApp Principal", "color": "#25d366" }],
+  "position": 0
+}]</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST /agenda_notification_rules -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge POST">POST</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_notification_rules</span>
+          <span class="endpoint-desc">Criar regra</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Body</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">title</span></td><td><span class="param-type">string</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Nome da regra</td></tr>
+                <tr><td><span class="param-name">rule_type</span></td><td><span class="param-type">string</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc"><code>reminder</code> | <code>confirmation</code> | <code>followup</code></td></tr>
+                <tr><td><span class="param-name">trigger_offset_hours</span></td><td><span class="param-type">integer</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Horas relativas ao evento. Negativo = antes. Ex: <code>-24</code> = 24h antes</td></tr>
+                <tr><td><span class="param-name">message_template</span></td><td><span class="param-type">string</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Template da mensagem. Variáveis: <code>{nome}</code>, <code>{hora}</code>, <code>{data}</code>, <code>{especialista}</code></td></tr>
+                <tr><td><span class="param-name">enabled</span></td><td><span class="param-type">boolean</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Padrão: <code>true</code></td></tr>
+                <tr><td><span class="param-name">icon</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Nome do ícone Lucide</td></tr>
+                <tr><td><span class="param-name">icon_color</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Cor hex do ícone</td></tr>
+                <tr><td><span class="param-name">inboxes</span></td><td><span class="param-type">array</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Array de <code>{ inbox_id, label, color }</code> — inboxes WhatsApp para envio</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X POST <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_notification_rules"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{
+  "agenda_notification_rule": {
+    "title": "Lembrete 24h antes",
+    "rule_type": "reminder",
+    "trigger_offset_hours": -24,
+    "message_template": "Ol&#225; {nome}, sua consulta &#233; amanh&#227; &#224;s {hora}!",
+    "enabled": true,
+    "inboxes": [{ "inbox_id": 5, "label": "WhatsApp Principal", "color": "#25d366" }]
+  }
+}'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH toggle -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_notification_rules/<span class="path-param">{id}</span>/toggle</span>
+          <span class="endpoint-desc">Ativar/desativar</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Alterna automaticamente o campo <code>enabled</code> da regra. Não precisa de body.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_notification_rules/1/toggle"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH update -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_notification_rules/<span class="path-param">{id}</span></span>
+          <span class="endpoint-desc">Atualizar regra</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_notification_rules/1"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{ "agenda_notification_rule": { "trigger_offset_hours": -48 } }'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE /agenda_notification_rules/:id -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge DELETE">DELETE</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_notification_rules/<span class="path-param">{id}</span></span>
+          <span class="endpoint-desc">Excluir regra</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X DELETE <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_notification_rules/1"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 200 OK (sem body)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET /agenda_notification_logs -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_notification_logs</span>
+          <span class="endpoint-desc">Histórico de envios</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Lista o histórico de notificações enviadas automaticamente pela agenda.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_notification_logs"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="api-section" id="agenda-config">
+      <div class="section-header">
+        <div class="section-icon agenda">⚙️</div>
+        <div>
+          <div class="section-title">Agenda — Config Online</div>
+          <div class="section-subtitle">Configurações do agendamento online público</div>
+        </div>
+      </div>
+
+      <!-- GET /agenda_online_config -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_online_config</span>
+          <span class="endpoint-desc">Ver configuração</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Retorna a configuração do mini-site de agendamento público. Criado automaticamente com defaults se ainda não existir.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_online_config"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>{
+  "id": 1,
+  "enabled": true,
+  "allow_new_patients": false,
+  "require_whatsapp_verification": true,
+  "require_email_verification": false,
+  "min_lead_time_minutes": 60,
+  "future_limit_days": 30,
+  "form_fields": [
+    { "id": "name",  "label": "Nome completo", "type": "text",  "required": true,  "system": true },
+    { "id": "phone", "label": "Telefone",       "type": "phone", "required": true,  "system": true },
+    { "id": "email", "label": "E-mail",         "type": "email", "required": false, "system": true }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH /agenda_online_config -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_online_config</span>
+          <span class="endpoint-desc">Atualizar configuração</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Body</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">enabled</span></td><td><span class="param-type">boolean</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Liga/desliga o mini-site público de agendamento</td></tr>
+                <tr><td><span class="param-name">allow_new_patients</span></td><td><span class="param-type">boolean</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Permite agendamentos de pacientes novos (não cadastrados)</td></tr>
+                <tr><td><span class="param-name">require_whatsapp_verification</span></td><td><span class="param-type">boolean</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Exige verificação via WhatsApp antes de confirmar</td></tr>
+                <tr><td><span class="param-name">require_email_verification</span></td><td><span class="param-type">boolean</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Exige verificação via e-mail antes de confirmar</td></tr>
+                <tr><td><span class="param-name">min_lead_time_minutes</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Antecedência mínima em minutos para agendar</td></tr>
+                <tr><td><span class="param-name">future_limit_days</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Quantos dias no futuro o paciente pode agendar</td></tr>
+                <tr><td><span class="param-name">form_fields</span></td><td><span class="param-type">array</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Array de campos do formulário: <code>{ id, label, type, required, system }</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_online_config"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{
+  "agenda_online_config": {
+    "enabled": true,
+    "allow_new_patients": false,
+    "min_lead_time_minutes": 120,
+    "future_limit_days": 45
+  }
+}'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    <section class="api-section" id="agenda-relatorios">
+      <div class="section-header">
+        <div class="section-icon agenda">📊</div>
+        <div>
+          <div class="section-title">Agenda — Relatórios & Forecast</div>
+          <div class="section-subtitle">Dashboard de métricas e previsão de agendamentos</div>
+        </div>
+      </div>
+      <!-- GET /agenda_reports/summary -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_reports/summary</span>
+          <span class="endpoint-desc">Métricas do período</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Parâmetros</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Parâmetro</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">since</span></td><td><span class="param-type">date</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Início do período. Padrão: hoje. Ex: <code>2026-03-01</code></td></tr>
+                <tr><td><span class="param-name">until</span></td><td><span class="param-type">date</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Fim do período. Padrão: hoje. Ex: <code>2026-03-31</code></td></tr>
+                <tr><td><span class="param-name">user_id</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Filtra por especialista específico</td></tr>
+                <tr><td><span class="param-name">open_hour</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Hora de abertura do consultório (0-23). Padrão: <code>9</code></td></tr>
+                <tr><td><span class="param-name">close_hour</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Hora de fechamento (0-23). Padrão: <code>18</code></td></tr>
+                <tr><td><span class="param-name">lunch_duration_minutes</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Minutos de almoço (0-120). Padrão: <code>0</code></td></tr>
+                <tr><td><span class="param-name">slot_minutes</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Duração do slot em minutos (15-120). Padrão: <code>30</code></td></tr>
+                <tr><td><span class="param-name">open_days</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Dias da semana separados por vírgula (0=Dom...6=Sáb). Ex: <code>1,2,3,4,5</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_reports/summary?since=2026-03-01&amp;until=2026-03-31&amp;open_hour=8&amp;close_hour=18&amp;slot_minutes=30&amp;open_days=1,2,3,4,5"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>{
+  "current": {
+    "total": 120, "confirmed": 45, "completed": 80, "no_show": 8, "cancelled": 12,
+    "no_show_rate": 7.4, "completion_rate": 74.1, "occupancy_rate": 66.7
+  },
+  "previous": { "total": 98, "completion_rate": 68.3, ... },
+  "range": { "from": "2026-03-01T00:00:00", "to": "2026-03-31T23:59:59" },
+  "status_breakdown": {
+    "scheduled": 15, "confirmed": 45, "arrived": 5,
+    "in_progress": 2, "completed": 80, "cancelled": 12, "no_show": 8
+  },
+  "daily_distribution": [
+    { "date": "2026-03-01", "label": "sábado", "total": 4, "completed": 3, "no_show": 1, "cancelled": 0, "confirmed": 2 }
+  ],
+  "agent_performance": [
+    { "id": 3, "name": "Dr. Silva", "total": 40, "completed": 32, "completion_rate": 80.0, "no_show_rate": 5.0 }
+  ],
+  "schedule_info": { "open_hour": 8, "close_hour": 18, "slots_per_day": 20, "open_days": [1,2,3,4,5] }
+}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET /agenda_reports/forecast -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/agenda_reports/forecast</span>
+          <span class="endpoint-desc">Previsão de agendamentos</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Parâmetros</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <div class="desc-box">Calcula a previsão de agendamentos para os próximos N dias com base na média histórica dos últimos 28 dias por dia da semana.</div>
+            <table class="params-table" style="margin-top:10px">
+              <thead><tr><th>Parâmetro</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">days</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Horizonte de previsão em dias (1-90). Padrão: <code>7</code></td></tr>
+                <tr><td><span class="param-name">user_id</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Filtra por especialista específico</td></tr>
+                <tr><td><span class="param-name">open_days</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Dias úteis (ex: <code>1,2,3,4,5,6</code>)</td></tr>
+                <tr><td><span class="param-name">slot_minutes</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Duração do slot. Influencia ocupação prevista</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/agenda_reports/forecast?days=14&amp;open_days=1,2,3,4,5,6&amp;slot_minutes=30"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>{
+  "forecast": [
+    { "date": "2026-03-22", "label": "sábado",  "predicted_total": 6.5, "predicted_occupancy": 32.5, "slots_available": 20, "day_of_week": 6 },
+    { "date": "2026-03-23", "label": "domingo",  "predicted_total": 0.0, "predicted_occupancy": 0.0,  "slots_available": 20, "day_of_week": 0 }
+  ],
+  "horizon_days": 14,
+  "history_days": 28
+}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="api-section" id="pacientes-crud">
+      <div class="section-header">
+        <div class="section-icon patients">🧑‍⚕️</div>
+        <div>
+          <div class="section-title">Pacientes — CRUD Principal</div>
+          <div class="section-subtitle">Criação, consulta, atualização e arquivamento de pacientes</div>
+        </div>
+      </div>
+
+      <!-- GET /patients -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients</span>
+          <span class="endpoint-desc">Listar pacientes</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Parâmetros</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Parâmetro</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">q</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Busca por nome (ILIKE)</td></tr>
+                <tr>
+                  <td><span class="param-name">status</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td>
+                  <td class="param-desc">Filtra por status<div class="enum-list"><span class="enum-chip">novo</span><span class="enum-chip">ativo</span><span class="enum-chip">inativo</span><span class="enum-chip">faltoso</span><span class="enum-chip">alta</span></div></td>
+                </tr>
+                <tr><td><span class="param-name">professional_id</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Filtra por especialista responsável</td></tr>
+                <tr><td><span class="param-name">needs_recall</span></td><td><span class="param-type">boolean</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Se <code>true</code>, retorna apenas pacientes que precisam de retorno</td></tr>
+                <tr><td><span class="param-name">page</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Página (padrão: 1)</td></tr>
+                <tr><td><span class="param-name">per_page</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Resultados por página (máx: 500, padrão: 25)</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients?q=Maria&amp;status=ativo&amp;page=1&amp;per_page=25"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>{
+  "patients": [{
+    "id": 15, "name": "Maria da Silva", "phone": "+5511999999999", "email": "maria@email.com",
+    "cpf": "000.000.000-00", "birthdate": "1990-05-15", "sex": "feminino",
+    "patient_status": "ativo", "needs_recall": false, "no_show_count": 0,
+    "responsible_professional": { "id": 3, "name": "Dr. Silva" },
+    "critical_alerts": []
+  }],
+  "meta": { "total_count": 142, "page": 1, "per_page": 25, "total_pages": 6 }
+}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST /patients -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge POST">POST</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients</span>
+          <span class="endpoint-desc">Criar paciente</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Body</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">name</span></td><td><span class="param-type">string</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Nome completo (mín. 2 caracteres)</td></tr>
+                <tr><td><span class="param-name">phone</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Telefone. Ex: <code>11999999999</code> (adiciona +55 automaticamente)</td></tr>
+                <tr><td><span class="param-name">email</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">E-mail do paciente</td></tr>
+                <tr><td><span class="param-name">cpf</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">CPF (formato livre)</td></tr>
+                <tr><td><span class="param-name">birthdate</span></td><td><span class="param-type">date</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Data de nascimento. Ex: <code>1990-05-15</code></td></tr>
+                <tr><td><span class="param-name">sex</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc"><code>masculino</code> | <code>feminino</code> | <code>outro</code></td></tr>
+                <tr><td><span class="param-name">patient_status</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Padrão: <code>novo</code>. <div class="enum-list"><span class="enum-chip">novo</span><span class="enum-chip">ativo</span><span class="enum-chip">inativo</span><span class="enum-chip">faltoso</span><span class="enum-chip">alta</span></div></td></tr>
+                <tr><td><span class="param-name">responsible_professional_id</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">ID do especialista responsável</td></tr>
+                <tr><td><span class="param-name">contact_id</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Vincula a um contato existente (se omitido, cria contato automaticamente)</td></tr>
+                <tr><td><span class="param-name">address</span></td><td><span class="param-type">object</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc"><code>{ street, number, complement, neighborhood, city, state, zip_code, country }</code></td></tr>
+                <tr><td><span class="param-name">emergency_contact</span></td><td><span class="param-type">object</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc"><code>{ name, phone, relationship }</code></td></tr>
+                <tr><td><span class="param-name">insurance</span></td><td><span class="param-type">object</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc"><code>{ name, number, plan, validity }</code></td></tr>
+                <tr><td><span class="param-name">pinned_note</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Nota fixada no topo do prontuário</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X POST <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{
+  "patient": {
+    "name": "Maria da Silva",
+    "phone": "11999999999",
+    "email": "maria@email.com",
+    "birthdate": "1990-05-15",
+    "sex": "feminino",
+    "patient_status": "novo",
+    "responsible_professional_id": 3
+  }
+}'</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 201 Created</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>{ "id": 16, "name": "Maria da Silva", "patient_status": "novo", "contact_id": 201, ... }</pre>
+            </div>
+            <div style="margin-top:10px"><div class="response-tag err">✗ 422 Unprocessable</div>
+              <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+                <pre>{ "errors": ["Name is too short (minimum is 2 characters)"] }</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET /patients/:id -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{id}</span></span>
+          <span class="endpoint-desc">Buscar paciente</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Registra automaticamente um log de auditoria de visualização (<code>action: view</code>).</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET /patients/:id/summary -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{id}</span>/summary</span>
+          <span class="endpoint-desc">Sumário do prontuário</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">⭐ Endpoint estrela — payload consolidado do prontuário com dados do paciente + última e próxima consulta + alertas urgentes.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/summary"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>{
+  "patient": { "id": 15, "name": "Maria da Silva", "patient_status": "ativo", ... },
+  "last_appointment": { "id": 42, "starts_at": "2026-03-10T09:00:00Z", "status": "completed" },
+  "next_appointment": { "id": 55, "starts_at": "2026-04-05T10:00:00Z", "status": "confirmed" },
+  "urgent_consents": []
+}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH /patients/:id -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{id}</span></span>
+          <span class="endpoint-desc">Atualizar paciente</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Aceita os mesmos campos do POST. Envie apenas os campos a serem atualizados.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{ "patient": { "pinned_note": "Paciente alergia a amoxicilina", "responsible_professional_id": 5 } }'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH /patients/:id/status -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{id}</span>/status</span>
+          <span class="endpoint-desc">Alterar status</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Altera o status clínico do paciente. Registra auditoria automaticamente.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/status"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{ "patient_status": "ativo" }'</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 200 — <code>{ "patient_status": "ativo" }</code></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST /patients/:id/quick_action -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge POST">POST</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{id}</span>/quick_action</span>
+          <span class="endpoint-desc">Ações rápidas</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Body</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><span class="param-name">action_type</span></td><td><span class="param-type">string</span></td><td><span class="param-required">obrig.</span></td>
+                  <td class="param-desc">
+                    <div class="enum-list">
+                      <span class="enum-chip">mark_no_show</span>
+                      <span class="enum-chip">toggle_recall</span>
+                    </div>
+                    <div style="margin-top:6px"><strong>mark_no_show</strong>: incrementa <code>no_show_count</code>, muda status para <code>faltoso</code> se &ge;3 faltas<br/><strong>toggle_recall</strong>: alterna <code>needs_recall</code></div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X POST <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/quick_action"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{ "action_type": "mark_no_show" }'</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 200 — <code>{ "no_show_count": 2, "patient_status": "ativo" }</code></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE /patients/:id -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge DELETE">DELETE</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{id}</span></span>
+          <span class="endpoint-desc">Arquivar paciente</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">⚠️ Soft delete — o paciente não é removido do banco, apenas arquivado (seta <code>deleted_at</code>). Pode ser restaurado via <code>/restore</code>.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X DELETE <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 200 OK (sem body)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET /patients/archived -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/archived</span>
+          <span class="endpoint-desc">Listar arquivados</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Aceita <code>?q=nome</code> para busca e <code>?page</code>/<code>?per_page</code> para paginação.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/archived?q=Maria"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH /patients/:id/restore -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{id}</span>/restore</span>
+          <span class="endpoint-desc">Restaurar arquivado</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Restaura um paciente arquivado. O ID deve ser de um paciente com <code>deleted_at</code> preenchido.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/restore"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET /patients/by_contact -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/by_contact</span>
+          <span class="endpoint-desc">Buscar por contato</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Busca o paciente ativo vinculado a um <code>contact_id</code> específico. útil para conectar conversas do chat ao prontuário.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/by_contact?contact_id=87"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET /patients/:id/change_history -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{id}</span>/change_history</span>
+          <span class="endpoint-desc">Histórico de alterações</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Retorna os logs de auditoria de criação e atualização do paciente paginados.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/change_history?page=1&amp;per_page=25"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    <section class="api-section" id="pacientes-evolucoes">
+      <div class="section-header">
+        <div class="section-icon clinical">📝</div>
+        <div>
+          <div class="section-title">Pacientes — Evoluções Clínicas</div>
+          <div class="section-subtitle">Notas clínicas, assinatura e histórico evolutivo</div>
+        </div>
+      </div>
+      <!-- GET /patients/:id/clinical_notes -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/clinical_notes</span>
+          <span class="endpoint-desc">Listar evoluções</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Parâmetros</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Parâmetro</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">page</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Página (padrão: 1)</td></tr>
+                <tr><td><span class="param-name">per_page</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Resultados por página (padrão: 10)</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/clinical_notes?page=1&amp;per_page=10"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>{
+  "clinical_notes": [{
+    "id": 7, "content": "Paciente relata melhora...",
+    "signed": true, "signed_at": "2026-03-10T10:30:00Z",
+    "signed_by": { "id": 3, "name": "Dr. Silva" },
+    "author": { "id": 3, "name": "Dr. Silva" },
+    "created_at": "2026-03-10T10:00:00Z"
+  }],
+  "meta": { "total_count": 12, "page": 1, "per_page": 10, "total_pages": 2 }
+}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST /patients/:id/clinical_notes -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge POST">POST</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/clinical_notes</span>
+          <span class="endpoint-desc">Criar evolução</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Body</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">content</span></td><td><span class="param-type">string</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Texto da evolução (suporta HTML rich text)</td></tr>
+                <tr><td><span class="param-name">agenda_event_id</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Vincula a evolução a uma consulta da agenda</td></tr>
+                <tr><td><span class="param-name">sign_on_create</span></td><td><span class="param-type">boolean</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Se <code>true</code>, assina digitalmente ao criar. Padrão: <code>false</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X POST <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/clinical_notes"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{
+  "clinical_note": {
+    "content": "Paciente relata melhora significativa da dor. PA: 120/80.",
+    "agenda_event_id": 42,
+    "sign_on_create": false
+  }
+}'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH /patients/:id/clinical_notes/:note_id -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/clinical_notes/<span class="path-param">{id}</span></span>
+          <span class="endpoint-desc">Atualizar evolução</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">⚠️ Não é possível editar evoluções assinadas (<code>signed: true</code>). Retorna <code>403</code> se tentar.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/clinical_notes/7"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{ "clinical_note": { "content": "Texto corrigido da evolução." } }'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH /sign -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/clinical_notes/<span class="path-param">{id}</span>/sign</span>
+          <span class="endpoint-desc">Assinar digitalmente</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Assina a evolução digitalmente com o usuário autenticado. Após assinar, não é mais possível editar. Não requer body.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/clinical_notes/7/sign"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 200 — <code>{ "signed": true, "signed_at": "2026-03-21T19:30:00Z", "signed_by": { "id": 3 } }</code></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE /patients/:id/clinical_notes/:note_id -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge DELETE">DELETE</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/clinical_notes/<span class="path-param">{id}</span></span>
+          <span class="endpoint-desc">Excluir evolução</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">⚠️ Retorna <code>403 Forbidden</code> se a evolução já estiver assinada.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X DELETE <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/clinical_notes/7"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 200 OK (sem body)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="api-section" id="pacientes-planos">
+      <div class="section-header">
+        <div class="section-icon clinical">📋</div>
+        <div>
+          <div class="section-title">Pacientes — Planos de Tratamento</div>
+          <div class="section-subtitle">CRUD de planos, aprovação, cancelamento e itens</div>
+        </div>
+      </div>
+
+      <!-- GET /patients/:id/treatment_plans -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/treatment_plans</span>
+          <span class="endpoint-desc">Listar planos</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/treatment_plans"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>[{
+  "id": 3, "title": "Tratamento Ortodôntico",
+  "status": "approved",
+  "total_value": "3500.00",
+  "approved_at": "2026-02-15T14:00:00Z",
+  "items": [
+    { "id": 1, "description": "Aparelho fixo",  "quantity": 1, "unit_price": "2000.00", "total": "2000.00" },
+    { "id": 2, "description": "Manutenção mensal", "quantity": 6, "unit_price": "250.00",  "total": "1500.00" }
+  ],
+  "created_at": "2026-02-10T09:00:00Z"
+}]</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST /patients/:id/treatment_plans -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge POST">POST</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/treatment_plans</span>
+          <span class="endpoint-desc">Criar plano</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Body</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">title</span></td><td><span class="param-type">string</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Título do plano</td></tr>
+                <tr><td><span class="param-name">notes</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Observações gerais do plano</td></tr>
+                <tr>
+                  <td><span class="param-name">items</span></td><td><span class="param-type">array</span></td><td><span class="param-optional">opcional</span></td>
+                  <td class="param-desc">Array de itens: <code>[{ description, quantity, unit_price, notes }]</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X POST <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/treatment_plans"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{
+  "treatment_plan": {
+    "title": "Tratamento Ortodôntico",
+    "notes": "Iniciar após extração do siso",
+    "items": [
+      { "description": "Aparelho fixo",     "quantity": 1, "unit_price": 2000.00 },
+      { "description": "Manutenção mensal", "quantity": 6, "unit_price": 250.00  }
+    ]
+  }
+}'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH /treatment_plans/:id/approve -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/treatment_plans/<span class="path-param">{id}</span>/approve</span>
+          <span class="endpoint-desc">Aprovar plano</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Muda o status para <code>approved</code> e registra <code>approved_at</code> com o timestamp atual. Não requer body.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/treatment_plans/3/approve"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 200 — <code>{ "status": "approved", "approved_at": "2026-03-21T19:28:00Z" }</code></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH /treatment_plans/:id/cancel -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/treatment_plans/<span class="path-param">{id}</span>/cancel</span>
+          <span class="endpoint-desc">Cancelar plano</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/treatment_plans/3/cancel"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 200 — <code>{ "status": "cancelled" }</code></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH /treatment_plans/:id -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/treatment_plans/<span class="path-param">{id}</span></span>
+          <span class="endpoint-desc">Atualizar plano</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/treatment_plans/3"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{ "treatment_plan": { "title": "Plano Revisado", "notes": "Ajuste após avaliação" } }'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE /treatment_plans/:id -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge DELETE">DELETE</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/treatment_plans/<span class="path-param">{id}</span></span>
+          <span class="endpoint-desc">Excluir plano</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X DELETE <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/treatment_plans/3"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 200 OK (sem body)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="api-section" id="pacientes-agendamentos">
+      <div class="section-header">
+        <div class="section-icon agenda">🗓️</div>
+        <div>
+          <div class="section-title">Pacientes — Agendamentos</div>
+          <div class="section-subtitle">Consultas do prontuário: criar, reagendar, cancelar, falta</div>
+        </div>
+      </div>
+
+      <!-- GET /patients/:id/appointments -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/appointments</span>
+          <span class="endpoint-desc">Listar consultas</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Parâmetros</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Parâmetro</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">page</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Página (padrão: 1)</td></tr>
+                <tr><td><span class="param-name">per_page</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Resultados por página (padrão: 15)</td></tr>
+                <tr><td><span class="param-name">status</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Filtra por status: <div class="enum-list"><span class="enum-chip">scheduled</span><span class="enum-chip">confirmed</span><span class="enum-chip">completed</span><span class="enum-chip">cancelled</span><span class="enum-chip">no_show</span></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/appointments?page=1&amp;per_page=15"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>{
+  "appointments": [{
+    "id": 10,
+    "agenda_event_id": 42,
+    "patient_id": 15,
+    "status": "completed",
+    "starts_at": "2026-03-10T09:00:00Z",
+    "ends_at": "2026-03-10T09:30:00Z",
+    "specialist": { "id": 3, "name": "Dr. Silva" },
+    "service": { "id": 1, "name": "Avaliação Clínica" },
+    "cancellation_reason": null
+  }],
+  "meta": { "total_count": 8, "page": 1, "per_page": 15 }
+}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST /patients/:id/appointments -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge POST">POST</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/appointments</span>
+          <span class="endpoint-desc">Criar consulta</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Body</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <div class="desc-box">Cria o evento na agenda (<code>AgendaEvent</code>) e o registro de consulta (<code>PatientAppointment</code>) de forma atômica.</div>
+            <table class="params-table" style="margin-top:10px">
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">starts_at</span></td><td><span class="param-type">datetime</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Data/hora de início (ISO 8601)</td></tr>
+                <tr><td><span class="param-name">ends_at</span></td><td><span class="param-type">datetime</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Data/hora de término (ISO 8601)</td></tr>
+                <tr><td><span class="param-name">user_id</span></td><td><span class="param-type">integer</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">ID do especialista</td></tr>
+                <tr><td><span class="param-name">agenda_service_id</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">ID do serviço/tratamento</td></tr>
+                <tr><td><span class="param-name">description</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Observações da consulta</td></tr>
+                <tr><td><span class="param-name">status</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Padrão: <code>scheduled</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X POST <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/appointments"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{
+  "appointment": {
+    "starts_at": "2026-04-10T09:00:00Z",
+    "ends_at":   "2026-04-10T09:30:00Z",
+    "user_id": 3,
+    "agenda_service_id": 1,
+    "description": "Retorno após procedimento",
+    "status": "scheduled"
+  }
+}'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH /appointments/:id/reschedule -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/appointments/<span class="path-param">{id}</span>/reschedule</span>
+          <span class="endpoint-desc">Reagendar consulta</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Atualiza <code>starts_at</code> e <code>ends_at</code> do evento vinculado e registra o reagendamento como timeline event.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/appointments/10/reschedule"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{ "starts_at": "2026-04-15T10:00:00Z", "ends_at": "2026-04-15T10:30:00Z" }'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH /appointments/:id/cancel -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/appointments/<span class="path-param">{id}</span>/cancel</span>
+          <span class="endpoint-desc">Cancelar consulta</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Body</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">cancellation_reason</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Motivo do cancelamento (registrado no timeline)</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/appointments/10/cancel"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{ "cancellation_reason": "Paciente solicitou remarcação" }'</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 200 — <code>{ "status": "cancelled", "cancellation_reason": "..." }</code></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH /appointments/:id/no_show -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/appointments/<span class="path-param">{id}</span>/no_show</span>
+          <span class="endpoint-desc">Registrar falta</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Marca a consulta como <code>no_show</code>, incrementa <code>no_show_count</code> do paciente e cria entrada na timeline. Não requer body.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/appointments/10/no_show"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 200 — <code>{ "status": "no_show", "patient": { "no_show_count": 2 } }</code></div>
+          </div>
+        </div>
+      </div>
+
+    <section class="api-section" id="pacientes-financeiro">
+      <div class="section-header">
+        <div class="section-icon financial">💰</div>
+        <div>
+          <div class="section-title">Pacientes — Financeiro</div>
+          <div class="section-subtitle">Orçamentos, transações e resumo financeiro do paciente</div>
+        </div>
+      </div>
+      <!-- GET /patients/:id/financial_summary -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/financial_summary</span>
+          <span class="endpoint-desc">Resumo financeiro</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">⭐ Endpoint estrela — totais de orçamentos, receita recebida e saldo em aberto do paciente.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/financial_summary"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>{
+  "total_budgeted":  "5500.00",
+  "total_paid":      "3200.00",
+  "total_pending":   "2300.00",
+  "total_overdue":   "500.00",
+  "budgets_count":   3,
+  "transactions_count": 8
+}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET /patients/:id/budgets -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/budgets</span>
+          <span class="endpoint-desc">Listar orçamentos</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/budgets"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>[{
+  "id": 5, "title": "Orçamento Tratamento Ortodôntico",
+  "status": "approved", "total_value": "3500.00",
+  "paid_value": "1000.00", "pending_value": "2500.00",
+  "items": [ { "description": "Aparelho fixo", "quantity": 1, "unit_price": "2000.00" } ],
+  "transactions": [ { "id": 1, "amount": "1000.00", "paid_at": "2026-03-01" } ]
+}]</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST /patients/:id/budgets -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge POST">POST</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/budgets</span>
+          <span class="endpoint-desc">Criar orçamento</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Body</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">title</span></td><td><span class="param-type">string</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Título do orçamento</td></tr>
+                <tr><td><span class="param-name">items</span></td><td><span class="param-type">array</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc"><code>[{ description, quantity, unit_price, notes }]</code></td></tr>
+                <tr><td><span class="param-name">notes</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Observações gerais</td></tr>
+                <tr><td><span class="param-name">valid_until</span></td><td><span class="param-type">date</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Validade do orçamento. Ex: <code>2026-04-30</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X POST <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/budgets"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{
+  "budget": {
+    "title": "Orçamento Ortodôntico",
+    "valid_until": "2026-05-31",
+    "items": [
+      { "description": "Consulta inicial",  "quantity": 1, "unit_price": 200.00 },
+      { "description": "Aparelho fixo",     "quantity": 1, "unit_price": 2000.00 }
+    ]
+  }
+}'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST /patients/:id/budgets/:id/transactions -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge POST">POST</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/budgets/<span class="path-param">{budget_id}</span>/transactions</span>
+          <span class="endpoint-desc">Registrar pagamento</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Body</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">amount</span></td><td><span class="param-type">decimal</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Valor do pagamento</td></tr>
+                <tr><td><span class="param-name">paid_at</span></td><td><span class="param-type">date</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Data do pagamento. Ex: <code>2026-03-21</code></td></tr>
+                <tr><td><span class="param-name">payment_method</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc"><div class="enum-list"><span class="enum-chip">pix</span><span class="enum-chip">credito</span><span class="enum-chip">debito</span><span class="enum-chip">dinheiro</span><span class="enum-chip">boleto</span></div></td></tr>
+                <tr><td><span class="param-name">notes</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Observações do pagamento</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X POST <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/budgets/5/transactions"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{
+  "transaction": {
+    "amount": 500.00,
+    "paid_at": "2026-03-21",
+    "payment_method": "pix",
+    "notes": "Entrada do tratamento"
+  }
+}'</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 201 — <code>{ "id": 9, "amount": "500.00", "paid_at": "2026-03-21", "payment_method": "pix" }</code></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="api-section" id="pacientes-outros">
+      <div class="section-header">
+        <div class="section-icon patients">🗂️</div>
+        <div>
+          <div class="section-title">Pacientes — Outros Módulos</div>
+          <div class="section-subtitle">Anamnese, exames, consentimentos, timeline e recalls</div>
+        </div>
+      </div>
+
+      <!-- GET/PATCH anamnesis -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/anamnesis</span>
+          <span class="endpoint-desc">Ver anamnese</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Retorna o formulário de anamnese do paciente. Cria automaticamente se ainda não existir (upsert interno).</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/anamnesis"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>{
+  "id": 2, "patient_id": 15,
+  "chief_complaint": "Dor de cabeça frequente",
+  "medical_history": "Hipertenso controlado",
+  "current_medications": "Losartana 50mg",
+  "allergies": "Penicilina",
+  "family_history": "Diabetes tipo 2 (pai)",
+  "lifestyle": "Não fuma, bebe socialmente",
+  "custom_fields": { "campo_extra": "valor" },
+  "updated_at": "2026-03-15T10:00:00Z"
+}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/anamnesis</span>
+          <span class="endpoint-desc">Atualizar anamnese</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Aceita qualquer subconjunto dos campos. Suporta <code>custom_fields</code> como objeto JSON livre.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/anamnesis"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{
+  "anamnesis": {
+    "allergies": "Penicilina, AAS",
+    "current_medications": "Losartana 50mg, Metoprolol 25mg",
+    "custom_fields": { "pressao_arterial": "130/85" }
+  }
+}'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Consentimentos -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/consent_forms</span>
+          <span class="endpoint-desc">Listar consentimentos</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/consent_forms"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>[{
+  "id": 1, "title": "Consentimento Anestesia",
+  "status": "signed", "signed_at": "2026-03-10T09:15:00Z",
+  "signature_url": "https://...",
+  "urgent": false
+}]</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge POST">POST</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/consent_forms</span>
+          <span class="endpoint-desc">Criar consentimento</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Body</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">title</span></td><td><span class="param-type">string</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Título do termo</td></tr>
+                <tr><td><span class="param-name">body</span></td><td><span class="param-type">string</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Conteúdo HTML do termo</td></tr>
+                <tr><td><span class="param-name">urgent</span></td><td><span class="param-type">boolean</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Se <code>true</code>, exibe alerta no prontuário até ser assinado</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X POST <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/consent_forms"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{
+  "consent_form": {
+    "title": "Consentimento para Anestesia Local",
+    "body": "<p>Declaro que fui informado(a)...</p>",
+    "urgent": true
+  }
+}'</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge PATCH">PATCH</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/consent_forms/<span class="path-param">{id}</span>/sign</span>
+          <span class="endpoint-desc">Assinar consentimento</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Body</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">signature</span></td><td><span class="param-type">string</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Assinatura em Base64 (PNG do canvas capturado no frontend)</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X PATCH <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/consent_forms/1/sign"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{ "signature": "data:image/png;base64,iVBORw0KGgoA..." }'</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 200 — <code>{ "status": "signed", "signed_at": "...", "signature_url": "https://..." }</code></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exames -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/exams</span>
+          <span class="endpoint-desc">Listar exames</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/exams"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge POST">POST</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/exams</span>
+          <span class="endpoint-desc">Upload de exame</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Body</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <div class="desc-box">📤 Endpoint multipart/form-data. Envia arquivo + metadados em uma única requisição.</div>
+            <table class="params-table" style="margin-top:10px">
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">file</span></td><td><span class="param-type">file</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Arquivo do exame (PDF, JPG, PNG, DICOM)</td></tr>
+                <tr><td><span class="param-name">name</span></td><td><span class="param-type">string</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Nome/descrição do exame</td></tr>
+                <tr><td><span class="param-name">exam_date</span></td><td><span class="param-type">date</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Data de realização. Ex: <code>2026-03-10</code></td></tr>
+                <tr><td><span class="param-name">notes</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc">Observações clínicas</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X POST <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/exams"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -F <span class="curl-val">"exam[file]=@/caminho/para/hemograma.pdf"</span> \
+  -F <span class="curl-val">"exam[name]=Hemograma Completo"</span> \
+  -F <span class="curl-val">"exam[exam_date]=2026-03-10"</span> \
+  -F <span class="curl-val">"exam[notes]=Solicitar reavaliação em 90 dias"</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 201 — <code>{ "id": 3, "name": "Hemograma Completo", "file_url": "https://..." }</code></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/exams/<span class="path-param">{id}</span>/download</span>
+          <span class="endpoint-desc">Download de exame</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Retorna redirect <code>302</code> para URL assinada do arquivo no storage (S3/GCS). URL expira em 15 minutos.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -L -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/exams/3/download"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  --output hemograma.pdf</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/timeline</span>
+          <span class="endpoint-desc">Timeline do paciente</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button>
+            <button class="tab-btn" onclick="switchTab(this, 'response')">Resposta</button>
+          </div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Retorna eventos cronológicos do prontuário: consultas, evoluções, pagamentos, status e outras ações. Suporta <code>?page</code> e <code>?per_page</code>.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/timeline?page=1&amp;per_page=20"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab="response">
+            <div class="response-tag ok">✓ 200 OK</div>
+            <div class="code-block"><div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre>{
+  "events": [
+    { "id": 1, "event_type": "appointment_completed", "description": "Consulta realizada",   "occurred_at": "2026-03-10T09:30:00Z", "actor": { "id": 3, "name": "Dr. Silva" } },
+    { "id": 2, "event_type": "status_changed",         "description": "Status: ativo",         "occurred_at": "2026-03-05T14:00:00Z", "actor": { "id": 1, "name": "Admin" } },
+    { "id": 3, "event_type": "payment_registered",     "description": "Pagamento R$ 500,00",   "occurred_at": "2026-03-01T10:15:00Z", "actor": { "id": 1, "name": "Admin" } }
+  ],
+  "meta": { "total_count": 24, "page": 1, "per_page": 20 }
+}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recalls -->
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge GET">GET</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/recalls</span>
+          <span class="endpoint-desc">Listar recalls</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs"><button class="tab-btn active" onclick="switchTab(this, 'curl')">cURL</button></div>
+          <div class="tab-panel active" data-tab="curl">
+            <div class="desc-box">Retorna histórico de mensagens de recall enviadas ao paciente com status de entrega.</div>
+            <div class="code-block" style="margin-top:10px">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X GET <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/recalls"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint-card">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge POST">POST</span>
+          <span class="endpoint-path">/api/v1/accounts/<span class="path-param">{account_id}</span>/patients/<span class="path-param">{patient_id}</span>/recalls</span>
+          <span class="endpoint-desc">Enviar recall manual</span>
+          <span class="endpoint-chevron">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this, 'params')">Body</button>
+            <button class="tab-btn" onclick="switchTab(this, 'curl')">cURL</button>
+          </div>
+          <div class="tab-panel active" data-tab="params">
+            <table class="params-table">
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><span class="param-name">message</span></td><td><span class="param-type">string</span></td><td><span class="param-required">obrig.</span></td><td class="param-desc">Texto da mensagem a enviar via WhatsApp/SMS</td></tr>
+                <tr><td><span class="param-name">channel</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">opcional</span></td><td class="param-desc"><div class="enum-list"><span class="enum-chip">whatsapp</span><span class="enum-chip">sms</span><span class="enum-chip">email</span></div> Padrão: <code>whatsapp</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel" data-tab="curl">
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-lang">cURL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+              <pre><span class="curl-flag">curl</span> -X POST <span class="curl-url">"<span class="cfg-domain-val">https://seu-dominio.com</span>/api/v1/accounts/<span class="cfg-account-val">1</span>/patients/15/recalls"</span> \
+  -H <span class="curl-val">"api_access_token: <span class="cfg-token-val">seu_token</span>"</span> \
+  -H <span class="curl-val">"Content-Type: application/json"</span> \
+  -d <span class="curl-val">'{
+  "recall": {
+    "message": "Olá Maria! Está na hora do seu retorno. Agende pelo link: https://...",
+    "channel": "whatsapp"
+  }
+}'</span></pre>
+            </div>
+            <div class="response-tag ok" style="margin-top:10px">✓ 201 — <code>{ "id": 8, "status": "sent", "sent_at": "2026-03-21T19:30:00Z" }</code></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <footer class="api-footer">
+        <p>Klivy API Reference &mdash; Documentação gerada internamente &middot; v1</p>
+        <p style="margin-top:6px">Todos os endpoints seguem o padrão <code style="font-family:monospace;font-size:11px;color:var(--accent-blue)">/api/v1/accounts/{id}/recurso</code></p>
+      </footer>
+    </main>
+  </div>
+</div>
+
+<!-- BACK TO TOP -->
+<button id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Voltar ao topo">↑</button>
+
+<script>
+  // ── CONFIG ─────────────────────────────────────────────────────
+  const DEFAULTS = {
+    domain:  localStorage.getItem('klivy_api_domain')  || '',
+    account: localStorage.getItem('klivy_api_account') || '',
+    token:   localStorage.getItem('klivy_api_token')   || '',
+  };
+
+  const domainInput  = document.getElementById('cfg-domain');
+  const accountInput = document.getElementById('cfg-account');
+  const tokenInput   = document.getElementById('cfg-token');
+  const statusDot    = document.getElementById('status-dot');
+  const displayDomain = document.getElementById('display-domain');
+
+  domainInput.value  = DEFAULTS.domain;
+  accountInput.value = DEFAULTS.account;
+  tokenInput.value   = DEFAULTS.token;
+
+  if (DEFAULTS.domain && DEFAULTS.token) applyConfig(true);
+
+  function applyConfig(silent = false) {
+    const domain  = domainInput.value.trim().replace(/\/$/, '');
+    const account = accountInput.value.trim() || '1';
+    const token   = tokenInput.value.trim();
+
+    localStorage.setItem('klivy_api_domain',  domain);
+    localStorage.setItem('klivy_api_account', account);
+    localStorage.setItem('klivy_api_token',   token);
+
+    // Update display
+    displayDomain.textContent = domain || 'não configurado';
+
+    // Update status dot
+    statusDot.classList.toggle('active', !!(domain && token));
+
+    // Inject into all cfg-* spans
+    document.querySelectorAll('.cfg-domain-val').forEach(el => {
+      el.textContent = domain || 'https://seu-dominio.com';
+    });
+    document.querySelectorAll('.cfg-account-val').forEach(el => {
+      el.textContent = account;
+    });
+    document.querySelectorAll('.cfg-token-val').forEach(el => {
+      el.textContent = token || 'seu_token';
+    });
+
+    if (!silent) {
+      const btn = document.querySelector('.btn-apply');
+      const original = btn.textContent;
+      btn.textContent = '✓ Aplicado!';
+      btn.style.background = '#29a745';
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.style.background = '';
+      }, 1500);
+    }
+  }
+
+  // Also apply on Enter
+  [domainInput, accountInput, tokenInput].forEach(el => {
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter') applyConfig(); });
+  });
+
+  // ── ENDPOINT TOGGLE ────────────────────────────────────────────
+  function toggleEndpoint(headerEl) {
+    const card = headerEl.closest('.endpoint-card');
+    card.classList.toggle('open');
+  }
+
+  // ── TABS ───────────────────────────────────────────────────────
+  function switchTab(btnEl, tabName) {
+    const body = btnEl.closest('.endpoint-body');
+    body.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    body.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btnEl.classList.add('active');
+    const panel = body.querySelector(`.tab-panel[data-tab="${tabName}"]`);
+    if (panel) panel.classList.add('active');
+  }
+
+  // ── COPY CODE ──────────────────────────────────────────────────
+  function copyCode(btnEl) {
+    const pre = btnEl.closest('.code-block').querySelector('pre');
+    const text = pre.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      btnEl.textContent = '✓ Copiado!';
+      btnEl.classList.add('copied');
+      setTimeout(() => {
+        btnEl.textContent = 'Copiar';
+        btnEl.classList.remove('copied');
+      }, 2000);
+    });
+  }
+
+  // ── SIDEBAR ACTIVE STATE on scroll ────────────────────────────
+  const sections = document.querySelectorAll('.api-section');
+  const sidebarLinks = document.querySelectorAll('.sidebar-link');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        sidebarLinks.forEach(link => {
+          link.classList.toggle(
+            'active',
+            link.getAttribute('href') === '#' + id
+          );
+        });
+      }
+    });
+  }, { rootMargin: `-${80}px 0px -60% 0px` });
+
+  sections.forEach(s => observer.observe(s));
+
+  // ── CREDENTIAL PROGRESS BAR ──────────────────────────────
+  const credBar = document.getElementById('cred-bar');
+  function updateCredBar() {
+    const d = domainInput.value.trim();
+    const a = accountInput.value.trim();
+    const t = tokenInput.value.trim();
+    const filled = [d, a, t].filter(Boolean).length;
+    credBar.style.width = (filled / 3 * 100) + '%';
+  }
+  [domainInput, accountInput, tokenInput].forEach(el => {
+    el.addEventListener('input', updateCredBar);
+  });
+  updateCredBar();
+
+  // ── BACK TO TOP ─────────────────────────────────────
+  const backToTop = document.getElementById('back-to-top');
+  window.addEventListener('scroll', () => {
+    backToTop.classList.toggle('visible', window.scrollY > 400);
+  }, { passive: true });
+
+  // ── KEYBOARD SHORTCUT (Cmd/Ctrl+K = focus domain) ───────────
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      domainInput.focus();
+    }
+  });
+</script>
+</body>
+</html>

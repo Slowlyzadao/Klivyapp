@@ -1,0 +1,51 @@
+post:
+  tags:
+    - Financeiro · Comissões
+  summary: Pagar várias comissões em lote
+  description: |
+    Cada comissão é tratada individualmente; falhas não bloqueiam o resto.
+    Resposta inclui `succeeded`/`failed` separados + `summary`. Requer
+    GERENTE/ADMIN. Idempotência via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [entry_ids]
+          properties:
+            entry_ids:
+              type: array
+              items: { type: integer }
+            due_date: { type: string, format: date }
+            description: { type: string }
+  responses:
+    '200':
+      description: Processado (sucessos e falhas separados)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              succeeded:
+                type: array
+                items:
+                  $ref: '../definitions/CommissionEntry.yml'
+              failed:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    errors:
+                      type: array
+                      items: { type: string }
+              summary:
+                type: object
+                properties:
+                  paid: { type: integer }
+                  errors: { type: integer }
+    '422':
+      description: Selecione pelo menos 1 comissão

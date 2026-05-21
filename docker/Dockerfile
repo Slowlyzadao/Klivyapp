@@ -1,0 +1,105 @@
+# pre-build stage
+FROM node:24-bookworm-slim as node
+FROM ruby:3.4.4-slim-bookworm AS pre-builder
+
+ENV RAILS_ENV=production
+ENV BUNDLE_WITHOUT="development:test"
+ENV BUNDLER_VERSION=2.5.16
+ENV BUNDLE_PATH="/gems"
+ENV BUNDLE_BIN="/gems/bin"
+ENV PATH="${BUNDLE_BIN}:${PATH}"
+ENV NODE_OPTIONS="--max-old-space-size=4096 --openssl-legacy-provider"
+
+RUN apt-get update && apt-get install -y \
+  build-essential \
+  libpq-dev \
+  git \
+  curl \
+  xz-utils \
+  python3 \
+  pkg-config \
+  libvips-dev \
+  cmake \
+  && gem install bundler -v "$BUNDLER_VERSION"
+
+WORKDIR /app
+
+COPY --from=node /usr/local/bin/node /usr/local/bin/
+COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+  && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+  && npm install -g pnpm foreman
+
+# Install Ruby Dependencies
+COPY Gemfile Gemfile.lock ./
+RUN bundle config set --local without 'development:test' && \
+  bundle config set --local deployment 'true' && \
+  bundle install -j 4 -r 3
+
+# Install Chatwoot Node Dependencies
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm i
+
+# Install WhatsApp Bridge Dependencies
+COPY lib/whatsapp/package.json ./lib/whatsapp/
+RUN cd lib/whatsapp && npm install
+
+COPY . /app
+
+# generate production assets
+RUN RAILS_SERVE_STATIC_FILES=true SECRET_KEY_BASE=precompile_placeholder RAILS_LOG_TO_STDOUT=enabled bundle exec rake assets:precompile && \
+  rm -rf spec node_modules tmp/cache
+
+RUN git rev-parse HEAD > /app/.git_sha || echo "unknown" > /app/.git_sha
+
+# final build stage
+FROM ruby:3.4.4-slim-bookworm
+
+ENV RAILS_ENV=production
+ENV BUNDLE_WITHOUT="development:test"
+ENV BUNDLE_PATH="/gems"
+ENV BUNDLE_BIN="/gems/bin"
+ENV PATH="${BUNDLE_BIN}:${PATH}"
+ENV RAILS_SERVE_STATIC_FILES=true
+
+RUN apt-get update && apt-get install -y \
+  libpq5 \
+  tzdata \
+  imagemagick \
+  git \
+  libvips42 \
+  curl \
+  python3 \
+  ca-certificates \
+  gnupg \
+  lsb-release \
+  && rm -rf /var/lib/apt/lists/* \
+  && gem install bundler -v "2.5.16"
+
+# PostgreSQL client matching server major (16+) — instalamos do repo oficial
+# do PostgreSQL pra evitar version mismatch no pg_dump (default Debian
+# bookworm vem com client v15, mas o server roda v16 → pg_dump aborta).
+# Necessário pro F-32 backup automático.
+RUN curl -sSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    | gpg --dearmor > /etc/apt/trusted.gpg.d/postgresql.gpg \
+  && echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+    > /etc/apt/sources.list.d/pgdg.list \
+  && apt-get update \
+  && apt-get install -y postgresql-client-16 \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY --from=node /usr/local/bin/node /usr/local/bin/
+COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+  && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+  && npm install -g foreman
+
+COPY --from=pre-builder /gems/ /gems/
+COPY --from=pre-builder /app /app
+
+WORKDIR /app
+
+EXPOSE 3000 3002
+
+# Default command uses foreman to run processes defined in Procfile
+CMD ["sh", "-c", "bundle exec rails db:chatwoot_prepare && bundle exec foreman start -f Procfile"]

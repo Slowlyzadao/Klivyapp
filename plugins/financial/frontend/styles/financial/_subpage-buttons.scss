@@ -1,0 +1,245 @@
+@use "../variables" as *;
+
+/* ── Generic buttons ──────────────────────────────────────── */
+.financial-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+}
+
+.financial-btn--primary {
+  background: rgb(var(--blue-9));
+  color: #ffffff;
+  border: none;
+}
+
+.financial-btn--primary:hover {
+  background: rgb(var(--blue-10)); /* Darker blue shade on hover */
+}
+
+.financial-btn--ghost {
+  background: transparent;
+  border: 1px solid rgb(var(--s-200));
+  color: rgb(var(--s-700));
+}
+
+.financial-btn--ghost:hover {
+  background: rgb(var(--s-50));
+}
+
+body.dark .financial-btn--ghost {
+  border-color: rgb(var(--s-600));
+  color: rgb(var(--s-200));
+}
+
+body.dark .financial-btn--ghost:hover {
+  background: rgb(var(--s-700));
+}
+
+/* PDF export button — azul sólido */
+.financial-btn--pdf {
+  background: rgb(39 129 246 / 1);
+  border: 1px solid transparent;
+  color: #fff;
+}
+
+.financial-btn--pdf:hover {
+  background: #1d6fd8;
+}
+
+body.dark .financial-btn--pdf {
+  background: rgb(39 129 246 / 0.9);
+  color: #fff;
+}
+
+/* CSV / Google Sheets export button — verde Sheets */
+.financial-btn--csv {
+  background: #1e7e34;
+  border: 1px solid transparent;
+  color: #fff;
+  padding: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  min-width: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.financial-btn--csv:hover {
+  background: #145c24;
+  box-shadow: 0 2px 8px rgba(30, 126, 52, 0.35);
+  transform: translateY(-1px);
+}
+
+.financial-btn--csv:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.financial-btn--csv svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+body.dark .financial-btn--csv {
+  background: #1a7030;
+}
+
+body.dark .financial-btn--csv:hover {
+  background: #0f5221;
+}
+
+/* CSV export — variante com ícone + texto (alinha com .financial-btn--pdf) */
+.financial-btn--csv-text {
+  background: #1e7e34;
+  color: #fff;
+  border: 1px solid transparent;
+}
+
+.financial-btn--csv-text:hover {
+  background: #145c24;
+  box-shadow: 0 2px 8px rgba(30, 126, 52, 0.35);
+}
+
+body.dark .financial-btn--csv-text {
+  background: #1a7030;
+}
+
+body.dark .financial-btn--csv-text:hover {
+  background: #0f5221;
+}
+
+
+.financial-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+/* ── Danger button variant ───────────────────────────────── */
+.financial-btn--danger {
+  background: $brand-danger;
+  color: #fff;
+  border: none;
+}
+
+.financial-btn--danger:hover {
+  background: $brand-danger-strong;
+}
+
+/* ── Header actions (multiple buttons + period) ──────────── */
+.financial-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ── Table actions column ────────────────────────────────── */
+.financial-table__col--actions {
+  text-align: right;
+  width: 100px;
+}
+
+.financial-table__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.25rem;
+}
+
+.financial-table__col--danger {
+  color: $brand-danger;
+  font-weight: 600;
+}
+
+/* ── Small action buttons (Receive / Pay / Edit per row) ── */
+.financial-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  background: transparent;
+  color: rgb(var(--s-500));
+}
+
+.financial-action-btn:hover {
+  background: rgb(var(--s-100));
+}
+
+body.dark .financial-action-btn:hover {
+  background: rgb(var(--s-700));
+}
+
+.financial-action-btn--success {
+background: rgba($brand-success, 0.1);
+color: $brand-success-strong;
+}
+
+.financial-action-btn--success:hover {
+  background: rgba($brand-success, 0.1);
+  color: $brand-success-strong;
+}
+
+.financial-action-btn--edit {
+  color: rgb(var(--s-500));
+  background: #f7f7f7;
+}
+
+.financial-action-btn--edit:hover {
+background: rgba($brand-info-bright, 0.08);
+color: $brand-info;
+border: 1px solid rgba($brand-info-bright, 0.15);
+}
+/* ── Custom page header buttons ───────────────────────────── */
+.btn-new-entry-cf {
+  background: #f1fdf0;
+  color: $brand-success;
+}
+
+.btn-new-expense-cf {
+  background: #fdf0f0;
+  color: $brand-danger;
+}
+
+.btn-new-entry-rec {
+  background: #f1fdf0;
+    color: $brand-success;
+}
+.btn-new-entry-rec:hover {
+  background: var(--color-woot-600);
+}
+
+.btn-new-expense-pay {
+  background: #fdf0f0;
+    color: $brand-danger;
+}
+.btn-new-expense-pay:hover {
+  background: var(--color-woot-600);
+}
+
+.financial-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgb(var(--s-500));
+  margin-bottom: 0.25rem;
+}

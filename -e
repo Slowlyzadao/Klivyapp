@@ -1,0 +1,190 @@
+# Sprint L — Transcreve audio com diarização perfeita + cleanup.
+#
+# Estratégia:
+#   1. Baixa doctor-temp.ogg + patient-temp.ogg do R2 (paralelo)
+#   2. Whisper × 2 → cada arquivo já vira segments com speaker conhecido
+#      (origem do arquivo = speaker garantido)
+#   3. Merge cronológico
+#   4. Persiste transcript_text + transcript_segments
+#   5. DELETA doctor_audio_key + patient_audio_key do R2 (permanente)
+#   6. ZERA as colunas no DB (composite_audio_key continua intacto)
+#   7. Enfileira GenerateEvolutionJob
+#
+# Após esta job rodar com sucesso, o registro tem apenas:
+#   - composite_audio_key  (arquivo único — usado pelo player)
+#   - transcript_text/segments (texto pra revisão e pro LLM)
+#
+# Falhas — retry exponencial 3×. Esgotado, marca `failed` mas mantém os
+# arquivos (admin pode reprocessar).
+require 'tempfile'
+
+module Telemed
+  class TranscribeRecordingJob < ApplicationJob
+  queue_as :default
+
+  retry_on StandardError, wait: :exponentially_longer, attempts: 3
+  discard_on ActiveJob::DeserializationError
+
+  def perform(recording_id)
+    recording = TelemedRecording.find_by(id: recording_id)
+    return unless recording
+    return if recording.ready? || recording.failed?
+    return if recording.archived?
+
+    # 2 modos suportados:
+    # 1) DIARIZED: doctor + patient temps → Whisper × 2 → merge com speaker tags
+    # 2) COMPOSITE_ONLY: só composite_audio_key → Whisper × 1 sem diarização
+    #    (usado em testes locais ou quando audio único é fornecido manualmente)
+    has_temps  = recording.doctor_audio_key.present? && recording.patient_audio_key.present?
+    has_solo   = recording.composite_audio_key.present?
+
+    unless has_temps || has_solo
+      recording.fail!('Faltam keys de audio no R2 (sem temps nem composite)')
+      return
+    end
+
+    recording.update!(status: 'transcribing')
+
+    if has_temps
+      transcribe_diarized!(recording)
+    else
+      transcribe_single!(recording)
+    end
+
+    GenerateEvolutionJob.perform_later(recording.id)
+  rescue StandardError => e
+    recording&.bump_retry!
+    if recording && recording.retries_exhausted?
+      recording.fail!("Transcrição falhou (#{e.class}): #{e.message}")
+      return
+    end
+    raise
+  end
+
+  private
+
+  # Modo padrão (produção com Egress): 2 arquivos isolados → diarização perfeita.
+  def transcribe_diarized!(recording)
+    doctor_key  = recording.doctor_audio_key
+    patient_key = recording.patient_audio_key
+
+    doctor_segments  = transcribe_track(doctor_key,  speaker: 'Doutor')
+    patient_segments = transcribe_track(patient_key, speaker: 'Paciente')
+    merged = merge_segments(doctor_segments + patient_segments)
+
+    recording.update!(
+      status:              'transcribed',
+      transcript_text:     render_text(merged),
+      transcript_segments: merged.map(&:to_h),
+      transcript_provider: 'whisper'
+    )
+    cleanup_temp_files!(recording, doctor_key, patient_key)
+  end
+
+  # Modo solo (testes locais / áudio injetado): 1 arquivo só, sem
+  # speaker tagging. Whisper transcreve, marca todos os segments como
+  # 'Falante' (caller pode inferir manualmente quem é quem pelo contexto).
+  def transcribe_single!(recording)
+    composite_key = recording.composite_audio_key
+
+    tmp = Tempfile.new(['telemed-solo-', '.ogg'], binmode: true)
+    begin
+      RecordingStorage.download(composite_key, tmp.path)
+      tmp.rewind
+
+      # Valida arquivo ANTES de gastar tokens no Whisper. Egress com
+      # bug (Chrome mode, NAT falhou, etc) pode gerar OGG mudo ou
+      # < 1KB. Whisper aceita arquivo vazio e retorna "" → vira recording
+      # 'transcribed' sem texto → GenerateEvolutionJob skipa silenciosamente
+      # → user fica olhando "Em andamento" pra sempre. Fail-fast aqui.
+      file_size = File.size(tmp.path)
+      raise "Arquivo de áudio vazio ou corrompido (#{file_size} bytes em #{composite_key})" if file_size < 1024
+
+      provider = TranscriptionProvider.for('whisper')
+      result   = provider.call(audio_io: File.open(tmp.path, 'rb'))
+
+      segments = result.segments.map do |seg|
+        AnnotatedSegment.new(start: seg.start, end_: seg.end_, speaker: 'Falante', text: seg.text)
+      end
+
+      # Se Whisper retornou ZERO segmentos OU só ruído (texto < 5 chars),
+      # provavelmente o áudio está mudo (Egress não capturou nada útil).
+      # Não marca como 'transcribed' — falha pra dentista saber.
+      if segments.empty? || render_text(segments).strip.length < 5
+        raise "Whisper não detectou fala no áudio (#{segments.size} segmentos). " \
+              "Provável falha de captura — verifique se ambos publicaram áudio."
+      end
+
+      recording.update!(
+        status:              'transcribed',
+        transcript_text:     render_text(segments),
+        transcript_segments: segments.map(&:to_h),
+        transcript_provider: 'whisper-solo'
+      )
+    ensure
+      tmp.close
+      tmp.unlink
+    end
+  end
+
+  def transcribe_track(storage_key, speaker:)
+    return [] if storage_key.blank?
+
+    tmp = Tempfile.new(['telemed-', '.ogg'], binmode: true)
+    begin
+      RecordingStorage.download(storage_key, tmp.path)
+      tmp.rewind
+
+      provider = TranscriptionProvider.for('whisper')
+      result   = provider.call(audio_io: File.open(tmp.path, 'rb'))
+
+      result.segments.map do |seg|
+        AnnotatedSegment.new(
+          start:   seg.start,
+          end_:    seg.end_,
+          speaker: speaker,
+          text:    seg.text
+        )
+      end
+    ensure
+      tmp.close
+      tmp.unlink
+    end
+  end
+
+  def cleanup_temp_files!(recording, *keys)
+    keys.compact.each do |key|
+      begin
+        RecordingStorage.delete(key)
+      rescue StandardError => e
+        # Não-fatal — log e segue. Pior caso é arquivo órfão no R2;
+        # job futuro `ReapOrphanRecordingsJob` (Fase 2) pode varrer.
+        Rails.logger.warn("[TranscribeRecordingJob] R2 delete falhou key=#{key}: #{e.message}")
+      end
+    end
+
+    recording.update!(doctor_audio_key: nil, patient_audio_key: nil)
+  end
+
+  def merge_segments(segments)
+    segments.sort_by(&:start)
+  end
+
+  def render_text(segments)
+    segments.map do |s|
+      "[#{format_timestamp(s.start)}] [#{s.speaker}] #{s.text}"
+    end.join("\n")
+  end
+
+  def format_timestamp(seconds)
+    seconds = seconds.to_f.round
+    format('%02d:%02d:%02d', seconds / 3600, (seconds % 3600) / 60, seconds % 60)
+  end
+
+  AnnotatedSegment = Struct.new(:start, :end_, :speaker, :text, keyword_init: true) do
+    def to_h
+      { start: start, end: end_, speaker: speaker, text: text }
+    end
+  end
+end
+end

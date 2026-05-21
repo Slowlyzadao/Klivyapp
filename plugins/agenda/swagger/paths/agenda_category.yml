@@ -1,0 +1,57 @@
+get:
+  tags:
+    - Categorias da Agenda
+  summary: Detalhar categoria
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Categoria
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaCategory.yml'
+patch:
+  tags:
+    - Categorias da Agenda
+  summary: Atualizar categoria
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [agenda_category]
+          properties:
+            agenda_category:
+              type: object
+              properties:
+                name: { type: string }
+                color: { type: string }
+                position: { type: integer }
+                active: { type: boolean }
+  responses:
+    '200':
+      description: Categoria atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaCategory.yml'
+delete:
+  tags:
+    - Categorias da Agenda
+  summary: Arquivar categoria (soft-delete via `active=false`)
+  description: |
+    Sem hard-delete intencional — eventos antigos continuam vinculados pela
+    `category_id` (a coluna **não** é nullificada). A categoria some das
+    listagens padrão; só reaparece com `include_inactive=true`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Categoria desativada

@@ -1,0 +1,110 @@
+get:
+  tags:
+    - Financeiro · Lançamentos
+  summary: Listar lançamentos (Fluxo de Caixa)
+  description: |
+    Lista TODOS os `Entry`s — manuais e automáticos. `uncategorized=true`
+    filtra os sem categoria (F-28 — reclassificação em massa).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: direction
+      in: query
+      schema: { type: string, enum: [in, out] }
+    - name: kind
+      in: query
+      schema: { type: string }
+    - name: bank_account_id
+      in: query
+      schema: { type: integer }
+    - name: category_id
+      in: query
+      schema: { type: integer }
+    - name: patient_id
+      in: query
+      schema: { type: integer }
+    - name: uncategorized
+      in: query
+      schema: { type: boolean, description: "True = só sem categoria" }
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+    - name: q
+      in: query
+      schema: { type: string, description: "Busca na descrição (ILIKE)" }
+    - name: sort
+      in: query
+      schema: { type: string, default: cash_date }
+    - name: direction_order
+      in: query
+      schema: { type: string, enum: [asc, desc], default: desc }
+    - name: page
+      in: query
+      schema: { type: integer, default: 1 }
+    - name: per_page
+      in: query
+      schema: { type: integer, default: 25, maximum: 100 }
+  responses:
+    '200':
+      description: Lista paginada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/Entry.yml'
+              meta:
+                type: object
+                properties:
+                  page: { type: integer }
+                  per_page: { type: integer }
+                  total: { type: integer }
+                  total_in_cents: { type: integer }
+                  total_out_cents: { type: integer }
+post:
+  tags:
+    - Financeiro · Lançamentos
+  summary: Criar lançamento manual (canon F-25)
+  description: |
+    Sempre cria com `kind=manual_entry` (qualquer outro kind é gerado por
+    services automaticamente). `cash_date` default = `competence_date`
+    quando omitido. Idempotência via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [entry]
+          properties:
+            entry:
+              type: object
+              required: [direction, amount_cents, competence_date]
+              properties:
+                direction: { type: string, enum: [in, out] }
+                amount_cents: { type: integer, minimum: 1 }
+                description: { type: string }
+                competence_date: { type: string, format: date }
+                cash_date: { type: string, format: date }
+                financial_bank_account_id: { type: integer }
+                financial_dre_category_id: { type: integer }
+                payment_method: { type: string }
+                patient_id: { type: integer }
+                affects_dre: { type: boolean, default: true }
+                affects_cashflow: { type: boolean, default: true }
+                metadata: { type: object, additionalProperties: true }
+  responses:
+    '201':
+      description: Lançamento criado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Entry.yml'
+    '422': { description: "Erro de validação" }

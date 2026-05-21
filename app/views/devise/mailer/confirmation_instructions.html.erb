@@ -1,0 +1,57 @@
+<% account_user = @resource&.account_users&.first %>
+
+<div style="font-family: 'Inter', Helvetica, sans-serif; color: #1f2937; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+  <div style="background-color: #f8f9fa; padding: 24px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+    <h2 style="color: #1f93ff; margin: 0; font-size: 24px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="#1f93ff" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.76.46 3.42 1.26 4.88L2 22l5.12-1.26A9.954 9.954 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      Klivy
+    </h2>
+  </div>
+  
+  <div style="padding: 32px 24px;">
+    <p style="font-size: 16px; margin-bottom: 20px;">Olá <strong><%= @resource.name %></strong>,</p>
+    
+    <% if account_user&.inviter.present? && @resource.unconfirmed_email.blank? %>
+      <p style="font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
+        Você foi convidado(a) por <%= account_user.inviter.name %> para participar da clínica <strong><%= account_user.account.name %></strong> no Klivy.
+      </p>
+      <p style="font-size: 16px; line-height: 1.5; margin-bottom: 32px;">Para aceitar o convite e definir sua senha de acesso, clique no botão abaixo:</p>
+      
+      <div style="text-align: center; margin-bottom: 32px;">
+        <%= link_to 'Aceitar Convite', frontend_url('auth/password/edit', reset_password_token: @resource.send(:set_reset_password_token)), style: "background-color: #1f93ff; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block;" %>
+      </div>
+      
+    <% elsif @resource.unconfirmed_email.present? %>
+      <p style="font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
+        Recebemos uma solicitação para atualizar o seu e-mail de acesso. Por favor, confirme esta alteração clicando no botão abaixo.
+      </p>
+      
+      <div style="text-align: center; margin-bottom: 32px;">
+        <%= link_to 'Confirmar novo e-mail', frontend_url('auth/confirmation', confirmation_token: @token), style: "background-color: #1f93ff; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block;" %>
+      </div>
+      
+    <% else %>
+      <p style="font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
+        Bem-vindo(a) ao Klivy! Estamos felizes em ter você conosco. Para garantir a segurança da sua conta e concluir seu cadastro, por favor confirme seu e-mail.
+      </p>
+      
+      <div style="text-align: center; margin-bottom: 32px;">
+        <%= link_to 'Confirmar meu e-mail', frontend_url('auth/confirmation', confirmation_token: @token), style: "background-color: #1f93ff; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block;" %>
+      </div>
+    <% end %>
+
+    <p style="font-size: 14px; color: #6b7280; line-height: 1.5; margin-bottom: 0;">
+      Se o botão não funcionar, copie e cole este link no seu navegador:<br>
+      <% if account_user&.inviter.present? && @resource.unconfirmed_email.blank? %>
+        <a href="<%= frontend_url('auth/password/edit', reset_password_token: @resource.send(:set_reset_password_token)) %>" style="color: #1f93ff; word-break: break-all;"><%= frontend_url('auth/password/edit', reset_password_token: @resource.send(:set_reset_password_token)) %></a>
+      <% else %>
+        <a href="<%= frontend_url('auth/confirmation', confirmation_token: @token) %>" style="color: #1f93ff; word-break: break-all;"><%= frontend_url('auth/confirmation', confirmation_token: @token) %></a>
+      <% end %>
+    </p>
+  </div>
+  
+  <div style="background-color: #f8f9fa; padding: 20px 24px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb;">
+    <p style="margin: 0 0 8px 0;">Este é um e-mail automático. Por favor, não responda.</p>
+    <p style="margin: 0;">© <%= Time.now.year %> Klivy. Todos os direitos reservados.</p>
+  </div>
+</div>

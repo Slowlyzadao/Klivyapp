@@ -1,0 +1,53 @@
+get:
+  tags:
+    - Financeiro · Categorias DRE
+  summary: Detalhar categoria
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Categoria
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/DreCategory.yml'
+patch:
+  tags:
+    - Financeiro · Categorias DRE
+  summary: Atualizar categoria
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [category]
+          properties:
+            category:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/DreCategory.yml'
+delete:
+  tags:
+    - Financeiro · Categorias DRE
+  summary: Excluir categoria (soft-delete)
+  description: |
+    Bloqueia se for `is_default=true` (categoria do sistema) ou se houver
+    lançamentos vinculados (`has_entries?`). Requer ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204': { description: "Removida" }
+    '422': { description: "Default ou com entries vinculadas" }
+    '403': { description: "Sem permissão (ADMIN)" }

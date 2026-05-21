@@ -1,0 +1,19 @@
+get:
+  tags:
+    - Financeiro · Paciente
+  summary: Timeline financeira do paciente
+  description: |
+    Substitui `Patients::TransactionsController#financial_timeline` legacy.
+    Cada `entry` é um `Budget` com suas `Installment`s agrupadas. Status
+    overall é derivado em runtime considerando pagamentos, estornos,
+    vencimentos e cancelamentos.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  responses:
+    '200':
+      description: Timeline
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PatientFinancialTimeline.yml'

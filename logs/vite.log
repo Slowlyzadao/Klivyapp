@@ -1,0 +1,288 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+2026-03-06T23:01:08.870Z vite:config bundled config file loaded in 65.25ms
+2026-03-06T23:01:08.878Z vite:config using resolved config: {
+  plugins: [
+    'vite:optimized-deps',
+    'vite:watch-package-data',
+    'vite:pre-alias',
+    'alias',
+    'vite:modulepreload-polyfill',
+    'vite:resolve',
+    'vite:html-inline-proxy',
+    'vite:css',
+    'vite:esbuild',
+    'vite:json',
+    'vite:wasm-helper',
+    'vite:worker',
+    'vite:asset',
+    'vite-plugin-ruby',
+    'vite:vue',
+    'vite:wasm-fallback',
+    'vite:define',
+    'vite:css-post',
+    'vite:worker-import-meta-url',
+    'vite:asset-import-meta-url',
+    'vite:dynamic-import-vars',
+    'vite:import-glob',
+    'vite:client-inject',
+    'vite:css-analysis',
+    'vite:import-analysis'
+  ],
+  build: {
+    target: [ 'es2020', 'edge88', 'firefox78', 'chrome87', 'safari14' ],
+    cssTarget: [ 'es2020', 'edge88', 'firefox78', 'chrome87', 'safari14' ],
+    outDir: '../../public/vite-dev',
+    assetsDir: 'assets',
+    assetsInlineLimit: 4096,
+    cssCodeSplit: true,
+    sourcemap: false,
+    rollupOptions: { output: [Object], input: [Object] },
+    minify: 'esbuild',
+    terserOptions: {},
+    write: true,
+    emptyOutDir: true,
+    copyPublicDir: true,
+    manifest: true,
+    lib: false,
+    ssr: false,
+    ssrManifest: false,
+    ssrEmitAssets: false,
+    reportCompressedSize: true,
+    chunkSizeWarningLimit: 500,
+    watch: null,
+    commonjsOptions: { include: [Array], extensions: [Array] },
+    dynamicImportVarsOptions: { warnOnError: true, exclude: [Array] },
+    modulePreload: { polyfill: true },
+    cssMinify: true
+  },
+  resolve: {
+    mainFields: [ 'browser', 'module', 'jsnext:main', 'jsnext' ],
+    conditions: [],
+    extensions: [
+      '.mjs',  '.js',
+      '.mts',  '.ts',
+      '.jsx',  '.tsx',
+      '.json'
+    ],
+    dedupe: [ 'vue' ],
+    preserveSymlinks: false,
+    alias: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object]
+    ]
+  },
+  test: {
+    environment: 'jsdom',
+    include: [ 'app/**/*.{test,spec}.?(c|m)[jt]s?(x)' ],
+    coverage: { reporter: [Array], include: [Array], exclude: [Array] },
+    globals: true,
+    outputFile: 'coverage/sonar-report.xml',
+    pool: 'threads',
+    poolOptions: { threads: [Object] },
+    server: { deps: [Object] },
+    setupFiles: [ 'fake-indexeddb/auto', 'vitest.setup.js' ],
+    mockReset: true,
+    clearMocks: true
+  },
+  mode: 'development',
+  optimizeDeps: {
+    holdUntilCrawlEnd: true,
+    force: undefined,
+    esbuildOptions: { preserveSymlinks: false }
+  },
+  server: {
+    preTransformRequests: true,
+    host: 'localhost',
+    fs: {
+      strict: true,
+      allow: [Array],
+      deny: [Array],
+      cachedChecks: undefined
+    },
+    https: false,
+    port: 3036,
+    strictPort: true,
+    hmr: { clientPort: 3036 },
+    sourcemapIgnoreList: [Function: isInNodeModules$1],
+    middlewareMode: false
+  },
+  base: '/vite-dev/',
+  envDir: '/Users/leandrobenuv/Documents/beclinic',
+  root: '/Users/leandrobenuv/Documents/beclinic/app/javascript',
+  viteRuby: {
+    additionalEntrypoints: [ '~/{assets,fonts,icons,images}/**/*' ],
+    assetsDir: 'assets',
+    autoBuild: 'true',
+    buildCacheDir: '/Users/leandrobenuv/Documents/beclinic/tmp/cache/vite',
+    publicOutputDir: 'vite-dev',
+    configPath: 'config/vite.json',
+    devServerConnectTimeout: '0.01',
+    publicDir: 'public',
+    entrypointsDir: 'entrypoints',
+    sourceCodeDir: 'app/javascript',
+    skipCompatibilityCheck: 'false',
+    skipProxy: 'false',
+    host: 'localhost',
+    https: false,
+    port: 3036,
+    hideBuildConsoleOutput: 'false',
+    viteBinPath: 'node_modules/.bin/vite',
+    watchAdditionalPaths: [],
+    base: '/vite-dev/',
+    ssrBuildEnabled: 'false',
+    ssrEntrypoint: '~/ssr/ssr.{js,ts,jsx,tsx}',
+    ssrOutputDir: '/Users/leandrobenuv/Documents/beclinic/public/vite-ssr',
+    mode: 'development',
+    ssrBuild: false,
+    server: {
+      fs: [Object],
+      host: 'localhost',
+      https: false,
+      port: 3036,
+      strictPort: true,
+      hmr: [Object]
+    },
+    root: '/Users/leandrobenuv/Documents/beclinic/app/javascript',
+    outDir: '../../public/vite-dev',
+    entrypoints: [
+      [Array], [Array],
+      [Array], [Array],
+      [Array], [Array],
+      [Array], [Array]
+    ]
+  },
+  define: {
+    __VUE_OPTIONS_API__: true,
+    __VUE_PROD_DEVTOOLS__: false,
+    __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false
+  },
+  ssr: {
+    target: 'node',
+    external: [],
+    optimizeDeps: { noDiscovery: true, esbuildOptions: [Object] }
+  },
+  configFile: '/Users/leandrobenuv/Documents/beclinic/vite.config.ts',
+  configFileDependencies: [ '/Users/leandrobenuv/Documents/beclinic/vite.config.ts' ],
+  inlineConfig: {
+    root: undefined,
+    base: undefined,
+    mode: 'development',
+    configFile: undefined,
+    logLevel: undefined,
+    clearScreen: undefined,
+    optimizeDeps: { force: undefined },
+    server: { host: undefined }
+  },
+  decodedBase: '/vite-dev/',
+  rawBase: '/vite-dev/',
+  publicDir: '/Users/leandrobenuv/Documents/beclinic/app/javascript/public',
+  cacheDir: '/Users/leandrobenuv/Documents/beclinic/node_modules/.vite',
+  command: 'serve',
+  isWorker: false,
+  mainConfig: null,
+  bundleChain: [],
+  isProduction: false,
+  css: { lightningcss: undefined },
+  esbuild: { jsxDev: true },
+  preview: {
+    port: undefined,
+    strictPort: true,
+    host: 'localhost',
+    allowedHosts: undefined,
+    https: false,
+    open: undefined,
+    proxy: undefined,
+    cors: undefined,
+    headers: undefined
+  },
+  env: {
+    VITE_RUBY_BASE: '',
+    VITE_RUBY_HIDE_BUILD_CONSOLE_OUTPUT: 'false',
+    VITE_RUBY_SKIP_PROXY: 'false',
+    VITE_RUBY_PUBLIC_OUTPUT_DIR: 'vite-dev',
+    VITE_RUBY_ROOT: '/Users/leandrobenuv/Documents/beclinic',
+    VITE_RUBY_MODE: 'development',
+    VITE_RUBY_ASSETS_DIR: 'assets',
+    VITE_RUBY_DEV_SERVER_CONNECT_TIMEOUT: '0.01',
+    VITE_RUBY_PORT: '3036',
+    VITE_RUBY_PUBLIC_DIR: 'public',
+    VITE_RUBY_SKIP_COMPATIBILITY_CHECK: 'false',
+    VITE_RUBY_BUILD_CACHE_DIR: '/Users/leandrobenuv/Documents/beclinic/tmp/cache/vite',
+    VITE_RUBY_AUTO_BUILD: 'true',
+    VITE_RUBY_CONFIG_PATH: 'config/vite.json',
+    VITE_RUBY_HOST: 'localhost',
+    VITE_RUBY_SOURCE_CODE_DIR: 'app/javascript',
+    VITE_RUBY_ENTRYPOINTS_DIR: 'entrypoints',
+    VITE_RUBY_SSR_OUTPUT_DIR: '/Users/leandrobenuv/Documents/beclinic/public/vite-ssr',
+    VITE_RUBY_PACKAGE_MANAGER: 'pnpm',
+    VITE_RUBY_SSR_BUILD_ENABLED: 'false',
+    VITE_RUBY_SSR_ENTRYPOINT: '~/ssr/ssr.{js,ts,jsx,tsx}',
+    VITE_RUBY_HTTPS: 'false',
+    BASE_URL: '/vite-dev/',
+    MODE: 'development',
+    DEV: true,
+    PROD: false
+  },
+  assetsInclude: [Function: assetsInclude],
+  logger: {
+    hasWarned: false,
+    info: [Function: info],
+    warn: [Function: warn],
+    warnOnce: [Function: warnOnce],
+    error: [Function: error],
+    clearScreen: [Function: clearScreen],
+    hasErrorLogged: [Function: hasErrorLogged]
+  },
+  packageCache: Map(3) {
+    'fnpd_/Users/leandrobenuv/Documents/beclinic' => {
+      dir: '/Users/leandrobenuv/Documents/beclinic',
+      data: [Object],
+      hasSideEffects: [Function: hasSideEffects],
+      webResolvedImports: {},
+      nodeResolvedImports: {},
+      setResolvedCache: [Function: setResolvedCache],
+      getResolvedCache: [Function: getResolvedCache]
+    },
+    'fnpd_/Users/leandrobenuv/Documents/beclinic/app/javascript' => {
+      dir: '/Users/leandrobenuv/Documents/beclinic',
+      data: [Object],
+      hasSideEffects: [Function: hasSideEffects],
+      webResolvedImports: {},
+      nodeResolvedImports: {},
+      setResolvedCache: [Function: setResolvedCache],
+      getResolvedCache: [Function: getResolvedCache]
+    },
+    'fnpd_/Users/leandrobenuv/Documents/beclinic/app' => {
+      dir: '/Users/leandrobenuv/Documents/beclinic',
+      data: [Object],
+      hasSideEffects: [Function: hasSideEffects],
+      webResolvedImports: {},
+      nodeResolvedImports: {},
+      setResolvedCache: [Function: setResolvedCache],
+      getResolvedCache: [Function: getResolvedCache]
+    },
+    set: [Function (anonymous)]
+  },
+  createResolver: [Function: createResolver],
+  worker: { format: 'iife', plugins: '() => plugins', rollupOptions: {} },
+  appType: 'spa',
+  experimental: { importGlobRestoreExtension: false, hmrPartialAccept: false },
+  webSocketToken: 'DpQ8zGv9pi0G',
+  additionalAllowedHosts: [ 'localhost', 'localhost' ],
+  getSortedPlugins: [Function: getSortedPlugins],
+  getSortedPluginHooks: [Function: getSortedPluginHooks]
+}
+2026-03-06T23:01:08.914Z vite:deps Hash is consistent. Skipping. Use --force to override.
+
+  VITE v5.4.21  ready in 182 ms
+
+  ➜  Local:   http://localhost:3036/vite-dev/
+  ➜  press h + enter to show help
+Browserslist: caniuse-lite is outdated. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme

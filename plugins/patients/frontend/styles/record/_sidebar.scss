@@ -1,0 +1,87 @@
+@use "../variables" as *;
+
+/* ── Sidebar vertical de tabs ───────────────────────── */
+.menu-sidebar {
+  background: rgb(var(--slate-2)) !important;
+  border-right: 1px solid rgb(var(--slate-4)) !important;
+}
+
+.vertical-tab-btn {
+  color: rgb(var(--slate-9)) !important;
+  background: transparent !important;
+}
+.vertical-tab-btn:hover {
+  color: rgb(var(--slate-11)) !important;
+  background: rgb(var(--slate-3)) !important;
+}
+.vertical-tab-btn.active {
+  color: $brand-info !important;
+  background: rgba($brand-info-bright, 0.08) !important;
+}
+
+/* ── Sidebar interna (vertical tabs) — accent ativo ───── */
+.vertical-tab-btn {
+  position: relative;
+}
+.vertical-tab-btn.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: $brand-info;
+}
+.dark .vertical-tab-btn.active::before {
+  background: $brand-info-light;
+}
+
+/* ── Sidebar de navegação vertical ───────────────────────── */
+.menu-sidebar {
+  flex: 0 0 240px;
+  max-width: 240px;
+  position: sticky;
+  top: 132px;
+  overflow-y: auto;
+  border-radius: 16px;
+  padding: 12px;
+}
+.menu-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.menu-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.menu-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+.menu-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.vertical-tabs-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vertical-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.vertical-tab-btn i {
+  font-size: 16px;
+  flex-shrink: 0;
+}

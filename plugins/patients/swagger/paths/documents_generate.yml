@@ -1,0 +1,37 @@
+post:
+  tags:
+    - Documentos
+  summary: Gerar PDF server-side (template Prawn)
+  description: |
+    Gera PDF via `Patients::PdfGenerator` usando template do tipo
+    informado. `variables` é interpolado no template. `is_generated=true`
+    no resultado. Cria timeline event `document_generated` + audit log.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [document_type]
+          properties:
+            document_type:
+              type: string
+              example: atestado
+            title: { type: string }
+            form_template_id: { type: integer }
+            variables:
+              type: object
+              description: Pares chave-valor para interpolar no template.
+              additionalProperties: true
+  responses:
+    '201':
+      description: PDF gerado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Document.yml'
+    '422':
+      description: Erro na geração (template inválido, etc)

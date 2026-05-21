@@ -1,0 +1,151 @@
+@use "../variables" as *;
+
+/* ── Grid de KPIs (5 cards) ─────────────────────────────────── */
+.financial-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 1200px) {
+  .financial-kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .financial-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── KPI Card ───────────────────────────────────────────────── */
+.financial-kpi-card {
+  background: #f7f7f7;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: box-shadow 0.15s ease;
+}
+
+.financial-kpi-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+body.dark .financial-kpi-card {
+  background: rgb(var(--s-800));
+}
+
+body.dark .financial-kpi-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.financial-kpi-card--profit {
+  background: #f0fdf4;
+}
+
+.financial-kpi-card--profit-negative {
+  background: #fef2f2;
+}
+.financial-kpi-card--profit-negative .financial-kpi-card__value {
+  color: $brand-danger !important;
+}
+
+.financial-kpi-card--ticket {
+  background: #f5f3ff;
+}
+.financial-kpi-card--ticket .financial-kpi-card__value {
+  color: $brand-purple !important;
+}
+
+body.dark .financial-kpi-card--profit {
+  background: linear-gradient(135deg, rgba($brand-success-bright, 0.06), rgba(16, 185, 129, 0.03));
+  border-color: rgba($brand-success-bright, 0.15);
+}
+
+body.dark .financial-kpi-card--profit-negative {
+  background: linear-gradient(135deg, rgba($brand-danger-bright, 0.1), rgba($brand-danger, 0.06));
+  border-color: rgba($brand-danger-bright, 0.2);
+}
+body.dark .financial-kpi-card--profit-negative .financial-kpi-card__value {
+  color: var(--r-500);
+}
+
+.financial-kpi-card__label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgb(var(--s-500));
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.financial-kpi-card__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: rgb(var(--s-900));
+  line-height: 1.2;
+}
+
+body.dark .financial-kpi-card__value {
+  color: rgb(var(--s-50));
+}
+
+.financial-kpi-card__value--income {
+  color: $brand-success;
+}
+
+.financial-kpi-card__value--expense {
+  color: $brand-danger;
+}
+
+.financial-kpi-card__value--profit {
+  color: $brand-success;
+}
+
+.financial-kpi-card__delta {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.financial-kpi-card__delta--up {
+  color: $brand-success;
+}
+
+.financial-kpi-card__delta--down {
+  color: $brand-danger;
+}
+/* ── Standalone KPI Section ─────────────────────── */
+.financial-standalone-kpi {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.financial-standalone-kpi__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: rgb(var(--s-700));
+}
+
+.dark .financial-standalone-kpi__header {
+  color: rgb(var(--s-200));
+}
+
+.financial-standalone-kpi__icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: rgb(var(--s-500));
+}
+
+.dark .financial-standalone-kpi__icon {
+  color: rgb(var(--s-400));
+}

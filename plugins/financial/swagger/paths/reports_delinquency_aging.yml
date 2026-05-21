@@ -1,0 +1,14 @@
+get:
+  tags:
+    - Financeiro · Relatórios · Charts
+  summary: Aging da inadimplência (snapshot atual, sem período)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Aging
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

@@ -1,0 +1,42 @@
+post:
+  tags:
+    - Consentimentos (LGPD)
+  summary: Assinar consentimento
+  description: |
+    Captura assinatura (base64 do PNG) + IP + device info. Calcula
+    `integrity_hash` (SHA256). Aceita modo `local_tablet` (no balcão) ou
+    `remote_link` (paciente clicou no link enviado). Bloqueia se já está
+    assinado/vencido/revogado.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [signature]
+          properties:
+            mode:
+              type: string
+              enum: [local_tablet, remote_link]
+              default: local_tablet
+            signature:
+              type: string
+              description: |
+                Base64 da imagem (PNG/WEBP). Máx ~500k chars.
+                Ex.: `data:image/webp;base64,UklGRiQ...`.
+            device_info:
+              type: string
+              description: User agent / device. Default = `request.user_agent`.
+  responses:
+    '200':
+      description: Consentimento assinado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/ConsentRecord.yml'
+    '422':
+      description: Já assinado, vencido, ou token expirado (modo remote)

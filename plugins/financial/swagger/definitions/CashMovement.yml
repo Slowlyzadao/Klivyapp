@@ -1,0 +1,17 @@
+type: object
+description: |
+  Movimento de caixa (`Financial::CashMovement`) — registra sangria
+  (`withdraw`) ou suprimento (`supplement`). Gera 2 `Entry`s (saída do
+  caixa + entrada no destino, ou vice-versa) referenciadas por
+  `entry_in_id`/`entry_out_id`.
+properties:
+  id: { type: integer }
+  kind:
+    type: string
+    enum: [withdraw, supplement]
+  amount_cents: { type: integer }
+  bank_account_id: { type: integer }
+  entry_in_id: { type: integer, nullable: true }
+  entry_out_id: { type: integer, nullable: true }
+  occurred_at: { type: string, format: date-time }
+  notes: { type: string, nullable: true }

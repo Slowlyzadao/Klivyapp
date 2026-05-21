@@ -1,0 +1,14 @@
+openapi: '3.0.4'
+info:
+  title: Patients Module API
+  version: 1.0.0
+  description: API completa para gestão de pacientes.
+paths:
+  /api/v1/accounts/{account_id}/patients:
+    $ref: './paths/patients.yml'
+  /api/v1/accounts/{account_id}/patients/{id}/summary:
+    $ref: './paths/patient_summary.yml'
+components:
+  schemas:
+    Patient:
+      $ref: './definitions/Patient.yml'

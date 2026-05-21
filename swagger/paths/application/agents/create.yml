@@ -1,0 +1,38 @@
+tags:
+  - Agents
+operationId: add-new-agent-to-account
+summary: Add a New Agent
+description: |
+  Add a new Agent to Account.
+
+  Triggers `AccountUser.after_create_commit` que cria automaticamente
+  o `beclinic_user_profile` com `agenda_public_id` único do agent (corrigido
+  em 1.6.1.18 — auditoria bug AddAgent).
+
+  **Campos depreciados no payload:**
+  - `custom_role_id`: ignorado silenciosamente desde 1.6.1.23 (auditoria
+    C-3 Fase A — enterprise wrapper removido). Use Klivy `klivy_role_id`
+    via `POST /api/v1/accounts/:account_id/klivy_roles/:role_id/assign`
+    pra atribuir role personalizada a um agent.
+security:
+  - userApiKey: []
+requestBody:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/agent_create_payload'
+responses:
+  '200':
+    description: Success
+    content:
+      application/json:
+        schema:
+          description: 'Newly Created Agent'
+          $ref: '#/components/schemas/agent'
+  '403':
+    description: Access denied
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/bad_request_error'

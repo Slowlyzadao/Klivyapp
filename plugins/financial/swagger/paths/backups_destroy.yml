@@ -1,0 +1,45 @@
+post:
+  tags:
+    - Financeiro · Backups
+  summary: Apagar backup (local + R2)
+  description: |
+    Apaga o arquivo das **duas** fontes (local e R2) quando existir em
+    ambas. `filename` precisa bater no pattern `klivy-YYYYMMDD-HHMMSS.sql.gz`
+    (validação dura contra path traversal). Requer ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [filename]
+          properties:
+            filename:
+              type: string
+              pattern: "^klivy-\\d{8}-\\d{6}\\.sql\\.gz$"
+              example: "klivy-20260517-030000.sql.gz"
+  responses:
+    '200':
+      description: Apagado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success: { type: boolean }
+              deleted:
+                type: object
+                properties:
+                  local: { type: boolean }
+                  r2: { type: boolean }
+              errors:
+                type: array
+                items: { type: string }
+    '400':
+      description: Filename inválido (não bate o pattern)
+    '404':
+      description: Não encontrado em nenhuma fonte
+    '403':
+      description: Sem permissão (ADMIN)

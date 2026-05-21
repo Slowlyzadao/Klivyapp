@@ -1,0 +1,35 @@
+post:
+  tags:
+    - Financeiro · Caixa
+  summary: Sangria (retirar dinheiro do caixa)
+  description: |
+    Transfere `amount_cents` do caixa para outra conta. Gera `CashMovement`
+    + 2 `Entry`s. Requer RECEPCAO/GERENTE/ADMIN. Idempotência via header
+    `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [to_bank_account_id, amount_cents]
+          properties:
+            to_bank_account_id: { type: integer }
+            amount_cents: { type: integer, minimum: 1 }
+            occurred_at: { type: string, format: date-time }
+            notes: { type: string }
+  responses:
+    '201':
+      description: Sangria registrada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              movement:
+                $ref: '../definitions/CashMovement.yml'
+    '422':
+      description: Erro

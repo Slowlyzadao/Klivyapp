@@ -1,0 +1,13 @@
+backend: bin/rails s -b 0.0.0.0 -p 3000
+# https://github.com/mperham/sidekiq/issues/3090#issuecomment-389748695
+worker: bundle exec sidekiq -C config/sidekiq.yml
+vite: bin/vite dev
+whatsapp: ./dev-tools/scripts/start_bridge.sh
+# LiveKit (telemedicina). Em --dev usa devkey/secret e escuta em 7880.
+# Foreman ignora a linha se o binário não existe — então funciona mesmo sem brew install livekit.
+livekit: command -v livekit-server >/dev/null 2>&1 && livekit-server --dev --bind 127.0.0.1 || (echo '[livekit] não instalado — `brew install livekit` pra ativar'; tail -f /dev/null)
+# Sprint L — LiveKit Egress (gravação → R2). Container Docker separado
+# porque Egress empacota ffmpeg + (opcional) Chrome. Padrão "noop se
+# ausente" do livekit-server: sem Docker ou sem a imagem puxada, a linha
+# vira tail -f /dev/null. Ativar: docker pull livekit/egress:latest
+livekit-egress: command -v docker >/dev/null 2>&1 && docker image inspect livekit/egress:latest >/dev/null 2>&1 && docker run --rm --name klivy-livekit-egress -v "$PWD/plugins/telemed/dev-tools/livekit-egress/config.yaml:/etc/egress.yaml:ro" -e EGRESS_CONFIG_FILE=/etc/egress.yaml --add-host=host.docker.internal:host-gateway livekit/egress:latest || (echo '[livekit-egress] inativo — `docker pull livekit/egress:latest` para ativar'; tail -f /dev/null)

@@ -1,0 +1,126 @@
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useAlert } from 'dashboard/composables';
+import { useLoadWithRetry } from 'dashboard/composables/loadWithRetry';
+import BaseBubble from './Base.vue';
+import Button from 'next/button/Button.vue';
+import Icon from 'next/icon/Icon.vue';
+import { useSnakeCase } from 'dashboard/composables/useTransformKeys';
+import { useMessageContext } from '../provider.js';
+import { downloadFile } from '@chatwoot/utils';
+
+import GalleryView from 'dashboard/components/widgets/conversation/components/GalleryView.vue';
+
+const { t } = useI18n();
+
+const { filteredCurrentChatAttachments, attachments, contentType } =
+  useMessageContext();
+
+const attachment = computed(() => {
+  return attachments.value[0];
+});
+
+const isSticker = computed(() => {
+  const isWebp =
+    attachment.value?.dataUrl?.includes('webp') ||
+    attachment.value?.filename?.includes('webp') ||
+    attachment.value?.extension === 'webp';
+  const hasStickerFlag =
+    contentType.value === 'sticker' ||
+    attachment.value?.isSticker ||
+    attachment.value?.is_sticker ||
+    attachment.value?.mimeType?.includes('webp') ||
+    attachment.value?.mime_type?.includes('webp');
+
+  return !!(isWebp || hasStickerFlag);
+});
+
+const { isLoaded, hasError, loadWithRetry } = useLoadWithRetry();
+
+const showGallery = ref(false);
+const isDownloading = ref(false);
+
+onMounted(() => {
+  console.log('--- STICKER DEBUG ---');
+  console.log('contentType:', contentType.value);
+  console.log('isSticker:', isSticker.value);
+  console.log('attachment:', attachment.value);
+  console.log('---------------------');
+  if (attachment.value?.dataUrl) {
+    loadWithRetry(attachment.value.dataUrl);
+  }
+});
+
+const downloadAttachment = async () => {
+  const { fileType, dataUrl, extension } = attachment.value;
+  try {
+    isDownloading.value = true;
+    await downloadFile({ url: dataUrl, type: fileType, extension });
+  } catch (error) {
+    useAlert(t('GALLERY_VIEW.ERROR_DOWNLOADING'));
+  } finally {
+    isDownloading.value = false;
+  }
+};
+
+const handleImageError = () => {
+  hasError.value = true;
+};
+</script>
+
+<template>
+  <BaseBubble
+    class="overflow-hidden p-3"
+    :class="{ 'bg-transparent !p-0 shadow-none': isSticker }"
+    data-bubble-name="image"
+    @click="showGallery = true"
+  >
+    <div v-if="hasError" class="flex items-center gap-1 text-center rounded-lg">
+      <Icon icon="i-lucide-circle-off" class="text-n-slate-11" />
+      <p class="mb-0 text-n-slate-11">
+        {{ $t('COMPONENTS.MEDIA.IMAGE_UNAVAILABLE') }}
+      </p>
+    </div>
+    <div v-else-if="isLoaded" class="relative group rounded-lg overflow-hidden">
+      <img
+        class="skip-context-menu"
+        :class="isSticker ? 'mx-auto' : ''"
+        :style="
+          isSticker
+            ? 'width: 150px !important; height: auto !important; max-width: 150px !important;'
+            : ''
+        "
+        :src="attachment.dataUrl"
+        :width="isSticker ? (attachment.width || 512) * 0.3 : attachment.width"
+        :height="
+          isSticker ? (attachment.height || 512) * 0.3 : attachment.height
+        "
+      />
+      <div
+        class="inset-0 p-2 pointer-events-none absolute bg-gradient-to-tl from-n-slate-12/30 dark:from-n-slate-1/50 via-transparent to-transparent hidden group-hover:flex"
+      />
+      <div class="absolute right-2 bottom-2 hidden group-hover:flex gap-2">
+        <Button xs solid slate icon="i-lucide-expand" class="opacity-60" />
+        <Button
+          xs
+          solid
+          slate
+          icon="i-lucide-download"
+          class="opacity-60"
+          :is-loading="isDownloading"
+          :disabled="isDownloading"
+          @click.stop="downloadAttachment"
+        />
+      </div>
+    </div>
+  </BaseBubble>
+  <GalleryView
+    v-if="showGallery"
+    v-model:show="showGallery"
+    :attachment="useSnakeCase(attachment)"
+    :all-attachments="filteredCurrentChatAttachments"
+    @error="handleImageError"
+    @close="() => (showGallery = false)"
+  />
+</template>

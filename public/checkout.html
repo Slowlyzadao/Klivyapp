@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klivy - Checkout</title>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --primary: #1f93ff;
+      --primary-hover: #177ce6;
+      --bg-body: #ffffff;
+      --bg-sidebar: #f8f9fa;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --border-color: #e5e7eb;
+      --error-color: #ef4444;
+      --success-color: #10b981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-body);
+      color: var(--text-main);
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .layout-wrapper { display: flex; width: 100%; margin: 0; min-height: 100vh; }
+
+    .sidebar {
+      width: 420px;
+      background-color: var(--bg-sidebar);
+      border-right: 1px solid var(--border-color);
+      padding: 3rem 2rem;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-logo {
+      margin-bottom: 3rem; display: flex; align-items: center; gap: 0.5rem;
+    }
+
+    .summary-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .summary-subtitle { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 2rem; }
+
+    .summary-card {
+      background: #ffffff; border: 1px solid var(--border-color);
+      border-radius: 8px; padding: 1.25rem; margin-bottom: 2rem;
+    }
+
+    .plan-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; font-weight: 500; }
+    .plan-badge { display: flex; align-items: center; gap: 0.5rem; color: var(--primary); }
+    .total-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-top: 1rem; border-top: 1px dashed var(--border-color);
+      font-weight: 700; font-size: 1.1rem;
+    }
+
+    .pay-today-card {
+      background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px;
+      padding: 1.25rem; display: flex; align-items: center; justify-content: space-between;
+    }
+    .pay-today-label { font-weight: 600; font-size: 1rem; }
+    .pay-today-price { font-weight: 700; font-size: 1.5rem; color: var(--primary); }
+
+    .main-content { flex: 1; padding: 3rem 4rem; background: #ffffff; overflow-y: auto; }
+
+    .progress-bar-container {
+      width: 100%; height: 4px; background: var(--border-color);
+      border-radius: 2px; margin-bottom: 2rem; position: relative;
+    }
+    .progress-bar-fill {
+      height: 100%; background: var(--primary); border-radius: 2px;
+      transition: width 0.3s ease; width: 25%;
+    }
+
+    .step-title { font-size: 1.75rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .step-subtitle { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 2.5rem; line-height: 1.5; }
+
+    .form-section { display: none; animation: fadeIn 0.3s ease; }
+    .form-section.active { display: block; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .form-group { margin-bottom: 1.5rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .form-row-3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1.5rem; }
+    .form-row-3-equal { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; }
+    .form-row-cep { display: grid; grid-template-columns: 200px auto; align-items: start; gap: 1.5rem; margin-bottom: 1.5rem; }
+    .cep-btn-wrapper { padding-top: 1.75rem; }
+
+    label { display: block; font-size: 0.875rem; font-weight: 500; color: var(--text-main); margin-bottom: 0.5rem; }
+    label span.req { color: var(--error-color); }
+
+    input, select {
+      width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color);
+      border-radius: 6px; font-family: inherit; font-size: 0.95rem; color: var(--text-main);
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(31, 147, 255, 0.1); }
+
+    .btn-container {
+      display: flex; justify-content: flex-end; gap: 1rem;
+      margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border-color);
+    }
+    button { padding: 0.75rem 1.5rem; border-radius: 6px; font-weight: 500; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+    
+    .btn-primary { background: var(--primary); color: white; border: 1px solid var(--primary); }
+    .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+    .btn-secondary { background: white; color: var(--text-main); border: 1px solid var(--border-color); }
+    .btn-secondary:hover { background: #f3f4f6; }
+
+    .credit-card-preview {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-radius: 12px; padding: 1.5rem; width: 350px; height: 210px;
+      display: flex; flex-direction: column; justify-content: space-between;
+      position: relative; margin: 0 auto 2rem auto; 
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+      color: white; overflow: hidden;
+    }
+    .credit-card-preview::before {
+      content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cc-brand-logo { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+    .cc-chip { width: 45px; height: 32px; background: linear-gradient(135deg, #ffd700 0%, #b8860b 100%); border-radius: 6px; position: relative; box-shadow: inset 0 1px 1px rgba(255,255,255,0.5); }
+    .cc-chip::after { content: ''; position: absolute; top: 4px; left: 4px; right: 4px; bottom: 4px; border: 1px solid rgba(0,0,0,0.1); border-radius: 2px; }
+    .cc-number-preview { font-family: 'Courier New', monospace; font-size: 1.3rem; letter-spacing: 2px; color: #f8fafc; margin-top: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3); white-space: nowrap; }
+    .cc-footer { display: flex; justify-content: space-between; font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; font-weight: 500; letter-spacing: 1px; }
+    .cc-label { font-size: 0.55rem; color: #64748b; margin-bottom: 2px; }
+    .cc-val { text-align: right; }
+    .cc-name-val, .cc-date-val { color: #f1f5f9; font-weight: 600; font-size: 0.85rem; }
+
+    .terms-box {
+      display: flex; align-items: flex-start; gap: 0.75rem; background: var(--bg-sidebar);
+      padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border-color);
+    }
+    .terms-box input[type="checkbox"] { width: 20px; height: 20px; margin-top: 2px; cursor: pointer; }
+
+    .toggle-group { display: flex; background: var(--bg-sidebar); border-radius: 8px; padding: 4px; gap: 4px; width: max-content; border: 1px solid var(--border-color); margin-bottom: 2rem; }
+    .toggle-btn { padding: 0.5rem 2rem; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: 1px solid transparent; color: var(--text-muted); transition: all 0.2s; background: transparent; }
+    .toggle-btn.active { background: white; color: var(--text-main); border-color: var(--border-color); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+    .alert { padding: 1rem; border-radius: 6px; background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; margin-bottom: 1.5rem; display: none; }
+    #btnSpinner { display: none; width: 16px; height: 16px; border: 2px solid white; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Inline field validation */
+    .field-error {
+      color: var(--error-color);
+      font-size: 0.75rem;
+      margin-top: 0.375rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      animation: fadeIn 0.2s ease;
+    }
+    input.input-invalid, select.input-invalid {
+      border-color: var(--error-color) !important;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+    }
+
+    /* Toast notifications (bottom-right) */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+      max-width: calc(100vw - 40px);
+    }
+    .toast {
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.12), 0 4px 10px -3px rgba(0,0,0,0.05);
+      padding: 14px 16px;
+      min-width: 280px;
+      max-width: 380px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      border-left: 4px solid var(--primary);
+      animation: toastIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      pointer-events: auto;
+    }
+    .toast.leaving { animation: toastOut 0.25s ease-in forwards; }
+    .toast.success { border-left-color: var(--success-color); }
+    .toast.error { border-left-color: var(--error-color); }
+    .toast.info { border-left-color: var(--primary); }
+    .toast-icon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+    .toast.success .toast-icon { color: var(--success-color); }
+    .toast.error .toast-icon { color: var(--error-color); }
+    .toast.info .toast-icon { color: var(--primary); }
+    .toast-body { flex: 1; font-size: 0.875rem; color: var(--text-main); line-height: 1.45; }
+    .toast-title { font-weight: 600; margin-bottom: 2px; color: var(--text-main); }
+    .toast-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0;
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .toast-close:hover { color: var(--text-main); }
+
+    @keyframes toastIn {
+      from { transform: translateX(120%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes toastOut {
+      to { transform: translateX(120%); opacity: 0; }
+    }
+
+    @media (max-width: 900px) {
+      .layout-wrapper { flex-direction: column; }
+      .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); padding: 2rem 1rem; }
+      .main-content { padding: 2rem 1rem; }
+      .form-row, .form-row-3, .form-row-3-equal { grid-template-columns: 1fr; gap: 0.85rem; }
+      .form-group { margin-bottom: 0.85rem; }
+      .step-subtitle { margin-bottom: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="layout-wrapper">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="brand-logo">
+        <img src="/brand-assets/logo.svg" alt="Klivy Logo" style="height: 40px; width: auto;">
+      </div>
+
+      <h2 class="summary-title">Resumo da assinatura</h2>
+      <p class="summary-subtitle">Revise os detalhes antes de prosseguir</p>
+      <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.05em; margin-bottom: 0.5rem; text-transform: uppercase;">Itens Inclusos</div>
+
+      <div class="summary-card">
+        <div class="plan-row">
+          <div class="plan-badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"></path></svg> Plano Standard</div>
+          <div>R$ 397,00</div>
+        </div>
+        <div class="total-row"><span>Total da assinatura</span><span id="totalAssinaturaValue"><span style="text-decoration: line-through; color: var(--text-muted); font-size: 0.9rem; margin-right: 0.5rem; font-weight: 400;">R$ 397,00</span>R$ 197,00 <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mês</span></span></div>
+      </div>
+
+      <div style="font-size: 0.65rem; color: var(--text-muted); text-align: center; margin-top: -1rem; margin-bottom: 2rem;">
+        * Sujeito a custos adicionais conforme utilização.<br>
+        Cancele quando quiser, sem burocracia.
+      </div>
+      
+      <div id="couponToggle" style="font-size: 0.85rem; color: var(--primary); text-align: center; margin-bottom: 2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 500;" onclick="toggleCoupon()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+        Adicionar código promocional
+      </div>
+
+      <div id="couponInputBox" style="display: none; align-items: stretch; gap: 0.5rem; margin-bottom: 2rem;">
+        <input type="text" id="couponCode" placeholder="Insira seu cupom" style="padding: 0.5rem 0.75rem; flex: 1; text-transform: uppercase; border: 1px solid var(--border-color); border-radius: 6px;">
+        <button type="button" class="btn-primary" style="padding: 0.5rem 1rem;" onclick="applyCoupon()">Aplicar</button>
+      </div>
+
+      <div class="pay-today-card" style="position: relative; margin-top: auto;">
+        <div>
+          <div class="pay-today-label">Total a pagar hoje</div>
+          <div id="payTodaySubtext" style="font-size: 0.75rem; color: var(--text-muted);">Implantação e treinamento</div>
+        </div>
+        <div style="text-align: right;">
+           <div id="payTodayBadge" style="position: absolute; right: 20px; top: -14px; background: #dcfce7; color: #166534; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">50% OFF</div>
+           <div id="payTodayOriginal" style="font-size: 0.8rem; color: var(--text-muted); text-decoration: line-through; margin-bottom: 2px;">R$ 397,00</div>
+           <div id="payTodayFinal" class="pay-today-price" style="line-height: 1;">R$ 197,00</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="progress-bar-container"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="alert" id="errorBox"></div>
+
+      <form id="checkoutForm">
+        
+        <!-- STEP 1: DADOS DE FATURAMENTO -->
+        <div class="form-section active" id="step1">
+          <h1 class="step-title">Dados de faturamento</h1>
+          <p class="step-subtitle">Informe os dados para a emissão das faturas e notas fiscais.</p>
+
+          <h3 style="font-size: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Identificação
+          </h3>
+
+          <div style="margin-bottom: 0.5rem;">
+            <label>Faturar como</label>
+            <div class="toggle-group">
+              <div class="toggle-btn active" onclick="activateToggle(this)">Pessoa Física</div>
+              <div class="toggle-btn" onclick="activateToggle(this)">Pessoa Jurídica</div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group"><label>Nome / Razão Social <span class="req">*</span></label><input type="text" id="name" placeholder="Nome Completo ou Empresa" value="" required></div>
+            <div class="form-group"><label>Nome da Clínica <span class="req">*</span></label><input type="text" id="clinic_name" placeholder="Nome fantasia da clínica" value="" required></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label id="label_cpf_cnpj">CPF <span class="req">*</span></label><input type="text" id="cpf_cnpj" placeholder="000.000.000-00" value="" inputmode="numeric" required></div>
+            <div class="form-group"><label>E-mail <span class="req">*</span></label><input type="email" id="email" placeholder="exemplo@email.com" value="" required></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>WhatsApp Pessoal <span class="req">*</span></label><input type="text" id="phone_personal" placeholder="(00) 00000-0000" value="" inputmode="numeric" required></div>
+            <div class="form-group"><label>WhatsApp da Clínica <span class="req">*</span></label><input type="text" id="phone" placeholder="(00) 00000-0000" value="" inputmode="numeric" required></div>
+          </div>
+          <div class="btn-container"><button type="button" class="btn-primary" onclick="goToStep(1, 2)">Continuar</button></div>
+        </div>
+
+        <!-- STEP 2: ENDEREÇO -->
+        <div class="form-section" id="step2">
+          <h1 class="step-title">Endereço</h1>
+          <p class="step-subtitle">Informe o endereço fiscal completo que será utilizado para a emissão das notas fiscais.</p>
+
+          <h3 style="font-size: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> Endereço
+          </h3>
+
+          <div class="form-group" style="max-width: 320px;">
+            <label>CEP <span class="req">*</span></label>
+            <div style="position: relative; display: flex; align-items: center;">
+              <input type="text" id="cep" placeholder="00000-000" value="" inputmode="numeric" required style="padding-right: 130px;">
+              <button type="button" id="btnBuscarCep" onclick="searchCEP()" style="position: absolute; right: 5px; background: #eff6ff; color: var(--primary); border: none; border-radius: 4px; font-weight: 600; font-size: 0.75rem; padding: 0.4rem 0.75rem; cursor: pointer; transition: background 0.2s;">Buscar</button>
+            </div>
+            <a href="https://buscacepinter.correios.com.br/app/endereco/index.php" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; color: var(--text-muted); text-decoration: none; margin-top: 6px; display: inline-block;">Não sabe seu CEP?</a>
+          </div>
+
+          <div class="form-row-3-equal">
+            <div class="form-group"><label>Estado <span class="req">*</span></label><input type="text" id="estado" value="" required></div>
+            <div class="form-group"><label>Cidade <span class="req">*</span></label><input type="text" id="cidade" value="" required></div>
+            <div class="form-group"><label>Bairro <span class="req">*</span></label><input type="text" id="bairro" value="" required></div>
+          </div>
+
+          <div class="form-row-3-equal">
+            <div class="form-group"><label>Rua <span class="req">*</span></label><input type="text" id="rua" value="" required></div>
+            <div class="form-group"><label>Número <span class="req">*</span></label><input type="text" id="numero" value="" inputmode="numeric" required></div>
+            <div class="form-group"><label>Complemento</label><input type="text" id="complemento" value=""></div>
+          </div>
+
+          <!-- Cloudflare Turnstile -->
+          <div style="margin-top: 1rem;">
+            <div class="cf-turnstile" data-sitekey="0x4AAAAAADBYeDgfeWeJkctQ" data-callback="onTurnstileSuccess" data-expired-callback="onTurnstileExpired" data-error-callback="onTurnstileError"></div>
+          </div>
+
+          <div class="btn-container">
+            <button type="button" class="btn-secondary" onclick="nextStep(1)">Voltar</button>
+            <button type="button" class="btn-primary" onclick="nextStepWithCaptcha(3)">Continuar</button>
+          </div>
+        </div>
+
+        <!-- STEP 3: TERMOS -->
+        <div class="form-section" id="step3">
+          <h1 class="step-title">Termos e Privacidade</h1>
+          <p class="step-subtitle">Revise e aceite as condições contratuais da plataforma Klivy.</p>
+
+          <div style="display: flex; background: var(--bg-sidebar); border-radius: 8px; padding: 4px; border: 1px solid var(--border-color); margin-bottom: 1rem; width: 100%;">
+             <div class="toggle-btn term-tab active" style="flex: 1; text-align: center;" onclick="changeTermsTab(1, this)">Termos de Uso</div>
+             <div class="toggle-btn term-tab" style="flex: 1; text-align: center;" onclick="changeTermsTab(2, this)">Termo de Adesão</div>
+             <div class="toggle-btn term-tab" style="flex: 1; text-align: center;" onclick="changeTermsTab(3, this)">Política de Privacidade</div>
+          </div>
+
+          <div id="termsContent" style="height: 250px; overflow-y: auto; background: #ffffff; border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; font-size: 0.875rem; color: var(--text-main); line-height: 1.6;"></div>
+
+          <div class="terms-box">
+            <input type="checkbox" id="accept_terms" required checked>
+            <label for="accept_terms" style="margin: 0; cursor: pointer; line-height: 1.5; font-size: 0.95rem;">
+              <strong>Li e aceito os Termos de Uso, Termo de Adesão e Política de Privacidade.</strong>
+              <br><span style="color: var(--text-muted); font-weight: 400; font-size: 0.85rem;">Declaro ser maior de idade e autorizo a renovação mensal pelo valor do plano.</span>
+            </label>
+          </div>
+
+          <div class="btn-container">
+            <button type="button" class="btn-secondary" onclick="nextStep(2)">Voltar</button>
+            <button type="button" class="btn-primary" onclick="goToStep(3, 4)">Continuar</button>
+          </div>
+        </div>
+
+        <!-- STEP 4: PAGAMENTO -->
+        <div class="form-section" id="step4">
+          <h1 class="step-title">Pagamento</h1>
+          <p class="step-subtitle">Pagamento apenas em cartão de crédito.</p>
+
+          <div style="display: flex; gap: 3rem; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 300px;">
+              <div class="form-group">
+                <label>Número do cartão <span class="req">*</span></label>
+                <input type="text" id="cc_number" placeholder="0000 0000 0000 0000" value="" inputmode="numeric" oninput="updateCardPreview()">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Data de Expiração <span class="req">*</span></label>
+                  <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="cc_month" placeholder="MM" value="" maxlength="2" inputmode="numeric" autocomplete="cc-exp-month" style="width: 50%" oninput="updateCardPreview()">
+                    <input type="text" id="cc_year" placeholder="AA" value="" maxlength="2" inputmode="numeric" autocomplete="cc-exp-year" style="width: 50%" oninput="updateCardPreview()">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Código de Seg. <span class="req">*</span></label>
+                  <input type="text" id="cc_cvv" placeholder="123" value="" inputmode="numeric" oninput="updateCardPreview()">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Nome impresso no Cartão <span class="req">*</span></label>
+                <input type="text" id="cc_name" placeholder="NOME COMPLETO" value="" oninput="updateCardPreview()">
+              </div>
+              <div class="form-group">
+                <label>CPF do titular do Cartão <span class="req">*</span></label>
+                <input type="text" id="cc_cpf" placeholder="000.000.000-00" value="" inputmode="numeric">
+              </div>
+            </div>
+
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 300px;">
+              <div class="credit-card-preview">
+                <div class="cc-brand-logo">
+                  <div class="cc-chip"></div>
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="7" cy="12" r="7" fill="#EB001B" fill-opacity="0.8"/>
+                    <circle cx="17" cy="12" r="7" fill="#F79E1B" fill-opacity="0.8"/>
+                  </svg>
+                </div>
+                <div class="cc-number-preview" id="prev_number">**** **** **** ****</div>
+                <div class="cc-footer">
+                  <div><div class="cc-label">Titular</div><div id="prev_name" class="cc-name-val">NOME NO CARTÃO</div></div>
+                  <div class="cc-val"><div class="cc-label">Validade</div><div id="prev_val" class="cc-date-val">MM/AA</div></div>
+                </div>
+              </div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem; justify-content: center; text-align: center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                As transações são criptografadas e processadas de forma segura.
+              </div>
+            </div>
+          </div>
+
+          <div class="btn-container">
+            <button type="button" class="btn-secondary" onclick="nextStep(3)">Voltar</button>
+            <button type="submit" class="btn-primary" id="submitBtn">
+              <span id="btnText">Assinar agora</span>
+              <div id="btnSpinner"></div>
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let currentStep = 1;
+    let appliedCoupon = null;
+
+    const TERMOS_USO_HTML = `<div style="text-align: center; margin-bottom: 0.25rem;"><strong>TERMOS DE USO DA KLIVY</strong></div>
+<div style="text-align: center; font-style: italic; color: var(--text-muted); margin-bottom: 1rem; font-size: 0.8rem;">Versão 1.0 — vigência a partir de 01/01/2026</div>
+Este instrumento rege o uso da plataforma Klivy, software como serviço (SaaS) de propriedade e operação de BENUV NEGÓCIOS DIGITAIS LTDA., inscrita no CNPJ sob nº 54.391.806/0001-87, com sede na Rua Ituporanga, 210, Bom Retiro, Joinville/SC, CEP 89222-430 (doravante "KLIVY" ou "CONTRATADA"), e a pessoa física ou jurídica que contrata a plataforma (doravante "CONTRATANTE" ou "CLIENTE").<br><br>
+A contratação se aperfeiçoa mediante aceite eletrônico expresso, manifestado pelo assinalamento de campo próprio ("checkbox") no momento do cadastro e do pagamento, constituindo vínculo contratual plenamente válido, eficaz e exigível entre as partes, nos termos do art. 107 do Código Civil e da legislação aplicável.<br><br>
+<strong>LEIA ATENTAMENTE ANTES DE ACEITAR. ESTE INSTRUMENTO CONTÉM CLÁUSULAS QUE LIMITAM RESPONSABILIDADES, ESTABELECEM OBRIGAÇÕES REGULATÓRIAS DO CONTRATANTE E DISCIPLINAM O TRATAMENTO DE DADOS PESSOAIS, INCLUSIVE DE NATUREZA SENSÍVEL.</strong>
+<br><br><strong>CLÁUSULA 1 — DEFINIÇÕES</strong><br>
+Para os fins deste instrumento, as expressões abaixo terão os seguintes significados:<br>
+<strong>1.1.</strong> "Plataforma" ou "Klivy": a solução tecnológica disponibilizada em ambiente de nuvem pela KLIVY, composta por interface web e funcionalidades correlatas, destinada à gestão clínica, administrativa e comercial de estabelecimentos e profissionais das áreas de estética, odontologia e bem-estar.<br>
+<strong>1.2.</strong> "Contratante", "Cliente" ou "Usuário Titular": pessoa física ou jurídica que celebra o presente contrato mediante aceite eletrônico e é titular da conta na Plataforma.<br>
+<strong>1.3.</strong> "Usuário Vinculado": pessoa natural autorizada pelo Contratante a acessar a Plataforma por meio de credenciais próprias, vinculadas a perfil de permissões.<br>
+<strong>1.4.</strong> "Paciente": pessoa natural cujos dados pessoais são tratados pelo Contratante no contexto da prestação de serviços de estética, odontologia ou bem-estar.<br>
+<strong>1.5.</strong> "Dados do Contratante": informações cadastrais, operacionais e financeiras relativas ao Contratante, seus sócios, representantes legais e Usuários Vinculados.<br>
+<strong>1.6.</strong> "Dados de Pacientes": informações pessoais e sensíveis de Pacientes inseridas na Plataforma pelo Contratante ou por seus Usuários Vinculados, incluindo prontuário, anamnese, imagens clínicas, exames, prescrições, documentos e consentimentos.<br>
+<strong>1.7.</strong> "Dados de Uso": registros técnicos, metadados, logs de acesso, logs de ação, dados de navegação, dados de telemetria e dados de performance da Plataforma.<br>
+<strong>1.8.</strong> "Dados Agregados e Anonimizados": informações resultantes de processos técnicos de anonimização irreversível e agregação estatística, nos termos dos arts. 5º, III e 12 da Lei nº 13.709/2018.<br>
+<strong>1.9.</strong> "LGPD": Lei Federal nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais).<br>
+<strong>1.10.</strong> "Subprocessador": terceiro contratado pela KLIVY para suporte à operação da Plataforma, incluindo provedores de infraestrutura em nuvem, gateway de pagamento, comunicação eletrônica e modelos de inteligência artificial.<br>
+<strong>1.11.</strong> "IA Assistiva": recursos da Plataforma baseados em modelos de inteligência artificial que geram sugestões, resumos, respostas preliminares, minutas ou recomendações, cuja decisão final permanece integralmente a cargo do Contratante e de seus Usuários Vinculados.<br>
+<strong>1.12.</strong> "Plano": modalidade de assinatura contratada, com preço, funcionalidades e limites definidos no ato da contratação.
+<br><br><strong>CLÁUSULA 2 — OBJETO E ESCOPO DA PLATAFORMA</strong><br>
+<strong>2.1.</strong> A KLIVY licencia ao Contratante, em regime não exclusivo, intransferível e por prazo indeterminado enquanto vigente o Plano, o direito de acesso e uso da Plataforma Klivy, como ferramenta auxiliar para a gestão de atividades clínicas, administrativas, financeiras e comerciais do seu estabelecimento.<br>
+<strong>2.2.</strong> A Plataforma é fornecida como Software como Serviço (SaaS), em ambiente multi-tenant, acessada remotamente via internet, sem entrega de código-fonte, sem instalação local e sem transferência de direitos de propriedade intelectual.<br>
+<strong>2.3.</strong> A Plataforma é, em sua finalidade e natureza, ferramenta meramente instrumental e auxiliar. A KLIVY não presta serviços de saúde, estética ou bem-estar, não emite diagnóstico, não realiza atendimento a pacientes, não substitui o exercício profissional, não valida tecnicamente informações clínicas inseridas pelo Contratante e não supervisiona, controla ou audita a conduta profissional dos Usuários Vinculados.<br>
+<strong>2.4.</strong> A Plataforma destina-se exclusivamente a profissionais e estabelecimentos das áreas de estética, odontologia e bem-estar. A Plataforma não se destina, não suporta e não autoriza o uso por profissionais cuja atividade seja regulada pelo Conselho Federal de Medicina (CFM) ou pelo Conselho Federal de Psicologia (CFP), tampouco a práticas privativas de tais categorias, incluindo, sem limitação, atos médicos, atendimento psicoterapêutico e emissão de prescrições sujeitas a controle médico especial. O cadastro ou uso em desacordo com esta restrição configura violação contratual e autoriza a suspensão imediata do acesso.<br>
+<strong>2.5.</strong> A Plataforma não se destina a qualquer modalidade de teleconsulta, telessaúde, teleatendimento ou atendimento remoto por vídeo, áudio em tempo real ou qualquer outro meio síncrono de comunicação com o Paciente. A Plataforma registra e organiza informações de atendimentos presenciais realizados pelo Contratante.<br>
+<strong>2.6.</strong> O escopo funcional efetivamente contratado é aquele correspondente ao Plano selecionado no ato da contratação, sendo certo que a Plataforma é continuamente desenvolvida e pode sofrer alterações, inclusões, remoções e substituições de funcionalidades ao longo do tempo, nos termos da Cláusula 13.
+<br><br><strong>CLÁUSULA 3 — ELEGIBILIDADE E CAPACIDADE PARA CONTRATAR</strong><br>
+<strong>3.1.</strong> Somente podem contratar a Plataforma:<br>
+&emsp;&bull; (i) pessoas naturais maiores de 18 anos, plenamente capazes, que sejam profissionais regularmente inscritos no Conselho Regional de Odontologia (CRO) ou profissionais atuantes em estética e bem-estar, inclusive técnicos e tecnólogos em estética, biomédicos com habilitação em estética, enfermeiros com habilitação em estética, esteticistas, terapeutas corporais e profissionais autônomos de segmentos correlatos, observada a legislação e a regulação profissional aplicáveis; e<br>
+&emsp;&bull; (ii) pessoas jurídicas regularmente constituídas no Brasil, com CNPJ ativo, cujo objeto social seja compatível com os segmentos de estética, odontologia ou bem-estar, representadas no ato da contratação por pessoa com poderes suficientes.<br>
+<strong>3.2.</strong> Ao aceitar este Termo, o Contratante declara, sob as penas da lei:<br>
+&emsp;&bull; (a) possuir plena capacidade civil e poderes de representação;<br>
+&emsp;&bull; (b) que as informações fornecidas no cadastro são verdadeiras, completas, exatas e atuais;<br>
+&emsp;&bull; (c) possuir inscrição ativa e regular junto ao conselho de classe competente, quando aplicável, e autorização legal para o exercício da atividade profissional declarada;<br>
+&emsp;&bull; (d) não exercer atividade privativa de médico ou psicólogo e não pretender utilizar a Plataforma para finalidade estranha aos segmentos de estética, odontologia ou bem-estar;<br>
+&emsp;&bull; (e) assumir, em caráter pessoal e intransferível, a responsabilidade pela exatidão das declarações prestadas;<br>
+&emsp;&bull; (f) compreender que a KLIVY pode, a qualquer tempo, solicitar comprovação documental das declarações prestadas e suspender ou cancelar o acesso em caso de inconsistência ou uso em desacordo com o escopo contratual.<br>
+<strong>3.3.</strong> A KLIVY não realiza verificação proativa de inscrição em conselho profissional, habilitação técnica ou regularidade fiscal do Contratante, e não responde por falsidade, inexatidão ou desatualização das informações fornecidas.
+<br><br><strong>CLÁUSULA 4 — CADASTRO, CONTA, CREDENCIAIS E VERACIDADE DAS INFORMAÇÕES</strong><br>
+<strong>4.1.</strong> O Contratante deverá realizar cadastro na Plataforma fornecendo dados verdadeiros, completos e atualizados, sendo responsável pela manutenção e atualização permanente dessas informações.<br>
+<strong>4.2.</strong> As credenciais de acesso são pessoais, intransferíveis e sigilosas. O Contratante e cada Usuário Vinculado são exclusivamente responsáveis pela guarda e confidencialidade de suas credenciais, bem como por toda e qualquer atividade realizada a partir delas, presumindo-se legítimos, para todos os fins contratuais, os atos praticados com o uso das credenciais do titular.<br>
+<strong>4.3.</strong> O Contratante compromete-se a:<br>
+&emsp;&bull; (a) notificar a KLIVY, imediatamente, em caso de suspeita de uso não autorizado da conta, comprometimento de credenciais, incidente de segurança ou extravio de dispositivo com sessão aberta;<br>
+&emsp;&bull; (b) não compartilhar credenciais;<br>
+&emsp;&bull; (c) não manter sessões abertas em dispositivos compartilhados ou públicos;<br>
+&emsp;&bull; (d) adotar medidas razoáveis de segurança de acesso, incluindo senhas robustas.<br>
+<strong>4.4.</strong> A KLIVY não responde por qualquer prejuízo decorrente de uso indevido de credenciais, compartilhamento de senhas, acesso não autorizado resultante de conduta ou omissão do Contratante ou de seus Usuários Vinculados, engenharia social, phishing ou comprometimento de dispositivos de terceiros fora de seu controle.
+<br><br><strong>CLÁUSULA 5 — USUÁRIO TITULAR, USUÁRIOS VINCULADOS E RESPONSABILIDADE POR PERMISSÕES</strong><br>
+<strong>5.1.</strong> O Contratante indicará, no cadastro, o Usuário Titular da conta, que será considerado, para todos os fins, representante legal perante a KLIVY e responsável por:<br>
+&emsp;&bull; (a) alterações contratuais, de plano e de dados cadastrais;<br>
+&emsp;&bull; (b) criação, edição, suspensão e exclusão de Usuários Vinculados;<br>
+&emsp;&bull; (c) atribuição de perfis de permissão;<br>
+&emsp;&bull; (d) contratação e cancelamento de funcionalidades adicionais;<br>
+&emsp;&bull; (e) encerramento da conta.<br>
+<strong>5.2.</strong> O Contratante é exclusivo e integralmente responsável pelos atos praticados por seus Usuários Vinculados, incluindo acessos, lançamentos, exclusões, exportações, envios de mensagens e interações com pacientes, respondendo perante a KLIVY, perante pacientes, perante terceiros e perante autoridades por qualquer conduta irregular de sua equipe.<br>
+<strong>5.3.</strong> A atribuição e a revisão periódica de permissões de acesso são obrigações exclusivas do Contratante, que deverá observar o princípio da necessidade de acesso (need to know) e o princípio da minimização, atribuindo a cada Usuário Vinculado apenas as permissões estritamente necessárias ao desempenho de suas funções.<br>
+<strong>5.4.</strong> Em caso de desligamento, afastamento, licença, substituição, dissolução societária, alteração de quadro ou qualquer outra hipótese de cessação do vínculo entre o Contratante e um Usuário Vinculado, é obrigação exclusiva do Contratante promover, imediatamente, a suspensão ou exclusão das credenciais correspondentes. A KLIVY não responde por acessos, lançamentos, exclusões, exportações ou condutas praticadas por Usuário Vinculado cuja credencial não tenha sido oportunamente revogada pelo Contratante.<br>
+<strong>5.5.</strong> Disputas societárias, conflitos entre sócios, alterações de quadro societário, cisões, fusões e dissoluções não serão objeto de mediação ou arbitragem pela KLIVY, que manterá o controle da conta com o Usuário Titular originalmente registrado até decisão judicial transitada em julgado, acordo formal entre os envolvidos ou procedimento de transferência de titularidade descrito na Cláusula 28.
+<br><br><strong>CLÁUSULA 6 — PERFIS DE ACESSO E LIMITAÇÃO DE ESCOPO POR FUNÇÃO</strong><br>
+<strong>6.1.</strong> A Plataforma disponibiliza perfis pré-definidos de acesso, com conjuntos distintos de permissões, adequados à segregação funcional típica de estabelecimentos clínicos:<br>
+&emsp;&bull; (a) Recepcionista: permissões restritas a agenda, cadastro e visualização básica de pacientes, sem acesso a conteúdo clínico;<br>
+&emsp;&bull; (b) Especialista: permissões voltadas ao exercício profissional, com acesso clínico completo aos pacientes de seu escopo;<br>
+&emsp;&bull; (c) Gerente: permissões amplas, com acesso clínico, financeiro, relatórios e configurações;<br>
+&emsp;&bull; (d) Comercial/SDR: permissões de captação, orçamentos e agenda, sem acesso a prontuário.<br>
+<strong>6.2.</strong> A escolha, atribuição e manutenção dos perfis são de responsabilidade exclusiva do Contratante. A KLIVY disponibiliza a funcionalidade, mas não opina, valida ou fiscaliza a adequação da atribuição de perfis à realidade operacional do Contratante.<br>
+<strong>6.3.</strong> A existência de perfis pré-definidos não afasta a obrigação do Contratante de realizar revisões periódicas de acessos, auditar logs e ajustar permissões conforme a natureza e sensibilidade dos dados tratados.
+<br><br><strong>CLÁUSULA 7 — ACEITE ELETRÔNICO E FORÇA VINCULANTE</strong><br>
+<strong>7.1.</strong> O aceite deste Termo é manifestado mediante assinalamento eletrônico de campo próprio ("checkbox") no momento do cadastro e do pagamento, com registro técnico de endereço IP, data e horário.<br>
+<strong>7.2.</strong> O aceite eletrônico tem plena validade jurídica e força vinculante entre as partes, nos termos do art. 10, § 2º, da Medida Provisória nº 2.200-2/2001 e da jurisprudência consolidada do Superior Tribunal de Justiça, dispensando qualquer outra formalidade.<br>
+<strong>7.3.</strong> A continuidade do uso da Plataforma após a publicação de nova versão deste Termo implica aceite tácito das alterações, ressalvado o direito de rescisão regulado na Cláusula 31.
+<br><br><strong>CLÁUSULA 8 — PLANOS, ASSINATURA, COBRANÇA E MODALIDADES DE PAGAMENTO</strong><br>
+<strong>8.1.</strong> Os Planos vigentes, com seus respectivos preços, funcionalidades e limites, são apresentados ao Contratante antes do aceite, no ato da contratação, e ficam integrados a este Termo.<br>
+<strong>8.2.</strong> Os Planos são oferecidos nas modalidades mensal, trimestral e anual, com pagamento recorrente na periodicidade contratada, em modelo pré-pago.<br>
+<strong>8.3.</strong> O processamento financeiro das assinaturas é realizado por meio de gateway de pagamento terceirizado (atualmente Asaas), ao qual o Contratante se vincula também pelas políticas próprias do provedor.<br>
+<strong>8.4.</strong> A KLIVY não armazena, em seus próprios sistemas, dados completos de cartão de crédito do Contratante, sendo tais informações tokenizadas e mantidas diretamente no ambiente seguro do gateway, em conformidade com o padrão PCI-DSS aplicável ao provedor.<br>
+<strong>8.5.</strong> O Contratante autoriza, desde já, a cobrança recorrente do valor do Plano contratado, na forma de pagamento cadastrada, em cada ciclo, até que o Plano seja cancelado na forma deste Termo.<br>
+<strong>8.6.</strong> A emissão de nota fiscal, quando aplicável, observará a legislação tributária vigente e os dados cadastrais informados pelo Contratante, que é exclusivamente responsável pela veracidade dessas informações.
+<br><br><strong>CLÁUSULA 9 — CARÊNCIA POR INADIMPLÊNCIA, SUSPENSÃO, BLOQUEIO E CANCELAMENTO</strong><br>
+<strong>9.1.</strong> Em caso de falha, recusa ou não realização da cobrança na data de vencimento, a KLIVY concederá prazo de carência de 3 (três) dias corridos para regularização, contados do primeiro dia subsequente ao vencimento, durante o qual a Plataforma permanecerá disponível.<br>
+<strong>9.2.</strong> Decorrido o prazo de carência sem regularização, a KLIVY poderá, independentemente de notificação adicional:<br>
+&emsp;&bull; (a) suspender o acesso à Plataforma;<br>
+&emsp;&bull; (b) bloquear funcionalidades;<br>
+&emsp;&bull; (c) interromper o envio de comunicações automáticas;<br>
+&emsp;&bull; (d) condicionar a reativação do acesso à quitação integral dos valores em aberto, acrescidos de correção monetária, juros de mora de 1% (um por cento) ao mês e multa contratual de 2% (dois por cento), nos termos da legislação aplicável.<br>
+<strong>9.3.</strong> A suspensão por inadimplência não exime o Contratante das obrigações financeiras acumuladas no período e não interrompe os prazos de retenção e exclusão de dados descritos na Cláusula 27.<br>
+<strong>9.4.</strong> Persistindo a inadimplência por mais de 60 (sessenta) dias contados do vencimento original, a KLIVY poderá cancelar unilateralmente o Plano e iniciar os procedimentos de encerramento de conta previstos neste Termo.
+<br><br><strong>CLÁUSULA 10 — PERÍODO DE AVALIAÇÃO ("TESTE GRÁTIS")</strong><br>
+<strong>10.1.</strong> A KLIVY pode oferecer, a seu critério, períodos de avaliação gratuita da Plataforma, com duração de 3 (três), 7 (sete), 14 (quatorze) ou 30 (trinta) dias, conforme a oferta aplicável.<br>
+<strong>10.2.</strong> Durante o período de avaliação, o usuário terá acesso às funcionalidades previstas na oferta correspondente, observadas as mesmas obrigações, vedações, deveres de cuidado, regras de uso e disposições sobre tratamento de dados previstas neste Termo.<br>
+<strong>10.3.</strong> Não haverá cobrança durante o período de avaliação, salvo conversão expressa em Plano pago, mediante novo aceite.<br>
+<strong>10.4.</strong> Encerrado o período de avaliação sem conversão em Plano pago, o acesso será automaticamente bloqueado, e os dados inseridos permanecerão armazenados pelo prazo máximo de 3 (três) meses de inatividade, findos os quais serão excluídos de forma definitiva, observado o disposto na Cláusula 27.<br>
+<strong>10.5.</strong> Durante o período de avaliação é expressamente vedado: (i) uso em produção sem propósito genuíno de avaliação; (ii) disparo massivo de comunicações a pacientes; (iii) cadastro de base de pacientes com finalidade de migração imediata sem conversão em Plano pago; (iv) qualquer conduta que caracterize uso abusivo, fraudulento ou em desacordo com a finalidade de avaliação. A KLIVY poderá, a seu critério, interromper o período de avaliação e bloquear o acesso em caso de uso anormal.
+<br><br><strong>CLÁUSULA 11 — AUSÊNCIA DE FIDELIDADE</strong><br>
+<strong>11.1.</strong> Os Planos oferecidos pela KLIVY não possuem fidelidade contratual. O Contratante pode solicitar o cancelamento a qualquer tempo, observado o disposto neste Termo.
+<br><br><strong>CLÁUSULA 12 — AUSÊNCIA DE REEMBOLSO E DIREITO DE ARREPENDIMENTO</strong><br>
+<strong>12.1.</strong> As mensalidades, trimestralidades e anuidades pagas não são reembolsáveis, total ou parcialmente, inclusive em caso de cancelamento antecipado, não utilização, utilização parcial, migração de Plano, redução de uso ou inatividade do Contratante.<br>
+<strong>12.2.</strong> Em caso de cancelamento, o acesso permanecerá ativo até o final do ciclo pago, sem qualquer devolução de valores.<br>
+<strong>12.3.</strong> Direito de arrependimento (aplicável exclusivamente a Contratante pessoa natural consumidor). Na primeira contratação, o Contratante pessoa natural que se qualifique como consumidor nos termos do Código de Defesa do Consumidor poderá exercer direito de arrependimento no prazo de 7 (sete) dias corridos contados do aceite, mediante solicitação escrita ao canal indicado na Cláusula 32, hipótese em que haverá restituição integral dos valores pagos na primeira mensalidade, sem prejuízo da exclusão dos dados conforme Cláusula 27. O exercício do arrependimento é exercível uma única vez por Contratante.
+<br><br><strong>CLÁUSULA 13 — MODIFICAÇÕES DE PREÇO, PLANOS, FUNCIONALIDADES E DESCONTINUAÇÃO DE RECURSOS</strong><br>
+<strong>13.1.</strong> A KLIVY poderá, a seu critério, revisar preços, redesenhar Planos, incluir, remover, alterar, atualizar ou substituir funcionalidades, inclusive descontinuar recursos específicos, sempre com o objetivo de aprimorar continuamente a Plataforma e acompanhar a evolução tecnológica e regulatória.<br>
+<strong>13.2.</strong> Alterações de preço ou de composição de Plano serão comunicadas com antecedência mínima de 30 (trinta) dias ao Contratante. Discordando, o Contratante poderá solicitar o cancelamento sem multa antes da entrada em vigor da alteração; a continuidade do uso após essa data implica aceite tácito das novas condições.<br>
+<strong>13.3.</strong> A descontinuação de funcionalidades específicas, desde que não afete substancialmente a essência do serviço contratado, não configura descumprimento contratual, não gera direito a reembolso e não dá ensejo a indenização.<br>
+<strong>13.4.</strong> A KLIVY esforça-se para minimizar impacto operacional ao Contratante em alterações relevantes, mas reserva-se o direito de priorizar segurança, conformidade, estabilidade e evolução tecnológica.
+<br><br><strong>CLÁUSULA 14 — USO PERMITIDO E USO PROIBIDO</strong><br>
+<strong>14.1.</strong> O Contratante compromete-se a utilizar a Plataforma exclusivamente para as finalidades lícitas, previstas neste Termo, no Plano contratado e compatíveis com a natureza do software.<br>
+<strong>14.2.</strong> É expressamente vedado ao Contratante e a seus Usuários Vinculados:<br>
+&emsp;&bull; (a) utilizar a Plataforma para atividade ilícita, contrária à ordem pública, aos bons costumes ou à regulação profissional aplicável;<br>
+&emsp;&bull; (b) inserir, armazenar, processar ou transmitir por meio da Plataforma qualquer conteúdo ilegal, obsceno, difamatório, discriminatório, fraudulento, que viole direitos de terceiros ou que configure crime;<br>
+&emsp;&bull; (c) utilizar a Plataforma para fins estranhos à atividade profissional declarada no cadastro ou fora do escopo de estética, odontologia e bem-estar;<br>
+&emsp;&bull; (d) utilizar a Plataforma para atividade privativa de médico ou psicólogo, teleconsulta, telemedicina, telessaúde ou qualquer modalidade de atendimento remoto síncrono ao Paciente;<br>
+&emsp;&bull; (e) praticar engenharia reversa, descompilação, desmontagem, extração não autorizada de código-fonte, clonagem, cópia ou qualquer tentativa de acesso ao núcleo técnico do software;<br>
+&emsp;&bull; (f) realizar testes de penetração, varredura automatizada ou ataque de qualquer natureza contra a infraestrutura, sem autorização escrita prévia;<br>
+&emsp;&bull; (g) utilizar bots, scrapers, crawlers, automações não autorizadas, APIs não documentadas ou qualquer mecanismo para extrair dados em massa;<br>
+&emsp;&bull; (h) revender, sublicenciar, ceder, emprestar, alugar ou disponibilizar o acesso à Plataforma a terceiros estranhos à operação regular do seu estabelecimento;<br>
+&emsp;&bull; (i) utilizar a Plataforma para enviar comunicações não solicitadas, spam, correntes, esquemas de marketing enganoso, phishing ou qualquer prática abusiva;<br>
+&emsp;&bull; (j) contornar, desabilitar ou interferir em mecanismos de segurança, controle de acesso, limitações técnicas ou restrições do Plano contratado;<br>
+&emsp;&bull; (k) inserir dados falsos, forjados ou manifestamente inexatos;<br>
+&emsp;&bull; (l) utilizar a Plataforma de forma que comprometa a estabilidade, performance ou disponibilidade para os demais usuários;<br>
+&emsp;&bull; (m) empregar a Plataforma em modalidade que a legislação ou o conselho de classe do Contratante proíba ou restrinja.<br>
+<strong>14.3.</strong> A KLIVY poderá, a seu exclusivo critério e sem aviso prévio, suspender, restringir ou cancelar o acesso do Contratante em caso de violação das regras desta Cláusula, sem prejuízo das sanções contratuais e das medidas judiciais cabíveis.
+<br><br><strong>CLÁUSULA 15 — PRONTUÁRIO, DADOS CLÍNICOS, DOCUMENTOS E RESPONSABILIDADE PROFISSIONAL DO CONTRATANTE</strong><br>
+<strong>15.1.</strong> A Plataforma disponibiliza recursos para registro e organização de informações clínicas, incluindo prontuário eletrônico, anamnese, evolução, plano de tratamento, procedimentos, exames, imagens, documentos, prescrições, consentimentos e termos relacionados.<br>
+<strong>15.2.</strong> O Contratante reconhece expressamente que:<br>
+&emsp;&bull; (a) o conteúdo clínico inserido na Plataforma é de sua exclusiva autoria, responsabilidade e domínio técnico;<br>
+&emsp;&bull; (b) a veracidade, exatidão, completude, adequação técnica e pertinência do conteúdo clínico são atribuições exclusivas do Contratante e do profissional habilitado responsável pelo atendimento;<br>
+&emsp;&bull; (c) o exercício profissional, a conduta clínica ou estética, o diagnóstico (quando aplicável à atividade), a indicação terapêutica, a prescrição, o procedimento executado, a relação profissional-paciente e todas as decisões correlatas são, em caráter pessoal e indelegável, de responsabilidade do profissional habilitado;<br>
+&emsp;&bull; (d) a Plataforma não substitui, não valida, não audita, não supervisiona, não corrige e não é corresponsável por qualquer ato profissional;<br>
+&emsp;&bull; (e) a obrigação de guarda de prontuário, observância das regras do Conselho Federal de Odontologia (CFO) e Conselhos Regionais de Odontologia (CRO), quando aplicáveis, e das normas sanitárias, éticas e regulatórias incidentes sobre as atividades de estética e bem-estar, o sigilo profissional, a obtenção de consentimento específico para atos clínicos (inclusive, quando aplicável, Termo de Consentimento Livre e Esclarecido – TCLE) e o cumprimento de deveres éticos permanecem integralmente a cargo do Contratante.<br>
+<strong>15.3.</strong> A Plataforma pode oferecer recurso para geração e assinatura eletrônica de TCLE e documentos correlatos dentro da conta. A adequação jurídica, clínica, ética, regulatória e técnica do conteúdo de cada documento é de responsabilidade exclusiva do Contratante, inclusive no que concerne à forma de coleta da manifestação do Paciente, ao meio de armazenamento, à preservação da integridade do documento e à conservação pelo prazo regulatório aplicável.<br>
+<strong>15.4.</strong> Guarda regulatória de prontuário. O Contratante reconhece que a legislação e as normas deontológicas aplicáveis, em especial as resoluções do Conselho Federal de Odontologia (a exemplo da Resolução CFO 226/2021), podem exigir a guarda de prontuários e documentos clínicos por prazos significativamente superiores ao prazo de retenção técnica oferecido pela KLIVY (Cláusula 27), podendo alcançar 20 (vinte) anos ou mais, conforme a natureza do documento e a regulação aplicável. É obrigação exclusiva do Contratante adotar, por conta própria, as medidas de exportação, migração, arquivamento físico, digital ou em sistema próprio capazes de garantir o cumprimento do prazo regulatório aplicável à sua categoria profissional. A KLIVY não garante, não promete e não se obriga a conservar prontuários pelos prazos regulatórios aplicáveis ao Contratante.<br>
+<strong>15.5.</strong> A Plataforma não se destina a armazenamento de prontuário de pacientes para os quais o Contratante não mantenha relação profissional legítima e contrato de prestação de serviços ativo.
+<br><br><strong>CLÁUSULA 16 — COMUNICAÇÃO COM PACIENTES</strong><br>
+<strong>16.1.</strong> A Plataforma disponibiliza canais de comunicação omnichannel (e-mail, SMS, chatbot, assistentes de inteligência artificial, integração com WhatsApp e outros meios que venham a ser incorporados), por meio dos quais o Contratante envia mensagens a seus Pacientes e leads.<br>
+<strong>16.2.</strong> O Contratante é integral e exclusivamente responsável por:<br>
+&emsp;&bull; (a) obter, manter e registrar base legal adequada, nos termos da LGPD, para o envio de cada comunicação, especialmente consentimento específico e destacado, quando aplicável;<br>
+&emsp;&bull; (b) garantir a veracidade, licitude, adequação e pertinência do conteúdo das mensagens;<br>
+&emsp;&bull; (c) respeitar a cadência, frequência, horários e regras aplicáveis a comunicações com consumidor e paciente;<br>
+&emsp;&bull; (d) observar as políticas dos provedores de comunicação utilizados (incluindo, sem limitação, as políticas do Meta/WhatsApp, dos provedores de SMS e e-mail), bem como as regras do Código de Defesa do Consumidor, do Marco Civil da Internet e da LGPD;<br>
+&emsp;&bull; (e) manter cadastro correto e atualizado de contatos dos Pacientes, inclusive quanto a números, endereços e preferências de comunicação;<br>
+&emsp;&bull; (f) atender imediatamente solicitações de descadastramento ("opt-out"), oposição ao tratamento ou revogação de consentimento;<br>
+&emsp;&bull; (g) abster-se de enviar conteúdo promocional a Pacientes que não tenham manifestado autorização específica, quando exigido.<br>
+<strong>16.3.</strong> A KLIVY não revisa, não supervisiona, não aprova, não modera e não audita o conteúdo das mensagens enviadas pelo Contratante, atuando como mero provedor de infraestrutura técnica de disparo.<br>
+<strong>16.4.</strong> Não responderá a KLIVY por: envio indevido em decorrência de erro de cadastro do Contratante; uso abusivo ou irregular de canais pelo Contratante; ausência de consentimento do destinatário; conteúdo das mensagens; reclamações de Pacientes; autuações de órgãos reguladores; ou penalidades aplicadas por provedores de comunicação em decorrência da conduta do Contratante.
+<br><br><strong>CLÁUSULA 17 — WHATSAPP API OFICIAL, QR CODE E RISCOS DE BLOQUEIO POR TERCEIROS</strong><br>
+<strong>17.1.</strong> A Plataforma oferece duas modalidades de integração com o WhatsApp: (i) API Oficial do WhatsApp Business e (ii) conexão via leitura de QR Code.<br>
+<strong>17.2.</strong> A KLIVY recomenda expressamente a utilização da API Oficial do WhatsApp Business, por oferecer aderência às políticas do Meta, maior estabilidade e menor risco de sanção.<br>
+<strong>17.3.</strong> A modalidade via QR Code é alternativa técnica fornecida por conveniência, cuja utilização é de livre escolha e risco assumido do Contratante. O Contratante reconhece, declara e aceita expressamente que:<br>
+&emsp;&bull; (a) a conexão via QR Code depende de serviço operado e regulado pelo Meta Platforms, Inc. ou suas afiliadas, terceiros alheios à KLIVY;<br>
+&emsp;&bull; (b) o Meta pode, a qualquer tempo, sem aviso prévio e a seu exclusivo critério, bloquear, suspender, limitar, banir, derrubar ou desconectar números e sessões conectadas via QR Code, inclusive sob alegação de uso não conforme ou automatizado;<br>
+&emsp;&bull; (c) instabilidades, lentidão, interrupções, desconexões, perda de mensagens, perda de histórico de conversa, perda de contatos, falhas de entrega e bloqueio de número não são de responsabilidade da KLIVY;<br>
+&emsp;&bull; (d) eventual penalidade aplicada pelo Meta ao número utilizado pelo Contratante, inclusive banimento permanente, é consequência direta da escolha do Contratante por esta modalidade de conexão, e a KLIVY não responde por perdas comerciais, financeiras, reputacionais ou operacionais daí decorrentes;<br>
+&emsp;&bull; (e) o uso da API Oficial também está sujeito a regras, políticas de aprovação, limitações de conteúdo, janelas de atendimento e possíveis sanções do Meta, que permanecem fora do controle da KLIVY.<br>
+<strong>17.4.</strong> A KLIVY poderá, a seu critério, descontinuar qualquer uma das modalidades de conexão com o WhatsApp em razão de alterações unilaterais promovidas pelo Meta, sem que isso configure descumprimento contratual.
+<br><br><strong>CLÁUSULA 18 — INTELIGÊNCIA ARTIFICIAL ASSISTIVA</strong><br>
+<strong>18.1.</strong> A Plataforma incorpora recursos de inteligência artificial para geração de sugestões, respostas preliminares, resumos, minutas, recomendações, qualificação de leads e automações correlatas, com emprego de modelos de fornecedores terceiros, incluindo, no momento, OpenAI, Google e Anthropic.<br>
+<strong>18.2.</strong> Natureza estritamente assistiva. Os recursos de IA disponibilizados pela Plataforma têm caráter meramente assistivo e auxiliar, sendo expressamente vedado seu uso como substituto de decisão humana qualificada. A decisão final clínica, estética, administrativa, financeira, comercial, estratégica, jurídica e profissional é, em todos os casos, do Contratante e do profissional habilitado competente, sobre quem recai a integral responsabilidade pelo conteúdo efetivamente adotado, enviado, publicado, registrado ou executado.<br>
+<strong>18.3.</strong> Revisão humana obrigatória. O Contratante se obriga a revisar, validar e, se necessário, corrigir qualquer conteúdo gerado por IA antes de utilizá-lo perante Paciente, terceiro ou no exercício profissional, reconhecendo que modelos de IA podem produzir informações imprecisas, desatualizadas, incompletas, tendenciosas ou fabricadas ("alucinações").<br>
+<strong>18.4.</strong> Limitações por Plano e por funcionalidade. O acesso da IA a dados da conta e as funcionalidades de IA disponíveis variam conforme o Plano contratado e as configurações da conta. A presença ou ausência de determinado recurso de IA em um Plano não configura defeito do serviço.<br>
+<strong>18.5.</strong> Trânsito de dados para provedores de IA. O Contratante reconhece, declara e autoriza expressamente que, para viabilizar as funcionalidades de IA, dados inseridos na Plataforma — incluindo dados pessoais e, conforme a funcionalidade acionada, dados pessoais sensíveis — poderão transitar por e ser processados por provedores terceiros de modelos de IA, inclusive em servidores localizados fora do território nacional, observadas as regras desta Cláusula 18, da Cláusula 21 e da legislação aplicável.<br>
+<strong>18.6.</strong> Vedações expressas ao uso da IA. É vedado ao Contratante:<br>
+&emsp;&bull; (a) utilizar a IA como único fundamento de decisão clínica, diagnóstica, prescritiva ou terapêutica;<br>
+&emsp;&bull; (b) apresentar ao Paciente conteúdo gerado por IA como se fosse manifestação técnica do profissional sem a devida revisão;<br>
+&emsp;&bull; (c) empregar a IA para gerar documentos que, pela sua natureza, exigem análise profissional individualizada, sem a competente revisão humana;<br>
+&emsp;&bull; (d) utilizar a IA para produção de conteúdo ilícito, discriminatório, difamatório, enganoso ou em violação a direitos de terceiros.<br>
+<strong>18.7.</strong> Melhoria de modelo próprio da KLIVY. A KLIVY não utiliza dados pessoais identificáveis ou dados pessoais sensíveis dos Pacientes para treinamento de modelos próprios de IA, sem prejuízo do uso de dados agregados e anonimizados, nos termos da Cláusula 19.<br>
+<strong>18.8.</strong> Exclusão de responsabilidade por resultados da IA. Na máxima extensão permitida em lei, a KLIVY não responde por qualquer prejuízo direto, indireto, lucros cessantes, perda de chance ou dano de qualquer natureza decorrentes do uso de conteúdo gerado por IA sem a devida revisão humana pelo Contratante ou pelos Usuários Vinculados, bem como por imprecisões, omissões, incompletudes ou divergências técnicas nos resultados gerados.
+<br><br><strong>CLÁUSULA 19 — DADOS PESSOAIS, PAPÉIS DAS PARTES E LGPD</strong><br>
+<strong>19.1.</strong> Papéis das partes.<br>
+&emsp;&bull; (a) Em relação aos Dados de Pacientes inseridos, gerenciados ou tratados por meio da Plataforma pelo Contratante, o Contratante atua como Controlador e a KLIVY atua como Operadora, nos termos dos arts. 5º, VI e VII, e 37 a 39 da LGPD.<br>
+&emsp;&bull; (b) Em relação aos Dados do Contratante, de seus sócios, representantes e Usuários Vinculados, necessários à formalização contratual, cobrança, suporte, gestão da conta, prevenção a fraudes e cumprimento de obrigações legais, a KLIVY atua como Controladora.<br>
+&emsp;&bull; (c) Em relação aos Dados de Uso, telemetria, segurança, prevenção a fraudes, auditoria, melhoria do serviço e conformidade regulatória da Plataforma, a KLIVY atua como Controladora dessas bases, em legítimo interesse, para finalidades próprias.<br>
+<strong>19.2.</strong> Obrigações do Contratante como Controlador. Cabe ao Contratante, em relação aos Dados de Pacientes:<br>
+&emsp;&bull; (a) definir finalidades e base legal;<br>
+&emsp;&bull; (b) informar os Pacientes de forma adequada;<br>
+&emsp;&bull; (c) coletar consentimento quando exigido;<br>
+&emsp;&bull; (d) responder a requisições dos titulares;<br>
+&emsp;&bull; (e) manter Registro de Operações de Tratamento (ROPA), quando aplicável;<br>
+&emsp;&bull; (f) adotar medidas técnicas e administrativas próprias adicionais às da KLIVY;<br>
+&emsp;&bull; (g) reportar a autoridades e titulares os incidentes que lhe sejam imputáveis;<br>
+&emsp;&bull; (h) indicar encarregado, quando for o caso.<br>
+<strong>19.3.</strong> Obrigações da KLIVY como Operadora. A KLIVY, ao tratar Dados de Pacientes, compromete-se a:<br>
+&emsp;&bull; (a) tratar os dados conforme finalidades estabelecidas pelo Contratante e limitadas à execução da Plataforma;<br>
+&emsp;&bull; (b) adotar medidas técnicas e organizacionais razoáveis para proteção dos dados, compatíveis com o estado da técnica;<br>
+&emsp;&bull; (c) manter confidencialidade;<br>
+&emsp;&bull; (d) auxiliar o Contratante, nos limites do tecnicamente razoável e do efetivamente disponibilizado pelos recursos da Plataforma, no atendimento a requisições de titulares;<br>
+&emsp;&bull; (e) comunicar ao Contratante, sem demora injustificada, incidentes de segurança relevantes de que venha a tomar conhecimento e que afetem diretamente seus Dados de Pacientes;<br>
+&emsp;&bull; (f) manter política de gestão de subprocessadores, nos termos da Cláusula 21.<br>
+<strong>19.4.</strong> Bases legais. O Contratante declara possuir, em todos os casos de tratamento realizado por meio da Plataforma, base legal adequada, nos termos do art. 7º e, quando aplicável, do art. 11 da LGPD. A KLIVY não responde por tratamento realizado pelo Contratante sem base legal apropriada.<br>
+<strong>19.5.</strong> Requisições de titulares. Requisições de titulares (Paciente) recebidas diretamente pela KLIVY serão, como regra, redirecionadas ao Contratante, a quem cabe responder na qualidade de Controlador.<br>
+<strong>19.6.</strong> Uso agregado, anonimizado e estatístico para melhoria de produto. Com base em legítimo interesse (art. 7º, IX, LGPD) e observado o art. 12, a KLIVY poderá, em atividades próprias e separadas da prestação a um Contratante específico, gerar, reter e utilizar Dados Agregados e Anonimizados obtidos a partir do uso da Plataforma, com finalidades de:<br>
+&emsp;&bull; (a) aperfeiçoamento de funcionalidades e de modelos próprios;<br>
+&emsp;&bull; (b) analytics internos;<br>
+&emsp;&bull; (c) benchmarking setorial e estatísticas de mercado;<br>
+&emsp;&bull; (d) prevenção a fraude e monitoramento de abuso;<br>
+&emsp;&bull; (e) estudos e relatórios internos ou, eventualmente, externos em formato agregado.<br>
+<strong>19.7.</strong> A anonimização será conduzida de modo a impedir reidentificação razoável, observada a melhor prática técnica disponível. Uma vez anonimizados, tais dados deixam de ser considerados dados pessoais, nos termos do art. 12 da LGPD.<br>
+<strong>19.8.</strong> O tratamento descrito na Cláusula 19.6 não contempla treinamento de modelos próprios de IA com dados pessoais identificáveis ou sensíveis e é executado sem reidentificação dos titulares.
+<br><br><strong>CLÁUSULA 20 — DADOS SENSÍVEIS E TRATAMENTO NO CONTEXTO CLÍNICO-ESTÉTICO</strong><br>
+<strong>20.1.</strong> O Contratante reconhece que a Plataforma trata, por sua natureza, dados pessoais sensíveis, em especial dados relativos à saúde, histórico clínico, procedimentos, imagens corporais e faciais, exames e documentos correlatos (art. 5º, II e art. 11 da LGPD).<br>
+<strong>20.2.</strong> Base legal para tratamento de dados sensíveis. O Contratante declara que, no exercício de Controlador, utiliza uma ou mais das hipóteses do art. 11 da LGPD adequadas ao seu contexto, em especial:<br>
+&emsp;&bull; (a) consentimento específico e destacado do titular, quando aplicável;<br>
+&emsp;&bull; (b) tutela da saúde, em procedimento realizado por profissionais de saúde sujeitos a sigilo, quando aplicável;<br>
+&emsp;&bull; (c) cumprimento de obrigação legal ou regulatória;<br>
+&emsp;&bull; (d) exercício regular de direitos.<br>
+<strong>20.3.</strong> O Contratante assume, em caráter exclusivo, a responsabilidade regulatória e profissional quanto ao sigilo, à guarda, à integridade, à autenticidade e à disponibilidade dos dados clínicos e estéticos, na forma da legislação aplicável e das normas dos conselhos de classe competentes, incluindo, quando aplicáveis, as resoluções do Conselho Federal de Odontologia.<br>
+<strong>20.4.</strong> Dados de menores e pacientes incapazes. O tratamento de dados de menores e de pacientes civilmente incapazes deve observar a LGPD, o Estatuto da Criança e do Adolescente e as regras aplicáveis, cabendo ao Contratante obter o consentimento ou autorização do responsável legal, quando exigido.
+<br><br><strong>CLÁUSULA 21 — SUBPROCESSADORES E TRANSFERÊNCIA INTERNACIONAL DE DADOS</strong><br>
+<strong>21.1.</strong> Para viabilizar a prestação da Plataforma, a KLIVY contrata subprocessadores que atuam sob sua supervisão e em conformidade com a LGPD, incluindo, no momento da vigência deste Termo, as seguintes categorias:<br>
+&emsp;&bull; (a) provedor de infraestrutura em nuvem e hospedagem;<br>
+&emsp;&bull; (b) provedor de gateway de pagamento;<br>
+&emsp;&bull; (c) provedores de comunicação eletrônica (SMS, e-mail, voz e mensageria);<br>
+&emsp;&bull; (d) provedores de modelos de inteligência artificial;<br>
+&emsp;&bull; (e) provedores de serviços acessórios de segurança, autenticação, monitoramento e analytics.<br>
+<strong>21.2.</strong> Lista pública de subprocessadores. A KLIVY manterá lista atualizada de subprocessadores em página pública de sua Plataforma ou website, com identificação do fornecedor, natureza do serviço e localidade relevante.<br>
+<strong>21.3.</strong> Alteração de subprocessadores. A KLIVY poderá, a seu critério, substituir, incluir ou remover subprocessadores, com vistas a melhoria, conformidade, estabilidade ou adequação tecnológica. A continuidade do uso da Plataforma após a atualização da lista implica aceite tácito, sem prejuízo do direito de cancelamento regulado na Cláusula 31.<br>
+<strong>21.4.</strong> Transferência internacional de dados. O Contratante reconhece, declara e autoriza, nos termos dos arts. 33 a 36 da LGPD, que os dados tratados por meio da Plataforma, incluindo dados pessoais e dados pessoais sensíveis, poderão ser armazenados, tratados, processados, replicados, backupeados ou trafegados em infraestrutura situada fora do território nacional, atualmente incluindo, entre outras localidades, infraestrutura na União Europeia (Finlândia, por meio do provedor Hetzner) e infraestrutura nos Estados Unidos da América, por meio de seus subprocessadores.<br>
+<strong>21.5.</strong> A base legal para a transferência internacional observa:<br>
+&emsp;&bull; (a) garantias contratuais específicas firmadas com subprocessadores (art. 33, II, LGPD), incluindo cláusulas de proteção equivalentes às exigidas pela LGPD;<br>
+&emsp;&bull; (b) consentimento específico e destacado manifestado pelo Contratante mediante o presente Termo (art. 33, V, LGPD);<br>
+&emsp;&bull; (c) execução de contrato e procedimentos preliminares relacionados (art. 33, VI, LGPD).<br>
+<strong>21.6.</strong> A KLIVY planeja, oportunamente, oferecer infraestrutura adicional localizada no Brasil, hipótese em que comunicará os Contratantes sobre eventuais alterações.<br>
+<strong>21.7.</strong> O Contratante tem o direito de, a qualquer tempo, rescindir a contratação caso não concorde com o regime de transferência internacional, observadas as demais disposições deste Termo.
+<br><br><strong>CLÁUSULA 22 — LOGS, MONITORAMENTO, SEGURANÇA, RASTREABILIDADE E COOPERAÇÃO EM INCIDENTES</strong><br>
+<strong>22.1.</strong> A Plataforma mantém logs de acesso e logs de ações dos Usuários Vinculados, com rastreabilidade sobre visualização, edição, exclusão e exportação de dados, para finalidades de segurança, auditoria, cumprimento regulatório, prevenção a fraude e suporte.<br>
+<strong>22.2.</strong> Os logs são de titularidade e gestão operacional da KLIVY e estarão disponíveis ao Contratante nos limites e formatos previstos no Plano contratado.<br>
+<strong>22.3.</strong> A KLIVY adota medidas técnicas e administrativas razoáveis e compatíveis com o estado da técnica para proteção da Plataforma e dos dados, incluindo criptografia em trânsito, segregação lógica, controles de acesso, monitoramento e práticas de desenvolvimento seguro, sem, contudo, garantir inviolabilidade absoluta, que inexiste tecnicamente.<br>
+<strong>22.4.</strong> Incidentes de segurança. Em caso de incidente de segurança relevante que afete Dados de Pacientes do Contratante, a KLIVY comunicará o Contratante sem demora injustificada, fornecerá informações razoáveis sobre natureza, escopo estimado, medidas adotadas e recomendações, cabendo ao Contratante, como Controlador, avaliar a necessidade de comunicação à ANPD e aos titulares afetados, nos termos do art. 48 da LGPD, e responder por tais comunicações.<br>
+<strong>22.5.</strong> O Contratante compromete-se a cooperar com a KLIVY em investigações e diligências técnicas relacionadas a incidentes, fornecendo informações solicitadas em tempo hábil.<br>
+<strong>22.6.</strong> A KLIVY não responde por incidentes:<br>
+&emsp;&bull; (a) causados por conduta ou omissão do Contratante ou de seus Usuários Vinculados;<br>
+&emsp;&bull; (b) decorrentes de comprometimento de credenciais sob responsabilidade do Contratante;<br>
+&emsp;&bull; (c) provocados por fatos de terceiros fora do âmbito de gestão da KLIVY;<br>
+&emsp;&bull; (d) decorrentes de ataques que, apesar da observância do estado da técnica, não foram preveníveis por medidas razoáveis.
+<br><br><strong>CLÁUSULA 23 — DISPONIBILIDADE, MANUTENÇÃO E LIMITAÇÕES TÉCNICAS</strong><br>
+<strong>23.1.</strong> A KLIVY empregará esforços razoáveis para manter a Plataforma disponível de forma contínua, sem, contudo, garantir disponibilidade ininterrupta, livre de erros, livre de indisponibilidades momentâneas, livre de lentidão ou imune a falhas.<br>
+<strong>23.2.</strong> Manutenções programadas, emergenciais, corretivas, preventivas, evolutivas ou de segurança poderão ser realizadas a qualquer tempo, com esforço razoável de minimização de impacto e, sempre que viável, com aviso prévio.<br>
+<strong>23.3.</strong> Nenhum índice de disponibilidade (SLA) é prometido, garantido ou implicado por este Termo, salvo se ajustado expressamente e por escrito em instrumento adicional.<br>
+<strong>23.4.</strong> A KLIVY não oferece, neste momento, funcionalidades de backup sob demanda ou restauração sob demanda para o Contratante. Backups eventualmente realizados pela KLIVY em sua infraestrutura têm finalidade exclusivamente interna e operacional, não gerando direito do Contratante à restauração específica, recuperação de versões, rollback de lançamentos ou entrega de cópias.<br>
+<strong>23.5.</strong> Cabe ao Contratante manter, a seu critério e por conta própria, cópias externas dos dados e documentos que considere críticos, observadas suas obrigações regulatórias próprias.
+<br><br><strong>CLÁUSULA 24 — FALHAS DE TERCEIROS E INDISPONIBILIDADES EXTERNAS</strong><br>
+<strong>24.1.</strong> A Plataforma depende, em maior ou menor grau, de serviços e infraestrutura de terceiros, incluindo, sem limitação, provedores de conectividade, provedores de nuvem, provedores de e-mail, SMS e mensageria, plataformas de comunicação como WhatsApp, gateways de pagamento, certificadoras, provedores de IA, provedores de autenticação e serviços de terceiros eventualmente integrados por solicitação do Contratante.<br>
+<strong>24.2.</strong> Falhas, instabilidades, indisponibilidades, atualizações unilaterais, alterações de interface, descontinuações, restrições, bloqueios, limites técnicos, medidas de segurança, sanções e decisões de terceiros não configuram descumprimento contratual da KLIVY, ainda que impactem funcionalidades da Plataforma, e não ensejam indenização, reembolso ou abatimento de preço.<br>
+<strong>24.3.</strong> A KLIVY não garante a continuidade, compatibilidade ou estabilidade de integrações com terceiros, seja em virtude de alterações destes, seja por decisão técnica ou comercial da própria KLIVY.<br>
+<strong>24.4.</strong> O Contratante reconhece que a KLIVY não detém controle sobre o Meta Platforms, OpenAI, Google, Anthropic, Twilio, Asaas, Hetzner ou quaisquer outros fornecedores, operadores ou terceiros em cuja infraestrutura a Plataforma ou parte dela se apoie.
+<br><br><strong>CLÁUSULA 25 — PROPRIEDADE INTELECTUAL, LICENÇA DE USO E RESTRIÇÕES</strong><br>
+<strong>25.1.</strong> A Plataforma, em seu conjunto — incluindo código-fonte, código-objeto, arquitetura, banco de dados, interfaces, layouts, elementos visuais, marca, nome comercial, logotipos, identidade visual, documentação, fluxos, algoritmos, modelos próprios, funcionalidades e toda evolução que vier a receber — é de titularidade exclusiva da KLIVY e está protegida pela legislação brasileira e internacional de propriedade intelectual, incluindo as Leis nº 9.279/1996, nº 9.609/1998, nº 9.610/1998 e tratados aplicáveis.<br>
+<strong>25.2.</strong> Ao aceitar este Termo e adimplir o Plano contratado, o Contratante recebe licença de uso pessoal, intransferível, não exclusiva, limitada, revogável e restrita ao prazo da assinatura, exclusivamente para as finalidades contempladas por este Termo.<br>
+<strong>25.3.</strong> Propriedade sobre conteúdo inserido. Os Dados do Contratante e os Dados de Pacientes inseridos por meio da Plataforma permanecem de titularidade do respectivo titular ou, conforme o caso, sob controle do Contratante como Controlador de dados, observado que tais dados não pertencem à KLIVY. A presente disposição afasta expressamente qualquer interpretação em sentido diverso.<br>
+<strong>25.4.</strong> Propriedade sobre elementos gerados pela Plataforma. Elementos produzidos pela Plataforma, incluindo insights, relatórios consolidados, modelos estatísticos internos, representações gráficas padronizadas, código da Plataforma e Dados Agregados e Anonimizados, são de titularidade da KLIVY.<br>
+<strong>25.5.</strong> Vedações específicas. O Contratante não poderá, sob qualquer pretexto: (i) copiar, reproduzir, modificar, traduzir, adaptar ou criar obras derivadas a partir da Plataforma; (ii) sublicenciar, emprestar, ceder, locar, revender ou distribuir; (iii) remover avisos de propriedade; (iv) utilizar marca, nome ou identidade visual da KLIVY sem autorização escrita; (v) acessar código-fonte. Em nenhuma hipótese será concedido acesso ao código-fonte da Plataforma.
+<br><br><strong>CLÁUSULA 26 — CONFIDENCIALIDADE</strong><br>
+<strong>26.1.</strong> Cada parte compromete-se a manter em sigilo informações confidenciais a que tiver acesso em razão deste contrato, incluindo informações técnicas, comerciais, financeiras, estratégicas, operacionais, de clientes e de terceiros, bem como dados pessoais de Pacientes.<br>
+<strong>26.2.</strong> A obrigação de confidencialidade vigora durante a contratação e por 5 (cinco) anos após seu encerramento, salvo obrigação legal ou judicial de divulgação.<br>
+<strong>26.3.</strong> Não é confidencial a informação que: (i) seja ou se torne de domínio público sem violação deste Termo; (ii) já era conhecida pela parte receptora antes da contratação, sem vínculo de sigilo; (iii) seja obtida licitamente de terceiro sem obrigação de sigilo; (iv) deva ser divulgada por força de lei, ordem judicial ou requisição de autoridade competente, hipótese em que a parte obrigada notificará a outra, quando lícito, antes da divulgação.
+<br><br><strong>CLÁUSULA 27 — RETENÇÃO, ARMAZENAMENTO, EXCLUSÃO E DESCARTE DE DADOS</strong><br>
+<strong>27.1.</strong> Durante a vigência do Plano pago, os dados permanecem armazenados na Plataforma, disponíveis ao Contratante conforme funcionalidades do respectivo Plano.<br>
+<strong>27.2.</strong> Encerramento de Plano pago. Encerrado o Plano pago, por qualquer motivo (cancelamento voluntário, não renovação, cancelamento por inadimplência, cancelamento por violação contratual), observa-se o seguinte regime:<br>
+&emsp;&bull; (a) Janela de exportação. O Contratante terá prazo de 30 (trinta) dias corridos, contados da data de encerramento efetivo, para realizar a exportação dos dados por meio das funcionalidades de exportação então disponibilizadas pela Plataforma, na forma, formato e escopo nativamente existentes;<br>
+&emsp;&bull; (b) Comunicação prévia. A KLIVY comunicará a janela de exportação por meio de e-mail, WhatsApp e, sempre que possível, ligação telefônica aos contatos cadastrados;<br>
+&emsp;&bull; (c) Ausência de obrigação de exportação completa. A KLIVY não se obriga a desenvolver, sob demanda, mecanismos adicionais de exportação, a entregar bases em formatos específicos, a executar migrações personalizadas ou a garantir que o conjunto de dados efetivamente exportável corresponda à totalidade das informações armazenadas;<br>
+&emsp;&bull; (d) Retenção posterior. Findo o prazo de 30 dias, a KLIVY manterá os dados armazenados por até 2 (dois) anos, para fins exclusivos de cumprimento de obrigações legais, defesa em eventual disputa, atendimento a requisições de autoridades competentes e auditorias, sem que isso configure disponibilização ativa ao Contratante. Durante esse período, o acesso operacional à Plataforma permanecerá bloqueado;<br>
+&emsp;&bull; (e) Exclusão definitiva. Após o prazo de 2 anos, os dados serão excluídos ou anonimizados de forma irreversível, ressalvados os dados que, por obrigação legal, fiscal, regulatória ou em função de disputa ativa, devam ser conservados por prazo superior.<br>
+<strong>27.3.</strong> Período de avaliação, teste grátis e contas inativas ou inadimplentes. Contas em período de avaliação, sem conversão em Plano pago, ou contas pagas que permaneçam inadimplentes, terão seus dados retidos por até 3 (três) meses contados do término do período de avaliação ou da inadimplência, após o que serão excluídos, com comunicação prévia mínima de 15 (quinze) dias por e-mail.<br>
+<strong>27.4.</strong> Guarda regulatória de prontuário: obrigação exclusiva do Contratante. O Contratante declara estar ciente de que a legislação e as normas dos conselhos profissionais aplicáveis — em especial as resoluções do Conselho Federal de Odontologia (CFO), como a Resolução CFO 226/2021, bem como as normas aplicáveis a estabelecimentos de estética e bem-estar, incluindo regulamentação sanitária estadual e municipal — podem impor prazos de guarda de prontuário e documentos clínicos significativamente superiores aos prazos de retenção técnica desta Cláusula 27, podendo alcançar 20 (vinte) anos ou mais. O Contratante reconhece expressamente que a observância dessa guarda é obrigação exclusiva do Contratante, a ser cumprida por meio da exportação prévia, da migração para sistema próprio e/ou do arquivamento em meio apto a preservar a integridade e a disponibilidade pelo prazo exigido. A KLIVY não garante guarda pelo prazo regulatório, não se responsabiliza por qualquer requisição tardia de prontuário e, encerrado o prazo de retenção da Cláusula 27.2 ou 27.3, não possuirá mais capacidade técnica de fornecer o conteúdo.<br>
+<strong>27.5.</strong> Ausência de backup/restauração sob demanda. Em linha com a Cláusula 23.4, a KLIVY não oferece serviço de backup ou restauração sob demanda ao Contratante.
+<br><br><strong>CLÁUSULA 28 — ENCERRAMENTO DA CONTA E EFEITOS DO CANCELAMENTO</strong><br>
+<strong>28.1.</strong> O Contratante pode cancelar a assinatura a qualquer tempo, por meio do canal indicado pela KLIVY, mantendo o acesso até o final do ciclo pago.<br>
+<strong>28.2.</strong> A KLIVY pode encerrar ou suspender a conta em caso de: (i) inadimplência persistente; (ii) violação deste Termo; (iii) uso abusivo, ilícito ou em desacordo com a finalidade; (iv) falsidade de declarações cadastrais; (v) decisão judicial ou administrativa; (vi) descontinuação do serviço, comunicada com antecedência mínima de 60 (sessenta) dias.<br>
+<strong>28.3.</strong> Transferência de titularidade de conta. A transferência de titularidade da conta entre pessoas naturais ou jurídicas exige solicitação escrita, apresentação de documentação comprobatória do vínculo ou da sucessão, concordância por escrito das partes envolvidas, inexistência de débitos e análise prévia da KLIVY. Em caso de conflito societário, a KLIVY manterá a titularidade atual até decisão judicial ou acordo formal documentado entre os envolvidos.<br>
+<strong>28.4.</strong> O encerramento da conta não isenta o Contratante de obrigações contratuais, incluindo pagamentos pendentes, responsabilidades regulatórias e confidencialidade.<br>
+<strong>28.5.</strong> Os efeitos do encerramento quanto a dados seguem a Cláusula 27.
+<br><br><strong>CLÁUSULA 29 — LIMITAÇÃO DE RESPONSABILIDADE E EXCLUSÕES</strong><br>
+<strong>29.1.</strong> Na máxima extensão permitida pela legislação brasileira, a responsabilidade da KLIVY é subjetiva, limitada a danos diretos e efetivamente comprovados, decorrentes de conduta dolosa ou com culpa grave diretamente imputável à KLIVY.<br>
+<strong>29.2.</strong> Nos termos deste instrumento, a KLIVY não responde, em qualquer hipótese, por:<br>
+&emsp;&bull; (a) conduta do Contratante, de seus sócios, prepostos, empregados, Usuários Vinculados ou terceiros por este autorizados;<br>
+&emsp;&bull; (b) decisões clínicas, estéticas, terapêuticas, diagnósticas, prescritivas ou administrativas tomadas pelo Contratante, ainda que com apoio em recursos da Plataforma, incluindo recursos de IA;<br>
+&emsp;&bull; (c) inexatidão, falsidade, desatualização ou inadequação das informações inseridas pelo Contratante;<br>
+&emsp;&bull; (d) lançamentos financeiros, cobranças, inadimplência de pacientes e conflitos comerciais do Contratante;<br>
+&emsp;&bull; (e) uso indevido da Plataforma ou em desacordo com sua finalidade;<br>
+&emsp;&bull; (f) falhas, indisponibilidades, instabilidades, decisões, bloqueios ou atos de terceiros, em especial Meta Platforms, provedores de e-mail, SMS, voz, IA, nuvem, gateway de pagamento, certificadoras e integrações externas;<br>
+&emsp;&bull; (g) perdas decorrentes de conduta de Pacientes, leads ou terceiros;<br>
+&emsp;&bull; (h) conflitos societários, trabalhistas, fiscais ou entre Usuários Vinculados;<br>
+&emsp;&bull; (i) decisões e autuações de conselhos profissionais, órgãos reguladores ou autoridades competentes dirigidas ao Contratante;<br>
+&emsp;&bull; (j) lucros cessantes, perda de oportunidade, dano reputacional, dano moral indireto ou qualquer prejuízo indireto, ressalvadas as hipóteses em que a responsabilidade for juridicamente incontornável.<br>
+<strong>29.3.</strong> Indenização pelo Contratante (hold harmless). O Contratante se obriga a manter a KLIVY integralmente indene e a ressarci-la de quaisquer custos, despesas, honorários advocatícios, condenações, acordos, multas regulatórias ou sanções que a KLIVY venha a suportar em razão de: (i) violação deste Termo pelo Contratante ou por seus Usuários Vinculados; (ii) conteúdo inserido ou mensagens enviadas pelo Contratante; (iii) uso indevido da IA; (iv) conduta profissional do Contratante; (v) tratamento de dados pelo Contratante em violação à LGPD ou a outra norma aplicável; (vi) reclamações de Pacientes, terceiros, autoridades ou conselhos profissionais dirigidas à KLIVY em razão de ato imputável ao Contratante.<br>
+<strong>29.4.</strong> Regime aplicável ao Contratante consumidor pessoa natural. Para Contratante pessoa natural que se qualifique como consumidor nos termos do CDC, as limitações desta Cláusula aplicam-se nos limites permitidos pela legislação consumerista, preservando-se, em sua integralidade, os direitos indisponíveis do consumidor.
+<br><br><strong>CLÁUSULA 30 — PENALIDADES POR USO ABUSIVO, ILÍCITO OU EM DESACORDO COM O CONTRATO</strong><br>
+<strong>30.1.</strong> Sem prejuízo das demais medidas previstas neste Termo, constituem hipóteses que autorizam suspensão imediata, bloqueio, limitação funcional ou cancelamento da conta, a critério exclusivo da KLIVY:<br>
+&emsp;&bull; (a) envio de spam, disparo em massa não autorizado, uso abusivo de canais;<br>
+&emsp;&bull; (b) violação das políticas dos provedores de comunicação;<br>
+&emsp;&bull; (c) uso ilícito da Plataforma;<br>
+&emsp;&bull; (d) uso que coloque em risco a estabilidade da Plataforma ou terceiros;<br>
+&emsp;&bull; (e) violação de direitos de Pacientes, de terceiros ou de ordem pública;<br>
+&emsp;&bull; (f) inserção de conteúdo ilegal, ofensivo, discriminatório ou manifestamente inverídico;<br>
+&emsp;&bull; (g) descumprimento reiterado deste Termo;<br>
+&emsp;&bull; (h) tentativa de fraude, engenharia reversa, ataque ou exploração de vulnerabilidade;<br>
+&emsp;&bull; (i) uso para atividade privativa de médico ou psicólogo ou fora do escopo de estética, odontologia e bem-estar;<br>
+&emsp;&bull; (j) violação da regulação profissional aplicável ao Contratante que comprometa a imagem ou responsabilidade da KLIVY.<br>
+<strong>30.2.</strong> A suspensão ou cancelamento por hipóteses desta Cláusula não gera direito a reembolso, sem prejuízo da cobrança de valores devidos e da responsabilização civil do Contratante.
+<br><br><strong>CLÁUSULA 31 — ALTERAÇÕES DO TERMO</strong><br>
+<strong>31.1.</strong> A KLIVY poderá atualizar este Termo, mediante publicação de nova versão na Plataforma ou em seu website oficial, com aviso prévio de 30 (trinta) dias ao Contratante antes da entrada em vigor das alterações substanciais.<br>
+<strong>31.2.</strong> A continuidade do uso da Plataforma após a entrada em vigor da nova versão implica aceite tácito. O Contratante que não concordar com as alterações pode cancelar a assinatura, sem multa, antes da entrada em vigor.<br>
+<strong>31.3.</strong> Alterações estritamente redacionais, correções, esclarecimentos e ajustes não substanciais poderão ser implementados sem prazo prévio específico.
+<br><br><strong>CLÁUSULA 32 — CANAIS DE CONTATO</strong><br>
+<strong>32.1.</strong> O Contratante poderá comunicar-se com a KLIVY por meio dos canais oficiais indicados na Plataforma e no website da KLIVY, em especial para: (i) suporte técnico; (ii) questões contratuais e comerciais; (iii) exercício de direitos relacionados a dados pessoais, incluindo os direitos previstos no art. 18 da LGPD.<br>
+<strong>32.2.</strong> Comunicações relevantes relativas a cobrança, alterações do Termo, incidentes e avisos legais serão feitas por meio eletrônico, em especial pelo e-mail cadastrado pelo Contratante, presumindo-se entregues e conhecidas para todos os fins contratuais.
+<br><br><strong>CLÁUSULA 33 — LEI APLICÁVEL E FORO</strong><br>
+<strong>33.1.</strong> Este Termo é regido pelas leis da República Federativa do Brasil.<br>
+<strong>33.2.</strong> Fica eleito o foro da Comarca de Joinville, Estado de Santa Catarina, para dirimir quaisquer litígios decorrentes deste Termo, com renúncia a qualquer outro, por mais privilegiado que seja, ressalvada, para Contratante pessoa natural consumidor, a prerrogativa legal de ajuizamento no foro do seu domicílio, nos termos da legislação consumerista.
+<br><br><strong>CLÁUSULA 34 — DISPOSIÇÕES FINAIS</strong><br>
+<strong>34.1.</strong> Independência das cláusulas. Se qualquer cláusula deste Termo for considerada inválida, ilegal ou inexequível, as demais permanecerão em pleno vigor, sendo a cláusula afetada interpretada de modo a preservar, na maior medida possível, a intenção original das partes.<br>
+<strong>34.2.</strong> Não renúncia. A tolerância de uma parte quanto ao descumprimento de qualquer disposição pela outra não constitui renúncia, novação ou modificação contratual.<br>
+<strong>34.3.</strong> Cessão. O Contratante não poderá ceder, transferir ou transmitir, total ou parcialmente, direitos e obrigações deste Termo sem prévia anuência escrita da KLIVY. A KLIVY poderá ceder este contrato em caso de reorganização societária, cisão, fusão ou trespasse.<br>
+<strong>34.4.</strong> Integralidade. Este Termo, em conjunto com as informações do Plano contratado, eventuais adendos escritos e a Política de Privacidade vigente, constitui a integralidade do acordo entre as partes, prevalecendo sobre entendimentos, tratativas e materiais de marketing anteriores.<br>
+<strong>34.5.</strong> Caso fortuito e força maior. Nenhuma das partes será responsabilizada por descumprimentos decorrentes de caso fortuito, força maior, fato do príncipe, evento regulatório, falha massiva de infraestrutura pública ou de terceiros que exceda, de forma razoável, o controle da parte afetada.<br>
+<strong>34.6.</strong> Comunicações e formalização. As comunicações eletrônicas entre as partes, feitas por e-mail, pela própria Plataforma ou por canais oficiais da KLIVY, têm plena validade e força probatória.<br>
+<strong>34.7.</strong> Ausência de vínculo trabalhista ou societário. Nada neste Termo cria vínculo de sociedade, consórcio, joint-venture, mandato, representação ou vínculo trabalhista entre as partes.`;
+
+    document.getElementById('termsContent').innerHTML = TERMOS_USO_HTML;
+
+    function changeTermsTab(index, el) {
+      document.querySelectorAll('.term-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+
+      const content = document.getElementById('termsContent');
+      if (index === 1) {
+        content.innerHTML = TERMOS_USO_HTML;
+      } else if (index === 2) {
+        content.innerHTML = `<div style="text-align: center; margin-bottom: 1rem;"><strong>TERMO DE ADESÃO</strong></div>
+            Bem-vindo à plataforma Klivy.<br><br>
+            Ao realizar sua adesão, você declara que compreende e aceita as responsabilidades financeiras do seu plano comercial.<br><br>
+            As soluções SaaS do Chatwoot Enterprise sub licenciadas asseguram conectividade contínua condicionada à adimplência da assinatura presente e não sofrem reajustes durante o primeiro ano.`;
+      } else if (index === 3) {
+        content.innerHTML = `<div style="text-align: center; margin-bottom: 1rem;"><strong>POLÍTICA DE PRIVACIDADE</strong></div>
+            A sua privacidade é nossa prioridade absoluta.<br><br>
+            Nós da Klivy protegemos todas as suas credenciais financeiras. Não armazenamos os dados de cartão inseridos; este token de cobrança é validado de forma direta sobre a malha de segurança PCI Compliance do gateway de pagamento (Asaas).<br><br>
+            O tratamento dos seus dados clínicas obedecem aos preceitos rígidos da Lei Geral de Proteção de Dados (LGPD).`;
+      }
+    }
+
+    function toggleCoupon() {
+      document.getElementById('couponToggle').style.display = 'none';
+      document.getElementById('couponInputBox').style.display = 'flex';
+      document.getElementById('couponCode').focus();
+    }
+
+    // ===== Catálogo de cupons =====
+    // Preço base do plano: R$ 197,00 (o "de R$ 397" é apenas âncora de marketing)
+    const PLAN_PRICE = 197.00;
+
+    const COUPONS = {
+      // Período grátis (trial)
+      'BEMVINDO':     { kind: 'trial', days: 3,   label: '3 DIAS GRÁTIS',   description: '3 dias grátis' },
+      '0ZN6VBZZ':     { kind: 'trial', days: 7,   label: '7 DIAS GRÁTIS',   description: '7 dias grátis' },
+      '1ZYTR06O':     { kind: 'trial', days: 14,  label: '14 DIAS GRÁTIS',  description: '14 dias grátis' },
+      'AFLHM4QV':     { kind: 'trial', days: 30,  label: '1 MÊS GRÁTIS',    description: '1 mês grátis' },
+      'HQJO6H8B':     { kind: 'trial', days: 60,  label: '2 MESES GRÁTIS',  description: '2 meses grátis' },
+      '7DAL4IXU':     { kind: 'trial', days: 90,  label: '3 MESES GRÁTIS',  description: '3 meses grátis' },
+
+      // 50% OFF
+      'HPIG310M':     { kind: 'percent', percent: 50, months: 1,  label: '50% OFF',        description: '50% OFF por 1 mês' },
+      'EQBMR6L0':     { kind: 'percent', percent: 50, months: 3,  label: '50% OFF · 3m',   description: '50% OFF por 3 meses' },
+      'SN3UKRFO':     { kind: 'percent', percent: 50, months: 6,  label: '50% OFF · 6m',   description: '50% OFF por 6 meses' },
+      'CSSRT526':     { kind: 'percent', percent: 50, months: 12, label: '50% OFF · 12m',  description: '50% OFF por 12 meses' },
+
+      // 20% OFF
+      'P5NW42NT':     { kind: 'percent', percent: 20, months: 1,  label: '20% OFF',        description: '20% OFF por 1 mês' },
+      'OALAHIZ3':     { kind: 'percent', percent: 20, months: 3,  label: '20% OFF · 3m',   description: '20% OFF por 3 meses' },
+      '9GZB25XN':     { kind: 'percent', percent: 20, months: 6,  label: '20% OFF · 6m',   description: '20% OFF por 6 meses' },
+      'JOYSXQC4':     { kind: 'percent', percent: 20, months: 12, label: '20% OFF · 12m',  description: '20% OFF por 12 meses' },
+
+      // 10% OFF
+      'JD3Q5BSM':     { kind: 'percent', percent: 10, months: 1,  label: '10% OFF',        description: '10% OFF no primeiro mês' },
+      'K2NXQS2M':     { kind: 'percent', percent: 10, months: 3,  label: '10% OFF · 3m',   description: '10% OFF por 3 meses' },
+      '6LLN8U5A':     { kind: 'percent', percent: 10, months: 6,  label: '10% OFF · 6m',   description: '10% OFF por 6 meses' },
+      'LPJ6ADUZ':     { kind: 'percent', percent: 10, months: 12, label: '10% OFF · 12m',  description: '10% OFF por 12 meses' },
+
+      // Admin
+      'RZGMTO6FSNQC': { kind: 'free_forever', label: 'VITALÍCIO', description: 'Grátis para sempre' }
+    };
+
+    function formatBRL(value) {
+      return 'R$ ' + value.toFixed(2).replace('.', ',');
+    }
+
+    function applyCoupon() {
+      const code = document.getElementById('couponCode').value.trim().toUpperCase();
+      if (code === '') {
+        showToast('Digite um código de cupom para aplicar.', 'info');
+        return;
+      }
+
+      const coupon = COUPONS[code];
+      if (!coupon) {
+        showToast('Cupom inválido ou expirado.', 'error');
+        return;
+      }
+
+      appliedCoupon = code;
+      showToast(coupon.description, 'success', { title: `Cupom "${code}" aplicado!` });
+
+      const payTodayFinal = document.getElementById('payTodayFinal');
+      const payTodayOriginal = document.getElementById('payTodayOriginal');
+      const payTodaySubtext = document.getElementById('payTodaySubtext');
+      const totalAssinaturaValue = document.getElementById('totalAssinaturaValue');
+      const badge = document.getElementById('payTodayBadge');
+
+      if (coupon.kind === 'trial') {
+        payTodayFinal.textContent = 'R$ 0,00';
+        payTodayOriginal.style.display = 'none';
+
+        badge.style.background = '#dbeafe';
+        badge.style.color = '#1e40af';
+        badge.textContent = coupon.label;
+
+        payTodaySubtext.innerHTML = `Avalie grátis por ${coupon.description.replace(' grátis', '')}<br><span style="font-size: 0.65rem; color: var(--primary);">Cobrança de ${formatBRL(PLAN_PRICE)}/mês após o período</span>`;
+
+        totalAssinaturaValue.innerHTML = `<span style="text-decoration: line-through; color: var(--text-muted); font-size: 0.9rem; margin-right: 0.5rem; font-weight: 400;">R$ 397,00</span>${formatBRL(PLAN_PRICE)} <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mês</span>`;
+
+      } else if (coupon.kind === 'percent') {
+        const discounted = PLAN_PRICE * (1 - coupon.percent / 100);
+        payTodayFinal.textContent = formatBRL(discounted);
+        payTodayOriginal.style.display = 'block';
+        payTodayOriginal.textContent = formatBRL(PLAN_PRICE);
+
+        badge.style.background = '#fef3c7';
+        badge.style.color = '#92400e';
+        badge.textContent = coupon.label;
+
+        const durText = coupon.months === 1 ? 'no primeiro mês' : `pelos primeiros ${coupon.months} meses`;
+        payTodaySubtext.innerHTML = `${coupon.percent}% OFF ${durText}<br><span style="font-size: 0.65rem; color: var(--primary);">Renovação por ${formatBRL(PLAN_PRICE)}/mês após o desconto</span>`;
+
+        totalAssinaturaValue.innerHTML = `<span style="text-decoration: line-through; color: var(--text-muted); font-size: 0.9rem; margin-right: 0.5rem; font-weight: 400;">${formatBRL(PLAN_PRICE)}</span>${formatBRL(discounted)} <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mês por ${coupon.months}m</span>`;
+
+      } else if (coupon.kind === 'free_forever') {
+        payTodayFinal.textContent = 'R$ 0,00';
+        payTodayOriginal.style.display = 'none';
+
+        badge.style.background = '#ede9fe';
+        badge.style.color = '#5b21b6';
+        badge.textContent = coupon.label;
+
+        payTodaySubtext.innerHTML = `Conta gratuita vitalícia<br><span style="font-size: 0.65rem; color: var(--primary);">Sem cobranças recorrentes</span>`;
+
+        totalAssinaturaValue.innerHTML = `<span style="text-decoration: line-through; color: var(--text-muted); font-size: 0.9rem; margin-right: 0.5rem; font-weight: 400;">${formatBRL(PLAN_PRICE)}</span>R$ 0,00 <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/sempre</span>`;
+      }
+
+      document.getElementById('couponInputBox').innerHTML = `<div style="padding: 0.5rem 0.75rem; flex: 1; border: 1px solid var(--success-color); border-radius: 6px; background: #ecfdf5; color: var(--success-color); display: flex; align-items: center; justify-content: space-between;">\n          <span style="font-weight: 600;">✅ ${code} (Aplicado)</span>\n          <span style="font-size: 0.75rem; cursor: pointer; text-decoration: underline;" onclick="removeCoupon()">Remover</span>\n        </div>`;
+    }
+
+    function removeCoupon() {
+      appliedCoupon = null;
+
+      document.getElementById('payTodayFinal').textContent = 'R$ 197,00';
+      document.getElementById('payTodayOriginal').style.display = 'block';
+      document.getElementById('payTodayOriginal').textContent = 'R$ 397,00';
+
+      const badge = document.getElementById('payTodayBadge');
+      badge.style.background = '#dcfce7';
+      badge.style.color = '#166534';
+      badge.textContent = '50% OFF';
+
+      document.getElementById('payTodaySubtext').textContent = 'Implantação e treinamento';
+
+      document.getElementById('totalAssinaturaValue').innerHTML = '<span style="text-decoration: line-through; color: var(--text-muted); font-size: 0.9rem; margin-right: 0.5rem; font-weight: 400;">R$ 397,00</span>R$ 197,00 <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/mês</span>';
+
+      document.getElementById('couponInputBox').innerHTML = `\n        <input type="text" id="couponCode" placeholder="Insira seu cupom" style="padding: 0.5rem 0.75rem; flex: 1; text-transform: uppercase; border: 1px solid var(--border-color); border-radius: 6px;">\n        <button type="button" class="btn-primary" style="padding: 0.5rem 1rem;" onclick="applyCoupon()">Aplicar</button>\n      `;
+    }
+
+    function activateToggle(element) {
+      document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+      element.classList.add('active');
+      
+      const labelCpfCnpj = document.getElementById('label_cpf_cnpj');
+      const inputCpfCnpj = document.getElementById('cpf_cnpj');
+      
+      if (element.innerText === 'Pessoa Jurídica') {
+        labelCpfCnpj.innerHTML = 'CNPJ <span class="req">*</span>';
+        inputCpfCnpj.placeholder = '00.000.000/0001-00';
+      } else {
+        labelCpfCnpj.innerHTML = 'CPF <span class="req">*</span>';
+        inputCpfCnpj.placeholder = '000.000.000-00';
+      }
+      inputCpfCnpj.value = '';
+    }
+
+    function nextStep(step) {
+      document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active'));
+      document.getElementById(`step${step}`).classList.add('active');
+      currentStep = step;
+
+      const percentages = {1: '25%', 2: '50%', 3: '75%', 4: '100%'};
+      document.getElementById('progressFill').style.width = percentages[step];
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ===== Validação de campos obrigatórios por passo =====
+    const REQUIRED_FIELDS_BY_STEP = {
+      1: ['name', 'clinic_name', 'cpf_cnpj', 'email', 'phone_personal', 'phone'],
+      2: ['cep', 'estado', 'cidade', 'bairro', 'rua', 'numero'],
+      4: ['cc_number', 'cc_month', 'cc_year', 'cc_cvv', 'cc_name', 'cc_cpf']
+    };
+
+    // ===== Toast notifications =====
+    const TOAST_ICONS = {
+      success: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>',
+      error: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+      info: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+    };
+
+    function ensureToastContainer() {
+      let c = document.getElementById('toastContainer');
+      if (!c) {
+        c = document.createElement('div');
+        c.id = 'toastContainer';
+        c.className = 'toast-container';
+        document.body.appendChild(c);
+      }
+      return c;
+    }
+
+    function showToast(message, type = 'info', { title = null, duration = 3500 } = {}) {
+      const container = ensureToastContainer();
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `
+        <div class="toast-icon">${TOAST_ICONS[type] || TOAST_ICONS.info}</div>
+        <div class="toast-body">
+          ${title ? `<div class="toast-title"></div>` : ''}
+          <div class="toast-message"></div>
+        </div>
+        <button type="button" class="toast-close" aria-label="Fechar">&times;</button>
+      `;
+      if (title) toast.querySelector('.toast-title').textContent = title;
+      toast.querySelector('.toast-message').textContent = message;
+
+      const dismiss = () => {
+        if (toast.classList.contains('leaving')) return;
+        toast.classList.add('leaving');
+        toast.addEventListener('animationend', () => toast.remove(), { once: true });
+      };
+      toast.querySelector('.toast-close').addEventListener('click', dismiss);
+      container.appendChild(toast);
+      if (duration > 0) setTimeout(dismiss, duration);
+    }
+
+    // ===== Inline field errors =====
+    function showFieldError(el, message) {
+      if (!el) return;
+      el.classList.add('input-invalid');
+      el.style.borderColor = '';
+      const group = el.closest('.form-group') || el.parentElement;
+      if (!group) return;
+      let errorEl = group.querySelector(':scope > .field-error');
+      if (!errorEl) {
+        errorEl = document.createElement('div');
+        errorEl.className = 'field-error';
+        errorEl.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span></span>`;
+        group.appendChild(errorEl);
+      }
+      errorEl.querySelector('span').textContent = message;
+      el.addEventListener('input', () => clearFieldError(el), { once: true });
+      el.addEventListener('change', () => clearFieldError(el), { once: true });
+    }
+
+    function clearFieldError(el) {
+      if (!el) return;
+      el.classList.remove('input-invalid');
+      const group = el.closest('.form-group') || el.parentElement;
+      if (!group) return;
+      // Only clear the group-level error if no other invalid sibling remains
+      const stillInvalid = group.querySelector('input.input-invalid, select.input-invalid');
+      if (!stillInvalid) {
+        const errorEl = group.querySelector(':scope > .field-error');
+        if (errorEl) errorEl.remove();
+      }
+    }
+
+    // ===== Validação CPF/CNPJ =====
+    function isValidCPF(cpf) {
+      cpf = cpf.replace(/\D/g, '');
+      if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+      let sum = 0, rest;
+      for (let i = 1; i <= 9; i++) sum += parseInt(cpf.charAt(i - 1)) * (11 - i);
+      rest = (sum * 10) % 11;
+      if (rest === 10 || rest === 11) rest = 0;
+      if (rest !== parseInt(cpf.charAt(9))) return false;
+      sum = 0;
+      for (let i = 1; i <= 10; i++) sum += parseInt(cpf.charAt(i - 1)) * (12 - i);
+      rest = (sum * 10) % 11;
+      if (rest === 10 || rest === 11) rest = 0;
+      return rest === parseInt(cpf.charAt(10));
+    }
+
+    function isValidCNPJ(cnpj) {
+      cnpj = cnpj.replace(/\D/g, '');
+      if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
+      let length = cnpj.length - 2;
+      let numbers = cnpj.substring(0, length);
+      const digits = cnpj.substring(length);
+      let sum = 0, pos = length - 7;
+      for (let i = length; i >= 1; i--) {
+        sum += numbers.charAt(length - i) * pos--;
+        if (pos < 2) pos = 9;
+      }
+      let result = sum % 11 < 2 ? 0 : 11 - sum % 11;
+      if (result !== parseInt(digits.charAt(0))) return false;
+      length += 1;
+      numbers = cnpj.substring(0, length);
+      sum = 0; pos = length - 7;
+      for (let i = length; i >= 1; i--) {
+        sum += numbers.charAt(length - i) * pos--;
+        if (pos < 2) pos = 9;
+      }
+      result = sum % 11 < 2 ? 0 : 11 - sum % 11;
+      return result === parseInt(digits.charAt(1));
+    }
+
+    function isValidPhone(phone) {
+      const d = phone.replace(/\D/g, '');
+      return d.length === 10 || d.length === 11;
+    }
+
+    // ===== Checagem assíncrona de e-mail no backend =====
+    async function checkEmailAvailability(email) {
+      try {
+        const res = await fetch(`/api/v1/billing/onboarding/check_email?email=${encodeURIComponent(email)}`);
+        if (!res.ok) return { available: true }; // fallback — deixa o usuário avançar, backend valida de novo
+        return await res.json();
+      } catch (e) {
+        return { available: true };
+      }
+    }
+
+    function validateStep(stepNum) {
+      if (stepNum === 3) {
+        if (!document.getElementById('accept_terms').checked) {
+          showToast('Você precisa aceitar os termos para continuar.', 'error');
+          return false;
+        }
+        return true;
+      }
+
+      const fields = REQUIRED_FIELDS_BY_STEP[stepNum] || [];
+      const invalid = [];
+
+      fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (!el.value || !el.value.trim()) {
+          showFieldError(el, 'Campo obrigatório');
+          invalid.push(el);
+        } else {
+          clearFieldError(el);
+        }
+      });
+
+      if (stepNum === 1) {
+        const email = document.getElementById('email');
+        if (email.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
+          showFieldError(email, 'Informe um e-mail válido');
+          invalid.push(email);
+        }
+
+        const cpfEl = document.getElementById('cpf_cnpj');
+        if (cpfEl.value.trim()) {
+          const isPJ = document.querySelector('.toggle-btn.active')?.innerText === 'Pessoa Jurídica';
+          const valid = isPJ ? isValidCNPJ(cpfEl.value) : isValidCPF(cpfEl.value);
+          if (!valid) {
+            showFieldError(cpfEl, isPJ ? 'CNPJ inválido' : 'CPF inválido');
+            invalid.push(cpfEl);
+          }
+        }
+
+        ['phone_personal', 'phone'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el.value.trim() && !isValidPhone(el.value)) {
+            showFieldError(el, 'Telefone inválido — use DDD + número');
+            invalid.push(el);
+          }
+        });
+      }
+
+      if (stepNum === 4) {
+        const ccNumber = document.getElementById('cc_number');
+        const num = ccNumber.value.replace(/\D/g, '');
+        if (num && (num.length < 13 || num.length > 19)) {
+          showFieldError(ccNumber, 'Número do cartão inválido');
+          invalid.push(ccNumber);
+        }
+        const monthEl = document.getElementById('cc_month');
+        const monthRaw = monthEl.value;
+        const month = parseInt(monthRaw, 10);
+        if (monthRaw && (isNaN(month) || month < 1 || month > 12)) {
+          showFieldError(monthEl, 'Mês inválido (01-12)');
+          invalid.push(monthEl);
+        }
+        const yearEl = document.getElementById('cc_year');
+        const yearRaw = yearEl.value;
+        const yearNum = parseInt(yearRaw, 10);
+        const currentYearShort = new Date().getFullYear() % 100;
+        if (yearRaw && (yearRaw.length !== 2 || isNaN(yearNum) || yearNum < currentYearShort || yearNum > currentYearShort + 20)) {
+          showFieldError(yearEl, 'Ano inválido');
+          invalid.push(yearEl);
+        }
+        const cvvEl = document.getElementById('cc_cvv');
+        const cvv = cvvEl.value.replace(/\D/g, '');
+        if (cvv && (cvv.length < 3 || cvv.length > 4)) {
+          showFieldError(cvvEl, 'CVV inválido');
+          invalid.push(cvvEl);
+        }
+      }
+
+      if (invalid.length > 0) {
+        invalid[0].focus();
+        showToast('Revise os campos destacados em vermelho.', 'error');
+        return false;
+      }
+      return true;
+    }
+
+    async function goToStep(currentStepNum, nextStepNum) {
+      if (!validateStep(currentStepNum)) return;
+
+      // Checagem assíncrona de e-mail ao sair do passo 1
+      if (currentStepNum === 1) {
+        const emailEl = document.getElementById('email');
+        const email = emailEl.value.trim().toLowerCase();
+        const btn = document.querySelector(`#step${currentStepNum} .btn-primary`);
+        const originalHtml = btn ? btn.innerHTML : null;
+
+        if (email) {
+          if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = 'Verificando...';
+          }
+          const result = await checkEmailAvailability(email);
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+          }
+
+          if (!result.available && result.reason === 'email_already_registered') {
+            showFieldError(emailEl, 'Este e-mail já está em uso');
+            emailEl.focus();
+            showToast('Este e-mail já possui uma conta. Use outro ou vá para o login.', 'error');
+            return;
+          }
+        }
+      }
+
+      nextStep(nextStepNum);
+    }
+
+    function updateCardPreview() {
+      const number = document.getElementById('cc_number').value || '0000 0000 0000 0000';
+      const name = document.getElementById('cc_name').value || 'NOME COMPLETO';
+      const month = document.getElementById('cc_month').value.padStart(2, '0') || 'MM';
+      const year = document.getElementById('cc_year').value || 'AA';
+      
+      const maskedNum = number.length >= 16 ? number.slice(0,4) + ' **** **** ' + number.slice(-4) : number;
+      
+      document.getElementById('prev_number').textContent = maskedNum;
+      document.getElementById('prev_name').textContent = name.toUpperCase();
+      document.getElementById('prev_val').textContent = `${month}/${year}`;
+    }
+
+    // ===== Cloudflare Turnstile =====
+    let turnstileToken = null;
+
+    function onTurnstileSuccess(token) {
+      turnstileToken = token;
+    }
+
+    function onTurnstileExpired() {
+      turnstileToken = null;
+    }
+
+    function onTurnstileError() {
+      turnstileToken = null;
+    }
+
+    function nextStepWithCaptcha(step) {
+      if (!validateStep(2)) return;
+      if (!turnstileToken) {
+        showToast('Confirme que você não é um robô antes de continuar.', 'error');
+        return;
+      }
+      nextStep(step);
+    }
+
+    document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!validateStep(4)) return;
+
+      if (!document.getElementById('accept_terms').checked) {
+        showToast('Você precisa aceitar os termos para continuar.', 'error');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitBtn');
+      const btnText = document.getElementById('btnText');
+      const btnSpinner = document.getElementById('btnSpinner');
+      const errorBox = document.getElementById('errorBox');
+      
+      submitBtn.disabled = true;
+      btnText.style.display = 'none';
+      btnSpinner.style.display = 'block';
+      errorBox.style.display = 'none';
+
+      if (!turnstileToken) {
+        errorBox.innerText = '❌ Sessão de verificação expirou. Recarregue a página e tente novamente.';
+        errorBox.style.display = 'block';
+        submitBtn.disabled = false;
+        btnText.style.display = 'inline';
+        btnSpinner.style.display = 'none';
+        return;
+      }
+
+      // Assemble payload including CC and dynamically using the Address info!
+      const payload = {
+        selected_plan: 'standard',
+        coupon: appliedCoupon,
+        turnstile_token: turnstileToken,
+        password: 'Klivy@123456', 
+        name: document.getElementById('name').value, 
+        clinic_name: document.getElementById('clinic_name').value,
+        email: document.getElementById('email').value,
+        cpf_cnpj: document.getElementById('cpf_cnpj').value.replace(/\D/g, ''),
+        phone: document.getElementById('phone').value.replace(/\D/g, ''),
+        
+        // Add address info to top level (for Asaas Customer)
+        address: document.getElementById('rua').value,
+        address_number: document.getElementById('numero').value,
+        complement: document.getElementById('complemento').value,
+        province: document.getElementById('bairro').value,
+        postal_code: document.getElementById('cep').value.replace(/\D/g, ''),
+        city: document.getElementById('cidade').value,
+        state: document.getElementById('estado').value,
+        
+        creditCard: {
+          holderName: document.getElementById('cc_name').value,
+          number: document.getElementById('cc_number').value.replace(/\D/g, ''),
+          expiryMonth: document.getElementById('cc_month').value.padStart(2, '0'),
+          expiryYear: '20' + document.getElementById('cc_year').value,
+          ccv: document.getElementById('cc_cvv').value
+        },
+        creditCardHolderInfo: {
+          name: document.getElementById('name').value,
+          email: document.getElementById('email').value,
+          cpfCnpj: document.getElementById('cc_cpf').value.replace(/\D/g, ''),
+          postalCode: document.getElementById('cep').value.replace(/\D/g, ''),
+          addressNumber: document.getElementById('numero').value,
+          phone: document.getElementById('phone').value.replace(/\D/g, '')
+        }
+      };
+
+      try {
+        const response = await fetch('/api/v1/billing/onboarding', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Store auth headers for the next step
+          localStorage.setItem('klivy_auth', JSON.stringify(data.auth));
+          localStorage.setItem('klivy_account_id', data.account_id);
+          localStorage.setItem('klivy_user_email', payload.email);
+          localStorage.setItem('klivy_clinic_name', payload.clinic_name);
+
+          window.location.href = '/onboarding-finish.html';
+        } else {
+          const err = new Error(data.error || 'Erro desconhecido ao processar pagamento.');
+          err.code = data.code;
+          throw err;
+        }
+      } catch (err) {
+        if (err.code === 'email_already_registered') {
+          const email = encodeURIComponent(payload.email || '');
+          errorBox.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 0.5rem;">❌ Este e-mail já possui uma conta.</div>
+            <div style="font-weight: 400; font-size: 0.9rem; margin-bottom: 0.75rem;">Se você já é cliente, entre pelas opções abaixo. Se preferir, use outro e-mail no checkout.</div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <a href="/app/login" style="padding: 0.4rem 0.9rem; background: var(--primary); color: #fff; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: 600;">Ir para login</a>
+              <a href="/app/auth/reset/password" style="padding: 0.4rem 0.9rem; border: 1px solid var(--primary); color: var(--primary); border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: 600;">Esqueci minha senha</a>
+            </div>
+          `;
+        } else {
+          errorBox.innerText = "❌ Ocorreu um erro: " + err.message;
+        }
+        errorBox.style.display = 'block';
+        submitBtn.disabled = false;
+        btnText.style.display = 'inline';
+        btnSpinner.style.display = 'none';
+
+        nextStep(4);
+      }
+    });
+
+    // Input Masks
+    const maskCPF = v => { v=v.replace(/\D/g,""); if(v.length>11)v=v.slice(0,11); v=v.replace(/(\d{3})(\d)/,"$1.$2"); v=v.replace(/(\d{3})(\d)/,"$1.$2"); v=v.replace(/(\d{3})(\d{1,2})$/,"$1-$2"); return v; }
+    const maskCNPJ = v => { v=v.replace(/\D/g,""); if(v.length>14)v=v.slice(0,14); v=v.replace(/^(\d{2})(\d)/,"$1.$2"); v=v.replace(/^(\d{2})\.(\d{3})(\d)/,"$1.$2.$3"); v=v.replace(/\.(\d{3})(\d)/,".$1/$2"); v=v.replace(/(\d{4})(\d)/,"$1-$2"); return v; }
+    const maskPhone = v => { v=v.replace(/\D/g,""); if(v.length>11)v=v.slice(0,11); v=v.replace(/^(\d{2})(\d)/g,"($1) $2"); v=v.replace(/(\d)(\d{4})$/,"$1-$2"); return v; }
+    const maskCEP = v => { v=v.replace(/\D/g,""); if(v.length>8)v=v.slice(0,8); v=v.replace(/^(\d{5})(\d)/,"$1-$2"); return v; }
+    const maskCC = v => { v=v.replace(/\D/g,""); if(v.length>16)v=v.slice(0,16); v=v.replace(/(\d{4})(?=\d)/g,"$1 "); return v; }
+
+    document.getElementById('cpf_cnpj').addEventListener('input', e => {
+      const isPJ = document.querySelector('.toggle-btn.active').innerText === 'Pessoa Jurídica';
+      e.target.value = isPJ ? maskCNPJ(e.target.value) : maskCPF(e.target.value);
+    });
+
+    // Validação antecipada (on blur) — usuário não precisa clicar em "Continuar"
+    document.getElementById('cpf_cnpj').addEventListener('blur', (e) => {
+      const val = e.target.value.trim();
+      if (!val) return;
+      const isPJ = document.querySelector('.toggle-btn.active')?.innerText === 'Pessoa Jurídica';
+      const valid = isPJ ? isValidCNPJ(val) : isValidCPF(val);
+      if (!valid) showFieldError(e.target, isPJ ? 'CNPJ inválido' : 'CPF inválido');
+    });
+
+    let lastCheckedEmail = null;
+    document.getElementById('email').addEventListener('input', (e) => {
+      if (e.target.value.trim().toLowerCase() !== lastCheckedEmail) lastCheckedEmail = null;
+    });
+    document.getElementById('email').addEventListener('blur', async (e) => {
+      const email = e.target.value.trim().toLowerCase();
+      if (!email) return;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showFieldError(e.target, 'Informe um e-mail válido');
+        return;
+      }
+      if (email === lastCheckedEmail) return;
+      lastCheckedEmail = email;
+      const result = await checkEmailAvailability(email);
+      if (!result.available && result.reason === 'email_already_registered') {
+        showFieldError(e.target, 'Este e-mail já está em uso');
+      }
+    });
+
+    document.getElementById('phone_personal').addEventListener('blur', (e) => {
+      if (e.target.value.trim() && !isValidPhone(e.target.value)) showFieldError(e.target, 'Telefone inválido — use DDD + número');
+    });
+    document.getElementById('phone').addEventListener('blur', (e) => {
+      if (e.target.value.trim() && !isValidPhone(e.target.value)) showFieldError(e.target, 'Telefone inválido — use DDD + número');
+    });
+    
+    document.getElementById('cc_cpf').addEventListener('input', e => e.target.value = maskCPF(e.target.value));
+    document.getElementById('phone_personal').addEventListener('input', e => e.target.value = maskPhone(e.target.value));
+    document.getElementById('phone').addEventListener('input', e => e.target.value = maskPhone(e.target.value));
+    document.getElementById('cep').addEventListener('input', e => { 
+      e.target.value = maskCEP(e.target.value);
+      if (e.target.value.length === 9) searchCEP(); // Auto-search on full CEP
+    });
+    
+    document.getElementById('cc_number').addEventListener('input', e => { e.target.value = maskCC(e.target.value); updateCardPreview(); });
+
+    // ===== Auto-avanço mês → ano =====
+    document.getElementById('cc_month').addEventListener('input', (e) => {
+      const digits = e.target.value.replace(/\D/g, '').slice(0, 2);
+      e.target.value = digits;
+      // Avança pro ano assim que o mês estiver completo:
+      // - 2 dígitos preenchidos (ex: 01, 04, 12), OU
+      // - 1 dígito > 1 (ex: "2" só pode ser fev, não 20)
+      if (digits.length === 2 || (digits.length === 1 && parseInt(digits, 10) > 1)) {
+        document.getElementById('cc_year').focus();
+      }
+    });
+
+    // Ano aceita só dígitos
+    document.getElementById('cc_year').addEventListener('input', (e) => {
+      const digits = e.target.value.replace(/\D/g, '').slice(0, 2);
+      e.target.value = digits;
+      if (digits.length === 2) {
+        document.getElementById('cc_cvv').focus();
+      }
+    });
+
+    // CVV aceita só dígitos
+    document.getElementById('cc_cvv').addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
+    });
+    
+    // Auto-format initial dummy values
+    document.getElementById('cpf_cnpj').value = maskCPF(document.getElementById('cpf_cnpj').value);
+    document.getElementById('cc_cpf').value = maskCPF(document.getElementById('cc_cpf').value);
+    document.getElementById('phone_personal').value = maskPhone(document.getElementById('phone_personal').value);
+    document.getElementById('phone').value = maskPhone(document.getElementById('phone').value);
+    document.getElementById('cep').value = maskCEP(document.getElementById('cep').value);
+    document.getElementById('cc_number').value = maskCC(document.getElementById('cc_number').value);
+
+    async function searchCEP() {
+      const cepInput = document.getElementById('cep');
+      const cepVal = cepInput.value.replace(/\D/g, '');
+      if (cepVal.length !== 8) return;
+      
+      const btn = document.getElementById('btnBuscarCep');
+      const originalText = btn.innerText;
+      btn.innerText = "Buscando...";
+      btn.disabled = true;
+      
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${cepVal}/json/`);
+        const data = await res.json();
+        if(!data.erro) {
+            document.getElementById('rua').value = data.logradouro || '';
+            document.getElementById('bairro').value = data.bairro || '';
+            document.getElementById('cidade').value = data.localidade || '';
+            document.getElementById('estado').value = data.uf || '';
+            document.getElementById('numero').focus();
+        }
+      } catch(err) {
+        console.error(err);
+      } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    updateCardPreview();
+  </script>
+</body>
+</html>

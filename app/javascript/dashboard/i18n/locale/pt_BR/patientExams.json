@@ -1,0 +1,127 @@
+{
+  "PATIENT_EXAMS": {
+    "HEADER": {
+      "TITLE": "Exames e Imagens",
+      "SUBTITLE": "Galeria clínica, exames laboratoriais e radiografias com suporte a PDF e imagens.",
+      "LIMITS": "Aceitos: imagens (JPG, PNG, WEBP, HEIC) até 5MB · PDF até 10MB · vídeo (MP4, MOV, WEBM) até 20MB",
+      "NEW_FOLDER": "Nova Pasta",
+      "UPLOAD": "Fazer Upload",
+      "UPLOAD_PROGRESS": "Enviando... {progress}%",
+      "UPLOAD_PROGRESS_LABEL": "Enviando arquivo... {progress}%"
+    },
+    "BREADCRUMB": {
+      "ROOT": "Exames",
+      "ALL_FILES": "Todos os arquivos",
+      "FILE_COUNT": "({count} arquivo(s))",
+      "DRAG_HINT": "Arraste para uma pasta ao lado"
+    },
+    "SIDEBAR": {
+      "ALL_FILES": "Todos os arquivos",
+      "FOLDERS_SECTION": "Pastas",
+      "EMPTY": "Nenhuma pasta criada",
+      "PROMOTE_TO_ROOT": "Mover para raiz",
+      "RENAME_TITLE": "Renomear pasta",
+      "DELETE_TITLE": "Excluir pasta",
+      "RENAME_SUBFOLDER_TITLE": "Renomear",
+      "DELETE_SUBFOLDER_TITLE": "Excluir"
+    },
+    "FILTERS": {
+      "ALL": "Todos",
+      "IMAGES": "Imagens",
+      "VIDEOS": "Vídeos",
+      "PDFS": "PDFs",
+      "DOCUMENTS": "Documentos"
+    },
+    "EMPTY": {
+      "TITLE": "Esta pasta está vazia",
+      "HINT": "Faça upload ou arraste um arquivo de outra pasta"
+    },
+    "CARD": {
+      "DEFAULT_NAME": "Arquivo",
+      "LOCK_BADGE": "Arquivo bloqueado",
+      "VIDEO_BADGE": "VÍDEO",
+      "RENAME_TITLE": "Renomear",
+      "DOWNLOAD_TITLE": "Baixar arquivo",
+      "LOCK_TITLE": "Bloquear arquivo",
+      "UNLOCK_TITLE": "Desbloquear arquivo",
+      "DELETE_TITLE": "Excluir"
+    },
+    "MODALS": {
+      "CREATE_FOLDER": {
+        "TITLE": "Nova Pasta",
+        "PLACEHOLDER": "Nome da pasta...",
+        "CANCEL": "Cancelar",
+        "CREATE": "Criar Pasta"
+      },
+      "RENAME_FOLDER": {
+        "TITLE": "Renomear Pasta",
+        "NAME_LABEL": "Nome",
+        "PLACEHOLDER": "Nome da pasta...",
+        "COLOR_LABEL": "Cor da pasta",
+        "PREVIEW_DEFAULT": "Pré-visualização",
+        "CANCEL": "Cancelar",
+        "SAVE": "Salvar"
+      },
+      "DELETE_FOLDER": {
+        "BLOCKED_TITLE": "Exclusão Bloqueada",
+        "BLOCKED_OK": "Entendido",
+        "TITLE": "Excluir Pasta",
+        "CONFIRM_PREFIX": "Tem certeza que deseja excluir a pasta",
+        "CONFIRM_SUFFIX": "? Os arquivos dentro serão movidos para a raiz.",
+        "CANCEL": "Cancelar",
+        "DELETE": "Excluir"
+      },
+      "LOCK_MEDIA": {
+        "LOCK_TITLE": "Bloquear Arquivo",
+        "UNLOCK_TITLE": "Desbloquear Arquivo",
+        "LOCK_MESSAGE": "O arquivo ficará protegido contra exclusão acidental. Você pode desbloqueá-lo a qualquer momento.",
+        "UNLOCK_MESSAGE": "O arquivo voltará a poder ser excluído normalmente. Confirma o desbloqueio?",
+        "CANCEL": "Cancelar",
+        "CONFIRM": "Confirmar"
+      },
+      "DELETE_MEDIA": {
+        "TITLE": "Excluir Arquivo",
+        "CONFIRM_PREFIX": "Tem certeza que deseja excluir o arquivo",
+        "CONFIRM_SUFFIX": "? Esta ação não pode ser desfeita.",
+        "DEFAULT_NAME": "este arquivo",
+        "CANCEL": "Cancelar",
+        "DELETE": "Excluir",
+        "DELETING": "Excluindo..."
+      }
+    },
+    "LIGHTBOX": {
+      "DOWNLOAD": "Abrir em nova aba",
+      "CLOSE": "Fechar",
+      "PDF_TITLE": "Visualizador de PDF"
+    },
+    "MESSAGES": {
+      "LOAD_MEDIA_ERROR": "Erro ao carregar exames e imagens.",
+      "LOAD_FOLDERS_ERROR": "Erro ao carregar pastas de exames.",
+      "REORDER_REVERTED": "Erro ao reordenar pastas. A ordem foi revertida.",
+      "FOLDER_NESTING_LIMIT": "Não é possível criar subpastas dentro de subpastas. Máximo de 1 nível de aninhamento permitido.",
+      "FOLDER_CIRCULAR": "Não é possível criar uma hierarquia circular.",
+      "FOLDER_MOVED_INTO": "\"{name}\" movida para dentro de \"{target}\"",
+      "CREATE_FOLDER_ERROR": "Erro ao criar pasta.",
+      "RENAME_FOLDER_ERROR": "Erro ao renomear pasta.",
+      "DELETE_FOLDER_BLOCKED": "Há um ou mais arquivos bloqueados dentro desta pasta. Desbloqueie-os antes de excluir a pasta.",
+      "DELETE_FOLDER_ERROR": "Erro ao excluir pasta.",
+      "MOVE_SUCCESS": "Arquivo movido com sucesso!",
+      "MOVE_ERROR": "Erro ao mover arquivo.",
+      "LOCK_SUCCESS": "Arquivo bloqueado com sucesso!",
+      "UNLOCK_SUCCESS": "Arquivo desbloqueado com sucesso!",
+      "LOCK_ERROR": "Erro ao alterar bloqueio.",
+      "RENAME_MEDIA_ERROR": "Erro ao renomear arquivo.",
+      "RENAME_DUPLICATE_NAME": "Já existe um arquivo com esse nome nesta pasta. Use um nome diferente.",
+      "DELETE_LOCKED_BLOCKED": "Este arquivo está bloqueado e não pode ser excluído. Desbloqueie-o primeiro.",
+      "DELETE_MEDIA_SUCCESS": "Arquivo excluído com sucesso.",
+      "DELETE_MEDIA_ERROR": "Erro ao excluir arquivo.",
+      "UPLOAD_INVALID_FORMAT": "Formato não suportado. Aceitos: imagem (JPG/PNG/WEBP/HEIC), PDF ou vídeo (MP4/MOV/WEBM).",
+      "UPLOAD_TOO_LARGE": "Arquivo muito grande. Máximo {limit} para {kind}.",
+      "UPLOAD_KIND_IMAGE": "imagem",
+      "UPLOAD_KIND_PDF": "PDF",
+      "UPLOAD_KIND_VIDEO": "vídeo",
+      "UPLOAD_SUCCESS": "Mídia enviada com sucesso!",
+      "UPLOAD_ERROR": "Erro no upload de mídia."
+    }
+  }
+}

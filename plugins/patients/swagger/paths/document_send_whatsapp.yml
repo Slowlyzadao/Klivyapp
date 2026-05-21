@@ -1,0 +1,27 @@
+post:
+  tags:
+    - Documentos
+  summary: Preparar envio via WhatsApp
+  description: |
+    Monta o payload de envio (`whatsapp_payload`) via
+    `Patients::DocumentWhatsappSender`. O envio real para o número do
+    paciente é responsabilidade do frontend (consumir o payload e bater
+    no endpoint apropriado da inbox WhatsApp).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Payload pronto
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string }
+              whatsapp_payload:
+                type: object
+                additionalProperties: true
+    '422':
+      description: Erro ao montar payload (paciente sem telefone, etc)

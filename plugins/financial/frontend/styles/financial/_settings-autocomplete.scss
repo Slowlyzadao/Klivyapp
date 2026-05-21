@@ -1,0 +1,75 @@
+/* ── Autocomplete / Datalist (FinancialSettings.vue) ─────────────────────── */
+.sets-autocomplete-wrapper {
+  position: relative;
+}
+
+.sets-autocomplete-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid rgb(var(--s-100));
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  z-index: 50;
+
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sets-autocomplete-menu::-webkit-scrollbar {
+  display: none;
+}
+
+body.dark .sets-autocomplete-menu {
+  background: rgb(var(--s-800));
+  border-color: rgb(var(--s-700));
+}
+
+.sets-autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sets-autocomplete-item:hover {
+  background: rgb(var(--s-50));
+}
+
+body.dark .sets-autocomplete-item:hover {
+  background: rgb(var(--s-700));
+}
+
+.sets-autocomplete-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.sets-autocomplete-code {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--s-800));
+  min-width: 32px;
+}
+
+body.dark .sets-autocomplete-code {
+  color: rgb(var(--s-200));
+}
+
+.sets-autocomplete-name {
+  font-size: 14px;
+  color: rgb(var(--s-700));
+}
+
+body.dark .sets-autocomplete-name {
+  color: rgb(var(--s-300));
+}

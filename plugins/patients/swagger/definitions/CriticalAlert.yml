@@ -1,0 +1,15 @@
+type: object
+description: |
+  Alerta crítico do paciente (alergia grave, condição clínica, comorbidade)
+  exibido em destaque no prontuário. Pode ser criado manualmente ou
+  automaticamente pelo `AnamnesisFinalizerService` ao detectar condições
+  marcadas como graves na anamnese.
+properties:
+  id: { type: integer }
+  alert_type: { type: string, description: "Categoria livre (alergia, comorbidade, medicacao, etc)" }
+  severity: { type: string, description: "Nível de severidade (baixa, media, alta, critica)" }
+  title: { type: string }
+  description: { type: string, nullable: true }
+  active: { type: boolean }
+  created_by_id: { type: integer, nullable: true }
+  created_at: { type: string, format: date-time }

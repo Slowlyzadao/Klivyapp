@@ -1,0 +1,62 @@
+type: object
+description: |
+  Agendamento exibido na aba do prontuário. **Atenção:** desde a auditoria
+  UX 2026-05-15, esta visão é uma projeção do `AgendaEvent` (não da tabela
+  `patient_appointments` direta). O `index` aplica heurística para casar
+  eventos do paciente: `custom_attributes->>'patient_id'` ou fallback por
+  `contact_id`. Eventos soft-deletados continuam aparecendo (badge próprio +
+  `deletion_reason`/`deletion_note`) para rastreabilidade clínica.
+
+  Operação (cancel/reschedule/no_show) saiu desta aba em 2026-05-15 —
+  agora é exclusiva do calendário principal.
+properties:
+  id: { type: integer, description: "Mesmo valor de `agenda_event_id`" }
+  agenda_event_id: { type: integer }
+  title: { type: string }
+  appointment_type: { type: string, description: "consultation, retorno, avaliacao, etc" }
+  event_type_label: { type: string }
+  priority: { type: string, enum: [low, medium, high] }
+  treatment: { type: string, nullable: true, description: "Nome do procedimento (legado, vindo de `custom_attributes`)" }
+  status:
+    type: string
+    description: |
+      Status efetivo. Quando o evento foi soft-deletado, vira virtual:
+      `deleted_user`/`deleted_patient`/`deleted_reschedule`/`deleted_other`
+      (derivado do `deletion_reason`).
+  scheduled_at: { type: string, format: date-time }
+  ends_at: { type: string, format: date-time }
+  duration_minutes: { type: integer }
+  notes: { type: string, nullable: true }
+  cancellation_reason: { type: string, nullable: true }
+  reschedule_reason: { type: string, nullable: true }
+  deleted_at: { type: string, format: date-time, nullable: true }
+  deletion_reason: { type: string, nullable: true }
+  deletion_reason_label: { type: string, nullable: true }
+  deletion_note: { type: string, nullable: true }
+  deleted_by:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+  recall_sent: { type: boolean }
+  recall_sent_at: { type: string, format: date-time, nullable: true }
+  return_in_days: { type: integer, nullable: true }
+  session_log_id: { type: integer, nullable: true }
+  treatment_plan_id: { type: integer, nullable: true }
+  professional:
+    type: object
+    nullable: true
+    properties:
+      name: { type: string }
+      avatar_url: { type: string, nullable: true }
+  professional_name: { type: string, nullable: true }
+  professional_avatar_url: { type: string, nullable: true }
+  is_upcoming: { type: boolean }
+  is_past: { type: boolean }
+  cancellable:
+    type: boolean
+    description: Sempre `true` no shape — operação real fica no calendário.
+  reschedulable: { type: boolean }
+  created_at: { type: string, format: date-time }
+  updated_at: { type: string, format: date-time }

@@ -1,0 +1,27 @@
+/**
+ * Estilos globais de eventos da Agenda — entry point modular.
+ *
+ * Importado uma vez pelo AgendaDashboard.vue:
+ *   import '@plugins/agenda/frontend/styles/agenda-events.scss';
+ *
+ * A ordem dos @use abaixo respeita a cascata da primeira ocorrência de
+ * cada partial no arquivo monolítico original. Reordenar pode alterar a
+ * resolução de overrides — em particular `_event-type-icon` precisa vir
+ * depois de `_event-card` (libera overflow/z-index no `:hover` do card)
+ * e `_text-color` precisa ser o último (cor de texto via auto-contrast
+ * sobrescreve cores inline dos tiers/popup/etc).
+ */
+
+@use 'agenda-events/event-card';
+@use 'agenda-events/event-tiers';
+@use 'agenda-events/event-common';
+@use 'agenda-events/event-type-icon';
+@use 'agenda-events/event-actions';
+@use 'agenda-events/event-popup';
+@use 'agenda-events/form';
+@use 'agenda-events/modal-buttons';
+@use 'agenda-events/scrollbar';
+@use 'agenda-events/slot-button';
+@use 'agenda-events/datepicker';
+@use 'agenda-events/text-color';
+@use 'agenda-events/year-view';

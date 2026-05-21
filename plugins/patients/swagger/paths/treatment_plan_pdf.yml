@@ -1,0 +1,21 @@
+get:
+  tags:
+    - Planos de Tratamento
+  summary: Download do PDF do plano
+  description: |
+    Serve o blob **atual** do PDF (resolve cache do frontend que poderia
+    apontar pro blob antigo após regeneração). `disposition=inline`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: PDF do plano (binary)
+      content:
+        application/pdf:
+          schema:
+            type: string
+            format: binary
+    '404':
+      description: PDF não gerado para este plano

@@ -1,0 +1,30 @@
+get:
+  tags:
+    - Financeiro · Caixa
+  summary: Listar sessões de caixa
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: bank_account_id
+      in: query
+      schema: { type: integer }
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+    - name: status
+      in: query
+      schema: { type: string }
+  responses:
+    '200':
+      description: Lista (ordem `session_date DESC`, limit 60)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/CashRegister.yml'

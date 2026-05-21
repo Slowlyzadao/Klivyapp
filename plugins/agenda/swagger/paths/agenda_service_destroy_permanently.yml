@@ -1,0 +1,20 @@
+delete:
+  tags:
+    - Serviços da Agenda
+  summary: Hard-delete individual (irreversível)
+  description: |
+    Remove **fisicamente** o serviço do banco. Diferente de
+    `DELETE /agenda_services/:id` (hoje também hard-delete), aceita também
+    serviços já arquivados. Usar quando não há necessidade de auditoria
+    histórica (ex.: serviços de teste). AuditLog dispara `destroy`
+    automaticamente.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Removido
+    '422':
+      description: Falha (constraint do banco)
+    '404':
+      description: Serviço não encontrado

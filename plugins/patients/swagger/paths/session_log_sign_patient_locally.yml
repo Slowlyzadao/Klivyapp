@@ -1,0 +1,32 @@
+post:
+  tags:
+    - Sessões Clínicas
+  summary: Capturar assinatura do paciente (modo local tablet)
+  description: |
+    Independente da assinatura do profissional. Calcula `integrity_hash`
+    SHA256(patient_id, id, blob, signed_at). Audit log `patient_sign_local`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [signature]
+          properties:
+            signature:
+              type: string
+              description: Base64 do PNG/WEBP (máx ~500k chars).
+            device_info: { type: string }
+  responses:
+    '200':
+      description: Assinatura do paciente registrada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/SessionLog.yml'
+    '422':
+      description: Paciente já assinou ou blob vazio

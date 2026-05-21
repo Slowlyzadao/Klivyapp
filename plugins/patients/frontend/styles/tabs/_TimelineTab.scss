@@ -1,0 +1,342 @@
+/* ============================================================
+   TIMELINE TAB — tl-* design system
+   ============================================================ */
+
+/* Filtros de categoria */
+.tl-filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tl-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.tl-filter-btn:hover {
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.04);
+}
+.tl-filter-btn--active {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.25);
+  color: #60a5fa;
+}
+
+/* Dropdown de ordenação */
+.tl-sort-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 50;
+  background: #0f1118;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 6px;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.tl-sort-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: #94a3b8;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+}
+.tl-sort-option:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+}
+.tl-sort-option--active {
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+/* Empty state */
+.tl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+  gap: 12px;
+}
+.tl-empty-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+}
+.tl-empty-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #94a3b8;
+  margin: 0;
+}
+.tl-empty-hint {
+  font-size: 13px;
+  color: #475569;
+  margin: 0;
+  text-align: center;
+}
+
+/* Container principal */
+.tl-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.tl-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Separador de data */
+.tl-date-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.tl-date-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.tl-date-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  padding: 3px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 99px;
+}
+
+/* Container de eventos do grupo */
+.tl-events {
+  position: relative;
+  padding-left: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.tl-vline {
+  position: absolute;
+  left: 14px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.tl-event-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.tl-event-icon {
+  position: absolute;
+  left: -36px;
+  top: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 99px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+/* Variantes de ícone semântico */
+.tl-icon--indigo { background: #16183a; box-shadow: 0 0 0 1px #4f52a0; color: #a5b4fc; }
+.tl-icon--blue { background: #0f1f35; box-shadow: 0 0 0 1px #3b6ea8; color: #93c5fd; }
+.tl-icon--orange { background: #1e120a; box-shadow: 0 0 0 1px #8b5a2b; color: #fdba74; }
+.tl-icon--yellow { background: #1b1506; box-shadow: 0 0 0 1px #7c6516; color: #fde68a; }
+.tl-icon--emerald { background: #0a1f18; box-shadow: 0 0 0 1px #276c52; color: #6ee7b7; }
+.tl-icon--red { background: #1e0d0d; box-shadow: 0 0 0 1px #7f2020; color: #fca5a5; }
+.tl-icon--rose { background: #1e0d13; box-shadow: 0 0 0 1px #7f2040; color: #fda4af; }
+.tl-icon--cyan { background: #0a1e25; box-shadow: 0 0 0 1px #1e6e7e; color: #67e8f9; }
+.tl-icon--teal { background: #0a1e1d; box-shadow: 0 0 0 1px #1e6e68; color: #5eead4; }
+.tl-icon--violet { background: #140e25; box-shadow: 0 0 0 1px #5837a0; color: #c4b5fd; }
+.tl-icon--sky { background: #0b1c2c; box-shadow: 0 0 0 1px #1e5f8c; color: #7dd3fc; }
+.tl-icon--purple { background: #180d2a; box-shadow: 0 0 0 1px #6a2e9e; color: #d8b4fe; }
+.tl-icon--green { background: #0c1e12; box-shadow: 0 0 0 1px #235c34; color: #86efac; }
+.tl-icon--amber { background: #1c1106; box-shadow: 0 0 0 1px #7c4e12; color: #fcd34d; }
+.tl-icon--slate { background: #141820; box-shadow: 0 0 0 1px #3a4455; color: #94a3b8; }
+.tl-icon--lime { background: #111a06; box-shadow: 0 0 0 1px #4a6a14; color: #bef264; }
+
+/* Card do evento */
+.tl-event-card {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 10px 14px;
+  transition: background 0.15s, border-color 0.15s;
+  min-width: 0;
+}
+.tl-event-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.tl-event-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.tl-event-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 5px;
+}
+
+.tl-badge--indigo { background: #1e2047; color: #a5b4fc; }
+.tl-badge--blue { background: #132440; color: #93c5fd; }
+.tl-badge--orange { background: #241508; color: #fdba74; }
+.tl-badge--yellow { background: #201a08; color: #fde68a; }
+.tl-badge--emerald { background: #0c2219; color: #6ee7b7; }
+.tl-badge--red { background: #220f0f; color: #fca5a5; }
+.tl-badge--rose { background: #220f16; color: #fda4af; }
+.tl-badge--cyan { background: #0c2229; color: #67e8f9; }
+.tl-badge--teal { background: #0c2221; color: #5eead4; }
+.tl-badge--violet { background: #170f2a; color: #c4b5fd; }
+.tl-badge--sky { background: #0d2033; color: #7dd3fc; }
+.tl-badge--purple { background: #1b0e2f; color: #d8b4fe; }
+.tl-badge--green { background: #0e2215; color: #86efac; }
+.tl-badge--amber { background: #211308; color: #fcd34d; }
+.tl-badge--slate { background: #171c25; color: #94a3b8; }
+.tl-badge--lime { background: #131e07; color: #bef264; }
+
+.tl-event-time {
+  font-size: 11px;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tl-event-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #cbd5e1;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.tl-event-meta {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 24px;
+}
+.tl-meta-item {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 12px;
+}
+.tl-meta-key {
+  color: #475569;
+  text-transform: capitalize;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tl-meta-key::after {
+  content: ':';
+}
+.tl-meta-val {
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tl-event-actor {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #334155;
+}
+
+/* Sentinel de carregamento progressivo (IntersectionObserver) */
+.tl-load-more-sentinel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* Marcador de início do histórico */
+.tl-history-end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 8px;
+}
+.tl-history-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.tl-history-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+.tl-history-label {
+  font-size: 11px;
+  color: #334155;
+  white-space: nowrap;
+}

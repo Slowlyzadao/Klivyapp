@@ -1,0 +1,27 @@
+type: object
+description: |
+  Despesa (`Financial::Expense`). Pode ser criada manualmente, vir de uma
+  `RecurringExpense` (`financial_recurring_expense_id`) ou de uma comissão
+  paga (`financial_commission_entry_id`). Status `pago` é imutável (editar/excluir
+  bloqueado — use `POST /reverse` para estornar).
+properties:
+  id: { type: integer }
+  description: { type: string }
+  category_id: { type: integer, nullable: true, description: "FK `financial_dre_category_id`" }
+  bank_account_id: { type: integer, nullable: true, description: "FK `financial_bank_account_id`" }
+  recurring_id: { type: integer, nullable: true }
+  commission_entry_id: { type: integer, nullable: true }
+  supplier_name: { type: string, nullable: true }
+  status:
+    type: string
+    enum: [pendente, vencido, pago, cancelado]
+  amount_cents: { type: integer }
+  paid_amount_cents: { type: integer }
+  remaining_cents: { type: integer }
+  payment_method: { type: string, nullable: true }
+  competence_date: { type: string, format: date }
+  due_date: { type: string, format: date }
+  paid_at: { type: string, format: date-time, nullable: true }
+  installments_count: { type: integer, nullable: true }
+  installment_number: { type: integer, nullable: true }
+  notes: { type: string, nullable: true }

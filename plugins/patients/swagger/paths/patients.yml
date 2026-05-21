@@ -1,0 +1,121 @@
+get:
+  tags:
+    - Pacientes
+  summary: Listar pacientes
+  description: |
+    Lista pacientes ativos (`deleted_at IS NULL`). Suporta busca textual,
+    filtros, ordenação e paginação. Retorna campos agregados pré-computados
+    (sem N+1): `last_visit`, `procedures_count`, `balance_due_cents` e
+    `critical_alerts`.
+
+    A busca por `q` é multi-campo: nome/email (`ILIKE`) sempre; se `q` contém
+    ≥ 3 dígitos, casa também por telefone e CPF (`LIKE` em campos
+    normalizados sem máscara).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: q
+      in: query
+      description: Texto livre (nome/email; telefone/CPF se houver 3+ dígitos).
+      schema:
+        type: string
+    - name: status
+      in: query
+      description: Filtra por `patient_status` exato.
+      schema:
+        type: string
+        enum: [novo, ativo, inativo, faltoso, alta, arquivado]
+    - name: professional_id
+      in: query
+      description: Filtra por `responsible_professional_id`.
+      schema:
+        type: integer
+    - name: needs_recall
+      in: query
+      description: Quando `true`, lista só pacientes com `needs_recall=true`.
+      schema:
+        type: string
+        enum: ["true", "false"]
+    - name: sort
+      in: query
+      schema:
+        type: string
+        enum: [name_asc, name_desc, created_at_desc, created_at_asc]
+        default: name_asc
+    - name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    - name: per_page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 25
+  responses:
+    '200':
+      description: Lista paginada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              payload:
+                type: array
+                items:
+                  $ref: '../definitions/Patient.yml'
+              meta:
+                type: object
+                properties:
+                  total_count: { type: integer }
+                  current_page: { type: integer }
+                  total_pages: { type: integer }
+post:
+  tags:
+    - Pacientes
+  summary: Criar paciente
+  description: |
+    Valida primeiro (antes de tocar em `Contact`) — evita criar contato
+    órfão quando o paciente é inválido. Se `contact_id` não vier no payload,
+    o backend procura/cria `Contact` pelo telefone normalizado
+    (`+55DDDNNNNNNNNN`) e linka. Audit log `create` é registrado.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [patient]
+          properties:
+            patient:
+              type: object
+              required: [name]
+              allOf:
+                - $ref: '../definitions/Patient.yml'
+              description: |
+                Campos editáveis. Veja `Patient` para o shape completo. Note
+                que `avatar` aceita upload (multipart) E `avatar_url` (string).
+  responses:
+    '201':
+      description: Paciente criado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              payload:
+                $ref: '../definitions/Patient.yml'
+    '422':
+      description: Erros de validação (CPF formato, guardian incompleto, etc)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              errors:
+                type: array
+                items: { type: string }

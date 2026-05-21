@@ -1,0 +1,39 @@
+post:
+  tags:
+    - Recall
+  summary: Preparar payload de recall (WhatsApp)
+  description: |
+    Monta o payload de mensagem via `Patients::RecallSender`. O envio
+    real para o número do paciente é responsabilidade do frontend
+    (consumir o payload e bater no endpoint da inbox).
+
+    Aceita `message` opcional para override do template padrão.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              description: Texto que substitui o template padrão.
+  responses:
+    '201':
+      description: Payload pronto
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string }
+              payload:
+                type: object
+                additionalProperties: true
+              patient_id: { type: integer }
+              needs_recall_updated: { type: boolean }
+    '422':
+      description: Erro (paciente sem telefone, sem inbox WhatsApp, etc)

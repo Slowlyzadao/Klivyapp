@@ -1,0 +1,21 @@
+patch:
+  tags:
+    - Sessões Clínicas
+  summary: Assinar sessão (profissional)
+  description: |
+    Finaliza via `Patients::SessionLogFinalizer`. Após assinatura, conteúdo
+    clínico fica imutável; só campos da `EDITABLE_AFTER_SIGN` podem mudar
+    (assinatura do paciente, errata).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Assinada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/SessionLog.yml'
+    '403':
+      description: Já assinada ou janela de edição expirou

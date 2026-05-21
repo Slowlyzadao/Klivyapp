@@ -1,0 +1,67 @@
+# ignorar auth do whatsapp (credenciais Baileys multi-tenant)
+lib/whatsapp/auth_info/*
+lib/whatsapp/sessions/*
+!lib/whatsapp/sessions/.gitkeep
+lib/whatsapp/media_cache/*
+node_modules
+/log/*
+/tmp/*
+/storage/*
+/public/assets
+/public/packs
+/public/vite
+/public/vite-dev
+/public/vite-test
+.bundle
+.DS_Store
+.env*
+!.env.example
+log/*.log
+
+# ----------------- ARQUIVOS TEMPORÁRIOS & LOGS NA RAIZ ----------------- #
+# Logs na raiz do projeto (ex: rails.log, foreman.log, vite.log, etc)
+/*.log
+
+# Textos e logs temporários soltos
+/temp*.txt
+/win_temp.txt
+/chatwoot_msgs*.txt
+/*.patch
+
+# Node / PNPM Debug Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ----------------- FERRAMENTAS DE IA & IDEs ----------------- #
+/.agent/
+/.agents/
+/.qwen/
+/.windsurf/
+/CLAUDE.md
+/changelog_Qwen.md
+/.vscode/
+
+# Node/PNPM stores e caches
+.pnpm-store/
+
+# Ignorar o Alternate Data Streams do Windows (Mark of the Web) no WSL
+# U+F03A é o caractere que o WSL usa para representar ':' de ADS do NTFS
+*:Zone.Identifier
+*Zone.Identifier
+*Zone.Identifier
+
+# Claude Source Control (auto-generated)
+.claude/file-attribution.jsonl
+.claude/session-names.json
+.claude/staged-files.json
+.claude/session-pids.json
+.claude/hooks/log-attribution.sh
+
+# ----------------- NOTAS LOCAIS COM CREDENCIAIS ----------------- #
+# Nunca commitar arquivos de notas com tokens / chaves
+docs/R2_Cloudlare_*.md
+docs/R2_Cloudflare_*.md
+docs/**/credentials*.md
+docs/**/secrets*.md

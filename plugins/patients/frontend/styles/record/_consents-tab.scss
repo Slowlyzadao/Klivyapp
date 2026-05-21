@@ -1,0 +1,64 @@
+@use "../variables" as *;
+
+/* ============================================================
+   ABA: CONSENTIMENTOS — consent-* system
+   ============================================================ */
+
+.consent-form-header {
+  color: rgb(var(--slate-12)) !important;
+  border-bottom: 1px solid rgb(var(--slate-4)) !important;
+}
+
+/* KPI cards */
+.consent-kpi-card {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+.consent-kpi-card--green { background: rgba($brand-success,0.07) !important; border-color: rgba($brand-success,0.15) !important; }
+.consent-kpi-card--amber { background: rgba($brand-amber,0.07) !important; border-color: rgba($brand-amber,0.15) !important; }
+.consent-kpi-card--red { background: rgba($brand-danger,0.07) !important; border-color: rgba($brand-danger,0.15) !important; }
+
+.consent-kpi-icon { background: rgb(var(--slate-3)) !important; color: rgb(var(--slate-9)) !important; }
+.consent-kpi-icon--neutral { color: rgb(var(--slate-9)) !important; }
+.consent-kpi-icon--green { color: $brand-success !important; }
+.consent-kpi-icon--amber { color: $brand-amber !important; }
+.consent-kpi-icon--red { color: $brand-danger !important; }
+
+.consent-kpi-label--green { color: $brand-success !important; }
+.consent-kpi-label--amber { color: $brand-amber !important; }
+.consent-kpi-label--red { color: $brand-danger !important; }
+
+.consent-kpi-value--green,
+.consent-kpi-value--amber,
+.consent-kpi-value--red { color: rgb(var(--slate-12)) !important; }
+
+/* Canvas de assinatura */
+.consent-sign-modal,
+.consent-view-modal {
+  background: rgb(var(--slate-1)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+.consent-canvas-wrap {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+.consent-canvas {
+  background: rgb(var(--slate-1)) !important;
+}
+.consent-canvas-hint { color: rgb(var(--slate-8)) !important; }
+.consent-canvas-footer { border-top: 1px solid rgb(var(--slate-4)) !important; }
+.consent-hash-hint { color: rgb(var(--slate-8)) !important; }
+
+/* Audit rows */
+.consent-audit-block { border-top: 1px solid rgb(var(--slate-4)) !important; }
+.consent-audit-title { color: rgb(var(--slate-9)) !important; }
+.consent-audit-row { color: rgb(var(--slate-11)) !important; }
+.consent-audit-row--green { color: $brand-success !important; background: rgba($brand-success,0.06) !important; }
+.consent-audit-row--muted { color: rgb(var(--slate-8)) !important; }
+
+.consent-sig-frame {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+.consent-sig-label { color: rgb(var(--slate-8)) !important; }
+

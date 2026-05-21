@@ -1,0 +1,33 @@
+tags:
+  - Teams
+operationId: create-a-team
+summary: Create a team
+security:
+  - userApiKey: []
+description: |
+  Create a team in the account.
+
+  **Authorization** (`TeamPolicy#create?`, desde 1.6.1.21 — auditoria A-5):
+  `administrator` OR Klivy `settings.teams_create`. Mesmo padrão pra
+  `update` (`teams_edit`) e `delete` (`teams_delete`).
+parameters:
+  - $ref: '#/components/parameters/account_id'
+requestBody:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/team_create_update_payload'
+responses:
+  '200':
+    description: Success
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/team'
+  '401':
+    description: Unauthorized
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/bad_request_error'

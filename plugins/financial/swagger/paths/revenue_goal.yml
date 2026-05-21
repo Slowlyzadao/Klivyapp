@@ -1,0 +1,9 @@
+delete:
+  tags:
+    - Financeiro · Metas de Receita
+  summary: Excluir meta
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204': { description: "Removida" }

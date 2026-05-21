@@ -1,0 +1,17 @@
+get:
+  tags:
+    - Permissões (boot)
+  summary: Permissões do usuário corrente
+  description: |
+    Singleton — endpoint chamado pelo frontend no **boot** para popular
+    o store de permissões. Devolve as 3 camadas do `BeclinicPermissible`:
+    papel base, permissões consolidadas e `KlivyRole` aplicada.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Snapshot de permissões
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/BeclinicPermissions.yml'

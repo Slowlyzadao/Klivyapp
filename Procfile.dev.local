@@ -1,0 +1,33 @@
+backend: bin/rails s -b 0.0.0.0 -p 3000
+worker: bundle exec sidekiq -C config/sidekiq.yml
+vite: bin/vite dev
+
+# Sprint L — sala WebRTC. Bind 0.0.0.0 pra cloudflared poder tunelar.
+# --config injeta webhook.urls (sem isso, Rails nunca sabe quando o Egress
+# termina e o pipeline de transcrição/evolução nunca dispara).
+livekit: livekit-server --dev --config plugins/telemed/dev-tools/livekit-server/config.yaml --bind 0.0.0.0
+
+# Sprint L — MinIO (S3-compatible) pra storage local de gravações.
+# Egress envia OGGs aqui via S3 API; RecordingStorage lê via mesmo client AWS.
+# Credenciais default: minioadmin/minioadmin (sobrescritas no .env).
+# Bucket é criado automaticamente pelo plugins/telemed/bin/dev-bootstrap.
+minio: docker run --rm --name klivy-minio -p 9000:9000 -p 9001:9001 -v "$PWD/tmp/minio-data:/data" -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin minio/minio:latest server /data --console-address ":9001"
+
+# Sprint L — LiveKit Egress (gravação). Conecta no LiveKit local via
+# host.docker.internal:7880, escreve no MinIO via S3 (endpoint vem do
+# RecordingOrchestrator). Webhook do Egress chega no Rails via host.docker.internal:3000.
+livekit-egress: docker run --rm --name klivy-livekit-egress -v "$PWD/plugins/telemed/dev-tools/livekit-egress/config.yaml:/etc/egress.yaml:ro" -e EGRESS_CONFIG_FILE=/etc/egress.yaml --add-host=host.docker.internal:host-gateway livekit/egress:latest
+
+# Sprint L — cloudflared tunnel pro Rails. Expõe portal pra paciente
+# acessar do celular via internet. URL aleatória é capturada pelo
+# plugins/telemed/bin/dev-bootstrap e gravada em tmp/telemed-tunnels.json.
+tunnel-rails: cloudflared tunnel --no-autoupdate --url http://localhost:3000 --logfile tmp/cf-rails.log --loglevel info
+
+# Sprint L — cloudflared tunnel pro LiveKit WebSocket (signaling).
+# Paciente conecta na sala via wss://[url].trycloudflare.com.
+tunnel-livekit: cloudflared tunnel --no-autoupdate --url http://localhost:7880 --logfile tmp/cf-livekit.log --loglevel info
+
+# Sprint L — bootstrap dev: cria bucket MinIO + vigia URLs dos túneis +
+# escreve tmp/telemed-tunnels.json (lido pelo CredentialsResolver) +
+# imprime URL pública pro celular da outra pessoa.
+telemed-bootstrap: plugins/telemed/bin/dev-bootstrap

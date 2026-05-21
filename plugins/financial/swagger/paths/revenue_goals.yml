@@ -1,0 +1,21 @@
+get:
+  tags:
+    - Financeiro · Metas de Receita
+  summary: Listar metas
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: year
+      in: query
+      schema: { type: integer }
+  responses:
+    '200':
+      description: Lista (ordem `year, period, month, quarter`)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/RevenueGoal.yml'

@@ -1,0 +1,67 @@
+type: object
+description: |
+  Anamnese clínica (questionário de admissão). Após `finalize`, fica
+  imutável e dispara `AnamnesisFinalizerService` — que pode criar
+  `CriticalAlert`s automaticamente a partir de alergias/condições.
+  Versionada via `version_number`.
+properties:
+  id: { type: integer }
+  patient_id: { type: integer }
+  account_id: { type: integer }
+  professional_id: { type: integer, nullable: true }
+  form_template_id: { type: integer, nullable: true }
+  version_number: { type: integer }
+  specialty: { type: string, nullable: true }
+  status: { type: string, description: "Ex.: rascunho, finalized" }
+  finalized_at: { type: string, format: date-time, nullable: true }
+  chief_complaint: { type: string, nullable: true, description: "Queixa principal" }
+  medical_history:
+    type: object
+    description: |
+      Boolean flags por condição (diabetes, hypertension, oncology, hepatitis,
+      has_implants, bleeding_disorder, pregnant, other text).
+    additionalProperties: true
+  allergies:
+    type: array
+    items:
+      type: object
+      properties:
+        name: { type: string }
+        substance: { type: string }
+        severity: { type: string }
+        reaction: { type: string }
+        description: { type: string }
+  current_medications:
+    type: array
+    items:
+      type: object
+      properties:
+        name: { type: string }
+        dosage: { type: string }
+        frequency: { type: string }
+        alert: { type: boolean }
+        interaction_risk: { type: string }
+  surgical_history: { type: string, nullable: true }
+  family_history: { type: string, nullable: true }
+  pregnancy:
+    type: object
+    additionalProperties: true
+  relevant_habits:
+    type: object
+    description: "Tabagismo, álcool, esportes, etc"
+    additionalProperties: true
+  contraindications:
+    type: array
+    items:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        details: { type: string }
+  additional_notes: { type: string, nullable: true }
+  pdf_url:
+    type: string
+    nullable: true
+    description: URL do PDF (quando anexado).
+  created_at: { type: string, format: date-time }
+  updated_at: { type: string, format: date-time }

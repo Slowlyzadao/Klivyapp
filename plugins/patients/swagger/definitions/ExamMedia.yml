@@ -1,0 +1,45 @@
+type: object
+description: |
+  Mídia/exame do paciente (imagem, RX, vídeo, PDF). Soft-delete com purge
+  físico em 30 dias via `ExamMediaPurgeJob`. URL é assinada (Active Storage)
+  com curta duração. Pode ser organizado em `ExamFolder`s.
+properties:
+  id: { type: integer }
+  account_id: { type: integer }
+  patient_id: { type: integer }
+  session_log_id: { type: integer, nullable: true }
+  appointment_id: { type: integer, nullable: true }
+  exam_folder_id: { type: integer, nullable: true }
+  folder_id:
+    type: integer
+    nullable: true
+    description: Alias de `exam_folder_id`.
+  locked:
+    type: boolean
+    description: Quando true, bloqueia exclusão (precisa desbloquear antes).
+  category:
+    type: string
+    description: "Ex.: rx, foto_clinica, atestado, outro"
+  file_name: { type: string, nullable: true }
+  mime_type: { type: string, nullable: true }
+  file_size: { type: integer, nullable: true, description: "Bytes" }
+  description: { type: string, nullable: true }
+  tags:
+    type: array
+    items: { type: string }
+  url:
+    type: string
+    nullable: true
+    description: URL assinada do arquivo original (Active Storage).
+  thumbnail_url:
+    type: string
+    nullable: true
+    description: Thumbnail (quando aplicável — imagens).
+  created_at: { type: string, format: date-time }
+  updated_at: { type: string, format: date-time }
+  uploaded_by:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }

@@ -1,0 +1,2052 @@
+/* ═══════════════════════════════════════════
+   FINANCEIRO — estilos exclusivos
+═══════════════════════════════════════════ */
+
+/* KPI grid — responsivo:
+     desktop ≥1280px → 5 colunas (todos KPIs em uma linha)
+     1024-1280px     → 3 colunas (laptop estreito)
+     <1024px         → carrossel horizontal com scroll-snap (mobile/tablet)
+*/
+.fin-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1280px) {
+  .fin-kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Mobile/tablet: carrossel horizontal contido NO PRÓPRIO container.
+   ESTRATÉGIA DEFINITIVA — `display: grid` com `grid-auto-flow: column`
+   + `contain: inline-size`:
+     • Grid auto-flow é MAIS previsível que flex pra carrossel — o
+       browser calcula a largura de cada coluna baseada em
+       `grid-auto-columns`, sem fit-content intrínseco como flex faz.
+     • `contain: inline-size` força o browser a calcular o tamanho
+       horizontal pelo que o container declara (`width: 100%`), não
+       pelo conteúdo dos filhos. ESSA é a propriedade que impede
+       definitivamente o vazamento.
+     • Removido o `display: flex` que tinha comportamento intrínseco
+       de expandir pra acomodar a soma das larguras dos children. */
+@media (max-width: 1024px) {
+  .fin-kpi-grid {
+    display: grid;
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100% - 24px) / 2.5);
+    gap: 12px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+    scroll-padding: 0 12px;
+    contain: inline-size;
+
+    /* Fade na borda direita — indica visualmente que tem mais conteúdo
+       pra deslizar. Usa `mask-image` (não depende da cor de fundo do
+       tema, funciona em light + dark). Os cards na ponta direita
+       ficam progressivamente transparentes. */
+    -webkit-mask-image: linear-gradient(
+      to right,
+      black 0,
+      black calc(100% - 50px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      black 0,
+      black calc(100% - 50px),
+      transparent 100%
+    );
+
+    /* Em browsers que suportam scroll-driven animations (Chrome 115+,
+       Edge 115+), o fade SOME quando o scroll atinge o final. Em
+       browsers antigos, o fade fica permanente (graceful degradation —
+       funciona sempre, só perde a animação extra). */
+    @supports (animation-timeline: scroll()) {
+      animation: fin-kpi-mask-end linear both;
+      animation-timeline: scroll(self inline);
+      animation-range: 85% 100%;
+    }
+
+    &::-webkit-scrollbar {
+      height: 4px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.35);
+      border-radius: 2px;
+    }
+  }
+
+  /* Quando chega ao final do scroll: mask vira opaco completo
+     (sem fade). Snap visual de fade → sem-fade nos últimos 15%. */
+  @keyframes fin-kpi-mask-end {
+    to {
+      -webkit-mask-image: linear-gradient(to right, black 100%, transparent 100%);
+      mask-image: linear-gradient(to right, black 100%, transparent 100%);
+    }
+  }
+
+  /* Em modo grid auto-flow column, propriedades flex não se aplicam.
+     Cada card vira uma coluna do grid com largura definida em
+     `grid-auto-columns`. */
+  .fin-kpi-card {
+    min-width: 0;
+    max-width: 100%;
+    scroll-snap-align: start;
+  }
+}
+
+/* Em telas muito estreitas (<420px), mostrar ~1.7 cards (mais
+   legibilidade individual com indicação clara de scroll). */
+@media (max-width: 420px) {
+  .fin-kpi-grid {
+    grid-auto-columns: calc((100% - 12px) / 1.7);
+  }
+}
+
+/* KPI card base — premium look com gradient diagonal + transition de hover.
+   Light mode: cores fortes pra serem perceptíveis sobre fundo branco.
+   Dark mode: alphas reduzidas via override `:root.dark` (mantém elegância
+   sem ofuscar em fundo escuro). */
+.fin-kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  background: linear-gradient(
+    135deg,
+    rgba(148, 163, 184, 0.16) 0%,
+    rgba(148, 163, 184, 0.06) 100%
+  );
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 14px;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.18s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  /* Brilho sutil no canto superior esquerdo (efeito "glass"/glow) */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.08) 0%,
+      transparent 50%
+    );
+    pointer-events: none;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    border-color: rgba(148, 163, 184, 0.45);
+  }
+}
+
+/* Variantes de cor com gradient mais saturado em LIGHT mode (default) */
+.fin-kpi-card--green {
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.28) 0%,
+    rgba(16, 185, 129, 0.08) 100%
+  );
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow:
+    0 1px 3px rgba(16, 185, 129, 0.12),
+    0 0 0 1px rgba(16, 185, 129, 0.06) inset;
+
+  &:hover {
+    border-color: rgba(16, 185, 129, 0.65);
+    box-shadow:
+      0 8px 24px rgba(16, 185, 129, 0.25),
+      0 0 0 1px rgba(16, 185, 129, 0.12) inset;
+  }
+}
+
+.fin-kpi-card--amber {
+  background: linear-gradient(
+    135deg,
+    rgba(245, 158, 11, 0.3) 0%,
+    rgba(245, 158, 11, 0.08) 100%
+  );
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow:
+    0 1px 3px rgba(245, 158, 11, 0.14),
+    0 0 0 1px rgba(245, 158, 11, 0.06) inset;
+
+  &:hover {
+    border-color: rgba(245, 158, 11, 0.65);
+    box-shadow:
+      0 8px 24px rgba(245, 158, 11, 0.28),
+      0 0 0 1px rgba(245, 158, 11, 0.12) inset;
+  }
+}
+
+.fin-kpi-card--red {
+  background: linear-gradient(
+    135deg,
+    rgba(220, 38, 38, 0.26) 0%,
+    rgba(220, 38, 38, 0.07) 100%
+  );
+  border-color: rgba(220, 38, 38, 0.5);
+  box-shadow:
+    0 1px 3px rgba(220, 38, 38, 0.12),
+    0 0 0 1px rgba(220, 38, 38, 0.06) inset;
+
+  &:hover {
+    border-color: rgba(220, 38, 38, 0.65);
+    box-shadow:
+      0 8px 24px rgba(220, 38, 38, 0.25),
+      0 0 0 1px rgba(220, 38, 38, 0.12) inset;
+  }
+}
+
+.fin-kpi-card--blue {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.28) 0%,
+    rgba(59, 130, 246, 0.08) 100%
+  );
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow:
+    0 1px 3px rgba(59, 130, 246, 0.12),
+    0 0 0 1px rgba(59, 130, 246, 0.06) inset;
+
+  &:hover {
+    border-color: rgba(59, 130, 246, 0.65);
+    box-shadow:
+      0 8px 24px rgba(59, 130, 246, 0.25),
+      0 0 0 1px rgba(59, 130, 246, 0.12) inset;
+  }
+}
+
+/* Dark mode: atenua alphas pra preservar elegância em fundo escuro
+   (sem ofuscar). As cores ainda são perceptíveis, só mais sutis. */
+:root.dark .fin-kpi-card {
+  background: linear-gradient(
+    135deg,
+    rgba(148, 163, 184, 0.09) 0%,
+    rgba(148, 163, 184, 0.03) 100%
+  );
+  border-color: rgba(148, 163, 184, 0.22);
+
+  &:hover {
+    border-color: rgba(148, 163, 184, 0.35);
+  }
+}
+
+:root.dark .fin-kpi-card--green {
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.16) 0%,
+    rgba(16, 185, 129, 0.04) 100%
+  );
+  border-color: rgba(16, 185, 129, 0.32);
+
+  &:hover {
+    border-color: rgba(16, 185, 129, 0.5);
+  }
+}
+
+:root.dark .fin-kpi-card--amber {
+  background: linear-gradient(
+    135deg,
+    rgba(245, 158, 11, 0.16) 0%,
+    rgba(245, 158, 11, 0.04) 100%
+  );
+  border-color: rgba(245, 158, 11, 0.32);
+
+  &:hover {
+    border-color: rgba(245, 158, 11, 0.5);
+  }
+}
+
+:root.dark .fin-kpi-card--red {
+  background: linear-gradient(
+    135deg,
+    rgba(220, 38, 38, 0.16) 0%,
+    rgba(220, 38, 38, 0.04) 100%
+  );
+  border-color: rgba(220, 38, 38, 0.32);
+
+  &:hover {
+    border-color: rgba(220, 38, 38, 0.5);
+  }
+}
+
+:root.dark .fin-kpi-card--blue {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.16) 0%,
+    rgba(59, 130, 246, 0.04) 100%
+  );
+  border-color: rgba(59, 130, 246, 0.32);
+
+  &:hover {
+    border-color: rgba(59, 130, 246, 0.5);
+  }
+}
+
+/* KPI ícone — quadrado com gradient + ring sutil */
+.fin-kpi-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(148, 163, 184, 0.22),
+    rgba(148, 163, 184, 0.1)
+  );
+  color: rgba(100, 116, 139, 1);
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.15);
+  margin-bottom: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+:root.dark .fin-kpi-icon {
+  color: rgba(203, 213, 225, 1);
+}
+
+.fin-kpi-icon--green {
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.28),
+    rgba(16, 185, 129, 0.12)
+  );
+  color: #047857;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2);
+}
+
+:root.dark .fin-kpi-icon--green {
+  color: #6ee7b7;
+}
+
+.fin-kpi-icon--amber {
+  background: linear-gradient(
+    135deg,
+    rgba(245, 158, 11, 0.28),
+    rgba(245, 158, 11, 0.12)
+  );
+  color: #b45309;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.2);
+}
+
+:root.dark .fin-kpi-icon--amber {
+  color: #fcd34d;
+}
+
+.fin-kpi-icon--red {
+  background: linear-gradient(
+    135deg,
+    rgba(220, 38, 38, 0.28),
+    rgba(220, 38, 38, 0.12)
+  );
+  color: #b91c1c;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.2);
+}
+
+:root.dark .fin-kpi-icon--red {
+  color: #fca5a5;
+}
+
+.fin-kpi-icon--blue {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.28),
+    rgba(59, 130, 246, 0.12)
+  );
+  color: #1d4ed8;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
+}
+
+:root.dark .fin-kpi-icon--blue {
+  color: #93c5fd;
+}
+
+.fin-kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgb(var(--slate-11));
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.fin-kpi-value {
+  font-size: 21px;
+  font-weight: 700;
+  color: rgb(var(--slate-12));
+  margin: 2px 0 0;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  position: relative;
+  z-index: 1;
+  /* leve text-shadow pra dar profundidade sem ser perceptível */
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.03);
+}
+
+.fin-kpi-hint {
+  font-size: 12px;
+  color: rgb(var(--slate-10));
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.fin-kpi-value--danger {
+  color: rgb(var(--ruby-10));
+}
+
+/* ── Tabs internas ──
+   O indicador ativo é uma linha reta (sem border-radius no elemento).
+   O próprio <button> não tem border-radius para garantir que o underline
+   apareça como linha plana de ponta a ponta. */
+.fin-tabs-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  border-bottom: 1px solid rgb(var(--slate-4));
+  margin-bottom: 16px;
+}
+.fin-tabs-list {
+  display: flex;
+  gap: 0;
+}
+
+.fin-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  /* slate-400 em rest, slate-200 em hover, blue-400 em active. Era slate-500
+     em rest (cinza muito apagado num dark mode bem escuro). */
+  color: rgb(var(--slate-10));
+  background: transparent;
+  border: none;
+  border-radius: 0; /* sem arredondamento — underline é linha reta */
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+  white-space: nowrap;
+  margin-bottom: -1px;
+}
+.fin-tab:hover {
+  color: rgb(var(--slate-11));
+}
+.fin-tab--active {
+  color: rgb(var(--blue-10));
+  border-bottom-color: rgb(var(--blue-9));
+}
+
+.fin-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 99px;
+  background: rgb(var(--blue-4));
+  color: rgb(var(--blue-11)); /* blue-300 — era slate-500 sem destaque */
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* ── Filtros ──
+   Margem inferior para o grupo não tocar a borda divisória */
+.fin-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--slate-5));
+  border-radius: 8px;
+  padding: 3px;
+  margin-bottom: 8px; /* afasta da linha divisória abaixo */
+}
+.fin-filter-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgb(var(--slate-10));
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition:
+    background 0.13s,
+    color 0.13s;
+  white-space: nowrap;
+}
+.fin-filter-btn:hover {
+  color: rgb(var(--slate-11));
+}
+.fin-filter-btn--active {
+  background: rgb(var(--blue-4));
+  color: rgb(var(--blue-11));
+}
+
+/* ── Tabela de transações ──
+   Zebra striping: linha par (lighter), linha ímpar (base).
+   Alinhamento vertical central em todas as células.
+   proc-table-row já adiciona hover; aqui adicionamos nth-child striping. */
+.fin-tx-table tbody tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0);
+}
+.fin-tx-table tbody tr:nth-child(even) {
+  background: rgb(var(--slate-3));
+}
+
+/* Cells — vertical center */
+.fin-tx-table td,
+.fin-tx-table th {
+  vertical-align: middle;
+  padding: 12px 14px;
+}
+
+/* Alinhamento: colunas numéricas centradas, texto à esquerda */
+.fin-tx-table th {
+  text-align: left;
+}
+.fin-tx-table td {
+  text-align: left;
+}
+.fin-tx-col-parcela,
+.fin-tx-col-valor,
+.fin-tx-col-metodo,
+.fin-tx-col-status {
+  text-align: center;
+}
+.fin-tx-col-acoes {
+  text-align: right;
+}
+
+/* Data de vencimento — slate-300 em rest, mais legível em dark mode */
+.fin-tx-date {
+  font-size: 12px;
+  font-family: ui-monospace, monospace;
+  color: rgb(var(--slate-11));
+}
+.fin-tx-date--overdue {
+  color: rgb(var(--ruby-11)); /* red-300 */
+  font-weight: 600;
+}
+.fin-tx-date--paid {
+  /* Riscada + cinza médio — antes era slate-700 (rgb(var(--slate-7))) que é quase
+     invisível em fundo dark; subido pra slate-500. */
+  color: rgb(var(--slate-9));
+  text-decoration: line-through;
+}
+
+.fin-tx-paid-at {
+  font-size: 11px;
+  color: rgb(var(--slate-10)); /* slate-400 */
+  margin-top: 2px;
+}
+
+/* Valor */
+.fin-tx-amount {
+  font-family: ui-monospace, monospace;
+  font-weight: 600;
+  font-size: 13px;
+  color: rgb(var(--slate-11));
+}
+.fin-tx-amount--income {
+  color: rgb(var(--slate-11));
+}
+.fin-tx-amount--expense {
+  color: rgb(var(--ruby-10));
+}
+
+/* Badge método */
+.fin-method-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgb(var(--slate-3));
+  border: 1px solid rgb(var(--slate-6));
+  color: rgb(var(--slate-11)); /* slate-300 — era slate-500 (rgb(var(--slate-9))) sem contraste */
+  white-space: nowrap;
+}
+
+/* Ações */
+.fin-tx-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+/* ── Cards de orçamento ── (refinos em [1.5.4.4])
+   - Layout accordion: header sempre visível (status, total, ações), body
+     recolhível com detalhes. Default = recolhido (mais cards na tela).
+   - Hover removido — card inteiro não tem ação, só o header (clickable
+     via toggle). Manter hover dava feedback visual confuso.
+   - Borda esquerda 4px colorida por status pra diferenciação rápida. */
+.fin-estimate-card {
+  display: flex;
+  flex-direction: column;
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-5));
+  border-left-width: 4px;
+  border-left-color: rgb(var(--slate-7));
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+/* sem hover — sem feedback visual enganoso (card por si não é clickable;
+   só o header tem ação) */
+
+/* Borda esquerda colorida por status — diferenciação visual rápida sem
+   depender só do badge. Pareada com `estimateStatusConfig().cls` no JS. */
+.fin-estimate-card--draft {
+  border-left-color: rgb(var(--slate-9));
+}
+.fin-estimate-card--sent {
+  border-left-color: rgb(var(--blue-9));
+}
+.fin-estimate-card--approved {
+  border-left-color: rgb(var(--emerald-9));
+}
+.fin-estimate-card--canceled {
+  border-left-color: rgb(var(--ruby-9));
+}
+
+/* Header do card (sempre visível) — chevron + meta + total + ações */
+.fin-estimate-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  outline: none;
+  transition: background 0.12s;
+
+  &:hover {
+    background: rgb(var(--slate-3));
+  }
+
+  &:focus-visible {
+    background: rgb(var(--slate-3));
+  }
+}
+
+.fin-estimate-chevron {
+  color: rgb(var(--slate-10));
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.fin-estimate-header:hover .fin-estimate-chevron {
+  color: rgb(var(--slate-11));
+}
+
+.fin-estimate-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.fin-estimate-header-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.fin-estimate-header-total-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgb(var(--slate-10));
+}
+
+.fin-estimate-header-total-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgb(var(--slate-12));
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.fin-estimate-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Body do card (recolhível) */
+.fin-estimate-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 14px 14px 36px; // alinha com o conteúdo do header (depois do chevron)
+  border-top: 1px solid rgb(var(--slate-3));
+  padding-top: 12px;
+}
+
+.fin-estimate-id {
+  font-size: 11px;
+  color: rgb(var(--slate-10)); /* slate-400 — era slate-700 invisível */
+  font-family: ui-monospace, monospace;
+}
+
+.fin-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: rgb(var(--blue-11));
+  background: rgb(var(--blue-3));
+  border: 1px solid rgb(var(--blue-6));
+  border-radius: 99px;
+  padding: 2px 8px;
+}
+
+.fin-estimate-values {
+  // 3 colunas (Total foi promovido pro header) — Subtotal, Desconto, Parcelas
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 14px;
+}
+.fin-estimate-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 14px;
+  padding-top: 10px;
+  border-top: 1px solid rgb(var(--slate-4));
+}
+.fin-estimate-value-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fin-estimate-value-label {
+  /* Era rgb(var(--slate-7)) (slate-700) — invisível. Subido pra slate-400. */
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgb(var(--slate-10));
+  margin: 0;
+}
+
+.fin-estimate-value-amount {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--slate-11)); /* slate-300 — era slate-400 (rgb(var(--slate-10))) */
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.fin-estimate-value-amount--highlight,
+.fin-estimate-value-amount--lg {
+  color: rgb(var(--slate-12));
+  font-size: 15px;
+}
+.fin-estimate-value-amount--danger,
+.fin-estimate-value-amount--red {
+  color: rgb(var(--ruby-11)); /* red-300 — antes era rgb(var(--ruby-10)) (red-400) */
+}
+.fin-estimate-value-amount--green {
+  color: rgb(var(--emerald-11)); /* green-300 */
+}
+.fin-estimate-value-amount--amber {
+  color: rgb(var(--amber-11)); /* amber-300 */
+}
+
+.fin-estimate-notes {
+  font-size: 12px;
+  color: rgb(var(--slate-11)); /* era slate-600 (rgb(var(--slate-8))) — só vinha em monitor calibrado */
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+/* Datas no body (criação + validade) — fica no rodapé do body recolhível.
+   `fin-estimate-actions` legado removido em [1.5.4.4]: ações foram pro header. */
+.fin-estimate-dates {
+  font-size: 11px;
+  color: rgb(var(--slate-10));
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid rgb(var(--slate-3));
+  font-variant-numeric: tabular-nums;
+}
+.fin-estimate-valid {
+  color: rgb(var(--slate-11));
+}
+
+/* ── RefundTransactionModal ── */
+.fin-refund-context {
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 12px;
+  }
+}
+
+.fin-refund-context-label {
+  color: rgb(var(--slate-10));
+  font-weight: 500;
+}
+
+.fin-refund-context-value {
+  color: rgb(var(--slate-12));
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.fin-refund-hint--partial {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: rgb(var(--amber-10)); /* amber-400 — chama atenção pra estorno parcial */
+}
+
+/* Hint visível quando "Crédito do paciente" é selecionado como método.
+   Verde — sinaliza ação positiva (não destrutiva, não tira do caixa). */
+.fin-refund-hint--credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.08); /* emerald-500/8% */
+  border-left: 3px solid #10b981;       /* emerald-500 */
+  color: #047857;                       /* emerald-700 */
+  font-size: 12px;
+  line-height: 1.4;
+  strong { font-weight: 600; }
+}
+:root.dark .fin-refund-hint--credit {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;                       /* emerald-300 (legível em fundo escuro) */
+}
+
+.fin-refund-error {
+  color: rgb(var(--ruby-11));
+  background: rgb(var(--ruby-3));
+  border: 1px solid rgb(var(--ruby-6));
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  margin: 0 0 12px;
+}
+
+/* ──────────────────────────────────────────────────────────
+   PayTransactionModal — refator [1.5.4.6]
+   Tailwind dark hardcoded → SCSS com tokens dual-theme.
+   ────────────────────────────────────────────────────────── */
+.pay-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.pay-modal {
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--slate-5));
+  border-radius: 16px;
+  width: 100%;
+  // 560px (era 480px) — comporta o grid 2-col dos campos avançados
+  // (Juros/Multa, Desconto/Abater crédito) sem quebrar o hint de "disponível".
+  max-width: 560px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.pay-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgb(var(--slate-4));
+}
+
+.pay-modal__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 600;
+  color: rgb(var(--slate-12));
+  margin: 0;
+}
+
+.pay-modal__title-icon {
+  color: rgb(var(--emerald-10));
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.pay-modal__subtitle {
+  font-size: 12px;
+  color: rgb(var(--slate-10));
+  margin: 4px 0 0;
+}
+
+.pay-modal__body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-y: auto;
+}
+
+.pay-modal__section {
+  display: flex;
+  flex-direction: column;
+}
+
+.pay-modal__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--slate-11));
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pay-modal__required {
+  color: rgb(var(--ruby-10));
+  font-weight: 700;
+}
+
+.pay-modal__empty {
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-5));
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+  color: rgb(var(--slate-10));
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.pay-modal__empty-icon {
+  font-size: 22px;
+  color: rgb(var(--emerald-10));
+  width: 28px;
+  height: 28px;
+}
+
+/* Lista de parcelas pendentes (scroll vertical) */
+.pay-modal__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.pay-modal__list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-5));
+  border-radius: 10px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font: inherit;
+  color: inherit;
+
+  &:hover {
+    background: rgb(var(--slate-3));
+    border-color: rgb(var(--slate-7));
+  }
+
+  &.is-selected {
+    background: rgb(var(--emerald-2));
+    border-color: rgb(var(--emerald-9));
+  }
+}
+
+/* Ícone do tipo de recorrência (avulso/parcelamento/mensalidade) à
+   esquerda do item, paleta semântica idêntica à do FinancialTimeline. */
+.pay-modal__list-item-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &--slate {
+    background: rgba(148, 163, 184, 0.18);
+    color: rgb(var(--slate-12));
+  }
+  &--blue {
+    background: rgba(59, 130, 246, 0.16);
+    color: #2563eb;
+  }
+  &--violet {
+    background: rgba(124, 58, 237, 0.16);
+    color: #7c3aed;
+  }
+}
+
+:root.dark .pay-modal__list-item-icon--blue {
+  color: #93c5fd;
+}
+:root.dark .pay-modal__list-item-icon--violet {
+  color: #c4b5fd;
+}
+
+.pay-modal__list-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.pay-modal__list-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.pay-modal__list-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--slate-12));
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  // max-width 100% permite o ellipsis adaptar ao container disponível
+  // em qualquer breakpoint (era fixo 240px que estourava em <320px).
+  max-width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pay-modal__list-item-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: rgb(var(--slate-10));
+  margin: 0;
+}
+
+.pay-modal__list-item-installment {
+  font-weight: 600;
+  color: rgb(var(--slate-11));
+  font-variant-numeric: tabular-nums;
+}
+
+.pay-modal__list-item-sep {
+  color: rgb(var(--slate-8));
+}
+
+.pay-modal__list-item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.pay-modal__list-item-amount {
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  font-size: 13px;
+  color: rgb(var(--emerald-11));
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Card de "parcela já selecionada" (modo edit) — mesma estrutura do
+   item da lista (ícone + info + ação à direita) pra manter consistência
+   visual entre as 2 etapas (selecionar → confirmada). */
+.pay-modal__selected {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 10px;
+}
+
+.pay-modal__selected-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.pay-modal__selected-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #047857;
+  margin: 0 0 4px;
+}
+
+:root.dark .pay-modal__selected-label {
+  color: #6ee7b7;
+}
+
+.pay-modal__selected-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(var(--slate-12));
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pay-modal__selected-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: rgb(var(--slate-11));
+  margin: 4px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Métodos de pagamento ──
+   Grid 3 colunas. Cada botão tem cor semântica única — em rest fica
+   discreto, em hover/selected ganha cor cheia. */
+/* Chips de forma de pagamento — espelha `.rpm-v2__chip*` do
+   ReceivePaymentModalV2 (A Receber global) pra UX consistente. Mantemos a
+   classe `.pay-modal__chip` em vez de reusar a classe do outro modal pra
+   evitar acoplamento estrutural (se um deles precisar mudar isolado). */
+.pay-modal__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pay-modal__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  font-family: inherit;
+}
+.pay-modal__chip--tone-emerald {
+  background: rgba(16, 185, 129, 0.10);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.28);
+  &:hover { background: rgba(16, 185, 129, 0.18); }
+}
+.pay-modal__chip--tone-pix {
+  background: rgba(46, 189, 175, 0.12);
+  color: #1f8a7e;
+  border-color: rgba(46, 189, 175, 0.32);
+  &:hover { background: rgba(46, 189, 175, 0.20); }
+}
+.pay-modal__chip--tone-violet {
+  background: rgba(124, 58, 237, 0.10);
+  color: #6d28d9;
+  border-color: rgba(124, 58, 237, 0.28);
+  &:hover { background: rgba(124, 58, 237, 0.18); }
+}
+.pay-modal__chip--tone-blue {
+  background: rgba(37, 99, 235, 0.10);
+  color: #1d4ed8;
+  border-color: rgba(37, 99, 235, 0.28);
+  &:hover { background: rgba(37, 99, 235, 0.18); }
+}
+.pay-modal__chip--tone-amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.32);
+  &:hover { background: rgba(245, 158, 11, 0.20); }
+}
+:root.dark .pay-modal__chip--tone-emerald { background: rgba(16, 185, 129, 0.18); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.4);
+  &:hover { background: rgba(16, 185, 129, 0.28); } }
+:root.dark .pay-modal__chip--tone-pix { background: rgba(46, 189, 175, 0.20); color: #5dd9c8; border-color: rgba(46, 189, 175, 0.45);
+  &:hover { background: rgba(46, 189, 175, 0.30); } }
+:root.dark .pay-modal__chip--tone-violet  { background: rgba(124, 58, 237, 0.20); color: #c4b5fd; border-color: rgba(124, 58, 237, 0.4);
+  &:hover { background: rgba(124, 58, 237, 0.30); } }
+:root.dark .pay-modal__chip--tone-blue    { background: rgba(59, 130, 246, 0.18); color: #93c5fd; border-color: rgba(59, 130, 246, 0.4);
+  &:hover { background: rgba(59, 130, 246, 0.28); } }
+:root.dark .pay-modal__chip--tone-amber   { background: rgba(245, 158, 11, 0.18); color: #fcd34d; border-color: rgba(245, 158, 11, 0.4);
+  &:hover { background: rgba(245, 158, 11, 0.28); } }
+
+.pay-modal__chip-icon { width: 14px; height: 14px; flex-shrink: 0; }
+
+.pay-modal__chip--active {
+  color: #ffffff;
+  border-color: transparent;
+  font-weight: 600;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.pay-modal__chip--tone-emerald.pay-modal__chip--active { background: #059669; &:hover { background: #047857; } }
+.pay-modal__chip--tone-pix.pay-modal__chip--active     { background: rgb(46, 189, 175); &:hover { background: #1f8a7e; } }
+.pay-modal__chip--tone-violet.pay-modal__chip--active  { background: #7c3aed; &:hover { background: #6d28d9; } }
+.pay-modal__chip--tone-blue.pay-modal__chip--active    { background: #2563eb; &:hover { background: #1d4ed8; } }
+.pay-modal__chip--tone-amber.pay-modal__chip--active   { background: #d97706; &:hover { background: #b45309; } }
+:root.dark .pay-modal__chip--active { color: #ffffff; }
+
+/* Footer */
+.pay-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid rgb(var(--slate-4));
+}
+
+/* Mobile xs: lista de parcelas no modal de pagamento permite wrap.
+   Em telas estreitas (<400px) o item empilha info + right. */
+@media (max-width: 400px) {
+  .pay-modal__list-item {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .pay-modal__list-item-info {
+    flex: 1 1 100%;
+  }
+
+  .pay-modal__list-item-right {
+    flex: 1 1 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .pay-modal__selected {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .pay-modal__selected-info {
+    flex: 1 1 calc(100% - 44px);
+  }
+}
+
+.fin-refund-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgb(var(--amber-10));
+  background: rgb(var(--amber-3));
+  border: 1px solid rgb(var(--amber-6));
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 11px;
+  margin: 8px 0 0;
+}
+
+/* ═══════════════════════════════════════════
+   Refactor financeiro 2026-05-06 — TIMELINE FINANCEIRA
+   PR 2 introduziu (toggle Clássica/Timeline + Timeline) — toggle removido
+   no PR 3 quando timeline virou padrão.
+   Componentes ativos:
+     • .fin-tl-*           — FinancialTimeline.vue
+     • .fin-progress-*     — InstallmentProgress.vue
+   Classes legadas `.fin-tx-*`, `.fin-tabs-bar*`, `.estimates-list*`,
+   `.fin-receipts-*` permanecem no arquivo como dead code junto com
+   débito SCSS já mapeado em AUDITORIA_2026-05-04.md item 43.
+*/
+
+/* ── FinancialTimeline ──────────────────────────────────────── */
+/* Filtros segmentados (chips) — UI de filtragem por status no topo
+   da timeline. Layout flex-wrap pra adaptar bem em mobile. */
+.fin-tl-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.fin-tl-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(var(--slate-11));
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+
+  &:hover {
+    background: rgba(148, 163, 184, 0.14);
+    border-color: rgba(148, 163, 184, 0.4);
+    color: rgb(var(--slate-12));
+  }
+
+  &--active {
+    background: linear-gradient(
+      135deg,
+      rgba(20, 184, 166, 0.22),
+      rgba(20, 184, 166, 0.08)
+    );
+    border-color: rgba(20, 184, 166, 0.5);
+    color: #0f766e;
+
+    &:hover {
+      background: linear-gradient(
+        135deg,
+        rgba(20, 184, 166, 0.28),
+        rgba(20, 184, 166, 0.1)
+      );
+      border-color: rgba(20, 184, 166, 0.65);
+    }
+  }
+}
+
+:root.dark .fin-tl-filter-chip--active {
+  color: #5eead4;
+}
+
+.fin-tl-fallback {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgb(var(--blue-2));
+  border: 1px solid rgb(var(--blue-5));
+  border-radius: 8px;
+  color: rgb(var(--blue-11));
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+.fin-tl-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 0;
+}
+
+.fin-tl-loading-text {
+  font-size: 12px;
+  color: rgb(var(--slate-11));
+}
+
+.fin-tl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 64px 0;
+  text-align: center;
+}
+
+.fin-tl-empty-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-10));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fin-tl-empty-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(var(--slate-12));
+  margin: 4px 0 0;
+}
+
+.fin-tl-empty-hint {
+  font-size: 12px;
+  color: rgb(var(--slate-11));
+  max-width: 380px;
+}
+
+.fin-tl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fin-tl-card {
+  // Cores rgba para funcionar em ambos light e dark mode sem override.
+  // Background bem sutil (.04) sobre fundo do app; borda em alpha .2.
+  background: rgba(148, 163, 184, 0.04);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: rgba(148, 163, 184, 0.4);
+  }
+
+  &--expanded {
+    border-color: rgba(20, 184, 166, 0.5);
+    box-shadow: 0 2px 12px rgba(20, 184, 166, 0.08);
+  }
+
+  // Orçamento aguardando aprovação (rascunho/enviado): destaque visual
+  // explícito para que o usuário NÃO precise abrir o card pra descobrir
+  // que há ação pendente. Accent left amber + background sutil + chip
+  // "Precisa aprovação" no header (renderizado pelo template).
+  &--needs-approval {
+    border-color: rgba(245, 158, 11, 0.45);
+    border-left-width: 4px;
+    border-left-color: #d97706;
+    background: rgba(245, 158, 11, 0.06);
+
+    &:hover {
+      border-color: rgba(245, 158, 11, 0.65);
+    }
+  }
+
+  // Orçamento cancelado: stripe diagonal vermelho sutil + opacidade
+  // reduzida + título riscado. Comunica "morto/inativo" sem competir
+  // com cards ativos. Padrão "deprecated" usado em ERPs.
+  &--cancelled {
+    border-color: rgba(220, 38, 38, 0.3);
+    border-left-width: 4px;
+    border-left-color: #dc2626;
+    background-color: rgba(220, 38, 38, 0.04);
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent,
+      transparent 10px,
+      rgba(220, 38, 38, 0.06) 10px,
+      rgba(220, 38, 38, 0.06) 11px
+    );
+    opacity: 0.78;
+
+    &:hover {
+      opacity: 0.95;
+      border-color: rgba(220, 38, 38, 0.5);
+    }
+
+    .fin-tl-card-title {
+      text-decoration: line-through;
+      text-decoration-color: rgba(220, 38, 38, 0.5);
+      text-decoration-thickness: 1.5px;
+    }
+  }
+}
+
+.fin-tl-card-head {
+  padding: 14px 16px;
+}
+
+.fin-tl-card-toggle {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+}
+
+.fin-tl-card-origin-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-11));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fin-tl-card-meta {
+  min-width: 0;
+}
+
+.fin-tl-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fin-tl-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(var(--slate-12));
+  margin: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  // max-width relativo ao container (não fixo 320px que estourava em
+  // mobile e ficava miúdo em desktop). O `min-width: 0` no `.fin-tl-card-meta`
+  // pai permite que o ellipsis funcione dentro do espaço disponível.
+  max-width: 100%;
+}
+
+.fin-tl-card-subtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: rgb(var(--slate-11));
+  margin: 4px 0 0;
+}
+
+.fin-tl-card-origin-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.fin-tl-card-link {
+  color: rgb(var(--teal-11));
+  font-weight: 500;
+
+  &:hover {
+    color: rgb(var(--teal-12));
+    text-decoration: underline;
+  }
+}
+
+.fin-tl-card-sep {
+  color: rgb(var(--slate-9));
+}
+
+.fin-tl-card-totals {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.fin-tl-card-amount {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgb(var(--slate-12));
+  font-variant-numeric: tabular-nums;
+}
+
+.fin-tl-card-chevron {
+  width: 16px;
+  height: 16px;
+  color: rgb(var(--slate-10));
+}
+
+.fin-tl-card-progress {
+  margin-top: 12px;
+}
+
+.fin-tl-card-body {
+  padding: 0 16px 14px;
+  border-top: 1px solid rgb(var(--slate-4));
+  margin-top: 4px;
+}
+
+.fin-tl-card-parent-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 0 4px;
+}
+
+/* ── Lista de parcelas (Nível 2) ────────────────────────────── */
+.fin-tl-installments {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fin-tl-installment {
+  display: grid;
+  grid-template-columns: 56px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(148, 163, 184, 0.07);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  // Accent à esquerda em 3px — escaneabilidade rápida do status sem
+  // precisar ler o badge. Padrão de "ledger row" usado em ERPs financeiros.
+  border-left-width: 3px;
+  border-left-color: rgba(148, 163, 184, 0.45);
+  border-radius: 8px;
+
+  // Cores rgba com alpha único (.07 bg / .25 border) funcionam tanto em
+  // light quanto dark mode sem precisar de seletor `:root.dark`. Backgrounds
+  // bem sutis para que o **badge de status** seja o protagonista visual;
+  // accent left de 3px (hex saturado) comunica status em < 1s.
+  &--paid {
+    background: rgba(16, 185, 129, 0.07);
+    border-color: rgba(16, 185, 129, 0.25);
+    border-left-color: #059669;
+  }
+
+  &--open {
+    background: rgba(245, 158, 11, 0.07);
+    border-color: rgba(245, 158, 11, 0.25);
+    border-left-color: #d97706;
+  }
+
+  &--overdue {
+    background: rgba(220, 38, 38, 0.07);
+    border-color: rgba(220, 38, 38, 0.25);
+    border-left-color: #dc2626;
+  }
+
+  &--refunded {
+    background: rgba(124, 58, 237, 0.07);
+    border-color: rgba(124, 58, 237, 0.25);
+    border-left-color: #7c3aed;
+  }
+
+  // Baixa parcial — tom azul (informativo, não alerta). Diferente do
+  // `--open` (amber, vai vencer) e do `--overdue` (red, já venceu). Sinal
+  // claro: "houve pagamento, mas falta saldo". Visual igual ao chip da
+  // tela A Receber pra UX consistente.
+  &--partial {
+    background: rgba(59, 130, 246, 0.07);
+    border-color: rgba(59, 130, 246, 0.25);
+    border-left-color: #2563eb;
+  }
+}
+
+// Valor original riscado quando há baixa parcial — UX igual à A Receber
+// (informa quanto a parcela "valia" antes do pagamento parcial).
+.fin-tl-installment-amount-strike {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgb(var(--slate-9));
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fin-tl-installment-number {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgb(var(--slate-11));
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.fin-tl-installment-info {
+  min-width: 0;
+}
+
+.fin-tl-installment-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--slate-12));
+  margin: 0;
+}
+
+.fin-tl-installment-meta {
+  font-size: 11px;
+  color: rgb(var(--slate-11));
+  margin: 2px 0 0;
+}
+
+/* Estorno parcial — meta inline com 2 chunks (recebido + estornado).
+   O verde sinaliza dinheiro que ficou no caixa, o âmbar o que voltou
+   pro paciente. Cores semanticamente alinhadas com o Badge global. */
+.fin-tl-installment-partial {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-weight: 500;
+}
+.fin-tl-installment-partial-received {
+  color: #047857; /* emerald-700 (Badge faded.emerald) */
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.fin-tl-installment-partial-refunded {
+  color: #b45309; /* amber-700 (Badge faded.amber) */
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.fin-tl-installment-partial-sep {
+  color: rgb(var(--slate-9));
+  opacity: 0.5;
+}
+:root.dark .fin-tl-installment-partial-received { color: #6ee7b7; }
+:root.dark .fin-tl-installment-partial-refunded { color: #fcd34d; }
+
+/* Linha de fundo do item com estorno parcial — leve tom âmbar pra
+   destacar visualmente sem competir com paid/overdue. */
+.fin-tl-installment--partial-refund {
+  background: rgba(245, 158, 11, 0.06);
+  border-left: 2px solid rgba(245, 158, 11, 0.5);
+}
+
+.fin-tl-installment-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── InstallmentProgress ─────────────────────────────────────── */
+.fin-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fin-progress-bar {
+  display: flex;
+  width: 100%;
+  height: 6px;
+  // rgba sobre slate — funciona tanto em light quanto dark mode sem
+  // precisar de override `:root.dark`. Em fundo claro fica cinza-claro
+  // sutil; em fundo escuro fica cinza-escuro sutil.
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.fin-progress-seg {
+  height: 100%;
+  transition: width 0.3s ease;
+
+  // Decisão de produto 2026-05-06: barra simples — só preenche o que está
+  // pago. O resto fica cinza (background da própria `.fin-progress-bar`).
+  // Hex direto (`emerald-500` do Tailwind) — saturado o suficiente para
+  // ser visível tanto em light quanto dark mode.
+  &--paid {
+    background: #10b981;
+  }
+}
+
+.fin-progress-counter {
+  font-size: 11px;
+  color: rgb(var(--slate-11));
+
+  .fin-progress-counter-paid {
+    color: rgb(var(--emerald-11));
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .fin-progress-counter-overdue {
+    color: rgb(var(--ruby-11));
+    font-weight: 600;
+  }
+
+  // Canceladas: cinza neutro pra não competir com vencidas (vermelho)
+  // nem com pagas (verde). Reforça "estado morto, sem ação possível".
+  .fin-progress-counter-cancelled {
+    color: rgb(var(--slate-10));
+    font-weight: 600;
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+    text-decoration-color: rgb(var(--slate-7));
+  }
+
+  .fin-progress-counter-sep {
+    margin: 0 6px;
+    color: rgb(var(--slate-8));
+  }
+}
+
+.fin-progress-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.fin-progress-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgb(var(--slate-12));
+  background: rgb(var(--slate-4));
+  border: 1px solid rgb(var(--slate-6));
+  cursor: default;
+
+  &--paid {
+    background: rgb(var(--emerald-9));
+    color: white;
+    border-color: rgb(var(--emerald-9));
+  }
+
+  // open agora também em vermelho (a vencer = atenção). Tom mais claro
+  // que `overdue` para preservar diferenciação visual.
+  &--open {
+    background: rgb(var(--ruby-3));
+    color: rgb(var(--ruby-12));
+    border-color: rgb(var(--ruby-6));
+  }
+
+  &--overdue {
+    background: rgb(var(--ruby-10));
+    color: white;
+    border-color: rgb(var(--ruby-10));
+  }
+
+  &--refunded {
+    background: rgb(var(--violet-3));
+    color: rgb(var(--violet-12));
+    border-color: rgb(var(--violet-6));
+  }
+
+  &--cancelled {
+    background: rgb(var(--slate-3));
+    color: rgb(var(--slate-10));
+    border-color: rgb(var(--slate-6));
+    opacity: 0.6;
+  }
+}
+
+.fin-progress-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fin-progress-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+
+  &--paid {
+    background: rgb(var(--emerald-3));
+    color: rgb(var(--emerald-11));
+  }
+
+  // Pílulas open/overdue ambas em ruby — open mais claro, overdue mais escuro.
+  &--open {
+    background: rgb(var(--ruby-3));
+    color: rgb(var(--ruby-11));
+  }
+
+  &--overdue {
+    background: rgb(var(--ruby-4));
+    color: rgb(var(--ruby-12));
+    font-weight: 700;
+  }
+
+  &--cancelled {
+    background: rgb(var(--slate-3));
+    color: rgb(var(--slate-10));
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+    text-decoration-color: rgb(var(--slate-7));
+  }
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVO — Timeline financeira
+   Breakpoints (decisão UX 2026-05-07):
+     ≥1024px  → desktop (layout original)
+     768-1024 → tablet  (cards mais juntos, KPI 2col já tratado acima)
+     480-768  → mobile  (header empilhado, totais full-width)
+     <480px   → mobile xs (parcelas em 2 linhas, ações em wrap)
+   ═══════════════════════════════════════════ */
+
+/* Tablet/mobile: header do card empilha verticalmente. Totais (valor +
+   status badge) descem pra próxima linha pra dar espaço ao título longo. */
+@media (max-width: 768px) {
+  .fin-tl-card-toggle {
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto;
+    row-gap: 6px;
+  }
+
+  .fin-tl-card-chevron {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .fin-tl-card-totals {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding-left: 44px; // alinha com o conteúdo (depois do icon 32px + gap 12px)
+  }
+
+  .fin-tl-card-amount {
+    font-size: 14px;
+  }
+
+  .fin-tl-card-title-row {
+    /* Em mobile, badges (recurrence + needs-approval) também wrappam. */
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+}
+
+/* Mobile (lista de parcelas): número à esquerda, info no meio, badge
+   de status à direita (mesma row), ações em linha cheia abaixo.
+   Sem `grid-column` explícito o badge cai por auto-placement em
+   col 1/row 2 e fica visualmente isolado/vazado — fix abaixo. */
+@media (max-width: 768px) {
+  .fin-tl-installment {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    row-gap: 8px;
+    padding: 12px;
+  }
+
+  .fin-tl-installment-number {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .fin-tl-installment-info {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  /* Badge de status do componente Badge (Beclinic). Selector explícito
+     pra alinhar à direita na row 1 — sem isso ele cai em col 1/row 2. */
+  .fin-tl-installment > .bc-badge {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .fin-tl-installment-actions {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}
+
+/* Mobile xs (≤480px): valor das parcelas vai para linha própria. */
+@media (max-width: 480px) {
+  .fin-tl-card-head {
+    padding: 12px 14px;
+  }
+
+  .fin-tl-card-body {
+    padding: 0 12px 12px;
+  }
+
+  .fin-tl-card-amount {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .fin-tl-installment-title {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
+
+

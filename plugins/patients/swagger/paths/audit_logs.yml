@@ -1,0 +1,51 @@
+get:
+  tags:
+    - Audit Logs
+  summary: Listar logs de auditoria do paciente
+  description: |
+    Lista TODOS os `PatientAuditLog` do paciente — inclui `view`, `create`,
+    `update`, `delete`, `sign`, `erratum`, `clinical_override` e
+    `patient_sign_local`. Para apenas `create`+`update`, use o atalho
+    [change_history](#tag/Pacientes/operation/change_history) em `/patients/:id/change_history`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - name: action_type
+      in: query
+      description: Filtra por action específica.
+      schema:
+        type: string
+        enum: [view, create, update, delete, sign, erratum, clinical_override, patient_sign_local, patient_signature_link_sent, approve, export]
+    - name: actor_id
+      in: query
+      schema: { type: integer }
+    - name: start_date
+      in: query
+      schema: { type: string, format: date }
+    - name: end_date
+      in: query
+      schema: { type: string, format: date }
+    - name: page
+      in: query
+      schema: { type: integer, default: 1 }
+    - name: per_page
+      in: query
+      schema: { type: integer, default: 25, maximum: 100 }
+  responses:
+    '200':
+      description: Logs paginados
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              audit_logs:
+                type: array
+                items:
+                  $ref: '../definitions/PatientAuditLog.yml'
+              meta:
+                type: object
+                properties:
+                  total_count: { type: integer }
+                  current_page: { type: integer }
+                  total_pages: { type: integer }

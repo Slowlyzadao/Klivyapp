@@ -1,0 +1,63 @@
+/* ============================================================
+   CHAT LIST HEADER — Estilos customizáveis
+   Modifique aqui para ajustar o visual da barra de busca
+   de conversas sem tocar nos componentes Vue.
+   ============================================================ */
+
+/* ── Row de busca (container abaixo dos ícones) ─────────── */
+.clh-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  /* Descomente para adicionar borda inferior:
+  border-bottom: 1px solid rgb(var(--slate-4)); */
+}
+
+/* ── Input de busca ─────────────────────────────────────── */
+.clh-search-input {
+  width: 100%;
+  padding: 6px 32px 6px 10px;
+  font-size: 13px;
+  color: rgb(var(--slate-12));
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  box-shadow: none;
+}
+
+.clh-search-input::placeholder {
+  color: rgb(var(--slate-9));
+}
+
+.clh-search-input:focus {
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+
+/* ── Botão de limpar (×) ────────────────────────────────── */
+.clh-search-clear {
+  position: absolute;
+  inset-block: 0;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  color: rgb(var(--slate-9));
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.clh-search-clear:hover {
+  color: rgb(var(--slate-12));
+}
+
+/* ── Dark mode ──────────────────────────────────────────── */
+body.dark .clh-search-input {
+  color: rgb(var(--slate-12));
+  background: transparent;
+}

@@ -1,0 +1,41 @@
+patch:
+  tags:
+    - Pastas de Exames
+  summary: Atualizar pasta (renomear, mover, recolorir)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [exam_folder]
+          properties:
+            exam_folder:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/ExamFolder.yml'
+delete:
+  tags:
+    - Pastas de Exames
+  summary: Excluir pasta
+  description: |
+    Move TODOS os arquivos (da pasta e das subpastas) para a raiz (não para
+    a pasta-pai) em uma transação, depois deleta. Subpastas vão junto
+    (`dependent: :destroy`).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204':
+      description: Excluída

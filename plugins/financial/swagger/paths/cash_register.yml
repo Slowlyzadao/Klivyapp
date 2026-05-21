@@ -1,0 +1,14 @@
+get:
+  tags:
+    - Financeiro · Caixa
+  summary: Detalhar sessão (com movements inline)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Sessão
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/CashRegister.yml'

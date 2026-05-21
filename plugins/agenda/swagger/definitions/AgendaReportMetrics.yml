@@ -1,0 +1,24 @@
+type: object
+description: KPIs agregados de um período (usado em `current` e `previous` do `summary`).
+properties:
+  total: { type: integer }
+  confirmed: { type: integer }
+  unconfirmed: { type: integer }
+  completed: { type: integer }
+  in_progress: { type: integer }
+  arrived: { type: integer }
+  no_show: { type: integer }
+  cancelled: { type: integer }
+  attended: { type: integer, description: "completed + in_progress + arrived" }
+  no_show_rate:
+    type: number
+    format: float
+    description: faltas / (total − cancelados) × 100
+  completion_rate:
+    type: number
+    format: float
+    description: completados / (total − cancelados) × 100
+  occupancy_rate:
+    type: number
+    format: float
+    description: slots ocupados / slots disponíveis × 100

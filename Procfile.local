@@ -1,0 +1,4 @@
+backend: RAILS_MAX_THREADS=10 bin/rails s -p 3000
+worker: SIDEKIQ_CONCURRENCY=4 bundle exec sidekiq -C config/sidekiq.yml
+vite: bin/vite dev
+whatsapp: cd lib/whatsapp && node server.js

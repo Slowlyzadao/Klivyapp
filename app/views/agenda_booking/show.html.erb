@@ -1,0 +1,927 @@
+<%# app/views/agenda_booking/show.html.erb %>
+
+<% if @error == 'not_found' %>
+  <div class="booking-main">
+    <div class="booking-container">
+      <div class="booking-error">
+        <div class="booking-error-icon">🔍</div>
+        <h2>Profissional não encontrado</h2>
+        <p>O link de agendamento é inválido ou foi desativado.</p>
+      </div>
+    </div>
+  </div>
+<% elsif @error == 'disabled' %>
+  <div class="booking-main">
+    <div class="booking-container">
+      <div class="booking-error">
+        <div class="booking-error-icon">🚫</div>
+        <h2>Agendamento desativado</h2>
+        <p>Este profissional não está aceitando agendamentos online no momento.</p>
+      </div>
+    </div>
+  </div>
+<% else %>
+
+<%
+  # `.presence` falls back when display_name is "" (empty string), which
+  # `||` wouldn't catch. Avoids rendering an empty .prof-name div.
+  prof_name = @user.display_name.presence || @user.name.presence || 'Profissional'
+  user_avatar_url = @user.avatar_url
+%>
+
+<!-- Auditoria UX 2026-05-15: header compacto — logo, avatar e nome do
+     profissional ficam todos em uma linha enxuta. O prof-card grande foi
+     removido para liberar espaço pro fluxo (form, calendário, slots) e
+     reduzir scroll, especialmente em mobile. -->
+<header class="booking-header" role="banner" id="booking-header">
+  <% if @brand_logo.present? %>
+    <img
+      src="<%= @brand_logo %>"
+      alt="<%= @brand_name %>"
+      class="booking-header-logo"
+      width="100"
+      height="26"
+    />
+  <% else %>
+    <span class="booking-header-brand"><%= @brand_name %></span>
+  <% end %>
+
+  <div class="booking-header-prof" id="prof-card">
+    <div class="booking-header-avatar"
+         <% if user_avatar_url.present? %>
+           style="background-image: url('<%= user_avatar_url %>'); background-size: cover; background-position: center; color: transparent;"
+         <% end %>
+    >
+      <% if user_avatar_url.blank? %>
+        <%= prof_name[0].upcase rescue '?' %>
+      <% end %>
+    </div>
+    <div class="booking-header-prof-info">
+      <span class="booking-header-prof-name"><%= prof_name %></span>
+      <span class="booking-header-prof-badge" aria-label="Agenda disponível">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        Agenda disponível
+      </span>
+    </div>
+  </div>
+</header>
+
+<div class="booking-main">
+  <div class="booking-container">
+
+    <!-- Steps -->
+    <div class="steps-bar" id="steps-bar" role="list" aria-label="Etapas do agendamento">
+      <div class="step-item active" id="step-1-item" role="listitem" aria-current="step">
+        <div class="step-dot" aria-hidden="true">1</div>
+        <span class="step-label">Seus dados</span>
+      </div>
+      <div class="step-item" id="step-2-item" role="listitem">
+        <div class="step-dot" aria-hidden="true">2</div>
+        <span class="step-label">Data e hora</span>
+      </div>
+      <div class="step-item" id="step-3-item" role="listitem">
+        <div class="step-dot" aria-hidden="true">3</div>
+        <span class="step-label">Confirmação</span>
+      </div>
+    </div>
+
+    <!-- STEP 1: Patient Form -->
+    <div id="step-1" class="card">
+      <div class="card-header">
+        <div class="card-title">Seus dados</div>
+        <div class="card-sub">Preencha as informações para identificação. Todos os campos marcados com <span style="color:#ef4444">*</span> são obrigatórios.</div>
+      </div>
+      <div class="card-body">
+        <form id="patient-form" novalidate aria-label="Formulário de dados do paciente">
+          <!-- 9.19 da auditoria — honeypot anti-bot. Campo invisível para
+               humanos (CSS off-screen + aria-hidden + tabindex=-1 + autocomplete=off).
+               Bots de spam tendem a preencher TODOS os inputs do form, então o
+               backend rejeita o submit se este campo vier preenchido. Defesa
+               complementar ao rate-limit de 9.9 (que já cobre volume). -->
+          <div class="hp-field" aria-hidden="true">
+            <label for="f-website">Não preencha este campo</label>
+            <input type="text" id="f-website" name="website" tabindex="-1" autocomplete="off">
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label for="f-first-name">Nome <span class="req" aria-hidden="true">*</span><span class="sr-only">obrigatório</span></label>
+              <input type="text" id="f-first-name" autocomplete="given-name" required aria-required="true">
+              <span class="field-error" id="err-first-name" role="alert">Informe o nome.</span>
+            </div>
+            <div class="field">
+              <label for="f-last-name">Sobrenome <span class="req" aria-hidden="true">*</span><span class="sr-only">obrigatório</span></label>
+              <input type="text" id="f-last-name" autocomplete="family-name" required aria-required="true">
+              <span class="field-error" id="err-last-name" role="alert">Informe o sobrenome.</span>
+            </div>
+            <div class="field">
+              <label for="f-phone">WhatsApp / Celular <span class="req" aria-hidden="true">*</span><span class="sr-only">obrigatório</span></label>
+              <input type="tel" id="f-phone" autocomplete="tel" inputmode="tel" required aria-required="true">
+              <span class="field-error" id="err-phone" role="alert">Informe um celular válido (DDD + número).</span>
+            </div>
+            <div class="field">
+              <label for="f-email">E-mail</label>
+              <input type="email" id="f-email" autocomplete="email">
+              <span class="hint">Opcional – para confirmação por e-mail</span>
+              <span class="field-error" id="err-email" role="alert">E-mail inválido.</span>
+            </div>
+            <div class="field full">
+              <label for="f-cpf">CPF <span class="req" aria-hidden="true">*</span><span class="sr-only">obrigatório</span></label>
+              <input type="text" id="f-cpf" maxlength="14" inputmode="numeric" required aria-required="true">
+              <span class="field-error" id="err-cpf" role="alert">CPF inválido. Informe os 11 dígitos.</span>
+            </div>
+            <div class="field full">
+              <label for="f-observations">Observações</label>
+              <textarea id="f-observations" rows="3" maxlength="500" placeholder=""></textarea>
+              <span class="hint">Opcional – algo que a clínica deva saber</span>
+            </div>
+          </div>
+          <div class="btn-row">
+            <span style="font-size:12px;color:#94a3b8">Seus dados são mantidos seguros e não serão compartilhados.</span>
+            <button type="submit" class="btn btn-primary" id="btn-next-1">
+              Próximo &rarr;
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- STEP 2: Service + Calendar + Slots -->
+    <div id="step-2" class="card" style="display:none">
+      <div class="card-header">
+        <div class="card-title">Escolha serviço, data e horário</div>
+        <div class="card-sub">Selecione o serviço desejado, depois um dia disponível e o horário.</div>
+      </div>
+      <div class="card-body">
+        <!-- Service Picker — visível só quando a clínica tem serviços cadastrados.
+             Não é obrigatório: paciente que não sabe qual escolher pode marcar
+             "Não sei – a clínica define" explicitamente. Sem serviços
+             cadastrados o picker é oculto e o slot grid usa
+             `slot_interval_minutes` como fallback. -->
+        <!-- Auditoria UX 2026-05-15: select nativo substituído por dropdown
+             custom (vanilla JS) inspirado no FormSelect do beclinic_core.
+             Mantém estado em state.selectedService / state.serviceSkipped. -->
+        <div id="service-picker-wrap" class="svc-picker-wrap" style="display:none">
+          <label class="svc-picker-label" for="svc-trigger">Serviço</label>
+          <div class="svc-picker">
+            <button
+              type="button"
+              class="svc-trigger"
+              id="svc-trigger"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              aria-labelledby="svc-trigger-text"
+            >
+              <span class="svc-trigger-text" id="svc-trigger-text">Selecione um serviço…</span>
+              <svg class="svc-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div class="svc-dropdown" id="svc-dropdown" role="listbox" hidden>
+              <div class="svc-dropdown-list" id="svc-dropdown-list"></div>
+            </div>
+          </div>
+          <span class="svc-picker-hint">A clínica avaliará e definirá o serviço se você não tiver certeza.</span>
+        </div>
+        <div class="cal-grid">
+          <!-- Calendar -->
+          <div>
+            <div class="cal-month-nav">
+              <button class="cal-nav-btn" id="cal-prev" title="Mês anterior">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <span class="cal-month-title" id="cal-month-title">—</span>
+              <button class="cal-nav-btn" id="cal-next" title="Próximo mês">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+            <div class="cal-weekdays">
+              <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span>
+              <span>Qui</span><span>Sex</span><span>Sáb</span>
+            </div>
+            <div class="cal-days" id="cal-days"></div>
+          </div>
+
+          <!-- Slots -->
+          <div>
+            <div class="slots-label" id="slots-header">Selecione um dia para ver horários</div>
+            <!-- 9.18 da auditoria: fuso explícito evita confusão para paciente em
+                 outro fuso (Manaus, Acre, Fernando de Noronha). Backend sempre
+                 interpreta entrada como America/Sao_Paulo. -->
+            <div class="slots-timezone" aria-label="Fuso horário">
+              <small>Horários no fuso de Brasília (UTC&minus;3)</small>
+            </div>
+            <div id="slots-container">
+              <div class="slots-empty">👈 Selecione uma data no calendário</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="btn-back-2">&larr; Voltar</button>
+          <button class="btn btn-primary" id="btn-next-2" disabled>
+            Próximo &rarr;
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Confirmation -->
+    <div id="step-3" class="card" style="display:none">
+      <div class="card-header">
+        <div class="card-title">Confirme seu agendamento</div>
+        <div class="card-sub">Verifique os dados antes de confirmar.</div>
+      </div>
+      <div class="card-body">
+        <div id="confirm-summary" style="background:#f8fafc;border-radius:12px;padding:20px;margin-bottom:20px;border:1px solid #e2e8f0;font-size:14px;line-height:1.8;">
+        </div>
+
+        <div id="booking-error-msg" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;color:#dc2626;font-size:13px;margin-bottom:16px;"></div>
+
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="btn-back-3">&larr; Voltar</button>
+          <button class="btn btn-primary" id="btn-confirm">
+            <span id="btn-confirm-text">Confirmar agendamento</span>
+            <span id="btn-confirm-spinner" class="spinner" style="display:none"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Success -->
+    <div id="step-4" class="card" style="display:none">
+      <div class="success-card">
+        <div class="success-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" class="success-icon-ring"/>
+            <polyline points="22 4 12 14.01 9 11.01" class="success-icon-check"/>
+          </svg>
+        </div>
+        <h2 class="success-title">Agendamento confirmado! <span class="success-emoji" aria-hidden="true">🎉</span></h2>
+        <p class="success-sub" id="success-sub">Seu agendamento foi realizado com sucesso.</p>
+        <div class="success-detail" id="success-detail" role="status" aria-live="polite"></div>
+        <!-- 9.11: cancelamento pelo paciente. Visível apenas após booking
+             confirmado (state.cancelToken setado). -->
+        <div id="success-cancel" class="success-cancel" style="display:none">
+          <button type="button" class="btn btn-ghost btn-cancel-booking" id="btn-cancel-booking">
+            Cancelar este agendamento
+          </button>
+          <div class="success-cancel-msg" id="cancel-msg" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function() {
+  const PUBLIC_ID = '<%= @public_id %>';
+  const API_BASE  = '/public/api/v1/agenda/' + PUBLIC_ID;
+  const FUTURE_LIMIT_DAYS = <%= (@config&.future_limit_days || 60).to_i %>;
+
+  // ── State ──────────────────────────────────────────────────────────────
+  const state = {
+    step: 1,
+    patient: {},
+    selectedDate: null,
+    selectedTime: null,
+    services: [],
+    selectedService: null,
+    serviceSkipped: false,
+    servicesLoaded: false,
+    calYear: new Date().getFullYear(),
+    calMonth: new Date().getMonth(),
+    slotsCache: {},
+    // 9.11 — token assinado retornado pelo POST /book. Usado para cancelar
+    // o agendamento via DELETE /booking/:token/cancel no step 4.
+    cancelToken: null,
+    cancelled: false,
+    loadingSlots: false,
+  };
+
+  // Formata preço (BRL) só quando > 0 — serviços gratuitos ficam sem rótulo.
+  function fmtPrice(p) {
+    const n = Number(p);
+    if (!Number.isFinite(n) || n <= 0) return '';
+    return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+  const $ = id => document.getElementById(id);
+  const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const DAYS_SHORT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  function fmt(s) { return s.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+
+  function fmtDate(d) {
+    if (!d) return '';
+    const [y, m, day] = d.split('-');
+    return day + '/' + m + '/' + y;
+  }
+
+  function maskCpf(v) {
+    v = v.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 9) v = v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9);
+    else if (v.length > 6) v = v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);
+    else if (v.length > 3) v = v.slice(0,3)+'.'+v.slice(3);
+    return v;
+  }
+
+  function maskPhone(v) {
+    v = v.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 10) v = '('+v.slice(0,2)+') '+v.slice(2,7)+'-'+v.slice(7);
+    else if (v.length > 6) v = '('+v.slice(0,2)+') '+v.slice(2,6)+'-'+v.slice(6);
+    else if (v.length > 2) v = '('+v.slice(0,2)+') '+v.slice(2);
+    return v;
+  }
+
+  function setStep(n) {
+    state.step = n;
+    [1,2,3,4].forEach(i => {
+      const el = $('step-'+i);
+      if (el) el.style.display = i === n ? '' : 'none';
+      const item = $('step-'+i+'-item');
+      if (item) {
+        item.className = 'step-item' + (i < n ? ' done' : i === n ? ' active' : '');
+      }
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── Step 1 – Form ────────────────────────────────────────────────────────
+  $('f-cpf').addEventListener('input', function() {
+    this.value = maskCpf(this.value);
+  });
+  $('f-phone').addEventListener('input', function() {
+    this.value = maskPhone(this.value);
+  });
+
+  function setFieldError(inputId, errId, hasError) {
+    const input = $(inputId);
+    const err = $(errId);
+    if (!input || !err) return;
+    if (hasError) {
+      input.classList.add('is-invalid');
+      input.setAttribute('aria-invalid', 'true');
+      err.classList.add('show');
+    } else {
+      input.classList.remove('is-invalid');
+      input.removeAttribute('aria-invalid');
+      err.classList.remove('show');
+    }
+  }
+
+  // Clear error as user starts fixing the field — feels more responsive
+  // than only validating on submit.
+  ['f-first-name','f-last-name','f-phone','f-cpf','f-email'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      el.classList.remove('is-invalid');
+      el.removeAttribute('aria-invalid');
+      const errId = 'err-' + id.slice(2);
+      const err = $(errId);
+      if (err) err.classList.remove('show');
+    });
+  });
+
+  $('patient-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const firstName    = $('f-first-name').value.trim();
+    const lastName     = $('f-last-name').value.trim();
+    const phone        = $('f-phone').value.trim();
+    const cpf          = $('f-cpf').value.trim();
+    const email        = $('f-email').value.trim();
+    const observations = $('f-observations').value.trim();
+
+    let invalid = false;
+    setFieldError('f-first-name', 'err-first-name', !firstName);
+    if (!firstName) invalid = true;
+    setFieldError('f-last-name', 'err-last-name', !lastName);
+    if (!lastName) invalid = true;
+
+    const phoneDigits = phone.replace(/\D/g, '');
+    const phoneInvalid = phoneDigits.length < 10 || phoneDigits.length > 11;
+    setFieldError('f-phone', 'err-phone', phoneInvalid);
+    if (phoneInvalid) invalid = true;
+
+    const cpfInvalid = cpf.replace(/\D/g, '').length < 11;
+    setFieldError('f-cpf', 'err-cpf', cpfInvalid);
+    if (cpfInvalid) invalid = true;
+
+    if (email) {
+      const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      setFieldError('f-email', 'err-email', !emailValid);
+      if (!emailValid) invalid = true;
+    }
+
+    if (invalid) {
+      // Move focus to first invalid field for screen readers + keyboard users.
+      const firstBad = document.querySelector('.field input.is-invalid');
+      if (firstBad) firstBad.focus();
+      return;
+    }
+
+    state.patient = { firstName, lastName, phone, cpf, email, observations };
+    setStep(2);
+    renderCalendar();
+    loadServices();
+  });
+
+  // ── Step 2 – Calendar ────────────────────────────────────────────────────
+  function renderCalendar() {
+    const year  = state.calYear;
+    const month = state.calMonth;
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    // Limite máximo de datas agendáveis: respeita `future_limit_days` da
+    // AgendaOnlineConfig — clínica define quantos dias à frente o paciente
+    // pode ver/escolher na agenda pública.
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + FUTURE_LIMIT_DAYS);
+
+    $('cal-month-title').textContent = MONTHS_PT[month] + ' ' + year;
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const container = $('cal-days');
+    container.innerHTML = '';
+
+    // Empty cells before first day
+    for (let i = 0; i < firstDay; i++) {
+      const el = document.createElement('div');
+      el.className = 'cal-day empty';
+      container.appendChild(el);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d);
+      date.setHours(0,0,0,0);
+      const iso = year + '-' + String(month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+
+      const el = document.createElement('div');
+      el.textContent = d;
+
+      const isPast = date < today;
+      const isBeyondLimit = date > maxDate;
+      const isToday = date.getTime() === today.getTime();
+      const isSelected = state.selectedDate === iso;
+
+      if (isPast) {
+        el.className = 'cal-day past';
+      } else if (isBeyondLimit) {
+        el.className = 'cal-day unavailable';
+      } else if (isSelected) {
+        el.className = 'cal-day selected';
+      } else if (isToday) {
+        el.className = 'cal-day today available';
+      } else {
+        el.className = 'cal-day available';
+      }
+
+      if (!isPast && !isBeyondLimit) {
+        el.addEventListener('click', () => selectDate(iso));
+      }
+
+      container.appendChild(el);
+    }
+  }
+
+  // Cache key inclui service_id porque a duração do slot depende do serviço —
+  // grade de 30min com serviço de 45min produz slots diferentes da grade
+  // padrão. Sem essa chave o paciente trocaria serviço e veria slots stale.
+  function slotsCacheKey(iso) {
+    const svcId = state.selectedService ? state.selectedService.id : 'none';
+    return iso + '|' + svcId;
+  }
+
+  async function selectDate(iso) {
+    state.selectedDate = iso;
+    state.selectedTime = null;
+    $('btn-next-2').disabled = true;
+    renderCalendar();
+
+    const [y, m, d] = iso.split('-');
+    $('slots-header').textContent = 'Horários disponíveis – ' + d + '/' + m + '/' + y;
+    $('slots-container').innerHTML = '<div class="slots-loading"><div class="spinner spinner-brand" style="margin:0 auto 8px"></div><br>Carregando horários...</div>';
+
+    const key = slotsCacheKey(iso);
+    if (state.slotsCache[key]) {
+      renderSlots(state.slotsCache[key], iso);
+      return;
+    }
+
+    try {
+      let url = API_BASE + '/slots?date=' + iso;
+      if (state.selectedService) url += '&service_id=' + state.selectedService.id;
+      const res = await fetch(url);
+      const data = await res.json();
+      state.slotsCache[key] = data.slots || [];
+      renderSlots(state.slotsCache[key], iso);
+    } catch(err) {
+      $('slots-container').innerHTML = '<div class="slots-empty">❌ Erro ao carregar horários. Tente novamente.</div>';
+    }
+  }
+
+  // ── Service picker ──────────────────────────────────────────────────────
+  // Auditoria UX 2026-05-15: dropdown custom (sem <select> nativo). Mantém
+  // a mesma API de state — apenas o widget de UI mudou.
+  function svcDropdownOpen() {
+    const dd = $('svc-dropdown');
+    const trg = $('svc-trigger');
+    dd.hidden = false;
+    trg.setAttribute('aria-expanded', 'true');
+    trg.classList.add('svc-trigger--open');
+  }
+  function svcDropdownClose() {
+    const dd = $('svc-dropdown');
+    const trg = $('svc-trigger');
+    dd.hidden = true;
+    trg.setAttribute('aria-expanded', 'false');
+    trg.classList.remove('svc-trigger--open');
+  }
+  function svcDropdownToggle() {
+    const dd = $('svc-dropdown');
+    if (dd.hidden) svcDropdownOpen(); else svcDropdownClose();
+  }
+  function svcUpdateTriggerText() {
+    const trg = $('svc-trigger-text');
+    if (state.serviceSkipped) {
+      trg.textContent = 'Não sei – a clínica define';
+      trg.classList.remove('svc-trigger-text--placeholder');
+    } else if (state.selectedService) {
+      const svc = state.selectedService;
+      const price = fmtPrice(svc.price);
+      const parts = [svc.name, svc.duration_minutes + 'min'];
+      if (price) parts.push(price);
+      trg.textContent = parts.join(' · ');
+      trg.classList.remove('svc-trigger-text--placeholder');
+    } else {
+      trg.textContent = 'Selecione um serviço…';
+      trg.classList.add('svc-trigger-text--placeholder');
+    }
+  }
+  function svcRenderList() {
+    const list = $('svc-dropdown-list');
+    list.innerHTML = '';
+
+    // "Não sei" fica no topo — fluxo do paciente leigo achar fácil.
+    const noneItem = document.createElement('button');
+    noneItem.type = 'button';
+    noneItem.className = 'svc-option svc-option--skip';
+    if (state.serviceSkipped) noneItem.classList.add('svc-option--selected');
+    noneItem.setAttribute('role', 'option');
+    noneItem.innerHTML =
+      '<span class="svc-option-icon">' +
+      '  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">' +
+      '    <circle cx="12" cy="12" r="10"/>' +
+      '    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>' +
+      '    <line x1="12" y1="17" x2="12.01" y2="17"/>' +
+      '  </svg>' +
+      '</span>' +
+      '<span class="svc-option-body">' +
+      '  <span class="svc-option-title">Não sei</span>' +
+      '  <span class="svc-option-sub">A clínica define o serviço</span>' +
+      '</span>';
+    noneItem.addEventListener('click', () => svcSelect(null, true));
+    list.appendChild(noneItem);
+
+    state.services.forEach(svc => {
+      const opt = document.createElement('button');
+      opt.type = 'button';
+      opt.className = 'svc-option';
+      if (state.selectedService && state.selectedService.id === svc.id) {
+        opt.classList.add('svc-option--selected');
+      }
+      opt.setAttribute('role', 'option');
+      const price = fmtPrice(svc.price);
+      opt.innerHTML =
+        '<span class="svc-option-dot" style="background:' + esc(svc.color || '#9ca3af') + '"></span>' +
+        '<span class="svc-option-body">' +
+        '  <span class="svc-option-title">' + esc(svc.name) + '</span>' +
+        '  <span class="svc-option-sub">' + svc.duration_minutes + 'min' + (price ? ' · ' + esc(price) : '') + '</span>' +
+        '</span>';
+      opt.addEventListener('click', () => svcSelect(svc.id, false));
+      list.appendChild(opt);
+    });
+  }
+  function svcSelect(id, skipped) {
+    state.serviceSkipped = !!skipped;
+    if (skipped) {
+      state.selectedService = null;
+    } else if (id != null) {
+      state.selectedService = state.services.find(s => s.id === id) || null;
+    } else {
+      state.selectedService = null;
+    }
+    svcUpdateTriggerText();
+    svcRenderList();
+    svcDropdownClose();
+
+    // Trocar serviço invalida horário e força re-fetch de slots — duração
+    // pode mudar e slots são recalculados em torno dela.
+    state.selectedTime = null;
+    $('btn-next-2').disabled = true;
+    if (state.selectedDate) {
+      selectDate(state.selectedDate);
+    }
+  }
+
+  async function loadServices() {
+    if (state.servicesLoaded) return;
+    try {
+      const res = await fetch(API_BASE + '/services');
+      const data = await res.json();
+      state.services = Array.isArray(data.services) ? data.services : [];
+    } catch(err) {
+      state.services = [];
+    }
+    state.servicesLoaded = true;
+
+    const wrap = $('service-picker-wrap');
+    if (state.services.length === 0) {
+      // Clínica sem catálogo — esconde o picker e segue fluxo legado:
+      // slots usam `slot_interval_minutes` como passo e duração do evento.
+      wrap.style.display = 'none';
+      return;
+    }
+
+    wrap.style.display = '';
+    svcUpdateTriggerText();
+    svcRenderList();
+
+    // Bind eventos uma vez. `loadServices` é idempotente via
+    // `state.servicesLoaded` guard, então os listeners não duplicam.
+    $('svc-trigger').addEventListener('click', e => {
+      e.stopPropagation();
+      svcDropdownToggle();
+    });
+    document.addEventListener('click', e => {
+      if ($('svc-dropdown').hidden) return;
+      if (!$('service-picker-wrap').contains(e.target)) svcDropdownClose();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !$('svc-dropdown').hidden) svcDropdownClose();
+    });
+  }
+
+  function renderSlots(slots, iso) {
+    if (!slots || slots.length === 0) {
+      $('slots-container').innerHTML = '<div class="slots-empty">😔 Nenhum horário disponível neste dia.<br>Escolha outra data.</div>';
+      return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'slots-grid';
+
+    slots.forEach(time => {
+      const btn = document.createElement('button');
+      btn.className = 'slot-btn' + (state.selectedTime === time ? ' selected' : '');
+      btn.textContent = time;
+      btn.addEventListener('click', () => {
+        state.selectedTime = time;
+        $('btn-next-2').disabled = false;
+        renderSlots(slots, iso);
+      });
+      grid.appendChild(btn);
+    });
+
+    $('slots-container').innerHTML = '';
+    $('slots-container').appendChild(grid);
+  }
+
+  // Quando o usuário navega mês via setas, reseta o painel direito de
+  // horários (antes ele ficava fixo no último dia clicado, com cabeçalho
+  // "Horários disponíveis – DD/MM" e grade de slots — confundia o paciente
+  // achando que aqueles horários eram do novo mês).
+  function resetSlotsPanel() {
+    state.selectedDate = null;
+    state.selectedTime = null;
+    $('btn-next-2').disabled = true;
+    $('slots-header').textContent = 'Selecione um dia para ver horários';
+    $('slots-container').innerHTML = '<div class="slots-empty">👈 Selecione uma data no calendário</div>';
+  }
+
+  $('cal-prev').addEventListener('click', () => {
+    if (state.calMonth === 0) { state.calMonth = 11; state.calYear--; }
+    else state.calMonth--;
+    resetSlotsPanel();
+    renderCalendar();
+  });
+  $('cal-next').addEventListener('click', () => {
+    if (state.calMonth === 11) { state.calMonth = 0; state.calYear++; }
+    else state.calMonth++;
+    resetSlotsPanel();
+    renderCalendar();
+  });
+
+  $('btn-back-2').addEventListener('click', () => setStep(1));
+  $('btn-next-2').addEventListener('click', () => {
+    // Quando a clínica tem catálogo, exigimos uma ESCOLHA explícita —
+    // ou um serviço específico, ou "Não sei" (a clínica define). Bloqueia
+    // só o placeholder vazio, pra evitar paciente avançar sem perceber
+    // que existia a etapa.
+    if (state.services.length > 0) {
+      const sel = $('service-picker');
+      if (sel.value === '') {
+        sel.classList.add('is-invalid');
+        sel.focus();
+        return;
+      }
+    }
+    if (!state.selectedDate || !state.selectedTime) return;
+    buildSummary();
+    setStep(3);
+  });
+
+  // ── Step 3 – Confirm ─────────────────────────────────────────────────────
+  // Escape simples para conteúdo digitado pelo paciente — `confirm-summary`
+  // usa `innerHTML` e os campos vêm do form. Sem isso, um '<' digitado em
+  // "Observações" quebraria a renderização do summary.
+  function esc(s) {
+    return String(s || '').replace(/[&<>"']/g, c =>
+      ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])
+    );
+  }
+
+  function buildSummary() {
+    const p = state.patient;
+    const svc = state.selectedService;
+    // Quando paciente escolheu "Não sei", mostra explicitamente "a clínica
+    // define" — assim ele vê que aquilo é uma escolha consciente, não um
+    // campo esquecido. Sem catálogo (clínica sem serviços), a linha de
+    // serviço some inteira.
+    let serviceLine = '';
+    if (svc) {
+      serviceLine = `<strong>Serviço</strong><span>${esc(svc.name)}${svc.duration_minutes ? ' · ' + svc.duration_minutes + 'min' : ''}</span>`;
+    } else if (state.serviceSkipped) {
+      serviceLine = `<strong>Serviço</strong><span style="color:var(--text-muted)">A clínica define</span>`;
+    }
+    $('confirm-summary').innerHTML = `
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;align-items:baseline;">
+        <strong>Nome</strong><span>${esc(p.firstName)} ${esc(p.lastName)}</span>
+        <strong>CPF</strong><span>${esc(p.cpf)}</span>
+        <strong>WhatsApp</strong><span>${esc(p.phone)}</span>
+        ${p.email ? `<strong>E-mail</strong><span>${esc(p.email)}</span>` : ''}
+        ${serviceLine}
+        <strong>Data</strong><span>${fmtDate(state.selectedDate)}</span>
+        <strong>Horário</strong><span>${esc(state.selectedTime)}</span>
+        ${p.observations ? `<strong>Observações</strong><span>${esc(p.observations)}</span>` : ''}
+      </div>
+    `;
+  }
+
+  $('btn-back-3').addEventListener('click', () => setStep(2));
+  $('btn-confirm').addEventListener('click', async () => {
+    const btn = $('btn-confirm');
+    const spinner = $('btn-confirm-spinner');
+    const btnText = $('btn-confirm-text');
+    const errBox = $('booking-error-msg');
+
+    btn.disabled = true;
+    spinner.style.display = '';
+    btnText.textContent = 'Confirmando...';
+    errBox.style.display = 'none';
+
+    const p = state.patient;
+    const payload = {
+      date: state.selectedDate,
+      time: state.selectedTime,
+      service_id: state.selectedService ? state.selectedService.id : null,
+      // 9.19 — honeypot. Bots tendem a preencher TODOS os inputs visíveis no
+      // form (incluindo o `#f-website` invisível); humanos não tocam. Se vier
+      // preenchido, backend rejeita silenciosamente.
+      website: $('f-website') ? $('f-website').value : '',
+      patient: {
+        first_name: p.firstName,
+        last_name: p.lastName,
+        phone: p.phone.replace(/\D/g,''),
+        email: p.email || null,
+        cpf: p.cpf.replace(/\D/g,''),
+        observations: p.observations || null,
+      }
+    };
+
+    try {
+      const res = await fetch(API_BASE + '/book', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        const [y, m, d] = state.selectedDate.split('-');
+        const dateStr = d + '/' + m + '/' + y;
+        const timeStr = state.selectedTime;
+        // Two-line semantic markup: data + horário side-by-side, com ícones,
+        // mais legível que a string única "📅 30/04/2026 às 13:00".
+        $('success-detail').innerHTML =
+          '<div class="success-pill">' +
+            '<div class="success-pill-item">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">' +
+                '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>' +
+                '<line x1="16" y1="2" x2="16" y2="6"/>' +
+                '<line x1="8" y1="2" x2="8" y2="6"/>' +
+                '<line x1="3" y1="10" x2="21" y2="10"/>' +
+              '</svg>' +
+              '<div>' +
+                '<div class="success-pill-label">Data</div>' +
+                '<div class="success-pill-value">' + dateStr + '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="success-pill-divider"></div>' +
+            '<div class="success-pill-item">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">' +
+                '<circle cx="12" cy="12" r="10"/>' +
+                '<polyline points="12 6 12 12 16 14"/>' +
+              '</svg>' +
+              '<div>' +
+                '<div class="success-pill-label">Horário</div>' +
+                '<div class="success-pill-value">' + timeStr + '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        // 9.11 — salva token e exibe botão de cancelar.
+        state.cancelToken = data.cancel_token || null;
+        state.cancelled = false;
+        if (state.cancelToken) {
+          $('success-cancel').style.display = '';
+          $('btn-cancel-booking').disabled = false;
+          $('btn-cancel-booking').textContent = 'Cancelar este agendamento';
+          $('cancel-msg').textContent = '';
+        }
+        setStep(4);
+        $('steps-bar').style.display = 'none';
+        // Step 4: header compacto fica visível (prof-card agora é parte do
+        // header e dá contexto pro paciente saber em qual profissional
+        // foi agendado mesmo na tela de sucesso).
+      } else {
+        errBox.textContent = data.error || 'Erro ao confirmar o agendamento. Tente novamente.';
+        errBox.style.display = '';
+        btn.disabled = false;
+        spinner.style.display = 'none';
+        btnText.textContent = 'Confirmar agendamento';
+      }
+    } catch(err) {
+      errBox.textContent = 'Erro de conexão. Verifique sua internet e tente novamente.';
+      errBox.style.display = '';
+      btn.disabled = false;
+      spinner.style.display = 'none';
+      btnText.textContent = 'Confirmar agendamento';
+    }
+  });
+
+  // 9.11 — handler do botão "Cancelar este agendamento" no step 4. Confirma
+  // intent (window.confirm — UX padrão para ação destrutiva sem mexer em CSS
+  // de modal), envia DELETE com token, atualiza UI conforme resposta.
+  $('btn-cancel-booking').addEventListener('click', async () => {
+    if (state.cancelled) return;
+    if (!state.cancelToken) return;
+
+    const ok = window.confirm('Deseja realmente cancelar este agendamento?');
+    if (!ok) return;
+
+    const btn = $('btn-cancel-booking');
+    const msg = $('cancel-msg');
+    btn.disabled = true;
+    btn.textContent = 'Cancelando...';
+    msg.textContent = '';
+
+    try {
+      const res = await fetch('/public/api/v1/agenda/booking/' + encodeURIComponent(state.cancelToken) + '/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        state.cancelled = true;
+        btn.style.display = 'none';
+        msg.textContent = data.message || 'Agendamento cancelado.';
+        msg.classList.add('cancel-msg--success');
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Cancelar este agendamento';
+        msg.textContent = data.error || 'Não foi possível cancelar. Tente novamente.';
+        msg.classList.add('cancel-msg--error');
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Cancelar este agendamento';
+      msg.textContent = 'Erro de conexão. Tente novamente.';
+      msg.classList.add('cancel-msg--error');
+    }
+  });
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+  setStep(1);
+})();
+</script>
+
+<% end %>
