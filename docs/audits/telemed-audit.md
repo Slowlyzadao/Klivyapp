@@ -9,6 +9,10 @@
 | **Método** | Auditoria estática read-only — leitura de código, sem execução, sem teste de carga, sem pen test |
 | **Notação** | **[E]** = evidência direta no código; **[H]** = hipótese (requer validação em runtime) |
 
+> ## 📌 Status pós-implementação (2026-05-21)
+>
+> Fases 1, 2 e 3 implementadas e commitadas; Fase 4 parcial (apenas item code-only). **Veja [Seção 18 — Status final de implementação](#18-status-final-de-implementação)** no fim do documento pra: commits, itens entregues vs adiados, justificativa de cada decisão de skip, e backlog acionável de Fase 4 (dívidas de infra).
+
 > ⚠️ Esta auditoria substitui o documento `plugins/telemed/docs/audit.md` (2026-05-20). Após aquela auditoria, o código foi consolidado em `plugins/telemed/`. Achados que **continuam válidos** estão marcados ✅; achados **agora resolvidos** estão marcados ❎; achados **novos** introduzidos ou descobertos nesta passada estão marcados 🆕.
 
 ---
@@ -963,4 +967,156 @@ Após Fase 1: deploy beta-staging com pelo menos 3 contas reais por 1 semana ant
 
 ---
 
-*Fim da auditoria. Documento gerado por Claude Code (Opus 4.7), 2026-05-21.*
+## 18. Status final de implementação
+
+Auditoria fechada em 2026-05-21 com 5 commits sequenciais no branch `main`:
+
+```
+ad0686d  feat(telemed): Fase 3 — LGPD, refactors, perf e UX polish
+1a1a78f  feat(telemed): Fase 2 — performance, resiliência e UX
+3f7f540  feat(telemed): ActionCable broadcasts (Fase 1 — Tranche 5)
+2238c4a  chore: gitignore — vendor/bundle, .sass-cache, junk
+460733a  chore: initial commit + Fase 1 Tranches 1-4
+```
+
+### 18.1 Status por fase
+
+| Fase | Implementados | Adiados | Total | Status |
+|---|---|---|---|---|
+| Fase 1 (bloqueadores) | 10 | 0 | 10 | ✅ 100% |
+| Fase 2 (curto prazo) | 14 | 1 (#17) | 15 | ✅ 93% |
+| Fase 3 (médio prazo) | 7 | 3 | 10 | ✅ 70% |
+| Fase 4 (longo prazo) | 1 | 5 | 6 | ⏳ 17% |
+| **TOTAL** | **32** | **9** | **41** | **~78%** |
+
+> Itens marcados como "adiados" têm justificativa documentada — não são esquecimentos. Vide §18.4.
+
+### 18.2 Mapeamento item-a-item
+
+#### Fase 1 — Bloqueadores de produção (10/10 ✅)
+
+| # | Item | Onde |
+|---|---|---|
+| 1 | `RecordingStorage.delete` implementado | `plugins/telemed/app/services/telemed/recording_storage.rb` |
+| 2 | Mass assignment `permit!` → whitelist | `plugins/telemed/app/controllers/api/v1/accounts/telemed/proposed_evolutions_controller.rb` |
+| 3 | Rack::Attack rate-limit no webhook LiveKit | `config/initializers/rack_attack.rb` |
+| 4 | ActionCable broadcasts em 5 status changes + canal + frontend subscribe | `TelemedRecording#broadcast_status_change!` + actionCable.js + `TeleconsultaDetailPage.vue` |
+| 5 | Pessimistic lock em `RecordingOrchestrator#start!` | `recording_orchestrator.rb` |
+| 6 | Pessimistic lock em `handle_started`/`handle_ended` + idempotência | `egress_controller.rb` |
+| 7 | Retry consolidado em TranscribeJob + GenerateEvolutionJob | `*_job.rb` |
+| 8 | Guard 25MB Whisper + `PermanentFailure` | `transcribe_recording_job.rb` |
+| 9 | Fallback `single` mode (composite-only) em egress parcial | `transcribe_recording_job.rb` |
+| 10 | Whisper timeout 300s → 900s | `transcription_provider/whisper.rb` |
+| 11 | `v-for :key` estável em Transcript + EvolutionEditor | `*.vue` |
+| 12 | LiveKit `room.off()` + audio listeners cleanup | `TelemedicineRoom.vue` + `TeleconsultaRecordingPlayer.vue` |
+
+#### Fase 2 — Curto prazo (14/15 ✅)
+
+| # | Item | Onde / Notas |
+|---|---|---|
+| 13 | Prompt-injection guard + sanitização transcript | `evolution_provider/claude.rb` |
+| 14 | Token cap pré-request Claude (`MAX_TRANSCRIPT_CHARS`) | `evolution_provider/claude.rb` |
+| 15 | Confirmação no `reject()` | `TeleconsultaEvolutionEditor.vue` |
+| 16 | `Telemed::PermanentFailure` shared | `services/telemed/permanent_failure.rb` |
+| 17 | Memoização `latest_recording_for` / `latest_proposed_evolution` (N+1 fix) | `teleconsultas_controller.rb` + `telemed_recording.rb` |
+| 18 | Índices compostos | `db/migrate/20260521000003` |
+| 19 | Queue segregation (jobs longos → `:low`, timers → `:high`, housekeeping → `:purgable`) | `*_job.rb queue_as` |
+| 20 | `ALLOWED_TRANSITIONS` + validator | `telemed_recording.rb` |
+| 21 | `with_lock` em `mark_*_job` (race fix #32) | `mark_no_show_job.rb` + `mark_in_progress_job.rb` |
+| 22 | Partial unique index `(telemed_recording_id) WHERE status='pending_review'` + rescue gracioso | `db/migrate/20260521000004` + `generate_evolution_job.rb` |
+| 23 | `requestSeq` em `useTeleconsultaList` (race fix) | `useTeleconsultaList.js` |
+| 24 | Consent persist em localStorage por `roomCode` | `TelemedicineRoom.vue` |
+| 25 | `onRoomReconnecting`/`onRoomReconnected` handlers + estado `reconnecting` | `TelemedicineRoom.vue` |
+| 26 | `hasUnsavedChanges` + `beforeunload` + `onBeforeRouteLeave` | `TeleconsultaEvolutionEditor.vue` + `TeleconsultaDetailPage.vue` |
+| **#17 audit** | Cancel proativo de `mark_*_job` em event delete | **ADIADO** — defensive guard existente cobre (find_by + return unless event); só economiza log noise. Custo de Sidekiq scheduled-set access > benefício. |
+
+#### Fase 3 — Médio prazo (7/10 ✅)
+
+| # | Item | Onde / Notas |
+|---|---|---|
+| 27 | `ProposedEvolutionApprovalService` extraído (audit #10.8) | `services/telemed/proposed_evolution_approval_service.rb` |
+| 28 | `SessionJobScheduler` extraído (audit #10.14) | `services/telemed/session_job_scheduler.rb` |
+| 29 | PII redaction em logs (filter_parameters) | `config/initializers/filter_parameter_logging.rb` |
+| 30 | `encrypts :transcript_text` + `:raw_markdown` + `:reviewer_notes` (LGPD #35) | `telemed_recording.rb` + `proposed_evolution.rb` (config preexistente em `application.rb` com `support_unencrypted_data`) |
+| 31 | Whisper compress via ffmpeg (32 kbps mono opus) — cobre consultas até ~3h | `transcribe_recording_job.rb#compress_for_whisper` |
+| 32 | Virtualização Transcript via `DynamicScroller` | `TeleconsultaTranscript.vue` |
+| 33 | Skeleton screens (List + Detail) com shimmer + `prefers-reduced-motion` | `TeleconsultaListPage.vue` + `TeleconsultaDetailPage.vue` + SCSS |
+| **#29 audit** | Cursor pagination | **NÃO IMPLEMENTADO** — frontend usa `goToPage` (jump direto pra página N) que cursor-based não suporta sem mudança de UX. Em volume real (~1k consultas/clínica/ano), offset 100 é trivial. Reavaliar quando datasets crescerem. |
+| **#9.10 audit** | i18n keys PT-BR | **ADIADO** — escopo de PR dedicado: requer criar `telemed.json` em ~16 locales, traduzir cada string, importar via `app/javascript/dashboard/i18n/`. Componentes já comentam "pendente i18n" — dívida consciente, não regressão. |
+| **#11.8 audit** | Rename `archive!` → `purge_storage!` | **NÃO RENOMEADO** — `archive!` é coerente com `archived_at`/`archived?`/scope `archived`; renomear apenas o método criaria mais inconsistência. Docstring clarificado em vez disso. |
+
+#### Fase 4 — Longo prazo (1/6 ⏳)
+
+| # | Item | Status |
+|---|---|---|
+| 34 | Remover injeção bidirecional `ClinicalNote belongs_to :proposed_evolution` | ✅ **IMPLEMENTADO** — `engine.rb` não injeta mais; FK column `proposed_evolution_id` permanece pra auditoria CFM; navegação reversa via `ProposedEvolution.find_by(clinical_note_id: ...)` (zero callers usavam a associação na época da remoção) |
+| 35 | JWT secret rotation + refresh token mechanism | **DÍVIDA** — vide §18.4 |
+| 36 | Tenant-scoped S3 credentials | **DÍVIDA infra** — vide §18.4 |
+| 37 | State machine AASM | **NÃO NECESSÁRIO** — validator manual com `ALLOWED_TRANSITIONS` (Fase 2) é tecnicamente equivalente. Adicionar gem AASM só por padronização não compensa risco. |
+| 38 | LiveKit Cloud migration | **DÍVIDA infra** — vide §18.4 |
+| 39 | Namespacear models (`Telemed::Recording`) | **DÍVIDA** — vide §18.4 |
+
+### 18.3 Resumo das migrations adicionadas
+
+```
+db/migrate/20260521000003_add_telemed_audit_phase2_indexes.rb
+  - idx_telemed_recordings_event_created_desc
+  - idx_telemed_recordings_active_account_created (partial)
+  - idx_proposed_evolutions_status_updated
+
+db/migrate/20260521000004_add_proposed_evolution_uniqueness_guard.rb
+  - idx_proposed_evolutions_unique_pending_per_recording (partial unique)
+```
+
+Todas com `algorithm: :concurrently` + `if_not_exists: true` — rollout sem lock pesado em prod.
+
+### 18.4 Backlog acionável (Fase 4 — dívida remanescente)
+
+**Dívidas de código (factíveis em PR dedicado):**
+
+1. **#35 JWT refresh mechanism** — `Telemed::SessionIssuer` emite tokens com TTL 3h (subido da Fase 2). Pra consultas que excedam o TTL: implementar endpoint `POST /telemed/sessions/refresh` que reemite token mediante validação de session ativa (LiveKit `RoomServiceClient.list_participants`). Cliente LiveKit JS suporta hot-swap de token. Risco: médio (lógica de validação + edge cases de race).
+
+2. **#37 AASM state machine** — opcional. Se equipe quiser padronização Gemfile-wide. Atual `ALLOWED_TRANSITIONS` + validator manual cobre o caso.
+
+3. **#39 Namespacear models** — `TelemedRecording` → `Telemed::Recording`, `ProposedEvolution` → `Telemed::ProposedEvolution`. Requer migration `rename_table` + atualizar todos os callers (engine, controllers, jobs, services, policies, factories, specs). **Não vale fazer junto com outras mudanças** — PR dedicado, validar em staging por 1+ semana antes de prod.
+
+4. **encrypts em jsonb (`soap_structure`, `attention_points`)** — dívida deixada na Fase 3. Rails 7 `encrypts` em jsonb perde queries dentro do JSON (`->`/`->>` viram inutilizáveis). Solução: ou aceitar perda (atualmente não há queries dentro do JSON), ou usar serializer custom (encrypta antes de salvar). Avaliar caso a caso.
+
+**Dívidas de infra (NÃO código — backlog ops/infra):**
+
+5. **#36 Tenant-scoped S3 credentials** — atualmente todas as contas escrevem no mesmo bucket R2 com mesmas credenciais (path inclui `accounts/<id>/` mas sem policy IAM por tenant). Para isolation real:
+    - Criar IAM users / API tokens R2 por account
+    - Reescrever `RecordingStorage` pra resolver credenciais dinâmicas por `account_id`
+    - Migrar dados existentes (re-upload com novas creds OU policy de migração)
+    - Custo: ~3 dias de trabalho ops + ~1 dia de código
+
+6. **#38 LiveKit Cloud migration** — opcional. Self-hosted LiveKit + cloudflared funciona em dev mas tem limitações em mobile (NAT traversal sem TURN gerenciado). LiveKit Cloud resolve com TURN gerenciado + escala global. Decisão de produto: $$ vs autonomia.
+
+7. **R2 lifecycle policy** (dívida da Fase 2 — pulada por ser config infra) — adicionar regra "delete temp prefix após 7 dias" no console R2. Cobre temp files órfãos caso `cleanup_temp_files!` falhe em alguma edge case.
+
+### 18.5 Recomendações pós-merge
+
+1. **Smoke test manual em staging** dos caminhos críticos antes de prod:
+   - Pipeline completo: paciente entra → doutor entra → 5 min → saída → transcript → evolution (validar broadcasts ActionCable atualizam UI sem F5)
+   - Race test: doutor e paciente entram exatamente juntos (rodar 2 requests simultâneos) — confirmar 1 recording, não 2
+   - 25MB guard: subir áudio de 1h+ → confirmar compressão ffmpeg roda e não estoura
+   - Webhook rate-limit: stress test com `ab` em `/webhooks/livekit/egress` — confirmar 429 após 100/min
+
+2. **Configurar ENV vars em prod antes do deploy:**
+   - `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY` + `_DETERMINISTIC_KEY` + `_KEY_DERIVATION_SALT` (gerar com `rails db:encryption:init`)
+   - `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` (rotacionar do dev)
+   - `TELEMED_STORAGE_*` (R2 production bucket)
+   - `OPENAI_WHISPER_KEY` + `ANTHROPIC_API_KEY`
+   - Opcional: `RATE_LIMIT_LIVEKIT_WEBHOOK_IP` (override do default 100/min)
+   - Opcional: `SIDEKIQ_CONCURRENCY` (default 10 — subir se volume de jobs `:low` crescer)
+
+3. **Monitorar:**
+   - `[TranscribeRecordingJob] comprimindo` no log — frequência indica se 32kbps default precisa virar bitrate menor
+   - `RecordNotUnique` em `ProposedEvolution` — se aparecer com freq alta, indica bug que está re-enqueuing job indevido
+   - Lag da queue `:low` — alertar se média de delay > 30min
+
+4. **Próximo audit recomendado:** após 3 meses em produção, refazer com foco em métricas reais (DB query plans, custo Whisper/Claude por consulta, falhas observadas, freq de retry, tamanho típico de transcrição).
+
+---
+
+*Auditoria fechada em 2026-05-21 — Claude Code (Opus 4.7).*

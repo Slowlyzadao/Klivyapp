@@ -35,13 +35,16 @@ module Telemed
         end
       end
 
-      if defined?(ClinicalNote)
-        ClinicalNote.class_eval do
-          # ProposedEvolution#approve! cria ClinicalNote — a associação inversa
-          # permite UI navegar "vista da nota → proposta original" (auditoria CFM).
-          belongs_to :proposed_evolution, optional: true
-        end
-      end
+      # Audit Fase 4 (#41) — REMOVIDO `ClinicalNote.class_eval { belongs_to
+      # :proposed_evolution }`. Antes criava acoplamento bidirecional
+      # core ↔ plugin: se o plugin telemed era desabilitado, ClinicalNote
+      # carregava uma associação pra constant inexistente. O FK column
+      # `clinical_notes.proposed_evolution_id` permanece (auditoria CFM),
+      # mas a navegação reversa agora é via query: quem precisar da
+      # proposta original a partir de uma nota usa
+      # `ProposedEvolution.find_by(clinical_note_id: note.id)` em vez de
+      # `note.proposed_evolution`. Nenhum código no projeto usava a
+      # associação na época da remoção (verificado por grep).
     end
   end
 end
