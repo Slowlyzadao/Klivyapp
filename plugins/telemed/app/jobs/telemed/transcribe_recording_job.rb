@@ -83,6 +83,7 @@ module Telemed
       end
 
       recording.update!(status: 'transcribing')
+      recording.broadcast_status_change!
 
       merged =
         if mode == :diarized
@@ -104,6 +105,7 @@ module Telemed
         transcript_segments: merged.map(&:to_h),
         transcript_provider: 'whisper'
       )
+      recording.broadcast_status_change!
 
       # Cleanup só dos temps (composite continua intacto pro player).
       # No modo `single` não há temps a deletar.

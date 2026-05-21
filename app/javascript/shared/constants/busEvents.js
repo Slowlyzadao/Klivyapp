@@ -13,4 +13,7 @@ export const BUS_EVENTS = {
   NEW_CONVERSATION_MODAL: 'newConversationModal',
   INSERT_INTO_RICH_EDITOR: 'insertIntoRichEditor',
   INSERT_INTO_NORMAL_EDITOR: 'insertIntoNormalEditor',
+  // Telemed (audit Fase 1 — Tranche 5): TeleconsultaDetailPage escuta pra
+  // atualizar status do recording em tempo real sem F5.
+  TELEMED_RECORDING_UPDATED: 'telemed.recording.updated',
 };

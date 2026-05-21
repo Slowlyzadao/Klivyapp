@@ -5,8 +5,10 @@
 // `@plugins/telemed/frontend/styles/teleconsulta-detail.scss`.
 import '@plugins/telemed/frontend/styles/teleconsulta-detail.scss';
 
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
+import { emitter } from 'shared/helpers/mitt';
 import { teleconsultasApi } from '../../api/teleconsultas';
 import TeleconsultaDetailHeader from './TeleconsultaDetailHeader.vue';
 import TeleconsultaRecordingPlayer from './TeleconsultaRecordingPlayer.vue';
@@ -75,7 +77,41 @@ const onEvolutionRejected = updated => {
   if (detail.value) detail.value.evolution = updated;
 };
 
-onMounted(fetchDetail);
+// ─── Realtime: status do recording via ActionCable ───────────────────────
+// Backend (`TelemedRecording#broadcast_status_change!`) emite no canal
+// `account_<id>` em cada transição (pending → recording → uploaded →
+// transcribing → transcribed → evolving → ready, ou failed). Sem este
+// subscribe a UI ficava stale eternamente em "Gravação em processamento…"
+// até o usuário dar F5. Audit Fase 1 — Tranche 5.
+const onTelemedRecordingUpdated = payload => {
+  // Só interessa o recording desta página. Mensagem de outras consultas é
+  // ignorada — o connector global recebe tudo do account.
+  if (!detail.value) return;
+  if (String(payload.agenda_event_id) !== String(eventId.value)) return;
+
+  // Hidrata recording inline (status, has_transcript, etc.). Para
+  // transições terminais (`transcribed`, `ready`, `failed`) refetch
+  // completo pra trazer segments/SOAP/evolution carregados pelo backend.
+  const status = payload.status;
+  if (detail.value.recording) {
+    detail.value.recording.status = status;
+    detail.value.recording.has_transcript = payload.has_transcript;
+    detail.value.recording.has_audio = payload.has_audio;
+  }
+
+  if (status === 'transcribed' || status === 'ready' || status === 'failed') {
+    fetchDetail();
+  }
+};
+
+onMounted(() => {
+  fetchDetail();
+  emitter.on(BUS_EVENTS.TELEMED_RECORDING_UPDATED, onTelemedRecordingUpdated);
+});
+
+onBeforeUnmount(() => {
+  emitter.off(BUS_EVENTS.TELEMED_RECORDING_UPDATED, onTelemedRecordingUpdated);
+});
 </script>
 
 <template>

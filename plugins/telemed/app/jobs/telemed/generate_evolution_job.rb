@@ -29,6 +29,7 @@ module Telemed
       return if recording.transcript_text.blank?
 
       recording.update!(status: 'evolving')
+      recording.broadcast_status_change!
 
       provider_name   = resolve_provider_name(recording.account)
       provider        = EvolutionProvider.for(provider_name)
@@ -51,6 +52,8 @@ module Telemed
       )
 
       recording.update!(status: 'ready')
+      recording.broadcast_status_change!
+
       # Notificação ao dentista — push/email/in-app. MVP: registro em
       # PatientPortalNotification do dentista (já existe na Sprint E).
       notify_dentist(recording)

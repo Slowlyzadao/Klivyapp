@@ -91,6 +91,9 @@ class TelemedRecording < ApplicationRecord
       failure_reason: reason.to_s.first(2000),
       updated_at: Time.current
     )
+    # UI precisa saber pra trocar "Transcrevendo…" pelo erro. Broadcast vai
+    # pro stream `account_<id>` que `TeleconsultaDetailPage` ouve.
+    broadcast_status_change!
   end
 
   def bump_retry!
@@ -142,6 +145,33 @@ class TelemedRecording < ApplicationRecord
       created_at: created_at,
       updated_at: updated_at
     }
+  end
+
+  # Push realtime para o canal da conta. UI do dentista subscreve no
+  # RoomChannel (`account_<id>`) e recebe transições de status sem precisar
+  # de F5. Chamado em todos os pontos onde `status` muda (webhook + 2 jobs).
+  # `account_<id>` é o stream global da conta já populado pelo RoomChannel;
+  # `isAValidEvent` no actionCable.js valida o tenant.
+  def broadcast_status_change!
+    evolution = latest_proposed_evolution
+    ActionCable.server.broadcast(
+      "account_#{account_id}",
+      event: 'telemed.recording.status_changed',
+      data: {
+        account_id:       account_id,
+        recording_id:     id,
+        agenda_event_id:  agenda_event_id,
+        status:           status,
+        has_transcript:   transcript_text.present?,
+        has_audio:        composite_audio_key.present?,
+        evolution:        evolution && { id: evolution.id, status: evolution.status },
+        failure_reason:   failure_reason
+      }
+    )
+  rescue StandardError => e
+    # Broadcast falhando NÃO deve quebrar a transação que mudou o status.
+    # Pior caso é a UI ficar stale e precisar de F5 — comportamento atual.
+    Rails.logger.warn("[TelemedRecording##{id}#broadcast_status_change!] #{e.class}: #{e.message}")
   end
 
   private

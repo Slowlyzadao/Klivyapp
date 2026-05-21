@@ -34,6 +34,8 @@ class ActionCableConnector extends BaseActionCableConnector {
       'conversation.updated': this.onConversationUpdated,
       'account.cache_invalidated': this.onCacheInvalidate,
       'copilot.message.created': this.onCopilotMessageCreated,
+      // Telemed plugin (audit Fase 1 — Tranche 5)
+      'telemed.recording.status_changed': this.onTelemedRecordingStatusChanged,
     };
   }
 
@@ -199,6 +201,14 @@ class ActionCableConnector extends BaseActionCableConnector {
     this.app.$store.dispatch('labels/revalidate', { newKey: keys.label });
     this.app.$store.dispatch('inboxes/revalidate', { newKey: keys.inbox });
     this.app.$store.dispatch('teams/revalidate', { newKey: keys.team });
+  };
+
+  // Telemed plugin — broadcast vindo de TelemedRecording#broadcast_status_change!
+  // Repassa via mitt bus pra TeleconsultaDetailPage (e quem mais ouvir).
+  // `isAValidEvent` (herdado) já garante que account_id bate, então não
+  // precisa revalidar aqui.
+  onTelemedRecordingStatusChanged = data => {
+    emitter.emit(BUS_EVENTS.TELEMED_RECORDING_UPDATED, data);
   };
 }
 

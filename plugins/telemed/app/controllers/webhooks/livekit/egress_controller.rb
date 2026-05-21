@@ -115,11 +115,17 @@ class Webhooks::Livekit::EgressController < ActionController::API
     # Lock serializa 3 webhooks `egress_started` chegando em ms (doctor,
     # patient, composite) — sem isso 3 UPDATEs concorrentes (lost-update
     # inofensivo aqui, mas ainda desperdiça writes).
+    transitioned = false
     recording.with_lock do
       return if recording.status != 'pending'
 
       recording.update!(status: 'recording')
+      transitioned = true
     end
+
+    # Broadcast fora do lock — não bloqueia a transação no Postgres com I/O
+    # do Redis pub/sub. Só transmite se houve transição (evita spam).
+    recording.broadcast_status_change! if transitioned
   end
 
   # Audio-only com até 3 egress jobs (doctor isolated + patient isolated +
@@ -188,6 +194,9 @@ class Webhooks::Livekit::EgressController < ActionController::API
     if enqueue_transcribe
       Rails.logger.info("[Webhooks::Livekit::EgressController] recording=#{recording.id} todos egress concluídos — enfileirando TranscribeJob")
       Telemed::TranscribeRecordingJob.perform_later(recording.id)
+      # UI mostra "Aguardando processamento" → "Transcrevendo" quando o job
+      # começa. Broadcast aqui sinaliza transição 'recording' → 'uploaded'.
+      recording.broadcast_status_change!
     end
   end
 
