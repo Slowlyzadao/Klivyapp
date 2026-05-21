@@ -13,10 +13,20 @@ node_modules
 /public/vite-dev
 /public/vite-test
 .bundle
+/vendor/bundle/
+/.sass-cache/
 .DS_Store
 .env*
 !.env.example
 log/*.log
+
+# ----------------- LIXO DE SHELL / EDITOR ----------------- #
+# Files criados acidentalmente (ex: `echo -e` que cria file `-e`, vírgulas
+# soltas em comandos `touch a, b, c`). Não trackeamos.
+/-e
+/arrived,
+/completed,
+/in_progress,
 
 # ----------------- ARQUIVOS TEMPORÁRIOS & LOGS NA RAIZ ----------------- #
 # Logs na raiz do projeto (ex: rails.log, foreman.log, vite.log, etc)
