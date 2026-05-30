@@ -31,8 +31,7 @@ export const validateAuthenticateRoutePermission = (to, next) => {
     return next(frontendURL(`accounts/${accountId}/dashboard`));
   }
 
-  const klivyPermissions =
-    store.getters['beclinicPermissions/getPermissions'];
+  const klivyPermissions = store.getters['beclinicPermissions/getPermissions'];
   const nextRoute = validateLoggedInRoutes(
     to,
     store.getters.getCurrentUser,

@@ -9,7 +9,12 @@ if ENV['SENTRY_DSN'].present?
 
     config.excluded_exceptions += ['Rack::Timeout::RequestTimeoutException']
 
-    # to track post data in sentry
-    config.send_default_pii = true unless ENV['DISABLE_SENTRY_PII']
+    # AUDIT 2026-05-25 — invertido pra opt-in (era opt-out).
+    # Default antigo (`true unless DISABLE_SENTRY_PII`) enviava request body,
+    # headers e params do paciente pro Sentry sem flag explícita. Em prod
+    # médico (LGPD/CFM), só ativa se ENABLE_SENTRY_PII=true estiver setado.
+    # filter_parameters já mascara transcript/soap_structure, mas exceptions
+    # podem carregar PII em mensagens livres — opt-in é a postura segura.
+    config.send_default_pii = ENV['ENABLE_SENTRY_PII'].present?
   end
 end

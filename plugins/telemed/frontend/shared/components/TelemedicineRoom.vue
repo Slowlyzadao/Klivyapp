@@ -31,6 +31,7 @@ import {
   Track,
   VideoPresets,
   VideoQuality,
+  ConnectionQuality,
   createLocalVideoTrack,
   createLocalAudioTrack,
 } from 'livekit-client';
@@ -38,7 +39,6 @@ import IconMic from '@plugins/patient_portal/frontend/components/icons/IconMic.v
 import IconMicOff from '@plugins/patient_portal/frontend/components/icons/IconMicOff.vue';
 import IconVideo from '@plugins/patient_portal/frontend/components/icons/IconVideo.vue';
 import IconVideoOff from '@plugins/patient_portal/frontend/components/icons/IconVideoOff.vue';
-import IconPhoneHangup from '@plugins/patient_portal/frontend/components/icons/IconPhoneHangup.vue';
 import IconScreenShare from '@plugins/patient_portal/frontend/components/icons/IconScreenShare.vue';
 import IconSwitchCamera from '@plugins/patient_portal/frontend/components/icons/IconSwitchCamera.vue';
 import IconMessage from '@plugins/patient_portal/frontend/components/icons/IconMessage.vue';
@@ -46,6 +46,10 @@ import IconClose from '@plugins/patient_portal/frontend/components/icons/IconClo
 import IconClock from '@plugins/patient_portal/frontend/components/icons/IconClock.vue';
 import IconChevronLeft from '@plugins/patient_portal/frontend/components/icons/IconChevronLeft.vue';
 import IconChatBubble from '@plugins/patient_portal/frontend/components/icons/IconChatBubble.vue';
+import IconShield from '@plugins/patient_portal/frontend/components/icons/IconShield.vue';
+import IconBlur from '@plugins/patient_portal/frontend/components/icons/IconBlur.vue';
+import { vOnClickOutside } from '@vueuse/components';
+import TelemedDeviceSelect from './TelemedDeviceSelect.vue';
 
 const props = defineProps({
   url: { type: String, required: true },
@@ -69,6 +73,27 @@ const props = defineProps({
   // header sob o título — útil pra paciente ler pelo telefone se precisar
   // de suporte e pra log/auditoria.
   roomCode: { type: String, default: '' },
+  // 2026-05-21 — Lista de identities já admitidas (server-side waiting room).
+  // Dentista reidrata estado: se ele recarrega a página, pacientes já
+  // aceitos não voltam pro card "Aceitar". Vem do backend em meta.admissions.
+  // Formato: { 'patient-12-abc': { admitted_at: '2026-05-21T...' }, ... }
+  initialAdmissions: { type: Object, default: () => ({}) },
+  // 2026-05-21 — Caller pra admit server-side (chama o endpoint Rails que
+  // executa LiveKit UpdateParticipant). Função `async (identity) => {}`.
+  // Wrapper do dentista injeta. Wrapper do paciente passa null (no-op).
+  admitter: { type: Function, default: null },
+  // 2026-05-22 — Estado inicial da gravação manual (vem do payload do
+  // endpoint /sessions). Permite reidratar a UI: se o doutor recarrega
+  // a página com gravação ON, o botão volta a aparecer aceso.
+  initialRecording: {
+    type: Object,
+    default: () => ({ active: false, started_at: null, consented: false }),
+  },
+  // 2026-05-22 — Callbacks pra start/stop da gravação manual. Wrapper
+  // dashboard injeta as 2; wrapper paciente passa null (paciente não
+  // tem controle de gravação, apenas o doutor).
+  recordStarter: { type: Function, default: null },
+  recordStopper: { type: Function, default: null },
 });
 // 'sessionEvent' (Sprint K — automação de status):
 //   - { kind: 'joined' } — emitido UMA vez quando o local participant
@@ -78,7 +103,11 @@ const props = defineProps({
 //     ou clique em "Sair"). Idempotência via emitSessionEventOnce.
 // Nome camelCase exigido pelo lint vue/custom-event-name-casing (Vue 3
 // convention); template pode escutar via @session-event ou @sessionEvent.
-const emit = defineEmits(['leave', 'sessionEvent']);
+// 'endedByHost' — emitido SÓ no lado do paciente quando recebemos um
+// `{type:'call_ended'}` do doutor via data channel. Wrapper do paciente
+// hooka pra navegar pra home (em vez do detalhe do appointment, que é
+// o destino default do `leave`).
+const emit = defineEmits(['leave', 'sessionEvent', 'endedByHost']);
 
 // 'preflight' (lobby Meet-style: preview + escolha de devices) → 'connecting'
 // → 'connected' | 'disconnected' | 'error'.
@@ -129,8 +158,18 @@ watch(recordingConsent, val => {
 // `setupPreflight()` via `Room.getLocalDevices`.
 const audioInputs = ref([]);
 const videoInputs = ref([]);
+const audioOutputs = ref([]);
 const selectedVideoDevice = ref('');
 const selectedAudioDevice = ref('');
+// Saída de áudio (speaker selector). Aplicado via setSinkId em todos os
+// <audio> remotos quando muda. Safari não suporta setSinkId — nesse caso o
+// select fica disabled. Tracking de elements em `audioElementsForSink` pra
+// reaplicar quando um novo track remoto chega.
+const selectedAudioOutputDevice = ref('');
+const supportsAudioOutputSelection =
+  typeof HTMLAudioElement !== 'undefined' &&
+  typeof HTMLAudioElement.prototype.setSinkId === 'function';
+const audioElementsForSink = new Set();
 // Resolução real do preview track (vem de `getSettings().{width,height}`).
 // Usado pra mostrar "1080p" / "720p" / "360p" no canto do preview.
 const previewResolution = ref({ width: 0, height: 0 });
@@ -150,6 +189,36 @@ const messages = ref([]);
 const unreadChat = ref(0);
 let msgCounter = 0;
 
+// Tempo decorrido desde que entrou na sala (marca em "Em andamento - HH:MM").
+// Conta a partir do primeiro `connected`. Em reconnect, NÃO reseta — a chamada
+// continua sendo a mesma. Formato HH:MM (hora suprimida se 0).
+const callStartedAt = ref(0);
+const callElapsedMs = ref(0);
+let durationInterval = null;
+const liveDurationLabel = computed(() => {
+  const total = Math.max(0, Math.floor(callElapsedMs.value / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const pad = n => String(n).padStart(2, '0');
+  return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+});
+
+function startDurationTimer() {
+  if (durationInterval) return;
+  if (!callStartedAt.value) callStartedAt.value = Date.now();
+  callElapsedMs.value = Date.now() - callStartedAt.value;
+  durationInterval = setInterval(() => {
+    callElapsedMs.value = Date.now() - callStartedAt.value;
+  }, 1000);
+}
+function stopDurationTimer() {
+  if (durationInterval) {
+    clearInterval(durationInterval);
+    durationInterval = null;
+  }
+}
+
 // Google Meet pattern: host (doutor) controla se participantes podem mandar
 // mensagem. Quando off, paciente vê input desabilitado e mensagem
 // explicativa. Doutor sempre pode mandar (ele É o host). Sincroniza via
@@ -159,6 +228,267 @@ const chatAllowed = ref(true);
 
 const activeSpeaker = ref('');
 const screenOn = ref(false);
+
+// ─── Indicador de qualidade da conexão (LiveKit ConnectionQuality) ─────
+// LiveKit avalia a conexão de cada participant via RTT, packet loss e
+// banda agregada — expõe um enum `Excellent | Good | Poor | Lost | Unknown`
+// via `RoomEvent.ConnectionQualityChanged`. Antes era "Conexão estável"
+// hardcoded (não refletia a realidade); agora é reativo.
+//
+// UI: pílula muda label + cor conforme estado. Pra dar sensação de
+// "monitoramento ativo" (UX request — "barras se mexendo"), as 3 barrinhas
+// animam continuamente em loop discreto, mesmo quando estável. Quando
+// instável, vira amarelo e a animação fica mais rápida.
+const connectionQuality = ref('unknown'); // 'excellent' | 'good' | 'poor' | 'lost' | 'unknown'
+
+const connectionLabel = computed(() => {
+  switch (connectionQuality.value) {
+    case 'excellent':
+    case 'good':
+      return 'Conexão estável';
+    case 'poor':
+      return 'Conexão instável';
+    case 'lost':
+      return 'Sem conexão';
+    default:
+      return 'Conectando…';
+  }
+});
+
+const connectionState = computed(() => {
+  if (connectionQuality.value === 'poor') return 'warn';
+  if (connectionQuality.value === 'lost') return 'bad';
+  return 'ok';
+});
+
+// Mapeia o enum opaco do LiveKit pros nossos string keys (mais fácil de
+// inspecionar em DevTools/log que `0|1|2|3`).
+function mapConnectionQuality(quality) {
+  switch (quality) {
+    case ConnectionQuality.Excellent:
+      return 'excellent';
+    case ConnectionQuality.Good:
+      return 'good';
+    case ConnectionQuality.Poor:
+      return 'poor';
+    case ConnectionQuality.Lost:
+      return 'lost';
+    default:
+      return 'unknown';
+  }
+}
+
+function onConnectionQualityChanged(quality, participant) {
+  // Só interessa a qualidade do LOCAL participant (a minha). Quality de
+  // remotes representa quão bem ELES estão conectados ao SFU — útil pra
+  // diagnóstico de bug ("paciente não me ouve, vê se a conexão dele está
+  // ruim"), mas no header mostramos a minha.
+  if (!participant?.isLocal) return;
+  connectionQuality.value = mapConnectionQuality(quality);
+}
+
+// ─── Desfoque de fundo (MediaPipe via @livekit/track-processors) ──────
+// Processor roda no browser do usuário — zero custo no servidor (o SFU só
+// repassa o stream já processado). O pacote (~3 MB de WASM + modelo) é
+// carregado via dynamic import só quando o usuário ATIVA o blur, evitando
+// peso no bundle inicial pra quem nunca usa.
+//
+// Mudanças de intensidade usam `updateTransformerOptions` em vez de
+// recriar o processor — assim o pipeline de vídeo não é destruído entre
+// frames e NÃO há flash preto na câmera enquanto o slider arrasta. Range
+// 5–50 (Meet usa até ~50 também). Valores >30 só fazem sentido em closeups.
+const blurEnabled = ref(false);
+const blurIntensity = ref(15);
+const blurMenuOpen = ref(false);
+const blurApplying = ref(false);
+let blurProcessor = null;
+
+function getActiveLocalVideoTrack() {
+  if (room?.localParticipant) {
+    const pub = room.localParticipant.getTrackPublication(Track.Source.Camera);
+    if (pub?.videoTrack) return pub.videoTrack;
+  }
+  return previewVideoTrack;
+}
+
+// Liga/desliga o blur. Mantém a instância do processor viva mesmo desligado
+// (via setProcessor / stopProcessor no track) pra evitar recarregar o WASM
+// quando o usuário re-ativa.
+//
+// 2026-05-22 — Race guard. Se a câmera foi desligada entre o pedido do
+// blur e a execução assíncrona (caso comum quando o usuário togglea
+// câmera rápido), o `track` aqui é o stale — chamar setProcessor nele
+// trava o WASM e deixa o vídeo preto sem recovery.
+async function applyBlurState() {
+  const track = getActiveLocalVideoTrack();
+  if (!track) return;
+  if (!camOn.value) return;
+  // O track pode ter sido stopado por trás (toggleCam concorrente);
+  // checagem leve antes de tocar no processor.
+  if (track.isMuted || track.mediaStreamTrack?.readyState === 'ended') return;
+  blurApplying.value = true;
+  try {
+    if (blurEnabled.value) {
+      if (!blurProcessor) {
+        const { BackgroundProcessor } = await import(
+          '@livekit/track-processors'
+        );
+        blurProcessor = BackgroundProcessor({
+          mode: 'background-blur',
+          blurRadius: blurIntensity.value,
+        });
+      } else {
+        // Garante que a intensidade atual está aplicada (caso o usuário tenha
+        // mexido no slider com blur off antes de ligar).
+        try {
+          await blurProcessor.updateTransformerOptions({
+            blurRadius: blurIntensity.value,
+          });
+        } catch (_) {
+          /* não-fatal */
+        }
+      }
+      await track.setProcessor(blurProcessor);
+    } else {
+      try {
+        await track.stopProcessor();
+      } catch (_) {
+        /* já estava sem processor — não-fatal */
+      }
+      // NÃO zera blurProcessor — reaproveita quando religar.
+    }
+  } catch (err) {
+    console.warn('[telemed] Falha ao aplicar desfoque de fundo:', err);
+    blurEnabled.value = false;
+  } finally {
+    blurApplying.value = false;
+  }
+}
+
+async function reapplyBlurIfActive() {
+  if (!blurEnabled.value) return;
+  await applyBlurState();
+}
+
+function toggleBlur() {
+  blurEnabled.value = !blurEnabled.value;
+  applyBlurState();
+}
+
+// Atualiza a intensidade do blur em tempo real (sem recriar o processor) —
+// chamado pelo slider em cada `input` event. Como updateTransformerOptions é
+// barato e roda no próprio loop de frames, NÃO causa flash entre frames.
+async function setBlurIntensity(value) {
+  const v = Number(value);
+  if (Number.isNaN(v)) return;
+  blurIntensity.value = Math.max(5, Math.min(50, v));
+  if (!blurEnabled.value || !blurProcessor) return;
+  try {
+    await blurProcessor.updateTransformerOptions({
+      blurRadius: blurIntensity.value,
+    });
+  } catch (err) {
+    console.warn('[telemed] Falha ao atualizar intensidade:', err);
+  }
+}
+
+function toggleBlurMenu() {
+  blurMenuOpen.value = !blurMenuOpen.value;
+}
+
+function closeBlurMenu() {
+  blurMenuOpen.value = false;
+}
+
+// ─── Fixar participante em destaque (spotlight, Meet pattern) ─────────
+// `pinnedIdentity`: identity do participante em foco. '' = layout normal,
+// 'local' = o próprio usuário em destaque, qualquer outra string = remote.
+// `pinIsGlobal`: quando true, mudanças são broadcast pra todos via data
+// channel — o pin "espalha" pra outros participantes. False = só local.
+//
+// Quem pode broadcastar: só o doutor (mesma regra do admit/chat_lock).
+// Paciente pode fixar localmente, mas não impõe pra todos.
+const LOCAL_PIN_KEY = 'local';
+const pinnedIdentity = ref('');
+const pinIsGlobal = ref(false);
+const pinMenuOpenFor = ref('');
+
+const isLocalPinned = computed(() => pinnedIdentity.value === LOCAL_PIN_KEY);
+const hasPin = computed(() => pinnedIdentity.value !== '');
+
+function isParticipantPinned(identity) {
+  return pinnedIdentity.value === identity;
+}
+
+function broadcastPin(identity) {
+  if (!room) return;
+  try {
+    const payload = encoder.encode(
+      JSON.stringify({ type: 'pin', identity: identity || '' })
+    );
+    room.localParticipant.publishData(payload, { reliable: true });
+  } catch (e) {
+    console.warn('[telemed] broadcastPin falhou:', e);
+  }
+}
+
+function pinFor(identity, global) {
+  pinnedIdentity.value = identity;
+  pinIsGlobal.value = !!global;
+  pinMenuOpenFor.value = '';
+  if (global)
+    broadcastPin(identity === LOCAL_PIN_KEY ? getLocalIdentity() : identity);
+}
+
+function unpin() {
+  const wasGlobal = pinIsGlobal.value;
+  pinnedIdentity.value = '';
+  pinIsGlobal.value = false;
+  pinMenuOpenFor.value = '';
+  if (wasGlobal) broadcastPin('');
+}
+
+// Posição fixed do menu (teleportado pra body). Calculada a partir do rect
+// do botão trigger no momento do abrir — garante que o popup escape do
+// `overflow: hidden` dos containers de vídeo (PIP local, tile remoto).
+const pinMenuStyle = ref({});
+
+function togglePinMenu(target, event) {
+  if (pinMenuOpenFor.value === target) {
+    pinMenuOpenFor.value = '';
+    return;
+  }
+  if (event?.currentTarget) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const menuHeight = 110;
+    const menuWidth = 200;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUp = spaceBelow < menuHeight + 16;
+    const top = openUp ? rect.top - menuHeight - 8 : rect.bottom + 8;
+    // Alinha o lado direito do menu com o lado direito do botão; se isso
+    // jogar o menu pra fora da viewport (botão muito à esquerda), usa
+    // alinhamento pela esquerda como fallback.
+    const rightFromEdge = window.innerWidth - rect.right;
+    const useRight = rect.right >= menuWidth;
+    pinMenuStyle.value = {
+      position: 'fixed',
+      top: `${Math.max(8, top)}px`,
+      ...(useRight
+        ? { right: `${Math.max(8, rightFromEdge)}px` }
+        : { left: `${rect.left}px` }),
+    };
+  }
+  pinMenuOpenFor.value = target;
+}
+
+function closePinMenu() {
+  pinMenuOpenFor.value = '';
+}
+
+function getLocalIdentity() {
+  return room?.localParticipant?.identity || '';
+}
+
 const videoDevices = ref([]);
 const hasMultipleCameras = ref(false);
 // Facing mode da câmera ativa — 'user' (frontal) ou 'environment' (traseira).
@@ -197,6 +527,17 @@ let previewAudioTrack = null;
 const isDoctor = computed(() => props.role === 'doctor');
 const isWaiting = computed(() => !admitted.value);
 
+// Texto do CTA do preflight muda conforme o fluxo:
+//   - Doutor: "Iniciar consulta" (ele É o host).
+//   - Paciente com requiresAdmit: "Solicitar entrada na consulta" (espera o
+//     doutor admitir).
+//   - Paciente dentro da janela (sem admit): "Entrar na consulta".
+const enterCtaLabel = computed(() => {
+  if (isDoctor.value) return 'Iniciar consulta';
+  if (props.requiresAdmit) return 'Solicitar entrada na consulta';
+  return 'Entrar na consulta';
+});
+
 const localVideo = ref(null);
 const chatList = ref(null);
 
@@ -215,6 +556,107 @@ const videoBindings = new Map();
 
 const localName = ref('');
 const localSpeaking = ref(false);
+
+// 2026-05-22 — Estado da gravação manual (doutor).
+// `recordingActive`: true quando gravação está rolando agora.
+// `recordingToggling`: true entre clique e resposta do backend (evita
+//   double-click do doutor disparar 2 starts em paralelo).
+// `recordingError`: string com a mensagem do backend (consent ausente,
+//   participants_not_ready, etc.) — mostrada em toast curto.
+// `recordHintVisible`: tooltip "balão de gibi" que aparece quando o doctor
+//   entra na sala lembrando de gravar. Auto-dismiss em 7s.
+const recordingActive = ref(!!props.initialRecording?.active);
+const recordingToggling = ref(false);
+const recordingError = ref('');
+const recordHintVisible = ref(false);
+let recordHintTimer = null;
+
+function dismissRecordHint() {
+  recordHintVisible.value = false;
+  if (recordHintTimer) {
+    clearTimeout(recordHintTimer);
+    recordHintTimer = null;
+  }
+}
+
+// Mostra o balão "Não esqueça de gravar essa consulta" pro doutor uma vez
+// quando o PACIENTE entra na sala (não quando o doutor entra — antes
+// disso o botão fica em estado waiting e clicar não grava, o que
+// confundia). Pula se a gravação já estiver ativa (recovery após F5)
+// ou se o balão já apareceu nesta sessão.
+let recordHintShown = false;
+function maybeShowRecordHint() {
+  if (!isDoctor.value) return;
+  if (recordingActive.value) return;
+  if (recordHintShown) return;
+  recordHintShown = true;
+  recordHintVisible.value = true;
+  recordHintTimer = setTimeout(dismissRecordHint, 7000);
+}
+
+// Title/aria-label do botão Gravar — reflete o estado em flight pra
+// usuário não ficar com tooltip "Aguarde" cortado quando o disabled
+// fica ativo no meio do toggle.
+const recordButtonTitle = computed(() => {
+  if (recordingToggling.value) {
+    return recordingActive.value
+      ? 'Parando gravação…'
+      : 'Iniciando gravação…';
+  }
+  if (recordingActive.value) return 'Parar gravação';
+  return 'Gravar consulta com IA';
+});
+
+// Limpa o toast de erro depois de N ms. Cancelável — se o usuário clica
+// outra vez, o toast antigo some sem deixar timer órfão.
+let recordingErrorTimer = null;
+function showRecordingError(message, ms = 8000) {
+  recordingError.value = message;
+  if (recordingErrorTimer) clearTimeout(recordingErrorTimer);
+  recordingErrorTimer = setTimeout(() => {
+    recordingError.value = '';
+    recordingErrorTimer = null;
+  }, ms);
+}
+
+// Doutor clicou no botão "Gravar" — alterna estado via API admin que
+// chama RecordingOrchestrator.start!/stop!. Sem guard local: o backend
+// é a fonte da verdade do estado da sala LiveKit (o tile remoto no
+// front mostra `participant.identity`, mas nem sempre coincide 1:1 com
+// o que `room_service_client.list_participants` enxerga). Erros do
+// backend caem no catch e viram toast.
+async function toggleRecording() {
+  if (!isDoctor.value) return;
+  if (recordingToggling.value) return;
+  dismissRecordHint();
+  recordingError.value = '';
+  recordingToggling.value = true;
+  try {
+    if (recordingActive.value) {
+      if (typeof props.recordStopper === 'function') await props.recordStopper();
+      recordingActive.value = false;
+    } else {
+      if (typeof props.recordStarter !== 'function') return;
+      await props.recordStarter();
+      recordingActive.value = true;
+    }
+  } catch (err) {
+    // Mensagens human-readable do backend (consent_missing,
+    // participants_not_ready) chegam em err.response.data.error.
+    // Mantém o estado anterior — sem fingir que iniciou.
+    showRecordingError(
+      err?.response?.data?.error ||
+        err?.message ||
+        'Não foi possível alternar a gravação.'
+    );
+  } finally {
+    recordingToggling.value = false;
+  }
+}
+
+// Lock pra reentrância do toggleCam (clicar rápido OFF/ON quebrava o
+// blur processor e deixava câmera preta).
+let camToggleInFlight = false;
 
 // Feedback claro pro usuário quando getUserMedia falha. Sem isso, paciente
 // vê tela cinza sem entender por quê — bug crítico reportado quando o app
@@ -244,7 +686,23 @@ let lastStatsAt = 0;
 let roomListeners = [];
 
 // Handler nomeado (extraído de arrow inline) pra permitir room.off().
+//
+// 2026-05-22 — Guard contra emit prematuro. Os listeners são registrados
+// ANTES de `room.connect()` (ver connect()). Se o handshake falha
+// (timeout, token inválido, WS fechado), o LiveKit dispara Disconnected
+// durante o connect — e antes o handler chamava emit('leave') aqui, o
+// que abria o modal "Como foi a consulta?" no dashboard SEM o doutor
+// nem ter entrado na sala. Fix: só emite leave/left quando a sessão foi
+// de fato CONNECTED (ou estava reconnecting). Erros pré-conexão são
+// tratados pelo catch do connect() que seta state='error'.
 function onRoomDisconnected() {
+  const hadSession =
+    state.value === 'connected' || state.value === 'reconnecting';
+  // Pre-conexão: NÃO troca state nem emite. O catch do connect() já vai
+  // setar state='error' com a mensagem certa. Sem isso, o user via tela
+  // branca (state ficava 'disconnected' que o template não cobre antes
+  // de ter conectado) ou o modal pós-encerramento abria sem sessão.
+  if (!hadSession) return;
   state.value = 'disconnected';
   // Reporta saída PRA automação. Idempotente — se já mandamos no botão
   // Sair, esta chamada vira no-op.
@@ -290,16 +748,29 @@ async function connect() {
     room = new Room({
       adaptiveStream: true,
       dynacast: true,
-      videoCaptureDefaults: { resolution: VideoPresets.h1080.resolution },
+      // 2026-05-21 — capture rebaixado de h1080 (1920×1080) pra h720
+      // (1280×720). Webcams de notebook costumam ser NATIVAS 720p; pedir
+      // 1080p força o browser a digitalmente fazer zoom/upscale e perde
+      // campo de visão (usuário vê crop apertado no busto). Meet usa
+      // 720p como default pelo mesmo motivo. Bitrate cai junto (menos
+      // CPU/banda) sem impacto perceptível — a publish layer mais alta
+      // já era 360p (ver simulcastLayers).
+      videoCaptureDefaults: { resolution: VideoPresets.h720.resolution },
       publishDefaults: {
         videoSimulcastLayers: [VideoPresets.h180, VideoPresets.h360],
-        videoEncoding: VideoPresets.h1080.encoding,
+        videoEncoding: VideoPresets.h720.encoding,
         videoCodec: 'vp8',
       },
       audioCaptureDefaults: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
+        // 2026-05-21 — `{ideal: true}` explícito em vez de `true`. Em alguns
+        // browsers (Chromium versões mais novas), `true` é tratado como
+        // "preferred" e pode ser descartado se a constraint anterior for
+        // mais restritiva. `{ideal: true}` força o navegador a manter AEC/
+        // NS/AGC ON quando o device suporta. Resolve relato de eco
+        // duplicando a voz do paciente em notebooks com webcam built-in.
+        echoCancellation: { ideal: true },
+        noiseSuppression: { ideal: true },
+        autoGainControl: { ideal: true },
       },
     });
 
@@ -312,10 +783,17 @@ async function connect() {
       [RoomEvent.TrackUnsubscribed, detachRemote],
       [RoomEvent.LocalTrackPublished, attachLocalCamera],
       [RoomEvent.LocalTrackUnpublished, detachLocalCamera],
+      // TrackMuted/Unmuted refletem o `isMicrophoneEnabled` do outro lado.
+      // Sem isso, não tinha como saber se o paciente apertou mute (a track
+      // continua publicada, só vira muted=true). Resultado UI: ícone de
+      // mic-off no centro do tile + na pílula do nome (parecido com Meet).
+      [RoomEvent.TrackMuted, onRemoteTrackMuted],
+      [RoomEvent.TrackUnmuted, onRemoteTrackUnmuted],
       [RoomEvent.DataReceived, handleData],
       [RoomEvent.ActiveSpeakersChanged, onActiveSpeakers],
       [RoomEvent.ParticipantConnected, onParticipantConnected],
       [RoomEvent.ParticipantDisconnected, onParticipantDisconnected],
+      [RoomEvent.ConnectionQualityChanged, onConnectionQualityChanged],
       // Disconnected pode vir de 2 origens:
       //   (a) usuário clicou Sair (já emitimos no leave())
       //   (b) servidor encerrou (kick, network drop, room fechado)
@@ -325,11 +803,17 @@ async function connect() {
       // sem nada no meio.
       [RoomEvent.Reconnecting, onRoomReconnecting],
       [RoomEvent.Reconnected, onRoomReconnected],
+      // 2026-05-21 — Server-side waiting room. Quando o dentista chama
+      // admit_patient, backend faz LiveKit UpdateParticipant(canPublish=true)
+      // e o LiveKit emite ParticipantPermissionsChanged no client do paciente.
+      // Aí disparamos applyAdmit() — STOP preview tracks + publish real.
+      [RoomEvent.ParticipantPermissionsChanged, onLocalPermissionsChanged],
     ];
     roomListeners.forEach(([event, handler]) => room.on(event, handler));
 
     await room.connect(props.url, props.token);
     state.value = 'connected';
+    startDurationTimer();
 
     // Sprint K — reporta entrada PRA automação de status. Wrapper escuta
     // o emit e bate em /telemedicine_event. Idempotência: emitSessionJoined
@@ -350,9 +834,21 @@ async function connect() {
 
     // Varre participants já na sala (entrou DEPOIS deles): cria tile pra
     // cada um e, se for doutor, marca pacientes como pendentes.
+    //
+    // 2026-05-22 — Também dispara `maybeShowRecordHint` aqui (não só no
+    // `onParticipantConnected`) porque o LiveKit NÃO emite ParticipantConnected
+    // pra quem já estava na sala antes de você. Sem isso, quando o paciente
+    // entrava primeiro (waiting room) e o doutor chegava depois, o lembrete
+    // "Não esqueça de gravar" nunca aparecia. Helper ignora chamadas extras
+    // (1x por sessão via `recordHintShown`).
     for (const p of room.remoteParticipants.values()) {
       addRemote(p);
-      if (isDoctor.value) registerPendingIfPatient(p);
+      if (isDoctor.value) {
+        registerPendingIfPatient(p);
+        if (String(p?.identity || '').startsWith('patient-')) {
+          maybeShowRecordHint();
+        }
+      }
       // Tracks já existentes — anexa via attachRemote.
       for (const pub of p.trackPublications.values()) {
         if (pub.track) attachRemote(pub.track, pub, p);
@@ -396,17 +892,49 @@ async function refreshDevices() {
 // Tratamento de erro: se mic OU cam falham, traduzimos o erro pra mensagem
 // amigável via mediaError. Antes ficava silencioso e o usuário via tela
 // cinza sem entender — bug crítico em HTTP.
+//
+// 2026-05-21 — STOPA os preview tracks da preflight ANTES de publicar.
+// Sem isso, getUserMedia abria 2 captures do mesmo mic (1 do preflight +
+// 1 do setMicrophoneEnabled). Em alguns devices (notebooks com webcam
+// built-in) isso causava ECO PERSISTENTE — o AEC do browser ficava
+// confuso com 2 streams paralelos do mesmo input. Resolve relato
+// 2026-05-21 "voz do paciente duplica e fica duplicando".
 async function publishLocalTracks() {
   if (!room) return;
   if (!checkSecureContext()) return;
+
+  // Stop dos preview tracks ANTES de pedir novos via setXxxEnabled — evita
+  // 2 captures ativos do mesmo mic/cam.
+  if (previewAudioTrack) {
+    try {
+      previewAudioTrack.stop();
+    } catch (_) {}
+    previewAudioTrack = null;
+  }
+  if (previewVideoTrack) {
+    try {
+      previewVideoTrack.stop();
+    } catch (_) {}
+    previewVideoTrack = null;
+  }
+
   let captured = false;
   // Respeita micOn/camOn (usuário pode ter desligado no preflight) e o
   // deviceId selecionado (segundo parâmetro do setXxxEnabled aceita opções
   // de captura). Sem isso, paciente que escolheu "Webcam USB" no preflight
   // entraria com a câmera built-in.
-  const audioOpts = selectedAudioDevice.value
-    ? { deviceId: selectedAudioDevice.value }
-    : undefined;
+  //
+  // 2026-05-21 — `{ideal: true}` nos flags AEC/NS/AGC pra forçar o navegador
+  // a HONRAR essas constraints quando o device suporta (alguns browsers
+  // tratam `true` como "preferred"; `{ideal: true}` é mais explícito).
+  const audioOpts = {
+    echoCancellation: { ideal: true },
+    noiseSuppression: { ideal: true },
+    autoGainControl: { ideal: true },
+    ...(selectedAudioDevice.value
+      ? { deviceId: selectedAudioDevice.value }
+      : {}),
+  };
   const videoOpts = selectedVideoDevice.value
     ? { deviceId: selectedVideoDevice.value }
     : undefined;
@@ -420,6 +948,7 @@ async function publishLocalTracks() {
   }
   try {
     await room.localParticipant.setCameraEnabled(camOn.value, videoOpts);
+    await reapplyBlurIfActive();
   } catch (err) {
     console.warn('[telemed] câmera falhou:', err);
     camOn.value = false;
@@ -432,8 +961,28 @@ async function publishLocalTracks() {
 // enquanto aguarda admit). Quando admit chega, publishTrack reusa esses.
 //
 // Erros viram mediaError pra mostrar UI explicativa.
+//
+// 2026-05-21 — STOPA tracks anteriores antes de criar novos. Antes, se
+// `createPreviewTracks` era chamado depois da preflight (que já tinha
+// criado preview tracks), os tracks antigos ficavam órfãos sem stop —
+// 2 captures do mesmo mic ativos simultaneamente (eco/duplicação).
 async function createPreviewTracks() {
   if (!checkSecureContext()) return;
+
+  // Limpa tracks da preflight antes de criar novos no connect()
+  if (previewVideoTrack) {
+    try {
+      previewVideoTrack.stop();
+    } catch (_) {}
+    previewVideoTrack = null;
+  }
+  if (previewAudioTrack) {
+    try {
+      previewAudioTrack.stop();
+    } catch (_) {}
+    previewAudioTrack = null;
+  }
+
   let captured = false;
   try {
     previewVideoTrack = await createLocalVideoTrack({
@@ -455,6 +1004,9 @@ async function createPreviewTracks() {
         localVideo.value.play().catch(() => {});
       }
     });
+    // Reaplica desfoque ao novo track de preview (caso usuário já tinha
+    // ativado e estamos recriando depois de uma troca de device).
+    await reapplyBlurIfActive();
   } catch (err) {
     console.warn('[telemed] preview camera falhou:', err);
     camOn.value = false;
@@ -463,9 +1015,9 @@ async function createPreviewTracks() {
   }
   try {
     previewAudioTrack = await createLocalAudioTrack({
-      echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true,
+      echoCancellation: { ideal: true },
+      noiseSuppression: { ideal: true },
+      autoGainControl: { ideal: true },
       deviceId: selectedAudioDevice.value || undefined,
     });
   } catch (err) {
@@ -509,25 +1061,87 @@ async function applyAdmit() {
     previewAudioTrack = null;
   }
 
+  // Pequeno delay pra garantir que o SO liberou o handle do mic/cam ANTES
+  // de pedir de novo — sem isso alguns browsers retornavam o stream antigo
+  // (já parado) ou abriam um segundo capture em paralelo (eco).
+  await new Promise(resolve => setTimeout(resolve, 80));
+
   // Respeita o estado micOn/camOn que o paciente deixou no waiting room
   // (se desligou o mic enquanto esperava, ele segue desligado depois).
+  // 2026-05-21 — passa audioOpts com constraints AEC/NS/AGC explícitas
+  // (ver publishLocalTracks pro racional).
+  const audioOpts = {
+    echoCancellation: { ideal: true },
+    noiseSuppression: { ideal: true },
+    autoGainControl: { ideal: true },
+    ...(selectedAudioDevice.value
+      ? { deviceId: selectedAudioDevice.value }
+      : {}),
+  };
+  const videoOpts = selectedVideoDevice.value
+    ? { deviceId: selectedVideoDevice.value }
+    : undefined;
   try {
-    await room.localParticipant.setMicrophoneEnabled(micOn.value);
+    await room.localParticipant.setMicrophoneEnabled(micOn.value, audioOpts);
   } catch (err) {
     console.warn('[telemed] applyAdmit mic publish falhou:', err);
   }
   try {
-    await room.localParticipant.setCameraEnabled(camOn.value);
+    await room.localParticipant.setCameraEnabled(camOn.value, videoOpts);
+    await reapplyBlurIfActive();
   } catch (err) {
     console.warn('[telemed] applyAdmit cam publish falhou:', err);
   }
+
+  // Grace period de 2s antes de desmutar o áudio remoto. Dá tempo pro
+  // vídeo terminar de subir e evita o paciente ouvir um clique/pedaço de
+  // conversa enquanto a UI ainda está montando os tiles.
+  setTimeout(unmuteAllRemoteAudio, 2000);
+}
+
+// 2026-05-21 — Listener pro ParticipantPermissionsChanged.
+// LiveKit dispara esse evento quando o servidor atualiza as permissions
+// de um participant. No nosso fluxo: backend chama UpdateParticipant pra
+// dar canPublish=true ao paciente quando o dentista clica "Aceitar".
+//
+// O SDK passa (prevPermissions, participant). Filtra:
+//   - Só interessa o LOCAL participant (ignora doutor recebendo evento
+//     sobre outro paciente).
+//   - Paciente em waiting room que ganhou canPublish → dispara applyAdmit().
+//   - Doutor (já admitido na conexão) é no-op.
+function onLocalPermissionsChanged(prevPermissions, participant) {
+  if (!room) return;
+  const local = room.localParticipant;
+  if (!local || !participant) return;
+  // SDK pode disparar o evento pra remote participants também — filtra.
+  if (participant.identity !== local.identity) return;
+  if (admitted.value) return;
+  const canPublishNow = !!participant.permissions?.canPublish;
+  if (!canPublishNow) return;
+  applyAdmit();
+}
+
+// Extrai patient_id de identity `patient-{ID}-{nonce}` (formato emitido por
+// Telemed::SessionIssuer). Backend persiste admissões por patient_id (não
+// pela identity completa) pra sobreviver a F5/reconnect do paciente.
+function extractPatientId(identity) {
+  if (!identity) return null;
+  const m = /^patient-(\d+)/.exec(identity);
+  return m ? m[1] : null;
 }
 
 // Doutor — registra remote participant como pendente se for identity patient-*.
+//
+// 2026-05-21 — Filtra pacientes já admitidos server-side. Chave por
+// patient_id (não identity completa): se o paciente recarregar, vem com
+// novo nonce mas ainda casa via patient_id.
 function registerPendingIfPatient(participant) {
   if (!isDoctor.value) return;
   const id = participant?.identity;
   if (!id || !id.startsWith('patient-')) return;
+  const pid = extractPatientId(id);
+  // Reidratação: paciente já foi admitido server-side → não mostra card.
+  if (pid && props.initialAdmissions && props.initialAdmissions[pid]) return;
   // Map é reativo só com .set, então clonamos pra disparar reatividade.
   const next = new Map(pendingPatients.value);
   next.set(id, {
@@ -544,9 +1158,32 @@ function unregisterPending(identity) {
   pendingPatients.value = next;
 }
 
+// Doutor ignora o pedido localmente (não broadcasta). O paciente continua
+// no waiting room — se o doutor mudar de ideia, o card volta na próxima
+// ParticipantConnected ou no F5. Mais leve que "kick" pelo SFU.
+function dismissPending(identity) {
+  unregisterPending(identity);
+}
+
+// "Pediu agora" se < 60s, senão "X min". `since` é Date.now(). Re-renderiza
+// automaticamente a cada segundo porque o `liveDurationLabel` (lido em
+// outro lugar do template) é reativo e força repaint do componente.
+function formatPendingDuration(since) {
+  const elapsed = Math.max(0, Math.floor((Date.now() - since) / 1000));
+  if (elapsed < 60) return 'agora';
+  const min = Math.floor(elapsed / 60);
+  return `${min} min`;
+}
+
 function onParticipantConnected(participant) {
   addRemote(participant);
   registerPendingIfPatient(participant);
+  // 2026-05-22 — Lembrete de gravação só dispara quando o PACIENTE entra
+  // (antes disso o botão fica em waiting e a UX é confusa). Helper ignora
+  // chamadas extras (1x por sessão).
+  if (String(participant?.identity || '').startsWith('patient-')) {
+    maybeShowRecordHint();
+  }
 }
 
 function onParticipantDisconnected(participant) {
@@ -564,6 +1201,9 @@ function addRemote(participant) {
   if (!participant) return;
   const id = participant.identity;
   if (remoteParticipants.value.find(p => p.id === id)) return;
+  // micMuted default true até receber TrackSubscribed pro mic — assim o
+  // ícone de mic-off já aparece pro participante recém-conectado sem audio
+  // ainda. Quando o track chega, recalculamos via publication.isMuted.
   remoteParticipants.value = [
     ...remoteParticipants.value,
     {
@@ -571,23 +1211,52 @@ function addRemote(participant) {
       name: participant.name || participant.identity || 'Participante',
       hasVideo: false,
       hasAudio: false,
+      micMuted: true,
+      speaking: false,
+      isScreenShare: false,
+    },
+  ];
+}
+
+// Tile sintético pro screen share de um remoto. Convive lado-a-lado com o
+// tile da câmera (mesmo padrão do Meet). Removido em detachRemote quando
+// o share termina, ou em removeRemote quando o publisher desconecta.
+function addRemoteScreenShare(participant) {
+  if (!participant) return;
+  const id = `${participant.identity}::screen`;
+  if (remoteParticipants.value.find(p => p.id === id)) return;
+  const baseName = participant.name || participant.identity || 'Participante';
+  remoteParticipants.value = [
+    ...remoteParticipants.value,
+    {
+      id,
+      name: `${baseName} (compartilhamento)`,
+      hasVideo: true,
+      hasAudio: false,
       micEnabled: false,
       speaking: false,
+      isScreenShare: true,
     },
   ];
 }
 
 function removeRemote(identity) {
+  // Remove o tile principal E o tile sintético de screen share (se existir).
+  // Sem isso, quando o publisher desconecta direto (sem antes parar o share),
+  // o tile fantasma do share fica pra sempre no DOM até refresh.
+  const screenId = `${identity}::screen`;
   remoteParticipants.value = remoteParticipants.value.filter(
-    p => p.id !== identity
+    p => p.id !== identity && p.id !== screenId
   );
-  const binding = videoBindings.get(identity);
-  if (binding?.videoTrack) {
-    try {
-      binding.videoTrack.detach();
-    } catch (_) {}
-  }
-  videoBindings.delete(identity);
+  [identity, screenId].forEach(key => {
+    const binding = videoBindings.get(key);
+    if (binding?.videoTrack) {
+      try {
+        binding.videoTrack.detach();
+      } catch (_) {}
+    }
+    videoBindings.delete(key);
+  });
 }
 
 function updateRemote(identity, patch) {
@@ -613,10 +1282,32 @@ function bindRemoteVideo(id, el) {
   videoBindings.set(id, entry);
 }
 
-// Doutor clicou "Admitir" pra um paciente específico — envia data channel
-// com destinationIdentities pra esse identity (não vaza pra outros pacientes).
+// Doutor clicou "Admitir" pra um paciente específico.
+//
+// 2026-05-21 — Agora server-side first:
+//   1. Chama API admit_patient (props.admitter) → backend faz
+//      LiveKit UpdateParticipant(canPublish=true). LiveKit emite
+//      ParticipantPermissionsChanged no client do paciente → applyAdmit().
+//   2. Envia data channel `admit` como fallback de UX (caso o client do
+//      paciente esteja em versão antiga sem o listener de permissions).
+//      Inofensivo: applyAdmit é idempotente.
+//   3. Se a API falhar, NÃO remove o paciente da lista de pendentes — o
+//      dentista clica de novo. Sem isso, falha silenciosa = dentista
+//      pensa que admitiu e paciente continua bloqueado.
 async function admitPatient(identity) {
   if (!room || !isDoctor.value) return;
+  let serverOk = true;
+  if (typeof props.admitter === 'function') {
+    try {
+      await props.admitter(identity);
+    } catch (err) {
+      serverOk = false;
+      console.error('[telemed] admit (server) falhou:', err);
+      // Mantém na lista de pendentes pra dentista tentar de novo.
+      return;
+    }
+  }
+  // Data channel — fallback de UX (idempotente no client do paciente).
   try {
     const payload = encoder.encode(
       JSON.stringify({ type: 'admit', target: identity })
@@ -625,16 +1316,20 @@ async function admitPatient(identity) {
       reliable: true,
       destinationIdentities: [identity],
     });
-    unregisterPending(identity);
   } catch (err) {
-    console.error('[telemed] admit falhou:', err);
+    console.warn('[telemed] admit (data channel) falhou:', err);
+    // Não bloqueia — server-side já fez o trabalho real.
   }
+  if (serverOk) unregisterPending(identity);
 }
 
 function attachLocalCamera(publication) {
-  if (publication.kind !== Track.Kind.Video) return;
-  // Captura facingMode no momento da publicação. Em desktop costuma vir
-  // undefined — manter o default 'user' (mirror ON, padrão de webcam).
+  // Filtra por source (não kind) — sem isso, screen share (também Video)
+  // entrava aqui e era atachado no elemento do PIP local, SOBRESCREVENDO
+  // a câmera. Resultado: ao parar o compartilhamento, o elemento ficava
+  // vazio e nem religar a câmera resolvia (o novo track era atachado,
+  // mas o handler do screen share continuava interferindo).
+  if (publication.source !== Track.Source.Camera) return;
   try {
     const fm = publication.track?.mediaStreamTrack?.getSettings?.()?.facingMode;
     if (fm) cameraFacing.value = fm;
@@ -649,21 +1344,72 @@ function attachLocalCamera(publication) {
 }
 
 function detachLocalCamera(publication) {
-  if (publication.kind !== Track.Kind.Video) return;
+  // Camera unpublish — limpa o elemento. Screen share unpublish dispara
+  // onLocalScreenShareEnded (abaixo) pra sincronizar o estado do botão.
+  if (publication.source === Track.Source.ScreenShare) {
+    onLocalScreenShareEnded();
+    return;
+  }
+  if (publication.source !== Track.Source.Camera) return;
   publication.track?.detach();
+}
+
+// Quando o usuário para de compartilhar pelo botão NATIVO do browser
+// ("Stop sharing"), o LiveKit auto-chama setScreenShareEnabled(false) e
+// emite LocalTrackUnpublished — mas nosso `screenOn` ficava dessincronizado
+// (continuava true). Próximo clique no nosso botão era no-op e atrapalhava
+// o fluxo. Esse handler garante o estado bate com a realidade.
+//
+// Re-attach defensivo da câmera: em alguns browsers (observado no Chrome
+// desktop), parar o screen share deixava o <video> local com srcObject nulo
+// — a câmera continuava publicada e tocando do outro lado, mas o PIP do
+// doutor mostrava avatar/inicial como se estivesse off. Reanexar a track da
+// câmera ao localVideo aqui resolve o "fantasma off" sem efeito colateral
+// (se já estiver anexada, attach() é idempotente).
+function onLocalScreenShareEnded() {
+  if (screenOn.value) screenOn.value = false;
+  if (!room) return;
+  const camPub = room.localParticipant?.getTrackPublication?.(
+    Track.Source.Camera
+  );
+  const camTrack = camPub?.videoTrack || camPub?.track;
+  if (!camTrack || !localVideo.value) return;
+  try {
+    camTrack.attach(localVideo.value);
+    localVideo.value.play().catch(() => {});
+  } catch (_) {
+    /* não-fatal — se attach falhar, próximo render do Vue acomoda */
+  }
 }
 
 // Trata novo track de um remote. Em vez de criar element imperativamente,
 // guardamos o track no binding por identity. O <video> declarativo do
 // template (v-for nos tiles) chama bindRemoteVideo() quando o ref é
 // definido, aí o anexamos.
+//
+// Screen share recebe um TILE SEPARADO (id sintético `${identity}::screen`).
+// Sem isso, o screen share — que também é Track.Kind.Video — sobrescrevia
+// `entry.videoTrack` da câmera e o <video> da câmera ficava com o stream
+// errado (HTMLMediaElement.srcObject só aceita um stream). Resultado pro
+// outro lado: "minha câmera some quando o colega compartilha tela". Tile
+// sintético segue o padrão Google Meet (tile da câmera + tile do share).
 function attachRemote(track, publication, participant) {
   if (track.kind !== Track.Kind.Audio && track.kind !== Track.Kind.Video)
     return;
 
-  // Garante que o tile existe (defesa caso ParticipantConnected tenha
-  // chegado depois — não deveria, mas custa pouco).
-  addRemote(participant);
+  const isScreen =
+    track.kind === Track.Kind.Video &&
+    publication?.source === Track.Source.ScreenShare;
+  const realIdentity = participant.identity;
+  const tileId = isScreen ? `${realIdentity}::screen` : realIdentity;
+
+  if (isScreen) {
+    addRemoteScreenShare(participant);
+  } else {
+    // Garante que o tile existe (defesa caso ParticipantConnected tenha
+    // chegado depois — não deveria, mas custa pouco).
+    addRemote(participant);
+  }
 
   if (track.kind === Track.Kind.Video) {
     if (publication?.setVideoQuality) {
@@ -673,17 +1419,16 @@ function attachRemote(track, publication, participant) {
         /* não-fatal */
       }
     }
-    const id = participant.identity;
-    const entry = videoBindings.get(id) || {};
+    const entry = videoBindings.get(tileId) || {};
     entry.videoTrack = track;
-    videoBindings.set(id, entry);
+    videoBindings.set(tileId, entry);
     if (entry.el) {
       try {
         track.attach(entry.el);
         entry.el.play?.().catch(() => {});
       } catch (_) {}
     }
-    updateRemote(id, { hasVideo: true });
+    updateRemote(tileId, { hasVideo: true });
 
     if (!statsInterval) {
       statsInterval = setInterval(refreshStats, 2000);
@@ -696,20 +1441,69 @@ function attachRemote(track, publication, participant) {
     const audioEl = track.attach();
     audioEl.classList.add('pp-telemed-room__remote-audio');
     audioEl.setAttribute('autoplay', '');
+    // 2026-05-21 — `playsinline` obrigatório no iOS (Safari mobile recusa
+    // autoplay de mídia sem ele). Sem isso, o paciente em iPhone às vezes
+    // só ouvia depois de tocar na tela.
+    audioEl.setAttribute('playsinline', '');
     audioEl.style.display = 'none';
+    // LGPD/UX: se o usuário ainda não foi admitido (paciente em waiting
+    // room), o áudio remoto começa MUTADO. Sem isso, o paciente escutava
+    // a conversa do consultório antes de o doutor aceitá-lo — vazamento
+    // de privacidade clínica. applyAdmit() desmuta após o grace period.
+    if (!admitted.value) audioEl.muted = true;
     document.body.appendChild(audioEl);
+    audioElementsForSink.add(audioEl);
+    applyAudioSink(audioEl);
     const id = participant.identity;
     const entry = videoBindings.get(id) || {};
     if (!entry.audioElements) entry.audioElements = new Map();
     entry.audioElements.set(track.sid, audioEl);
     videoBindings.set(id, entry);
-    updateRemote(id, { hasAudio: true });
+    // micMuted recalculado a cada subscribe — se a publication chegou já
+    // mutada (paciente entrou com mic off no preflight), ícone aparece
+    // imediato. Default false (sem ser ::screen).
+    updateRemote(realIdentity, {
+      hasAudio: true,
+      micMuted: publication?.isMuted === true,
+    });
   }
 }
 
+// Reage a mute/unmute remoto. O LiveKit dispara TrackMuted/Unmuted pra
+// QUALQUER track — filtramos por source pra atualizar só o estado de mic
+// (vídeo muted = câmera off; tratamos via hasVideo separadamente).
+function onRemoteTrackMuted(publication, participant) {
+  if (!participant?.identity) return;
+  if (publication?.source === Track.Source.Microphone) {
+    updateRemote(participant.identity, { micMuted: true });
+  }
+}
+
+function onRemoteTrackUnmuted(publication, participant) {
+  if (!participant?.identity) return;
+  if (publication?.source === Track.Source.Microphone) {
+    updateRemote(participant.identity, { micMuted: false });
+  }
+}
+
+// Desmuta todos os elementos de áudio remoto. Chamado pelo applyAdmit
+// após o grace period — garante que o paciente só comece a ouvir DEPOIS
+// que entrou de fato (não enquanto carrega vídeo/track).
+function unmuteAllRemoteAudio() {
+  audioElementsForSink.forEach(el => {
+    el.muted = false;
+  });
+}
+
 function detachRemote(track, publication, participant) {
-  const id = participant?.identity;
-  if (!id) return;
+  const realIdentity = participant?.identity;
+  if (!realIdentity) return;
+
+  // Screen share tem id sintético — espelha a lógica de attachRemote.
+  const isScreen =
+    track.kind === Track.Kind.Video &&
+    publication?.source === Track.Source.ScreenShare;
+  const id = isScreen ? `${realIdentity}::screen` : realIdentity;
   const entry = videoBindings.get(id);
   if (!entry) return;
 
@@ -719,18 +1513,43 @@ function detachRemote(track, publication, participant) {
     } catch (_) {}
     entry.videoTrack = null;
     videoBindings.set(id, entry);
-    updateRemote(id, { hasVideo: false });
+    if (isScreen) {
+      // Tile sintético do screen share existe SÓ enquanto o share está ativo.
+      // Quando o publisher para de compartilhar, removemos do array reativo —
+      // diferente da câmera, que pode ficar como avatar/inicial.
+      removeRemote(id);
+    } else {
+      updateRemote(id, { hasVideo: false });
+    }
   } else if (track.kind === Track.Kind.Audio) {
     const el = entry.audioElements?.get(track.sid);
     if (el) {
       try {
         track.detach();
       } catch (_) {}
+      audioElementsForSink.delete(el);
       el.remove();
       entry.audioElements.delete(track.sid);
     }
     updateRemote(id, { hasAudio: (entry.audioElements?.size || 0) > 0 });
   }
+}
+
+// Aplica o sinkId selecionado em um <audio> remoto. Tolerante a navegadores
+// sem suporte (Safari): no-op. Tolerante a deviceId inválido: catch silencioso.
+function applyAudioSink(audioEl) {
+  if (!supportsAudioOutputSelection || !selectedAudioOutputDevice.value) return;
+  try {
+    audioEl.setSinkId(selectedAudioOutputDevice.value).catch(() => {});
+  } catch (_) {
+    /* Browser sem suporte ou deviceId fora de política — não-fatal. */
+  }
+}
+
+async function changeAudioOutputDevice(deviceId) {
+  selectedAudioOutputDevice.value = deviceId;
+  if (!supportsAudioOutputSelection) return;
+  audioElementsForSink.forEach(el => applyAudioSink(el));
 }
 
 async function sendChat() {
@@ -795,10 +1614,58 @@ function handleData(payload, participant) {
       const senderId = participant?.identity || '';
       if (!senderId.startsWith('doctor-')) return;
       chatAllowed.value = !!data.enabled;
+      return;
+    }
+
+    // Pin "pra todos" (spotlight broadcast). Mesma defesa: só aceito de
+    // doutor pra não permitir paciente forçar foco em si mesmo via DevTools.
+    // identity vazia = unpin (clear spotlight global).
+    if (data.type === 'pin') {
+      const senderId = participant?.identity || '';
+      if (!senderId.startsWith('doctor-')) return;
+      const target = data.identity || '';
+      if (!target) {
+        // unpin global — só limpa se o pin atual era global (não pisa em
+        // cima de pin local do usuário).
+        if (pinIsGlobal.value) {
+          pinnedIdentity.value = '';
+          pinIsGlobal.value = false;
+        }
+        return;
+      }
+      pinnedIdentity.value =
+        target === getLocalIdentity() ? LOCAL_PIN_KEY : target;
+      pinIsGlobal.value = true;
+      return;
+    }
+
+    // Encerramento iniciado pelo doutor — paciente é desconectado e o
+    // wrapper navega pra home (UX: paciente não precisa apertar Sair se o
+    // doutor já encerrou). Só aceito vindo de identity `doctor-*` pra
+    // paciente não forçar saída de outro paciente via DevTools. Idempotente:
+    // múltiplos broadcasts (raro) caem no guard `hasEmittedLeave`.
+    if (data.type === 'call_ended') {
+      const senderId = participant?.identity || '';
+      if (!senderId.startsWith('doctor-')) return;
+      if (isDoctor.value) return; // doutor não se auto-encerra via broadcast
+      leaveBecauseHostEnded();
     }
   } catch (e) {
     console.warn('[telemed] data inválido:', e);
   }
+}
+
+// Saída forçada do paciente quando o doutor encerra. Diferente de `leave()`
+// (clique do próprio paciente), aqui emitimos `'ended-by-host'` pro wrapper
+// — ele decide a rota (home, no caso do portal do paciente). Mantém o
+// fluxo de session-event (`'left'`) intacto pra automação de status no
+// backend.
+function leaveBecauseHostEnded() {
+  if (hasEmittedLeave) return;
+  emitSessionLeft();
+  disconnect();
+  hasEmittedLeave = true;
+  emit('endedByHost');
 }
 
 // Cap pra evitar growth ilimitado em sessões longas (consulta de 50min
@@ -835,18 +1702,33 @@ async function toggleMic() {
   }
 }
 
+// 2026-05-22 — Lock de reentrância (`camToggleInFlight` declarado no topo
+// do script). setCameraEnabled é async (~300-800ms no caminho LiveKit,
+// mais o reapplyBlurIfActive que carrega WASM). Sem lock, clicar rápido
+// OFF/ON/OFF/ON criava race: track antigo era stopado enquanto
+// applyBlurState chamava setProcessor nele → BlurProcessor (WASM
+// MediaPipe) travava a thread principal e o vídeo ficava preto pros dois
+// lados sem recovery. Relato 2026-05-22 "câmera travou e ficou preta".
 async function toggleCam() {
   if (!room) return;
-  camOn.value = !camOn.value;
+  if (camToggleInFlight) return; // ignora clicks até o anterior completar
+  camToggleInFlight = true;
+  const target = !camOn.value;
+  camOn.value = target;
   try {
     if (admitted.value) {
-      await room.localParticipant.setCameraEnabled(camOn.value);
+      await room.localParticipant.setCameraEnabled(target);
+      // Race guard: usuário pode ter clicado de novo no meio. Se camOn
+      // mudou, NÃO aplica blur — o próximo toggle vai cuidar disso.
+      if (target && camOn.value === true) await reapplyBlurIfActive();
     } else if (previewVideoTrack) {
-      if (camOn.value) await previewVideoTrack.unmute();
+      if (target) await previewVideoTrack.unmute();
       else await previewVideoTrack.mute();
     }
   } catch (e) {
     console.warn('[telemed] toggleCam falhou:', e);
+  } finally {
+    camToggleInFlight = false;
   }
 }
 
@@ -890,6 +1772,8 @@ async function switchCamera() {
       .getTrackPublication?.(Track.Source.Camera)
       ?.track?.mediaStreamTrack?.getSettings?.()?.facingMode;
     if (fm) cameraFacing.value = fm;
+    // switchActiveDevice troca o track interno — reaplica o processor.
+    await reapplyBlurIfActive();
   } catch (e) {
     console.warn('[telemed] switchCamera falhou:', e);
   }
@@ -998,6 +1882,7 @@ async function refreshDeviceList() {
     const devices = await Room.getLocalDevices();
     videoInputs.value = devices.filter(d => d.kind === 'videoinput');
     audioInputs.value = devices.filter(d => d.kind === 'audioinput');
+    audioOutputs.value = devices.filter(d => d.kind === 'audiooutput');
     videoDevices.value = videoInputs.value;
     hasMultipleCameras.value = videoInputs.value.length > 1;
     if (!selectedVideoDevice.value && videoInputs.value[0]) {
@@ -1005,6 +1890,13 @@ async function refreshDeviceList() {
     }
     if (!selectedAudioDevice.value && audioInputs.value[0]) {
       selectedAudioDevice.value = audioInputs.value[0].deviceId;
+    }
+    if (!selectedAudioOutputDevice.value && audioOutputs.value[0]) {
+      // 'default' costuma ser o speaker do SO — bom default que respeita
+      // a escolha do usuário no nível do OS.
+      const def = audioOutputs.value.find(d => d.deviceId === 'default');
+      selectedAudioOutputDevice.value =
+        def?.deviceId || audioOutputs.value[0].deviceId;
     }
   } catch (_) {
     /* não-fatal */
@@ -1031,7 +1923,10 @@ async function startPreviewTracks() {
   if (camOn.value) {
     try {
       previewVideoTrack = await createLocalVideoTrack({
-        resolution: VideoPresets.h1080.resolution,
+        // h720 (1280×720) por consistência com o capture da sala —
+        // ver comentário no `new Room(...)`. Pedir 1080p aqui também
+        // causa o mesmo "crop apertado" em webcams nativas 720p.
+        resolution: VideoPresets.h720.resolution,
         deviceId: selectedVideoDevice.value || undefined,
       });
       // Captura resolução real (LiveKit pode degradar de 1080 → 720 se a
@@ -1050,6 +1945,9 @@ async function startPreviewTracks() {
           el.play?.().catch(() => {});
         }
       });
+      // Track novo (troca de device ou primeira inicialização) — reaplica
+      // o blur caso o usuário tenha ativado no preflight.
+      await reapplyBlurIfActive();
     } catch (err) {
       console.warn('[telemed] preview camera falhou:', err);
       camOn.value = false;
@@ -1062,9 +1960,9 @@ async function startPreviewTracks() {
   if (micOn.value) {
     try {
       previewAudioTrack = await createLocalAudioTrack({
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
+        echoCancellation: { ideal: true },
+        noiseSuppression: { ideal: true },
+        autoGainControl: { ideal: true },
         deviceId: selectedAudioDevice.value || undefined,
       });
     } catch (err) {
@@ -1128,16 +2026,26 @@ function disconnect() {
     clearInterval(statsInterval);
     statsInterval = null;
   }
+  // 2026-05-22 — Cancela timer do tooltip de gravação pra evitar callback
+  // disparar depois do componente ser desmontado (Vue warn + leak).
+  if (recordHintTimer) {
+    clearTimeout(recordHintTimer);
+    recordHintTimer = null;
+  }
+  recordHintVisible.value = false;
+  stopDurationTimer();
   // Limpa audio elements anexados ao body — sem isso ficam órfãos tocando
   // após sair da sala (raro mas observado em refresh rápido).
   videoBindings.forEach(entry => {
     entry.audioElements?.forEach(el => {
       try {
+        audioElementsForSink.delete(el);
         el.remove();
       } catch (_) {}
     });
   });
   videoBindings.clear();
+  audioElementsForSink.clear();
   remoteParticipants.value = [];
   // Remove o listener de hot-plug pra evitar leak entre sessões.
   if (
@@ -1187,6 +2095,46 @@ function disconnect() {
 }
 
 function leave() {
+  // Doutor saindo = chamada encerrada pra todos. Broadcast SÍNCRONO via
+  // data channel ANTES do disconnect() — paciente precisa receber a
+  // mensagem pra navegar pra home (sem isso, ele só nota porque o
+  // ParticipantDisconnected dele dispara, mas aí a saída fica sem UX
+  // clara: o vídeo congela e o tile desaparece silenciosamente).
+  //
+  // `publishData` é reliable, mas `room.disconnect()` corta o socket logo
+  // depois — então usamos a Promise pra "tentar mandar antes de cortar".
+  // Se falhar (rede ruim), o paciente cai no fallback do ParticipantDis-
+  // connected: vê tile vazio e fica num estado meio limbo. Aceitável pro
+  // MVP — quando a rede está tão ruim, o paciente provavelmente já caiu.
+  if (isDoctor.value && room) {
+    try {
+      const payload = encoder.encode(JSON.stringify({ type: 'call_ended' }));
+      // Não await — se demorar, paciente recebe via fallback (Disconnected).
+      // Doutor não pode esperar a propagação antes de sair.
+      room.localParticipant
+        .publishData(payload, { reliable: true })
+        .catch(() => {});
+    } catch (_) {
+      /* não-fatal — disconnect prossegue */
+    }
+  }
+  // 2026-05-22 — Se doutor está saindo COM gravação ativa, dispara stop
+  // ANTES do disconnect. Fire-and-forget: o backend tem failsafe (left!
+  // do doutor já chama stop_recording_if_active), mas mandar daqui também
+  // garante que o pipeline de transcrição comece antes — o webhook do
+  // Egress chega no Rails em paralelo com o emitSessionLeft.
+  if (
+    isDoctor.value &&
+    recordingActive.value &&
+    typeof props.recordStopper === 'function'
+  ) {
+    try {
+      props.recordStopper().catch(() => {});
+    } catch (_) {
+      /* não-fatal — left! do backend para a gravação como fallback */
+    }
+    recordingActive.value = false;
+  }
   emitSessionLeft();
   disconnect();
   emitLeaveOnce();
@@ -1322,168 +2270,223 @@ function emitSessionLeft() {
      Sprint K). Pendente i18n quando o portal for traduzido. -->
 <template>
   <div class="pp-telemed-room">
-    <!-- Preflight (Google Meet lobby): preview da câmera, dropdowns de
-         dispositivos, label de resolução, controles mic/cam. Acontece
-         ANTES do `connect()` — ninguém entra na sala sem confirmar. -->
+    <!-- Preflight (pré-consulta): preview de câmera à esquerda, painel de
+         configuração à direita (3 selects de dispositivo + card de segurança
+         + CTA primária). Mobile empilha vertical. -->
     <div v-if="state === 'preflight'" class="pp-telemed-preflight">
-      <div class="pp-telemed-preflight__preview">
-        <video
-          ref="preflightVideo"
-          autoplay
-          muted
-          playsinline
-          class="pp-telemed-preflight__video"
-          :class="{
-            'pp-telemed-preflight__video--mirror':
-              cameraFacing !== 'environment',
-            'pp-telemed-preflight__video--hidden': !camOn,
-          }"
-        />
-        <div v-if="!camOn" class="pp-telemed-preflight__camoff">
+      <div class="pp-telemed-preflight__shell">
+        <!-- Coluna esquerda: preview do vídeo + overlay glassmorphism com
+             toggles de mic/cam. -->
+        <section class="pp-telemed-preflight__preview-col">
           <div
-            class="pp-telemed-room__avatar"
-            :style="{ background: avatarColor(localName || headerTitle) }"
+            class="pp-telemed-preflight__preview"
+            :class="{ 'pp-telemed-preflight__preview--off': !camOn }"
           >
-            {{ initial(localName || headerTitle) }}
-          </div>
-          <p>Câmera desligada</p>
-        </div>
-        <div
-          v-if="camOn && previewResolution.height > 0"
-          class="pp-telemed-preflight__quality"
-        >
-          {{ layerForResolution(previewResolution.height) }}
-        </div>
-        <div class="pp-telemed-preflight__overlay-controls">
-          <button
-            class="pp-telemed-preflight__ctrl"
-            :class="{ off: !micOn }"
-            :title="micOn ? 'Silenciar' : 'Ativar microfone'"
-            type="button"
-            @click="togglePreflightMic"
-          >
-            <IconMic v-if="micOn" :size="20" />
-            <IconMicOff v-else :size="20" />
-          </button>
-          <button
-            class="pp-telemed-preflight__ctrl"
-            :class="{ off: !camOn }"
-            :title="camOn ? 'Desligar câmera' : 'Ligar câmera'"
-            type="button"
-            @click="togglePreflightCam"
-          >
-            <IconVideo v-if="camOn" :size="20" />
-            <IconVideoOff v-else :size="20" />
-          </button>
-        </div>
-      </div>
-
-      <div class="pp-telemed-preflight__panel">
-        <h2 class="pp-telemed-preflight__title">Pronto para entrar?</h2>
-        <p v-if="roomCode" class="pp-telemed-preflight__code">
-          Código da sala: <strong>{{ roomCode }}</strong>
-        </p>
-
-        <div
-          v-if="mediaError"
-          class="pp-telemed-room__media-error pp-telemed-preflight__error"
-          role="alert"
-        >
-          <div class="pp-telemed-room__media-error-icon">
-            <IconVideoOff :size="20" />
-          </div>
-          <div class="pp-telemed-room__media-error-text">
-            <strong>{{ mediaError.title }}</strong>
-            <p>{{ mediaError.message }}</p>
-          </div>
-          <button
-            class="pp-telemed-room__media-error-btn"
-            type="button"
-            @click="retryMedia"
-          >
-            Tentar novamente
-          </button>
-        </div>
-
-        <label class="pp-telemed-preflight__row">
-          <span class="pp-telemed-preflight__row-label">
-            <IconMic :size="16" />
-            Microfone
-          </span>
-          <select
-            class="pp-telemed-preflight__select"
-            :value="selectedAudioDevice"
-            :disabled="audioInputs.length === 0"
-            @change="changeAudioDevice($event.target.value)"
-          >
-            <option v-if="audioInputs.length === 0" value="">
-              Nenhum microfone encontrado
-            </option>
-            <option
-              v-for="d in audioInputs"
-              :key="d.deviceId"
-              :value="d.deviceId"
+            <video
+              ref="preflightVideo"
+              autoplay
+              muted
+              playsinline
+              class="pp-telemed-preflight__video"
+              :class="{
+                'pp-telemed-preflight__video--mirror':
+                  cameraFacing !== 'environment',
+                'pp-telemed-preflight__video--hidden': !camOn,
+              }"
+            />
+            <div v-if="!camOn" class="pp-telemed-preflight__camoff">
+              <div
+                class="pp-telemed-room__avatar"
+                :style="{ background: avatarColor(localName || headerTitle) }"
+              >
+                {{ initial(localName || headerTitle) }}
+              </div>
+              <p>Câmera desligada</p>
+            </div>
+            <div
+              v-if="camOn && previewResolution.height > 0"
+              class="pp-telemed-preflight__quality"
             >
-              {{ d.label || 'Microfone padrão' }}
-            </option>
-          </select>
-        </label>
+              {{ layerForResolution(previewResolution.height) }}
+            </div>
 
-        <label class="pp-telemed-preflight__row">
-          <span class="pp-telemed-preflight__row-label">
-            <IconVideo :size="16" />
-            Câmera
-          </span>
-          <select
-            class="pp-telemed-preflight__select"
-            :value="selectedVideoDevice"
-            :disabled="videoInputs.length === 0"
-            @change="changeVideoDevice($event.target.value)"
+            <div class="pp-telemed-preflight__overlay-controls">
+              <button
+                class="pp-telemed-preflight__ctrl"
+                :class="{ 'pp-telemed-preflight__ctrl--off': !micOn }"
+                :title="micOn ? 'Silenciar' : 'Ativar microfone'"
+                type="button"
+                @click="togglePreflightMic"
+              >
+                <IconMic v-if="micOn" :size="20" />
+                <IconMicOff v-else :size="20" />
+              </button>
+              <button
+                class="pp-telemed-preflight__ctrl"
+                :class="{ 'pp-telemed-preflight__ctrl--off': !camOn }"
+                :title="camOn ? 'Desligar câmera' : 'Ligar câmera'"
+                type="button"
+                @click="togglePreflightCam"
+              >
+                <IconVideo v-if="camOn" :size="20" />
+                <IconVideoOff v-else :size="20" />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Coluna direita: painel de configuração. -->
+        <section class="pp-telemed-preflight__panel">
+          <header class="pp-telemed-preflight__header">
+            <h1 class="pp-telemed-preflight__title">Pré-consulta</h1>
+            <p class="pp-telemed-preflight__subtitle">
+              Ajuste sua câmera e microfone antes de entrar na sala de espera.
+            </p>
+            <p v-if="roomCode" class="pp-telemed-preflight__code">
+              Código da sala: <strong>{{ roomCode }}</strong>
+            </p>
+          </header>
+
+          <div
+            v-if="mediaError"
+            class="pp-telemed-room__media-error pp-telemed-preflight__error"
+            role="alert"
           >
-            <option v-if="videoInputs.length === 0" value="">
-              Nenhuma câmera encontrada
-            </option>
-            <option
-              v-for="d in videoInputs"
-              :key="d.deviceId"
-              :value="d.deviceId"
+            <div class="pp-telemed-room__media-error-icon">
+              <IconVideoOff :size="20" />
+            </div>
+            <div class="pp-telemed-room__media-error-text">
+              <strong>{{ mediaError.title }}</strong>
+              <p>{{ mediaError.message }}</p>
+            </div>
+            <button
+              class="pp-telemed-room__media-error-btn"
+              type="button"
+              @click="retryMedia"
             >
-              {{ d.label || 'Câmera padrão' }}
-            </option>
-          </select>
-        </label>
+              Tentar novamente
+            </button>
+          </div>
 
-        <!-- Sprint L — Consent obrigatório de gravação (LGPD/CFM 2.314) -->
-        <label class="pp-telemed-preflight__consent">
-          <input
-            v-model="recordingConsent"
-            type="checkbox"
-            class="pp-telemed-preflight__consent-checkbox"
-          />
-          <span class="pp-telemed-preflight__consent-text">
-            Aceito que o <strong>áudio</strong> desta consulta seja gravado para
-            fins de prontuário e compliance, conforme
-            <a href="#" @click.prevent="showConsentTerms = true">termos LGPD e CFM 2.314/2022</a>.
-          </span>
-        </label>
+          <div class="pp-telemed-preflight__fields">
+            <TelemedDeviceSelect
+              label="Câmera"
+              :model-value="selectedVideoDevice"
+              :options="videoInputs"
+              empty-text="Nenhuma câmera encontrada"
+              fallback-label="Câmera padrão"
+              @update:model-value="changeVideoDevice"
+            >
+              <template #icon>
+                <IconVideo :size="14" />
+              </template>
+            </TelemedDeviceSelect>
 
-        <div class="pp-telemed-preflight__actions">
-          <button
-            class="pp-telemed-preflight__cancel"
-            type="button"
-            @click="leave"
-          >
-            Cancelar
-          </button>
-          <button
-            class="pp-telemed-preflight__enter"
-            type="button"
-            :disabled="(mediaError && mediaError.type === 'insecure') || !recordingConsent"
-            @click="enterRoom"
-          >
-            Entrar agora
-          </button>
-        </div>
+            <TelemedDeviceSelect
+              label="Microfone"
+              :model-value="selectedAudioDevice"
+              :options="audioInputs"
+              empty-text="Nenhum microfone encontrado"
+              fallback-label="Microfone padrão"
+              @update:model-value="changeAudioDevice"
+            >
+              <template #icon>
+                <IconMic :size="14" />
+              </template>
+            </TelemedDeviceSelect>
+
+            <TelemedDeviceSelect
+              label="Saída de áudio"
+              :model-value="selectedAudioOutputDevice"
+              :options="audioOutputs"
+              :disabled="!supportsAudioOutputSelection"
+              :empty-text="
+                supportsAudioOutputSelection
+                  ? 'Nenhuma saída encontrada'
+                  : 'Seu navegador usa a saída padrão do sistema'
+              "
+              fallback-label="Saída padrão"
+              @update:model-value="changeAudioOutputDevice"
+            >
+              <template #icon>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                  <path d="M15.54 8.46a5 5 0 010 7.07" />
+                  <path d="M19.07 4.93a10 10 0 010 14.14" />
+                </svg>
+              </template>
+            </TelemedDeviceSelect>
+          </div>
+
+          <!-- Card de Segurança / Consent LGPD. Substitui o checkbox solto
+               do design antigo por um agrupamento visualmente coeso. -->
+          <div class="pp-telemed-preflight__security">
+            <h3 class="pp-telemed-preflight__security-title">
+              <IconShield :size="16" />
+              Configurações de segurança
+            </h3>
+            <label class="pp-telemed-preflight__consent">
+              <input
+                v-model="recordingConsent"
+                type="checkbox"
+                class="pp-telemed-preflight__consent-checkbox"
+              />
+              <span class="pp-telemed-preflight__consent-text">
+                Li e aceito os
+                <!-- eslint-disable-next-line vue/max-attributes-per-line -->
+                <a href="#" @click.prevent="showConsentTerms = true"
+                  >termos de privacidade e proteção de dados (LGPD)</a
+                >. Compreendo que o áudio desta consulta será gravado conforme a
+                Resolução CFM 2.314/2022.
+              </span>
+            </label>
+          </div>
+
+          <div class="pp-telemed-preflight__actions">
+            <button
+              class="pp-telemed-preflight__enter"
+              type="button"
+              :disabled="
+                (mediaError && mediaError.type === 'insecure') ||
+                !recordingConsent
+              "
+              @click="enterRoom"
+            >
+              <span>{{ enterCtaLabel }}</span>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </button>
+            <button
+              class="pp-telemed-preflight__cancel"
+              type="button"
+              @click="leave"
+            >
+              Cancelar
+            </button>
+          </div>
+        </section>
       </div>
     </div>
 
@@ -1500,8 +2503,8 @@ function emitSessionLeft() {
         <div class="pp-telemed-consent-modal__body">
           <p>
             <strong>Esta teleconsulta gravará apenas o áudio</strong> da
-            conversa entre você e o(a) profissional. Não será gravada imagem
-            de vídeo.
+            conversa entre você e o(a) profissional. Não será gravada imagem de
+            vídeo.
           </p>
           <p>
             <strong>1. Finalidade:</strong> O áudio será utilizado para
@@ -1517,20 +2520,20 @@ function emitSessionLeft() {
           <p>
             <strong>3. Retenção do áudio:</strong> O arquivo de áudio fica
             disponível por tempo limitado conforme política da clínica
-            (tipicamente as 15 consultas mais recentes). Após esse período,
-            o áudio é excluído permanentemente.
+            (tipicamente as 15 consultas mais recentes). Após esse período, o
+            áudio é excluído permanentemente.
           </p>
           <p>
-            <strong>4. Retenção da evolução clínica:</strong> A evolução
-            escrita gerada a partir do áudio (prontuário) é preservada por
-            <strong>20 anos</strong>, conforme exigência do CFM, mesmo após
-            o áudio ser excluído.
+            <strong>4. Retenção da evolução clínica:</strong> A evolução escrita
+            gerada a partir do áudio (prontuário) é preservada por
+            <strong>20 anos</strong>, conforme exigência do CFM, mesmo após o
+            áudio ser excluído.
           </p>
           <p>
             <strong>5. Seus direitos:</strong> Você pode solicitar a exclusão
-            antecipada do áudio a qualquer momento, sem prejuízo do
-            atendimento. Atos clínicos já registrados na evolução não são
-            afetados pela revogação.
+            antecipada do áudio a qualquer momento, sem prejuízo do atendimento.
+            Atos clínicos já registrados na evolução não são afetados pela
+            revogação.
           </p>
           <p>
             Ao marcar a caixa de seleção e clicar em "Entrar agora", você
@@ -1562,32 +2565,95 @@ function emitSessionLeft() {
       </button>
     </div>
 
-    <template v-else-if="state === 'connected' || state === 'disconnected'">
-      <!-- Header CLARO (Google Meet pattern). Fundo branco, texto escuro,
-           shadow discreta. Coerente com o resto do portal do paciente.
-           Sob o título, "Código: pppp-eeee-aaaa" pra paciente ler/copiar. -->
-      <header class="pp-telemed-room__header">
-        <button
-          class="pp-telemed-room__back"
-          aria-label="Voltar"
-          @click="leave"
-        >
-          <IconChevronLeft :size="18" />
-        </button>
-        <div class="pp-telemed-room__head-text">
-          <div class="pp-telemed-room__title">{{ headerTitle }}</div>
-          <div v-if="roomCode" class="pp-telemed-room__code" :title="roomCode">
-            {{ roomCode }}
-          </div>
-        </div>
-        <div v-if="devMode" class="pp-telemed-room__dev">DEV</div>
-      </header>
-
-      <!-- Body: stage (vídeo, fundo escuro) + chat sidebar opcional.
-           Quando chat abre, o stage comprime à esquerda — igual Google Meet.
-           Antes era um <aside> position:absolute em cima do vídeo (pop-up). -->
+    <template
+      v-else-if="
+        state === 'connected' ||
+        state === 'disconnected' ||
+        state === 'reconnecting'
+      "
+    >
+      <!-- Body full-bleed: stage de vídeo preto ocupando 100% + chat sidebar
+           opcional à direita. Header e toolbar agora flutuam SOBRE o vídeo. -->
       <div class="pp-telemed-room__body">
         <main class="pp-telemed-room__main">
+          <!-- Header overlay (gradient escuro topo). Logo Klivy + nome do outro
+               participante + badge "Em andamento - MM:SS". Direita: status da
+               conexão. Volta no canto esquerdo (botão circular sutil). -->
+          <header class="pp-telemed-room__header">
+            <div class="pp-telemed-room__header-left">
+              <button
+                class="pp-telemed-room__back"
+                aria-label="Voltar"
+                @click="leave"
+              >
+                <IconChevronLeft :size="18" />
+              </button>
+              <span class="pp-telemed-room__brand">Klivy</span>
+              <span class="pp-telemed-room__brand-sep" />
+              <span class="pp-telemed-room__participant">{{
+                headerTitle
+              }}</span>
+              <span
+                class="pp-telemed-room__status-pill"
+                :class="{
+                  'pp-telemed-room__status-pill--warn':
+                    state === 'reconnecting',
+                }"
+              >
+                <span class="pp-telemed-room__status-dot-pulse" />
+                <span v-if="state === 'reconnecting'">Reconectando…</span>
+                <span v-else>Em andamento · {{ liveDurationLabel }}</span>
+              </span>
+            </div>
+            <div class="pp-telemed-room__header-right">
+              <span
+                v-if="roomCode"
+                class="pp-telemed-room__code"
+                :title="`Código da sala: ${roomCode}`"
+              >
+                {{ roomCode }}
+              </span>
+              <!-- Pílula de qualidade da conexão. Estado e label reagem
+                   ao `ConnectionQualityChanged` do LiveKit. As 3 barrinhas
+                   animam em loop discreto pra dar a sensação de
+                   "monitoramento ativo" (request UX) — em estado warn/bad
+                   o loop fica mais agitado e a cor muda. -->
+              <span
+                class="pp-telemed-room__conn"
+                :class="{
+                  'pp-telemed-room__conn--warn': connectionState === 'warn',
+                  'pp-telemed-room__conn--bad': connectionState === 'bad',
+                }"
+                :title="connectionLabel"
+              >
+                <span class="pp-telemed-room__conn-bars" aria-hidden="true">
+                  <span class="pp-telemed-room__conn-bar" />
+                  <span class="pp-telemed-room__conn-bar" />
+                  <span class="pp-telemed-room__conn-bar" />
+                </span>
+                {{ connectionLabel }}
+              </span>
+              <!-- 2026-05-22 — Badge "REC + IA" no header. Aparece pros DOIS
+                   participantes (doutor e paciente) quando a gravação está
+                   ativa. É a confirmação visível pedida pelo doutor: se ele
+                   vê o badge piscando aqui, a gravação está rolando de fato
+                   no LiveKit Egress + a transcrição/evolução vão rodar no
+                   pipeline pós-encerramento. -->
+              <span
+                v-if="recordingActive"
+                class="pp-telemed-room__rec-badge"
+                role="status"
+                aria-live="polite"
+                title="Esta consulta está sendo gravada e será transcrita pela IA"
+              >
+                <span class="pp-telemed-room__rec-badge-dot" aria-hidden="true" />
+                <span class="pp-telemed-room__rec-badge-text">REC</span>
+                <span class="pp-telemed-room__rec-badge-ai">IA</span>
+              </span>
+              <span v-if="devMode" class="pp-telemed-room__dev">DEV</span>
+            </div>
+          </header>
+
           <!-- Banner de erro de mídia (HTTPS, permissão negada, sem device).
                Aparece ACIMA do stage pra não confundir com waiting room. -->
           <div
@@ -1611,7 +2677,13 @@ function emitSessionLeft() {
             </button>
           </div>
 
-          <div class="pp-telemed-room__stage">
+          <div
+            class="pp-telemed-room__stage"
+            :class="{
+              'pp-telemed-room__stage--pinned-self': isLocalPinned,
+              'pp-telemed-room__stage--pinned': hasPin,
+            }"
+          >
             <!-- Waiting: sem participantes remotos. -->
             <div
               v-if="remoteParticipants.length === 0"
@@ -1635,7 +2707,11 @@ function emitSessionLeft() {
                 v-for="p in remoteParticipants"
                 :key="p.id"
                 class="pp-telemed-room__tile"
-                :class="{ 'pp-telemed-room__tile--speaking': p.speaking }"
+                :class="{
+                  'pp-telemed-room__tile--speaking': p.speaking,
+                  'pp-telemed-room__tile--pinned': isParticipantPinned(p.id),
+                  'pp-telemed-room__tile--screen': p.isScreenShare,
+                }"
               >
                 <video
                   :ref="el => bindRemoteVideo(p.id, el)"
@@ -1644,6 +2720,7 @@ function emitSessionLeft() {
                   class="pp-telemed-room__tile-video"
                   :class="{
                     'pp-telemed-room__tile-video--hidden': !p.hasVideo,
+                    'pp-telemed-room__tile-video--contain': p.isScreenShare,
                   }"
                 />
                 <div
@@ -1653,14 +2730,87 @@ function emitSessionLeft() {
                 >
                   {{ initial(p.name) }}
                 </div>
+                <!-- Ícone de mic-off CENTRALIZADO sobre o tile. Padrão Meet:
+                     além da pílula no nome (sutil), tem um indicador visual
+                     grande que o usuário vê de relance. Não aparece em
+                     screen share (tile não tem mic associado). -->
+                <div
+                  v-if="!p.isScreenShare && p.micMuted"
+                  class="pp-telemed-room__tile-mute-overlay"
+                  aria-hidden="true"
+                >
+                  <IconMicOff :size="22" />
+                </div>
                 <div class="pp-telemed-room__tile-name">
                   <IconMicOff
-                    v-if="!p.hasAudio"
+                    v-if="!p.isScreenShare && p.micMuted"
                     :size="12"
                     class="pp-telemed-room__tile-mic-off"
                   />
                   <span>{{ p.name }}</span>
                 </div>
+                <!-- Pin trigger no canto superior direito — aparece no hover
+                     do tile ou se já está fixado. O menu propriamente dito é
+                     renderizado via Teleport pro body (final do template). -->
+                <button
+                  type="button"
+                  class="pp-telemed-room__pin-btn"
+                  :class="{
+                    'pp-telemed-room__pin-btn--active': isParticipantPinned(
+                      p.id
+                    ),
+                  }"
+                  :title="
+                    isParticipantPinned(p.id)
+                      ? 'Fixado em destaque'
+                      : 'Fixar em destaque'
+                  "
+                  :aria-expanded="pinMenuOpenFor === p.id"
+                  @click.stop="togglePinMenu(p.id, $event)"
+                >
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 17v5" />
+                    <path
+                      d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"
+                    />
+                  </svg>
+                </button>
+                <!-- Badge "pinned" no canto superior esquerdo. -->
+                <span
+                  v-if="isParticipantPinned(p.id)"
+                  class="pp-telemed-room__pin-badge"
+                  :title="
+                    pinIsGlobal ? 'Fixado pra todos' : 'Fixado só pra você'
+                  "
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.4"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 17v5" />
+                    <path
+                      d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"
+                    />
+                  </svg>
+                  <span>{{ pinIsGlobal ? 'Fixado · todos' : 'Fixado' }}</span>
+                </span>
               </div>
             </div>
 
@@ -1677,39 +2827,108 @@ function emitSessionLeft() {
               </div>
             </div>
 
-            <!-- Banner do doutor — pacientes aguardando admissão. -->
+            <!-- Cards de admit (doutor) — empilhados no canto inferior
+                 direito, acima do PIP. Um card por paciente pendente.
+                 Substituiu o banner topo-central da versão anterior. -->
             <div
               v-if="isDoctor && pendingPatients.size > 0"
-              class="pp-telemed-room__admit-banner"
+              class="pp-telemed-room__admit-stack"
+              role="region"
+              aria-label="Pedidos de entrada"
             >
-              <div class="pp-telemed-room__admit-banner-head">
-                <IconClock
-                  :size="16"
-                  class="pp-telemed-room__admit-banner-icon"
-                />
-                <strong>
-                  {{ pendingPatients.size }}
-                  {{
-                    pendingPatients.size === 1
-                      ? 'paciente quer entrar'
-                      : 'pacientes querem entrar'
-                  }}
-                </strong>
-              </div>
-              <div class="pp-telemed-room__admit-banner-list">
-                <div
-                  v-for="[identity, info] in pendingPatients"
-                  :key="identity"
-                  class="pp-telemed-room__admit-banner-row"
-                >
-                  <span class="pp-telemed-room__admit-banner-name">
-                    {{ info.name }}
+              <div
+                v-for="[identity, info] in pendingPatients"
+                :key="identity"
+                class="pp-telemed-room__admit-card2"
+              >
+                <header class="pp-telemed-room__admit-card2-head">
+                  <span class="pp-telemed-room__admit-card2-tag">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6V11c0-3.07-1.64-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"
+                      />
+                    </svg>
+                    Entrada solicitada
                   </span>
+                  <span class="pp-telemed-room__admit-card2-time">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    {{ formatPendingDuration(info.since) }}
+                  </span>
+                </header>
+                <div class="pp-telemed-room__admit-card2-body">
+                  <div
+                    class="pp-telemed-room__admit-card2-avatar"
+                    :style="{ background: avatarColor(info.name) }"
+                  >
+                    {{ initial(info.name) }}
+                    <span class="pp-telemed-room__admit-card2-dot" />
+                  </div>
+                  <div class="pp-telemed-room__admit-card2-info">
+                    <h3 class="pp-telemed-room__admit-card2-name">
+                      {{ info.name }}
+                    </h3>
+                    <p class="pp-telemed-room__admit-card2-sub">
+                      Aguardando na sala de espera
+                    </p>
+                  </div>
                   <button
-                    class="pp-telemed-room__admit-btn"
+                    type="button"
+                    class="pp-telemed-room__admit-card2-deny"
+                    title="Recusar"
+                    aria-label="Recusar"
+                    @click="dismissPending(identity)"
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    class="pp-telemed-room__admit-card2-accept"
                     @click="admitPatient(identity)"
                   >
-                    Admitir
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"
+                      />
+                    </svg>
+                    Aceitar
                   </button>
                 </div>
               </div>
@@ -1744,7 +2963,8 @@ function emitSessionLeft() {
             </button>
 
             <!-- PIP local — avatar com inicial quando câmera off (igual Meet),
-                 border azul + glow quando eu estiver falando. -->
+                 border azul + glow quando eu estiver falando. Quando o local
+                 está pinado, esse container vira o stage (CSS class --as-stage). -->
             <div
               class="pp-telemed-room__local"
               :class="{
@@ -1752,6 +2972,7 @@ function emitSessionLeft() {
                 'pp-telemed-room__local--mirror':
                   cameraFacing !== 'environment',
                 'pp-telemed-room__local--speaking': localSpeaking,
+                'pp-telemed-room__local--as-stage': isLocalPinned,
               }"
             >
               <video ref="localVideo" autoplay muted playsinline />
@@ -1770,16 +2991,48 @@ function emitSessionLeft() {
                 />
                 <span>Você</span>
               </div>
+              <!-- Pin trigger no PIP local. Menu vive teleportado no body
+                   (final do template) pra escapar do overflow:hidden do PIP. -->
+              <button
+                type="button"
+                class="pp-telemed-room__pin-btn pp-telemed-room__pin-btn--local"
+                :class="{
+                  'pp-telemed-room__pin-btn--active': isLocalPinned,
+                }"
+                :title="
+                  isLocalPinned ? 'Fixado em destaque' : 'Fixar em destaque'
+                "
+                :aria-expanded="pinMenuOpenFor === LOCAL_PIN_KEY"
+                @click.stop="togglePinMenu(LOCAL_PIN_KEY, $event)"
+              >
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 17v5" />
+                  <path
+                    d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"
+                  />
+                </svg>
+              </button>
             </div>
           </div>
         </main>
 
-        <!-- Chat sidebar (Google Meet pattern). Fica ao lado do vídeo,
-             comprimindo a área de stream. Empty state com SVG quando não
-             há mensagens. Toggle "permitir participantes" só pro doutor. -->
+        <!-- Chat sidebar — painel branco fixo à direita. Quando chatOpen,
+             comprime o vídeo. System message centralizada como pill. Cada
+             mensagem mostra autor + hora acima da bubble; bubbles com
+             rounded-tl-none (recebidas) ou rounded-tr-none (enviadas). -->
         <aside v-if="chatOpen" class="pp-telemed-room__chat">
           <header class="pp-telemed-room__chat-head">
-            <strong>Mensagens na chamada</strong>
+            <strong>Chat da consulta</strong>
             <button
               class="pp-telemed-room__chat-close"
               aria-label="Fechar chat"
@@ -1789,9 +3042,6 @@ function emitSessionLeft() {
             </button>
           </header>
 
-          <!-- Host control: doutor decide se pacientes podem mandar.
-               Switch visual (label + pill). Quando off, todos os pacientes
-               recebem chat_lock via data channel e input deles fica disabled. -->
           <div v-if="isDoctor" class="pp-telemed-room__chat-toggle">
             <span class="pp-telemed-room__chat-toggle-label">
               Permitir que os participantes enviem mensagens
@@ -1808,7 +3058,6 @@ function emitSessionLeft() {
             </button>
           </div>
 
-          <!-- Aviso pro PACIENTE quando o doutor desligou o chat. -->
           <div
             v-if="!isDoctor && !chatAllowed"
             class="pp-telemed-room__chat-locked"
@@ -1818,14 +3067,16 @@ function emitSessionLeft() {
           </div>
 
           <div ref="chatList" class="pp-telemed-room__chat-list">
-            <!-- Empty state (Google Meet pattern). Ícone grande em cinza +
-                 texto explicativo. Substitui a lista vazia "branca". -->
+            <div class="pp-telemed-room__chat-system">
+              <span>A chamada foi iniciada</span>
+            </div>
+
             <div
               v-if="messages.length === 0"
               class="pp-telemed-room__chat-empty"
             >
               <div class="pp-telemed-room__chat-empty-icon">
-                <IconChatBubble :size="56" />
+                <IconChatBubble :size="48" />
               </div>
               <p class="pp-telemed-room__chat-empty-title">
                 Ainda sem mensagens
@@ -1837,114 +3088,336 @@ function emitSessionLeft() {
             <div
               v-for="m in messages"
               :key="m.id"
-              class="pp-telemed-room__chat-msg"
-              :class="{ 'pp-telemed-room__chat-msg--mine': m.fromMe }"
+              class="pp-telemed-room__chat-row"
+              :class="{ 'pp-telemed-room__chat-row--mine': m.fromMe }"
             >
-              <div class="pp-telemed-room__chat-author">
+              <div class="pp-telemed-room__chat-meta">
                 {{ m.fromMe ? 'Você' : m.author }}
               </div>
-              <div class="pp-telemed-room__chat-text">{{ m.text }}</div>
+              <div
+                class="pp-telemed-room__chat-msg"
+                :class="{ 'pp-telemed-room__chat-msg--mine': m.fromMe }"
+              >
+                {{ m.text }}
+              </div>
             </div>
           </div>
           <form class="pp-telemed-room__chat-form" @submit.prevent="sendChat">
-            <input
-              v-model="chatInput"
-              type="text"
-              :placeholder="
-                !isDoctor && !chatAllowed
-                  ? 'Mensagens desativadas pelo host'
-                  : 'Enviar uma mensagem'
-              "
-              maxlength="500"
-              :disabled="!isDoctor && !chatAllowed"
-            />
-            <button
-              type="submit"
-              :disabled="!chatInput.trim() || (!isDoctor && !chatAllowed)"
-            >
-              Enviar
-            </button>
+            <div class="pp-telemed-room__chat-input-wrap">
+              <input
+                v-model="chatInput"
+                type="text"
+                :placeholder="
+                  !isDoctor && !chatAllowed
+                    ? 'Mensagens desativadas pelo host'
+                    : 'Digite uma mensagem…'
+                "
+                maxlength="500"
+                :disabled="!isDoctor && !chatAllowed"
+              />
+              <button
+                type="submit"
+                class="pp-telemed-room__chat-send"
+                aria-label="Enviar"
+                :disabled="!chatInput.trim() || (!isDoctor && !chatAllowed)"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M22 2L11 13" />
+                  <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+                </svg>
+              </button>
+            </div>
           </form>
         </aside>
       </div>
 
-      <!-- Footer CLARO. Botões em cinza claro (off: vermelho discreto).
-           Botão Sair mantém vermelho saturado (ação destrutiva). -->
+      <!-- Toolbar flutuante (glassmorphism). Pill central com botões
+           circulares + botão "Encerrar" vermelho na direita. Sobrepõe o
+           vídeo, então fica posicionada absolute no main. -->
       <footer class="pp-telemed-room__controls">
+        <div class="pp-telemed-room__controls-pill">
+          <button
+            class="pp-telemed-room__ctrl"
+            :class="{ off: !micOn }"
+            :title="micOn ? 'Silenciar' : 'Ativar microfone'"
+            @click="toggleMic"
+          >
+            <IconMic v-if="micOn" :size="20" />
+            <IconMicOff v-else :size="20" />
+          </button>
+          <button
+            class="pp-telemed-room__ctrl"
+            :class="{ off: !camOn }"
+            :title="camOn ? 'Desligar câmera' : 'Ligar câmera'"
+            @click="toggleCam"
+          >
+            <IconVideo v-if="camOn" :size="20" />
+            <IconVideoOff v-else :size="20" />
+          </button>
+          <button
+            v-if="hasMultipleCameras && isMobile"
+            class="pp-telemed-room__ctrl"
+            title="Trocar câmera"
+            @click="switchCamera"
+          >
+            <IconSwitchCamera :size="20" />
+          </button>
+          <!-- Desfoque de fundo. Click no botão alterna o menu (popover acima);
+               toggle dentro do menu liga/desliga o blur; slider ajusta a
+               intensidade quando ligado. Estado active = blur on (cor Klivy). -->
+          <div class="pp-telemed-room__blur-wrap">
+            <button
+              class="pp-telemed-room__ctrl"
+              :class="{ 'pp-telemed-room__ctrl--active': blurEnabled }"
+              :title="
+                blurEnabled
+                  ? `Desfoque ativo (intensidade ${blurIntensity})`
+                  : 'Desfoque de fundo'
+              "
+              :aria-expanded="blurMenuOpen"
+              aria-haspopup="dialog"
+              @click="toggleBlurMenu"
+            >
+              <IconBlur :size="20" />
+            </button>
+            <div
+              v-if="blurMenuOpen"
+              v-on-click-outside="closeBlurMenu"
+              class="pp-telemed-room__blur-menu"
+              role="dialog"
+              aria-label="Desfoque de fundo"
+            >
+              <div class="pp-telemed-room__blur-menu-head">
+                <span class="pp-telemed-room__blur-menu-title">
+                  Desfoque de fundo
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  :aria-checked="blurEnabled"
+                  :disabled="blurApplying"
+                  class="pp-telemed-room__switch"
+                  :class="{ 'pp-telemed-room__switch--on': blurEnabled }"
+                  @click="toggleBlur"
+                >
+                  <span class="pp-telemed-room__switch-thumb" />
+                </button>
+              </div>
+              <div v-if="blurEnabled" class="pp-telemed-room__blur-menu-body">
+                <label class="pp-telemed-room__blur-menu-label">
+                  <span>Intensidade</span>
+                  <span class="pp-telemed-room__blur-menu-value">
+                    {{ blurIntensity }}
+                  </span>
+                </label>
+                <input
+                  type="range"
+                  min="5"
+                  max="50"
+                  step="1"
+                  class="pp-telemed-room__blur-slider"
+                  :style="{
+                    '--telemed-slider-progress':
+                      ((blurIntensity - 5) / 45) * 100 + '%',
+                  }"
+                  :value="blurIntensity"
+                  @input="setBlurIntensity($event.target.value)"
+                />
+                <div class="pp-telemed-room__blur-slider-ticks">
+                  <span>Leve</span>
+                  <span>Forte</span>
+                </div>
+              </div>
+              <p class="pp-telemed-room__blur-menu-hint">
+                Processado no seu computador. Pode usar mais bateria.
+              </p>
+            </div>
+          </div>
+          <!-- 2026-05-22 — Botão Gravar (só doutor).
+               OFF: bolinha vermelha preenchida = "clique pra começar a gravar".
+               ON:  quadradinho vermelho preenchido pulsando = "REC, clique pra parar".
+               Mimetiza o padrão universal de câmeras (record ⏺ / stop ⏹).
+               Tooltip "balão de gibi" aparece 7s ao entrar na sala lembrando
+               de gravar (auto-dismiss; some ao clicar no botão também). -->
+          <div v-if="isDoctor" class="pp-telemed-room__rec-wrap">
+            <button
+              class="pp-telemed-room__ctrl pp-telemed-room__ctrl--rec"
+              :class="{ 'pp-telemed-room__ctrl--rec-on': recordingActive }"
+              :disabled="recordingToggling"
+              :title="recordButtonTitle"
+              :aria-pressed="recordingActive"
+              :aria-label="recordButtonTitle"
+              @click="toggleRecording"
+            >
+              <!-- OFF: bolinha vermelha preenchida (record icon). -->
+              <svg
+                v-if="!recordingActive"
+                class="pp-telemed-room__rec-icon"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="7" fill="#dc2626" />
+              </svg>
+              <!-- ON: quadradinho vermelho preenchido (stop icon). -->
+              <svg
+                v-else
+                class="pp-telemed-room__rec-icon pp-telemed-room__rec-icon--on"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <rect x="5.5" y="5.5" width="13" height="13" rx="2" fill="#dc2626" />
+              </svg>
+              <!-- Spinner enquanto o toggle está em flight (start_recording
+                   pode levar 1-2s no LiveKit). -->
+              <span
+                v-if="recordingToggling"
+                class="pp-telemed-room__rec-spinner"
+                aria-hidden="true"
+              />
+            </button>
+            <transition name="pp-telemed-room__rec-hint">
+              <div
+                v-if="recordHintVisible"
+                class="pp-telemed-room__rec-hint"
+                role="tooltip"
+                @click="dismissRecordHint"
+              >
+                <span class="pp-telemed-room__rec-hint-text">
+                  Não esqueça de gravar essa consulta
+                </span>
+                <span class="pp-telemed-room__rec-hint-tail" />
+              </div>
+            </transition>
+            <transition name="pp-telemed-room__rec-err">
+              <div
+                v-if="recordingError"
+                class="pp-telemed-room__rec-err"
+                role="alert"
+              >
+                {{ recordingError }}
+              </div>
+            </transition>
+          </div>
+          <button
+            class="pp-telemed-room__ctrl"
+            :class="{ 'pp-telemed-room__ctrl--share-on': screenOn }"
+            :title="screenOn ? 'Parar compartilhamento' : 'Compartilhar tela'"
+            @click="toggleScreen"
+          >
+            <IconScreenShare :size="20" />
+          </button>
+          <span class="pp-telemed-room__ctrl-sep" />
+          <button
+            class="pp-telemed-room__ctrl"
+            :class="{ 'pp-telemed-room__ctrl--active': chatOpen }"
+            title="Chat"
+            @click="chatOpen = !chatOpen"
+          >
+            <IconMessage :size="20" />
+            <span v-if="unreadChat" class="pp-telemed-room__badge">
+              {{ unreadChat }}
+            </span>
+          </button>
+        </div>
         <button
-          class="pp-telemed-room__ctrl"
-          :class="{ off: !micOn }"
-          :title="micOn ? 'Silenciar' : 'Ativar microfone'"
-          @click="toggleMic"
-        >
-          <IconMic v-if="micOn" :size="22" />
-          <IconMicOff v-else :size="22" />
-        </button>
-        <button
-          class="pp-telemed-room__ctrl"
-          :class="{ off: !camOn }"
-          :title="camOn ? 'Desligar câmera' : 'Ligar câmera'"
-          @click="toggleCam"
-        >
-          <IconVideo v-if="camOn" :size="22" />
-          <IconVideoOff v-else :size="22" />
-        </button>
-        <button
-          v-if="hasMultipleCameras && isMobile"
-          class="pp-telemed-room__ctrl"
-          title="Trocar câmera"
-          @click="switchCamera"
-        >
-          <IconSwitchCamera :size="22" />
-        </button>
-        <button
-          class="pp-telemed-room__ctrl"
-          :class="{ off: screenOn }"
-          :title="screenOn ? 'Parar compartilhamento' : 'Compartilhar tela'"
-          @click="toggleScreen"
-        >
-          <IconScreenShare :size="22" />
-        </button>
-        <button
-          class="pp-telemed-room__ctrl"
-          :class="{ 'pp-telemed-room__ctrl--active': chatOpen }"
-          title="Chat"
-          @click="chatOpen = !chatOpen"
-        >
-          <IconMessage :size="22" />
-          <span v-if="unreadChat" class="pp-telemed-room__badge">
-            {{ unreadChat }}
-          </span>
-        </button>
-        <button
-          class="pp-telemed-room__ctrl pp-telemed-room__ctrl--leave"
+          class="pp-telemed-room__leave"
           title="Sair da consulta"
           @click="leave"
         >
-          <IconPhoneHangup :size="20" />
-          <span>Sair</span>
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.88 1.11-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.965.965 0 0 1-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.78-.74-1.68-1.36-2.66-1.85a.997.997 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"
+            />
+          </svg>
+          <span>Encerrar</span>
         </button>
       </footer>
     </template>
+
+    <!-- Menu de Pin compartilhado (teleportado pro body pra escapar de
+         qualquer overflow:hidden). Renderizado apenas quando aberto;
+         posição calculada inline no momento do clique no botão trigger. -->
+    <Teleport to="body">
+      <div
+        v-if="pinMenuOpenFor"
+        v-on-click-outside="closePinMenu"
+        class="pp-telemed-room__pin-menu"
+        role="menu"
+        :style="pinMenuStyle"
+      >
+        <button
+          v-if="
+            pinMenuOpenFor === LOCAL_PIN_KEY
+              ? isLocalPinned
+              : isParticipantPinned(pinMenuOpenFor)
+          "
+          type="button"
+          class="pp-telemed-room__pin-menu-item"
+          @click="unpin"
+        >
+          Desafixar
+        </button>
+        <template v-else>
+          <button
+            type="button"
+            class="pp-telemed-room__pin-menu-item"
+            @click="pinFor(pinMenuOpenFor, false)"
+          >
+            Fixar pra mim
+          </button>
+          <button
+            v-if="isDoctor"
+            type="button"
+            class="pp-telemed-room__pin-menu-item pp-telemed-room__pin-menu-item--primary"
+            @click="pinFor(pinMenuOpenFor, true)"
+          >
+            Fixar pra todos
+          </button>
+        </template>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
-/* ─── Root ────────────────────────────────────────────────────────────
-   Google Meet pattern: header/footer claros (#fff), stage central preto
-   (pra valorizar o vídeo). Grid de 3 linhas garante que footer não suba
-   sobre o vídeo e header não invada o stage. */
+/* ───────────────────────────────────────────────────────────────────────
+   Sala de telemedicina — redesign 2026-05-21 (Klivy minimalista).
+   Stage preto full-bleed; header e toolbar flutuam SOBRE o vídeo (overlay
+   com gradient discreto). Chat sidebar empurra o stage à esquerda (não
+   sobrepõe). Cor de marca: #1552F1 (Klivy primary).
+   ─────────────────────────────────────────────────────────────────────── */
 .pp-telemed-room {
   position: fixed;
   inset: 0;
-  background: #f8fafc;
-  color: #0f172a;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  background: #000;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
   z-index: 1000;
+  font-feature-settings: 'cv11', 'ss01';
 }
 
-/* Overlay de loading/erro — light. Antes era dark; alinha com o portal. */
+/* Overlay de loading/erro — fundo preto translúcido coerente com o stage. */
 .pp-telemed-room__overlay {
   position: absolute;
   inset: 0;
@@ -1953,14 +3426,15 @@ function emitSessionLeft() {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  background: rgba(248, 250, 252, 0.96);
-  z-index: 2;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 50;
 }
 .pp-telemed-room__spinner {
   width: 36px;
   height: 36px;
-  border: 3px solid rgba(37, 99, 235, 0.15);
-  border-top-color: #2563eb;
+  border: 3px solid rgba(255, 255, 255, 0.18);
+  border-top-color: #1552f1;
   border-radius: 50%;
   animation: spin 0.9s linear infinite;
 }
@@ -1971,73 +3445,236 @@ function emitSessionLeft() {
 }
 .pp-telemed-room__status {
   font-size: 14px;
-  color: #475569;
+  color: #cbd5e1;
 }
 .pp-telemed-room__status--error {
-  color: #b91c1c;
+  color: #fca5a5;
   max-width: 80%;
   text-align: center;
 }
 .pp-telemed-room__btn {
   margin-top: 12px;
   padding: 10px 20px;
-  background: #2563eb;
+  background: #1552f1;
   color: #fff;
   border: 0;
   border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
+  transition: background 120ms ease;
+}
+.pp-telemed-room__btn:hover {
+  background: #0c3fcc;
 }
 
-/* ─── Header ──────────────────────────────────────────────────────────
-   Branco, texto escuro, shadow discreta. Botão voltar agora cinza claro
-   (não translúcido sobre dark). */
+/* ─── Body (split: stage preto | chat sidebar) ────────────────────── */
+.pp-telemed-room__body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.pp-telemed-room__main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  background: #000;
+  overflow: hidden;
+}
+
+/* ─── Header overlay (gradient escuro topo) ─────────────────────────
+   Sobrepõe o vídeo. Gradient suave do preto pra transparente garante
+   legibilidade sem cobrir muito. */
 .pp-telemed-room__header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 24px;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0.25) 60%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+.pp-telemed-room__header > * {
+  pointer-events: auto;
+}
+.pp-telemed-room__header-left,
+.pp-telemed-room__header-right {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
-  z-index: 1;
+  min-width: 0;
 }
 .pp-telemed-room__back {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #f1f5f9;
-  border: 0;
-  color: #334155;
   width: 32px;
   height: 32px;
   border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 0;
+  color: #fff;
   cursor: pointer;
+  backdrop-filter: blur(6px);
   transition: background 120ms ease;
 }
 .pp-telemed-room__back:hover {
-  background: #e2e8f0;
+  background: rgba(255, 255, 255, 0.22);
 }
-.pp-telemed-room__head-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+.pp-telemed-room__brand {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
 }
-.pp-telemed-room__title {
+.pp-telemed-room__brand-sep {
+  display: inline-block;
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.25);
+}
+.pp-telemed-room__participant {
   font-size: 14px;
   font-weight: 600;
-  color: #0f172a;
-  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
 }
-/* Código da sala estilo Google Meet (tkt-vxoc-drv). Monospace pra ressaltar
-   formato; cor cinza pra não competir com o título. */
+.pp-telemed-room__status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: rgba(34, 197, 94, 0.18);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+.pp-telemed-room__status-pill--warn {
+  background: rgba(251, 191, 36, 0.18);
+  color: #fcd34d;
+  border-color: rgba(251, 191, 36, 0.35);
+}
+.pp-telemed-room__status-dot-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 0 currentColor;
+  animation: telemed-pulse 1.8s ease-out infinite;
+}
+@keyframes telemed-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+.pp-telemed-room__conn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+  /* Variável CSS controla a cor das barras pra warn/bad sem repetir
+     o keyframe inteiro. */
+  --conn-bar-color: #4ade80;
+  --conn-bar-duration: 1.4s;
+}
+.pp-telemed-room__conn--warn {
+  --conn-bar-color: #fbbf24;
+  --conn-bar-duration: 0.9s;
+  color: #fef3c7;
+}
+.pp-telemed-room__conn--bad {
+  --conn-bar-color: #f87171;
+  --conn-bar-duration: 0.6s;
+  color: #fecaca;
+}
+
+/* 3 barras estilo "wifi/equalizador" que sobem e descem em loop discreto.
+   Cada barra com delay diferente — efeito de onda. `transform-origin: bottom`
+   pra crescer a partir da base (visualmente parece "pulso"). */
+.pp-telemed-room__conn-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+}
+.pp-telemed-room__conn-bar {
+  display: inline-block;
+  width: 3px;
+  height: 100%;
+  background: var(--conn-bar-color);
+  border-radius: 1px;
+  transform-origin: bottom;
+  animation: telemed-conn-bar var(--conn-bar-duration) ease-in-out infinite;
+}
+.pp-telemed-room__conn-bar:nth-child(1) {
+  animation-delay: 0s;
+}
+.pp-telemed-room__conn-bar:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.pp-telemed-room__conn-bar:nth-child(3) {
+  animation-delay: 0.36s;
+}
+@keyframes telemed-conn-bar {
+  0%,
+  100% {
+    transform: scaleY(0.4);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+/* Respeita prefers-reduced-motion — sem animar pra quem desliga animações
+   no SO/browser. Mantém só a cor pra ainda comunicar o estado. */
+@media (prefers-reduced-motion: reduce) {
+  .pp-telemed-room__conn-bar {
+    animation: none;
+    transform: scaleY(0.8);
+    opacity: 1;
+  }
+}
 .pp-telemed-room__code {
-  margin-top: 2px;
   font-family: ui-monospace, Menlo, Monaco, monospace;
   font-size: 11px;
   font-weight: 500;
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.65);
   letter-spacing: 0.6px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  backdrop-filter: blur(6px);
 }
 .pp-telemed-room__dev {
   font-size: 10px;
@@ -2048,38 +3685,25 @@ function emitSessionLeft() {
   border-radius: 999px;
 }
 
-/* ─── Body (split horizontal: stage | chat) ──────────────────────────
-   Grid 2-col: vídeo expande, chat ocupa 360px à direita quando aberto.
-   Antes o chat era position:absolute em cima do stage (pop-up). */
-.pp-telemed-room__body {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  min-height: 0; /* Permite o filho com overflow scroll funcionar. */
-}
-.pp-telemed-room__main {
-  position: relative;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  background: #e2e8f0;
-}
-
 .pp-telemed-room__stage {
-  flex: 1;
-  position: relative;
+  position: absolute;
+  inset: 0;
   overflow: hidden;
 }
-/* Tiles dos participantes remotos (Google Meet pattern). Stack absoluto
-   pra preencher o stage. Grid 1, 2x1 ou 2x2 dependendo do número de
-   participantes. Cada tile tem fundo escuro próprio (#1e293b) — quando
-   sem vídeo, vê-se o avatar. */
+/* Tiles dos participantes remotos. Quando 1 participante, ocupa full
+   bleed (sem padding/borda) pra dar o efeito "vídeo gigante". Com 2+,
+   vira grid clássico. */
 .pp-telemed-room__tiles {
   position: absolute;
   inset: 0;
   display: grid;
+  grid-template-columns: 1fr;
+}
+.pp-telemed-room__tiles[data-count='2'],
+.pp-telemed-room__tiles[data-count='3'],
+.pp-telemed-room__tiles[data-count='4'] {
   gap: 8px;
   padding: 8px;
-  grid-template-columns: 1fr;
 }
 .pp-telemed-room__tiles[data-count='2'] {
   grid-template-columns: 1fr 1fr;
@@ -2094,109 +3718,147 @@ function emitSessionLeft() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #1e293b;
-  border-radius: 12px;
+  background: #0a0a0a;
   overflow: hidden;
-  border: 3px solid transparent;
+  border: 2px solid transparent;
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease;
 }
-/* Active speaker — border azul + glow externo. Igual Meet. */
+.pp-telemed-room__tiles[data-count='2'] .pp-telemed-room__tile,
+.pp-telemed-room__tiles[data-count='3'] .pp-telemed-room__tile,
+.pp-telemed-room__tiles[data-count='4'] .pp-telemed-room__tile {
+  border-radius: 16px;
+}
 .pp-telemed-room__tile--speaking {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
+  border-color: #1552f1;
+  box-shadow: 0 0 0 3px rgba(21, 82, 241, 0.4);
 }
 .pp-telemed-room__tile-video {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
+/* Screen share: contain (não corta a tela compartilhada — usuário precisa
+   ver o conteúdo todo). Fundo preto preenche aspect-ratio mismatch. */
+.pp-telemed-room__tile-video--contain {
+  object-fit: contain;
+  background: #000;
+}
 .pp-telemed-room__tile-video--hidden {
   display: none;
 }
+/* Screen share tile: borda mais discreta (não é "alguém falando"); fundo
+   preto pra contraste com a UI compartilhada. */
+.pp-telemed-room__tile--screen {
+  background: #000;
+}
 .pp-telemed-room__tile-name {
   position: absolute;
-  left: 12px;
-  bottom: 10px;
+  left: 16px;
+  bottom: 16px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 5px 12px;
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
 }
 .pp-telemed-room__tile-mic-off {
   color: #f87171;
 }
 
-/* Avatar com inicial (em vez de vídeo). Cor estável por nome via
-   avatarColor(). Tamanho responsivo via min(20vw, 120px). */
+/* Overlay grande de mic-off no centro do tile. Padrão Meet/Zoom: avisa de
+   forma clara que o participante está mudo, mesmo no canto da galeria.
+   Posicionamento absoluto, semi-transparente pra não competir com o vídeo
+   se ele estiver visível atrás. */
+.pp-telemed-room__tile-mute-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .pp-telemed-room__avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(20vw, 120px);
-  height: min(20vw, 120px);
+  width: min(22vw, 140px);
+  height: min(22vw, 140px);
   border-radius: 50%;
-  font-size: min(8vw, 48px);
+  font-size: min(9vw, 56px);
   font-weight: 600;
   color: #fff;
   letter-spacing: 0.5px;
   user-select: none;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 .pp-telemed-room__avatar--pip {
   width: 56px;
   height: 56px;
   font-size: 22px;
+  box-shadow: none;
 }
-.pp-telemed-room__remote :deep(.pp-telemed-room__remote-el) {
-  max-width: 100%;
-  max-height: 100%;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-/* Waiting state — texto/ícone em cinza médio pra contrastar com slate-200
-   sem ficar agressivo. Antes era branco sobre preto. */
+
+/* Waiting state — fundo cinza claro suave (não preto puro pra não parecer
+   freezada), ícone redondo em cinza azulado, texto cinza médio. */
 .pp-telemed-room__waiting {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  gap: 12px;
-  color: #475569;
+  gap: 16px;
+  background: #e8edf3;
+  color: #64748b;
   text-align: center;
   padding: 20px;
   font-size: 14px;
+}
+.pp-telemed-room__waiting p {
+  margin: 0;
+  font-weight: 500;
 }
 .pp-telemed-room__waiting-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 72px;
-  height: 72px;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
-  background: #cbd5e1;
-  color: #475569;
+  background: rgba(255, 255, 255, 0.85);
+  color: #64748b;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
 }
 
 .pp-telemed-room__speaker {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 80px;
+  right: 24px;
   background: rgba(34, 197, 94, 0.85);
   color: #fff;
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
-  z-index: 3;
+  z-index: 18;
   backdrop-filter: blur(4px);
   display: inline-flex;
   align-items: center;
@@ -2205,34 +3867,35 @@ function emitSessionLeft() {
 
 .pp-telemed-room__stats {
   position: absolute;
-  top: 12px;
-  left: 12px;
-  background: rgba(0, 0, 0, 0.7);
+  top: 80px;
+  left: 24px;
+  background: rgba(0, 0, 0, 0.65);
   color: #fff;
   padding: 6px 10px;
   border-radius: 8px;
   font-family: ui-monospace, Menlo, Monaco, monospace;
   font-size: 11px;
   line-height: 1.4;
-  z-index: 3;
+  z-index: 18;
   cursor: pointer;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
 }
 .pp-telemed-room__stats-toggle {
   position: absolute;
-  top: 12px;
-  left: 12px;
-  background: rgba(0, 0, 0, 0.6);
+  top: 80px;
+  left: 24px;
+  background: rgba(0, 0, 0, 0.55);
   color: #fff;
   border: 0;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 8px;
   cursor: pointer;
-  z-index: 3;
+  z-index: 18;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  backdrop-filter: blur(6px);
 }
 .pp-telemed-room__stats-line {
   display: flex;
@@ -2248,73 +3911,277 @@ function emitSessionLeft() {
   flex-shrink: 0;
 }
 
-/* PIP local — bottom 16 porque footer agora é externo ao stage (grid row).
-   Antes era 100px pra escapar dos controles que estavam por cima do vídeo. */
+/* PIP local — bottom-right elevado pra não chocar com a toolbar (que fica
+   floating bottom 24). Tamanho um pouco maior pra dar presença; rounded-xl
+   + shadow-popover. Cresce sutilmente no hover. */
 .pp-telemed-room__local {
   position: absolute;
-  right: 16px;
-  bottom: 16px;
-  width: 200px;
-  height: 113px;
-  border-radius: 12px;
+  right: 24px;
+  bottom: 112px;
+  width: 220px;
+  height: 156px;
+  border-radius: 14px;
   background: #1e293b;
   overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.18);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2;
+  z-index: 15;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  transition:
+    transform 200ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+.pp-telemed-room__local:hover {
+  transform: scale(1.03);
 }
 .pp-telemed-room__local video {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-/* Espelha SÓ quando facingMode === 'user' (frontal). Câmera traseira
-   filmando o ambiente não deve inverter — texto/objetos ficariam ao
-   contrário. Desktop sem facingMode reportado cai no default 'user'. */
 .pp-telemed-room__local--mirror video {
   transform: scaleX(-1);
 }
 .pp-telemed-room__local--off {
-  background: #334155;
+  background: #1e293b;
 }
-/* Border azul + glow quando eu estiver falando (active speaker local).
-   Mesma linguagem visual dos tiles remotos. */
 .pp-telemed-room__local--speaking {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.35);
+  border-color: #1552f1;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.45),
+    0 0 0 3px rgba(21, 82, 241, 0.5);
 }
-/* Label "Você" no canto do PIP, com indicador de mic mutado. */
 .pp-telemed-room__local-name {
   position: absolute;
-  left: 8px;
-  bottom: 8px;
+  left: 10px;
+  bottom: 10px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
-  background: rgba(0, 0, 0, 0.55);
+  padding: 3px 10px;
+  background: rgba(0, 0, 0, 0.6);
   color: #fff;
-  border-radius: 999px;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 500;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
   pointer-events: none;
 }
 
-/* ─── Banner de erro de mídia ──────────────────────────────────────────
-   Aparece acima do stage quando getUserMedia falha (HTTP, permissão
-   negada, sem device). Banner amarelo (warning) com ícone + texto +
-   botão "Tentar novamente". */
+/* ─── Pin (spotlight) ─────────────────────────────────────────────────
+   Botão circular pequeno no canto superior direito de cada tile (remoto)
+   e do PIP local. Esconde no idle, aparece no hover ou se já está pinado.
+   Menu de opções abre como dropdown direcionado pra dentro (não pra fora
+   do container) pra não ser cortado pelo overflow:hidden do tile.
+
+   Posicionado CENTRALIZADO no tile/PIP. Background preto translúcido leve
+   (~25%) com blur — sutil, não chama atenção. Só aparece em hover sobre o
+   tile/PIP; quando o mouse sai, some completamente. Estado "fixado" não
+   muda o botão — o sinal de fixado é o badge no canto, não o botão. */
+.pp-telemed-room__pin-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.85);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  border: 0;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 6;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition:
+    opacity 180ms ease,
+    background 140ms ease,
+    transform 140ms ease;
+}
+.pp-telemed-room__pin-btn svg {
+  width: 26px;
+  height: 26px;
+}
+.pp-telemed-room__pin-btn--local svg {
+  width: 22px;
+  height: 22px;
+}
+.pp-telemed-room__pin-btn--local {
+  width: 48px;
+  height: 48px;
+}
+/* Único trigger de visibilidade: hover sobre o tile/PIP. Sem hover, some.
+   pointer-events: none quando hidden evita clique fantasma em botão
+   "invisível" sobreposto ao vídeo. */
+.pp-telemed-room__tile:hover .pp-telemed-room__pin-btn,
+.pp-telemed-room__local:hover .pp-telemed-room__pin-btn {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+.pp-telemed-room__pin-btn:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* Menu de opções — teleportado pro body, posição fixed setada inline pelo
+   JS. Estilos aqui só cuidam de aparência (border, padding, items). */
+.pp-telemed-room__pin-menu {
+  min-width: 200px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(7, 16, 42, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 1100;
+  animation: telemed-pin-menu-in 140ms ease-out;
+}
+@keyframes telemed-pin-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.pp-telemed-room__pin-menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1c1b1b;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+.pp-telemed-room__pin-menu-item:hover {
+  background: #f1f5f9;
+}
+.pp-telemed-room__pin-menu-item--primary {
+  color: #1552f1;
+  font-weight: 600;
+}
+.pp-telemed-room__pin-menu-item--primary:hover {
+  background: rgba(21, 82, 241, 0.08);
+}
+
+/* Badge mostrando estado fixado no canto superior esquerdo do tile. */
+.pp-telemed-room__pin-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(21, 82, 241, 0.92);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(6px);
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* Tile pinado — border azul Klivy primary pra reforçar destaque. */
+.pp-telemed-room__tile--pinned {
+  border-color: #1552f1;
+  box-shadow: 0 0 0 3px rgba(21, 82, 241, 0.3);
+}
+
+/* ─── Layout swap: local em destaque (pinned-self) ─────────────────────
+   Quando o usuário fixa a si mesmo, o PIP local cresce pra ocupar o stage
+   inteiro e os tiles remotos viram thumbnails na lateral (acima de onde o
+   PIP estava). Funciona pra 1-on-1 (caso comum em telemed) e degrada ok
+   pra 2+ remotos (cada um vira um card menor). */
+.pp-telemed-room__local--as-stage {
+  position: absolute;
+  inset: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+  z-index: 1;
+  transition: none;
+}
+.pp-telemed-room__local--as-stage:hover {
+  transform: none;
+}
+
+/* Quando o local é o pinado, troca os tiles remotos pra um stack vertical
+   pequeno no canto inferior direito (onde o PIP normalmente fica). */
+.pp-telemed-room__stage--pinned-self .pp-telemed-room__tiles {
+  position: absolute;
+  bottom: 112px;
+  right: 24px;
+  top: auto;
+  left: auto;
+  width: 220px;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+  grid-template-columns: none !important;
+  grid-template-rows: none !important;
+  z-index: 14;
+}
+.pp-telemed-room__stage--pinned-self .pp-telemed-room__tile {
+  width: 220px;
+  height: 156px;
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+/* Em pinned-self, esconde o nome do PIP local (ele agora é o stage,
+   nome embaixo fica redundante e poluído). */
+.pp-telemed-room__local--as-stage .pp-telemed-room__local-name {
+  bottom: 100px;
+  left: 24px;
+  font-size: 13px;
+  padding: 5px 14px;
+}
+/* Stage com pin (qualquer pin) — esconde a tarja "Você" do PIP local
+   quando ele tá em modo PIP normal (sem destaque). Pra não conflitar
+   visualmente com o badge do pinado. */
+
+/* Banner de erro de mídia — flutuante no topo do stage (overlay). */
 .pp-telemed-room__media-error {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 19;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
   background: #fef3c7;
-  border-bottom: 1px solid #fde68a;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
   color: #78350f;
+  max-width: calc(100% - 48px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 .pp-telemed-room__media-error-icon {
   display: inline-flex;
@@ -2359,29 +4226,28 @@ function emitSessionLeft() {
   background: #92400e;
 }
 
-/* ─── Chat sidebar (Google Meet pattern) ──────────────────────────────
-   Painel branco fixo de 360px à direita do stage. Empilha:
-     - header (título + close)
-     - toggle host (doutor)
-     - lock notice (paciente, se host desligou)
-     - lista (ou empty state)
-     - form
-   Em mobile (< 768px) ocupa a tela toda — o stage some atrás. */
+/* ─── Chat sidebar ────────────────────────────────────────────────────
+   Painel branco fixo de 400px à direita. Sistema message centralizada
+   como pill cinza; bubbles com autor+hora acima; sent em Klivy primary. */
 .pp-telemed-room__chat {
-  width: 360px;
+  width: 400px;
+  flex-shrink: 0;
   background: #fff;
   border-left: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  color: #0f172a;
+  box-shadow: -10px 0 30px rgba(7, 16, 42, 0.08);
 }
 .pp-telemed-room__chat-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: 18px 20px;
   border-bottom: 1px solid #e5e7eb;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 600;
   color: #0f172a;
 }
 .pp-telemed-room__chat-close {
@@ -2391,24 +4257,25 @@ function emitSessionLeft() {
   background: transparent;
   color: #64748b;
   border: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   cursor: pointer;
   padding: 0;
-  transition: background 120ms ease;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
 }
 .pp-telemed-room__chat-close:hover {
   background: #f1f5f9;
   color: #0f172a;
 }
 
-/* Host toggle (doutor) — switch estilo iOS */
 .pp-telemed-room__chat-toggle {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 12px 20px;
   border-bottom: 1px solid #f1f5f9;
 }
 .pp-telemed-room__chat-toggle-label {
@@ -2430,7 +4297,7 @@ function emitSessionLeft() {
   padding: 0;
 }
 .pp-telemed-room__switch--on {
-  background: #2563eb;
+  background: #1552f1;
 }
 .pp-telemed-room__switch-thumb {
   position: absolute;
@@ -2447,12 +4314,11 @@ function emitSessionLeft() {
   left: 18px;
 }
 
-/* Aviso pro paciente quando host travou o chat. */
 .pp-telemed-room__chat-locked {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 10px 20px;
   background: #fef3c7;
   color: #78350f;
   font-size: 12px;
@@ -2462,13 +4328,28 @@ function emitSessionLeft() {
 .pp-telemed-room__chat-list {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 18px;
+  background: #ffffff;
 }
 
-/* Empty state — ícone grande cinza + título + texto explicativo. */
+/* System message centralizada (pill cinza) — "A chamada foi iniciada". */
+.pp-telemed-room__chat-system {
+  display: flex;
+  justify-content: center;
+}
+.pp-telemed-room__chat-system span {
+  display: inline-block;
+  padding: 5px 14px;
+  background: #ebe7e7;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 999px;
+}
+
 .pp-telemed-room__chat-empty {
   display: flex;
   flex-direction: column;
@@ -2476,7 +4357,7 @@ function emitSessionLeft() {
   justify-content: center;
   text-align: center;
   flex: 1;
-  padding: 20px;
+  padding: 32px 20px;
   color: #94a3b8;
 }
 .pp-telemed-room__chat-empty-icon {
@@ -2497,116 +4378,140 @@ function emitSessionLeft() {
   max-width: 240px;
 }
 
-.pp-telemed-room__chat-msg {
+/* Linha = autor/hora + bubble. Recebida alinha à esquerda, enviada à
+   direita. Bubble com canto chanfrado no lado do remetente. */
+.pp-telemed-room__chat-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   max-width: 85%;
-  padding: 8px 12px;
-  border-radius: 12px;
-  background: #f1f5f9;
-  color: #0f172a;
-  align-self: flex-start;
+  gap: 4px;
 }
-.pp-telemed-room__chat-msg--mine {
-  background: #2563eb;
-  color: #fff;
+.pp-telemed-room__chat-row--mine {
+  align-items: flex-end;
   align-self: flex-end;
 }
-.pp-telemed-room__chat-author {
-  font-size: 10px;
-  opacity: 0.7;
-  margin-bottom: 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+.pp-telemed-room__chat-meta {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  padding: 0 4px;
 }
-.pp-telemed-room__chat-text {
-  font-size: 13px;
-  line-height: 1.4;
+.pp-telemed-room__chat-msg {
+  padding: 10px 14px;
+  border-radius: 16px;
+  border-top-left-radius: 4px;
+  background: #ebe7e7;
+  color: #1c1b1b;
+  font-size: 14px;
+  line-height: 1.5;
   word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
+.pp-telemed-room__chat-msg--mine {
+  background: #1552f1;
+  color: #fff;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 4px;
+}
+
 .pp-telemed-room__chat-form {
-  display: flex;
-  gap: 8px;
-  padding: 12px 16px;
+  padding: 14px 20px 20px;
   border-top: 1px solid #e5e7eb;
+  background: #fcf9f8;
+}
+.pp-telemed-room__chat-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 .pp-telemed-room__chat-form input {
   flex: 1;
   min-width: 0;
-  padding: 10px 12px;
-  background: #f8fafc;
+  padding: 12px 48px 12px 16px;
+  background: #fff;
   color: #0f172a;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  font-size: 13px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 .pp-telemed-room__chat-form input::placeholder {
   color: #94a3b8;
 }
 .pp-telemed-room__chat-form input:focus {
   outline: 0;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  border-color: #1552f1;
+  box-shadow: 0 0 0 3px rgba(21, 82, 241, 0.12);
 }
 .pp-telemed-room__chat-form input:disabled {
   background: #f1f5f9;
   cursor: not-allowed;
 }
-.pp-telemed-room__chat-form button {
-  padding: 8px 14px;
-  background: #2563eb;
-  color: #fff;
+.pp-telemed-room__chat-send {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #1552f1;
   border: 0;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 120ms ease;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
 }
-.pp-telemed-room__chat-form button:hover:not(:disabled) {
-  background: #1d4ed8;
+.pp-telemed-room__chat-send:hover:not(:disabled) {
+  background: rgba(21, 82, 241, 0.1);
 }
-.pp-telemed-room__chat-form button:disabled {
-  background: #cbd5e1;
+.pp-telemed-room__chat-send:disabled {
+  color: #cbd5e1;
   cursor: not-allowed;
 }
 
-/* Em mobile o chat vira fullscreen (sobrepõe o stage). */
 @media (max-width: 768px) {
   .pp-telemed-room__chat {
     position: absolute;
     inset: 0;
     width: 100%;
     border-left: 0;
-    z-index: 6;
+    z-index: 30;
   }
 }
 
-/* Sala de espera (paciente) — light theme.
-   Overlay claro com card branco no centro. Backdrop semitransparente
-   pra ainda dar pra perceber o vídeo/preview por baixo se quiser. */
+/* Sala de espera (paciente) — overlay escuro com card branco no centro.
+   Backdrop blur para focar o card sem perder noção do vídeo. */
 .pp-telemed-room__admit-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(248, 250, 252, 0.92);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 4;
+  z-index: 25;
   padding: 20px;
 }
 .pp-telemed-room__admit-card {
   width: 100%;
   max-width: 380px;
-  padding: 28px 24px;
+  padding: 32px 28px;
   background: #fff;
-  border-radius: 20px;
-  box-shadow: 0 20px 50px -12px rgba(15, 23, 42, 0.18);
+  border-radius: 24px;
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.45);
   text-align: center;
   color: #0f172a;
 }
 .pp-telemed-room__admit-card h2 {
-  margin: 16px 0 8px;
-  font-size: 18px;
+  margin: 18px 0 8px;
+  font-size: 20px;
   font-weight: 700;
   color: #0f172a;
 }
@@ -2620,98 +4525,218 @@ function emitSessionLeft() {
   width: 44px;
   height: 44px;
   margin: 0 auto;
-  border: 3px solid rgba(37, 99, 235, 0.15);
-  border-top-color: #2563eb;
+  border: 3px solid rgba(21, 82, 241, 0.15);
+  border-top-color: #1552f1;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
-/* Banner do doutor — pacientes pra admitir */
-.pp-telemed-room__admit-banner {
+/* ─── Cards de admit (doutor) ─────────────────────────────────────────
+   Stack vertical no canto inferior direito (acima do PIP local). Cada
+   pedido vira um card branco com pill "Entrada solicitada", tempo
+   decorrido, avatar do paciente + nome e dois botões (recusar/aceitar). */
+.pp-telemed-room__admit-stack {
   position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  min-width: 280px;
-  max-width: 90%;
-  background: #fff;
-  color: #0f172a;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-  z-index: 5;
-  overflow: hidden;
-}
-.pp-telemed-room__admit-banner-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: #fef3c7;
-  color: #78350f;
-  font-size: 13px;
-}
-.pp-telemed-room__admit-banner-icon {
-  color: #b45309;
-}
-.pp-telemed-room__admit-banner-list {
+  right: 24px;
+  bottom: 288px;
+  z-index: 22;
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  width: 360px;
+  max-width: calc(100vw - 48px);
+  pointer-events: none;
 }
-.pp-telemed-room__admit-banner-row {
+.pp-telemed-room__admit-card2 {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(7, 16, 42, 0.18);
+  color: #1c1b1b;
+  animation: telemed-admit-card-in 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@keyframes telemed-admit-card-in {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.pp-telemed-room__admit-card2-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 14px;
-  border-top: 1px solid #f1f5f9;
+  gap: 8px;
 }
-.pp-telemed-room__admit-banner-row:first-child {
-  border-top: 0;
+.pp-telemed-room__admit-card2-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: #dde1ff;
+  color: #0038b6;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
-.pp-telemed-room__admit-banner-name {
-  font-size: 14px;
+.pp-telemed-room__admit-card2-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #64748b;
   font-weight: 500;
 }
-.pp-telemed-room__admit-btn {
-  background: #16a34a;
-  color: #fff;
-  border: 0;
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 120ms ease;
-}
-.pp-telemed-room__admit-btn:hover {
-  background: #15803d;
-}
-
-/* ─── Footer (controles) ──────────────────────────────────────────────
-   Bar branca, border-top discreta. Controles em cinza claro (default),
-   vermelho saturado quando em estado "off" (mic mutado, cam desligada) ou
-   "active" (chat aberto = azul claro). Botão "Sair" mantém pill vermelho. */
-.pp-telemed-room__controls {
+.pp-telemed-room__admit-card2-body {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 12px;
-  padding: 14px 16px;
-  padding-bottom: max(14px, env(safe-area-inset-bottom));
-  background: #fff;
-  border-top: 1px solid #e5e7eb;
+}
+.pp-telemed-room__admit-card2-avatar {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.pp-telemed-room__admit-card2-dot {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 12px;
+  height: 12px;
+  background: #22c55e;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+.pp-telemed-room__admit-card2-info {
+  flex: 1;
+  min-width: 0;
+}
+.pp-telemed-room__admit-card2-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1c1b1b;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pp-telemed-room__admit-card2-sub {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.4;
+}
+.pp-telemed-room__admit-card2-deny,
+.pp-telemed-room__admit-card2-accept {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    transform 100ms ease;
+  flex-shrink: 0;
+}
+.pp-telemed-room__admit-card2-deny:active,
+.pp-telemed-room__admit-card2-accept:active {
+  transform: scale(0.95);
+}
+.pp-telemed-room__admit-card2-deny {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #ef4444;
+  color: #fff;
+}
+.pp-telemed-room__admit-card2-deny:hover {
+  background: #dc2626;
+}
+.pp-telemed-room__admit-card2-accept {
+  gap: 6px;
+  padding: 0 16px;
+  height: 40px;
+  border-radius: 12px;
+  background: #22c55e;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+.pp-telemed-room__admit-card2-accept:hover {
+  background: #16a34a;
+}
+
+@media (max-width: 640px) {
+  .pp-telemed-room__admit-stack {
+    right: 16px;
+    bottom: 220px;
+    width: calc(100vw - 32px);
+  }
+  .pp-telemed-room__admit-card2 {
+    padding: 14px;
+  }
+  .pp-telemed-room__admit-card2-accept span {
+    display: none;
+  }
+}
+
+/* ─── Toolbar flutuante (glassmorphism) ───────────────────────────────
+   Pill central com botões circulares + botão "Encerrar" vermelho ao lado.
+   Auto-hide: a pill some pra baixo quando o mouse sai da zona inferior
+   da viewport (toolbarRevealed=false → classe não aplicada). O botão
+   Encerrar permanece visível 100% do tempo (única ação essencial). */
+.pp-telemed-room__controls {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 18;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.pp-telemed-room__controls-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(2, 2, 2, 0.048);
+  border: 1px solid rgba(255, 255, 255, 0.103);
+  border-radius: 999px;
+  box-shadow: 0 0px 40px rgb(7 16 42 / 29%);
+  backdrop-filter: blur(12px);
 }
 .pp-telemed-room__ctrl {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: #f1f5f9;
-  color: #334155;
+  background: #00000071;
+  color: #fdfdfd;
   border: 0;
   cursor: pointer;
   transition:
@@ -2720,7 +4745,7 @@ function emitSessionLeft() {
     transform 80ms ease;
 }
 .pp-telemed-room__ctrl:hover {
-  background: #e2e8f0;
+  background: rgb(39 129 246 / 1);
 }
 .pp-telemed-room__ctrl:active {
   transform: scale(0.94);
@@ -2733,68 +4758,518 @@ function emitSessionLeft() {
   background: #fecaca;
 }
 .pp-telemed-room__ctrl--active {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: #1552f1;
+  color: #fff;
 }
 .pp-telemed-room__ctrl--active:hover {
-  background: #bfdbfe;
+  background: #0c3fcc;
 }
-.pp-telemed-room__ctrl--leave {
-  width: auto;
-  padding: 0 18px;
-  border-radius: 28px;
+.pp-telemed-room__ctrl--share-on {
+  background: rgba(21, 82, 241, 0.12);
+  color: #1552f1;
+}
+.pp-telemed-room__ctrl--share-on:hover {
+  background: rgba(21, 82, 241, 0.18);
+}
+.pp-telemed-room__ctrl-sep {
+  display: inline-block;
+  width: 1px;
+  height: 24px;
+  background: rgba(15, 23, 42, 0.12);
+  margin: 0 2px;
+}
+
+/* 2026-05-22 — Botão de gravação manual (toolbar do doutor) + tooltip
+   "balão de gibi" apontando pra ele.
+   OFF: SVG <circle> preenchido em vermelho = "iniciar gravação".
+   ON:  SVG <rect> preenchido em vermelho + halo pulsante = "REC, parar". */
+.pp-telemed-room__rec-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.pp-telemed-room__ctrl--rec {
+  position: relative;
+}
+.pp-telemed-room__rec-icon {
+  display: block;
+  transition: transform 140ms ease, opacity 140ms ease;
+}
+.pp-telemed-room__ctrl--rec:hover .pp-telemed-room__rec-icon {
+  transform: scale(1.08);
+}
+/* Estado ON: borda + halo de pulso vermelho. O preenchimento do quadrado
+   já indica "stop" — o pulse reforça que está GRAVANDO agora. */
+.pp-telemed-room__ctrl--rec-on {
+  background: rgba(220, 38, 38, 0.12);
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.35) inset;
+}
+.pp-telemed-room__ctrl--rec-on:hover {
+  background: rgba(220, 38, 38, 0.18);
+}
+.pp-telemed-room__rec-icon--on {
+  animation: pp-telemed-room__rec-pulse 1.4s ease-in-out infinite;
+  border-radius: 4px;
+}
+@keyframes pp-telemed-room__rec-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 0 rgba(220, 38, 38, 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 0 6px rgba(220, 38, 38, 0.85));
+  }
+}
+
+/* Spinner overlay enquanto o toggle está em flight. Centralizado sobre
+   o ícone — sinaliza "aguarde, mandando comando pro LiveKit". */
+.pp-telemed-room__rec-spinner {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border: 2px solid rgba(220, 38, 38, 0.25);
+  border-top-color: #dc2626;
+  border-radius: 50%;
+  animation: pp-telemed-room__rec-spin 700ms linear infinite;
+  pointer-events: none;
+}
+@keyframes pp-telemed-room__rec-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Badge "● REC · IA" no header. Confirmação visível de que a gravação
+   está ATIVA pros dois lados. Pulsa pra chamar atenção mas sem distrair. */
+.pp-telemed-room__rec-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  color: #b91c1c;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  user-select: none;
+}
+.pp-telemed-room__rec-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #dc2626;
+  animation: pp-telemed-room__rec-pulse 1.4s ease-in-out infinite;
+}
+.pp-telemed-room__rec-badge-text {
+  letter-spacing: 0.08em;
+}
+.pp-telemed-room__rec-badge-ai {
+  padding: 2px 5px;
+  border-radius: 6px;
   background: #dc2626;
   color: #fff;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+/* Tooltip "balão de gibi": fundo vermelho, texto branco, com seta apontando
+   pra baixo (direção do botão). Posicionado acima do botão. */
+.pp-telemed-room__rec-hint {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  box-shadow: 0 8px 20px -6px rgba(220, 38, 38, 0.55),
+              0 2px 6px rgba(15, 23, 42, 0.15);
+  cursor: pointer;
+  z-index: 30;
+  user-select: none;
+}
+.pp-telemed-room__rec-hint-text {
+  display: block;
+}
+.pp-telemed-room__rec-hint-tail {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #dc2626;
+}
+/* Entrada/saída suaves. */
+.pp-telemed-room__rec-hint-enter-active,
+.pp-telemed-room__rec-hint-leave-active {
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+.pp-telemed-room__rec-hint-enter-from,
+.pp-telemed-room__rec-hint-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 6px);
+}
+
+/* Toast de erro ACIMA do botão (mesma posição do balão de gibi) quando
+   start/stop falha (consent ausente, participants_not_ready, etc.).
+   2026-05-22 — Antes ficava ABAIXO do botão, mas a toolbar vive no
+   bottom da tela e o toast caía fora do viewport. Subir resolve. */
+.pp-telemed-room__rec-err {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  color: #991b1b;
+  padding: 10px 14px 10px 12px;
+  border-radius: 12px;
+  border: 1.5px solid #dc2626;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: normal;
+  width: max-content;
+  max-width: 280px;
+  text-align: left;
+  z-index: 30;
+  box-shadow:
+    0 12px 28px -8px rgba(220, 38, 38, 0.35),
+    0 2px 6px rgba(15, 23, 42, 0.15);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.pp-telemed-room__rec-err::before {
+  content: '⚠';
+  font-size: 16px;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+.pp-telemed-room__rec-err-enter-active,
+.pp-telemed-room__rec-err-leave-active {
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+.pp-telemed-room__rec-err-enter-from,
+.pp-telemed-room__rec-err-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 6px);
+}
+
+/* Mobile (toolbar empilhada vertical): tooltip ainda apontando pra cima. */
+@media (max-width: 640px) {
+  .pp-telemed-room__rec-hint {
+    font-size: 12px;
+    padding: 8px 12px;
+    max-width: 240px;
+    white-space: normal;
+    text-align: center;
+  }
+}
+
+/* (Bloco duplicado removido em 2026-05-22 — definições canônicas
+   ficam acima, junto com as variações OFF/ON do botão e do tooltip.) */
+
+/* ─── Desfoque de fundo (popover) ─────────────────────────────────────
+   Wrapper relativo ao redor do botão pra ancorar o menu. Menu sobe acima
+   da toolbar (bottom: 100%) com gap pra não colar no botão. */
+.pp-telemed-room__blur-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.pp-telemed-room__blur-menu {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(7, 16, 42, 0.18);
+  z-index: 30;
+  animation: telemed-blur-menu-in 160ms ease-out;
+}
+@keyframes telemed-blur-menu-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+.pp-telemed-room__blur-menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pp-telemed-room__blur-menu-title {
   font-size: 14px;
   font-weight: 600;
+  color: #1c1b1b;
 }
-.pp-telemed-room__ctrl--leave:hover {
+.pp-telemed-room__blur-menu-body {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pp-telemed-room__blur-menu-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: #434656;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.pp-telemed-room__blur-menu-value {
+  font-family: ui-monospace, Menlo, Monaco, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1552f1;
+  letter-spacing: 0;
+  text-transform: none;
+}
+/* Slider — track com fill dinâmico via CSS var (preenchido = Klivy primary
+   até o thumb, cinza depois). Thumb grande com aura sutil no hover/active
+   pra dar feedback de "arraste". CSS var é atualizada inline no template
+   pra refletir blurIntensity em tempo real sem precisar de re-render Vue. */
+.pp-telemed-room__blur-slider {
+  --telemed-slider-progress: 0%;
+  width: 100%;
+  height: 6px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: linear-gradient(
+    to right,
+    #1552f1 0%,
+    #1552f1 var(--telemed-slider-progress),
+    #e5e7eb var(--telemed-slider-progress),
+    #e5e7eb 100%
+  );
+  border-radius: 999px;
+  outline: none;
+  cursor: grab;
+  transition: background 60ms linear;
+}
+.pp-telemed-room__blur-slider:active {
+  cursor: grabbing;
+}
+
+/* WebKit thumb. */
+.pp-telemed-room__blur-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #1552f1;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(21, 82, 241, 0.4);
+  cursor: grab;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+.pp-telemed-room__blur-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow:
+    0 2px 12px rgba(21, 82, 241, 0.45),
+    0 0 0 8px rgba(21, 82, 241, 0.12);
+}
+.pp-telemed-room__blur-slider:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.2);
+  box-shadow:
+    0 2px 14px rgba(21, 82, 241, 0.5),
+    0 0 0 10px rgba(21, 82, 241, 0.18);
+}
+
+/* Firefox thumb. */
+.pp-telemed-room__blur-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #1552f1;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(21, 82, 241, 0.4);
+  cursor: grab;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+.pp-telemed-room__blur-slider::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow:
+    0 2px 12px rgba(21, 82, 241, 0.45),
+    0 0 0 8px rgba(21, 82, 241, 0.12);
+}
+.pp-telemed-room__blur-slider:active::-moz-range-thumb {
+  cursor: grabbing;
+  transform: scale(1.2);
+  box-shadow:
+    0 2px 14px rgba(21, 82, 241, 0.5),
+    0 0 0 10px rgba(21, 82, 241, 0.18);
+}
+.pp-telemed-room__blur-slider::-moz-range-track {
+  background: transparent;
+}
+.pp-telemed-room__blur-slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+.pp-telemed-room__blur-menu-hint {
+  margin: 14px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #94a3b8;
+}
+.pp-telemed-room__leave {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  background: #dc2626;
+  color: #fff;
+  border: 0;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(220, 38, 38, 0.32);
+  transition:
+    background 120ms ease,
+    transform 80ms ease;
+}
+.pp-telemed-room__leave:hover {
   background: #b91c1c;
+}
+.pp-telemed-room__leave:active {
+  transform: scale(0.97);
 }
 .pp-telemed-room__badge {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  min-width: 16px;
-  height: 16px;
+  top: -2px;
+  right: -2px;
+  min-width: 14px;
+  height: 14px;
   padding: 0 4px;
   background: #ef4444;
   color: #fff;
   border-radius: 999px;
   font-size: 10px;
   font-weight: 700;
+  border: 2px solid #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-/* ─── Preflight (Google Meet lobby) ────────────────────────────────────
-   Tela cheia, fundo claro do portal. Split: preview à esquerda (60%) e
-   painel de controles à direita (40%). Mobile empilha vertical. */
+/* Mobile — toolbar diminui, PIP encolhe, header esconde detalhes. */
+@media (max-width: 640px) {
+  .pp-telemed-room__controls {
+    bottom: 16px;
+    gap: 8px;
+  }
+  .pp-telemed-room__controls-pill {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .pp-telemed-room__ctrl {
+    width: 40px;
+    height: 40px;
+  }
+  .pp-telemed-room__leave {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+  .pp-telemed-room__leave span {
+    display: none;
+  }
+  .pp-telemed-room__local {
+    width: 130px;
+    height: 90px;
+    bottom: 96px;
+    right: 16px;
+  }
+  .pp-telemed-room__header {
+    padding: 12px 16px;
+  }
+  .pp-telemed-room__participant {
+    max-width: 120px;
+    font-size: 13px;
+  }
+  .pp-telemed-room__brand {
+    font-size: 16px;
+  }
+  .pp-telemed-room__code,
+  .pp-telemed-room__conn {
+    display: none;
+  }
+}
+
+/* ─── Preflight (Pré-consulta) ─────────────────────────────────────────
+   Tela cheia clara. Split horizontal: preview à esquerda (3/5), painel de
+   configuração à direita (2/5). Mobile empilha vertical. */
 .pp-telemed-preflight {
   position: fixed;
   inset: 0;
-  background: #f8fafc;
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
-  gap: 24px;
-  padding: 32px;
+  background: #f6f3f2;
+  overflow-y: auto;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
   z-index: 1000;
+  color: #1c1b1b;
 }
+.pp-telemed-preflight__shell {
+  width: 100%;
+  max-width: 1180px;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(360px, 2fr);
+  gap: 64px;
+  align-items: center;
+}
+
+.pp-telemed-preflight__preview-col {
+  width: 100%;
+}
+
 .pp-telemed-preflight__preview {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
-  background: #0f172a;
+  background: #121a34;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 10px 40px -12px rgba(15, 23, 42, 0.4);
+  box-shadow: 0 4px 20px rgba(7, 16, 42, 0.08);
+}
+.pp-telemed-preflight__preview--off {
+  background: #1e293b;
 }
 .pp-telemed-preflight__video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: opacity 200ms ease;
 }
 .pp-telemed-preflight__video--mirror {
   transform: scaleX(-1);
@@ -2809,240 +5284,321 @@ function emitSessionLeft() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 14px;
   background: #1e293b;
   color: #cbd5e1;
 }
 .pp-telemed-preflight__camoff p {
   margin: 0;
   font-size: 14px;
+  font-weight: 500;
 }
-/* "1080p" / "720p" / "360p" label canto superior direito do preview. */
 .pp-telemed-preflight__quality {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 14px;
+  right: 14px;
   padding: 4px 12px;
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
   border-radius: 999px;
-  font-size: 12px;
-  font-weight: 500;
-  backdrop-filter: blur(4px);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  backdrop-filter: blur(6px);
 }
-/* Controles flutuantes sobre o preview — mic/cam toggle. */
+
+/* Toggles flutuantes sobre o preview — glassmorphism translúcido branco;
+   estado off vira vermelho saturado pra sinalizar bloqueio claro. */
 .pp-telemed-preflight__overlay-controls {
   position: absolute;
-  bottom: 16px;
+  bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 12px;
+  gap: 16px;
+  z-index: 2;
 }
 .pp-telemed-preflight__ctrl {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.95);
-  color: #334155;
-  border: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   transition:
-    background 120ms ease,
-    color 120ms ease,
-    transform 80ms ease;
+    background 160ms ease,
+    color 160ms ease,
+    transform 100ms ease,
+    border-color 160ms ease;
 }
 .pp-telemed-preflight__ctrl:hover {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
 }
 .pp-telemed-preflight__ctrl:active {
-  transform: scale(0.94);
+  transform: scale(0.95);
 }
-.pp-telemed-preflight__ctrl.off {
-  background: #dc2626;
+.pp-telemed-preflight__ctrl--off {
+  background: rgba(186, 26, 26, 0.92);
+  border-color: rgba(186, 26, 26, 0.55);
   color: #fff;
 }
-.pp-telemed-preflight__ctrl.off:hover {
-  background: #b91c1c;
+.pp-telemed-preflight__ctrl--off:hover {
+  background: rgba(186, 26, 26, 1);
 }
 
+/* ─── Painel de configuração (direita) ──────────────────────────────── */
 .pp-telemed-preflight__panel {
+  width: 100%;
+  max-width: 460px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  max-width: 420px;
-  width: 100%;
-  justify-self: center;
+  gap: 28px;
+  justify-self: start;
+}
+
+.pp-telemed-preflight__header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .pp-telemed-preflight__title {
-  margin: 0 0 4px;
-  font-size: 22px;
+  margin: 0;
+  font-size: 28px;
   font-weight: 700;
-  color: #0f172a;
+  letter-spacing: -0.01em;
+  color: #1c1b1b;
+  line-height: 1.2;
+}
+.pp-telemed-preflight__subtitle {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #64748b;
 }
 .pp-telemed-preflight__code {
-  margin: 0 0 12px;
-  font-size: 13px;
+  margin: 4px 0 0;
+  font-size: 12px;
   color: #64748b;
 }
 .pp-telemed-preflight__code strong {
   font-family: ui-monospace, Menlo, Monaco, monospace;
   letter-spacing: 0.4px;
-  color: #0f172a;
+  color: #1c1b1b;
 }
+
 .pp-telemed-preflight__error {
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  max-width: 100%;
   border-radius: 12px;
-  border: 1px solid #fde68a;
 }
-.pp-telemed-preflight__row {
+
+.pp-telemed-preflight__fields {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 20px;
 }
-.pp-telemed-preflight__row-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #475569;
-}
-.pp-telemed-preflight__select {
-  width: 100%;
-  padding: 10px 12px;
+
+/* Card de segurança / consent — destaque visual leve em branco. */
+.pp-telemed-preflight__security {
+  padding: 18px 20px;
   background: #fff;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  font-size: 13px;
-  color: #0f172a;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.pp-telemed-preflight__security-title {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1c1b1b;
+}
+.pp-telemed-preflight__security-title :deep(svg) {
+  color: #1552f1;
+}
+.pp-telemed-preflight__consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   cursor: pointer;
-  /* Remove arrow nativa em alguns browsers — mantém minimal. */
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 12px;
-  padding-right: 36px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
 }
-.pp-telemed-preflight__select:focus {
-  outline: 0;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+.pp-telemed-preflight__consent-checkbox {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: #1552f1;
+  cursor: pointer;
 }
-.pp-telemed-preflight__select:disabled {
-  background-color: #f1f5f9;
-  cursor: not-allowed;
-  color: #94a3b8;
+.pp-telemed-preflight__consent-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #434656;
 }
+.pp-telemed-preflight__consent-text a {
+  color: #1552f1;
+  font-weight: 600;
+  text-decoration: none;
+}
+.pp-telemed-preflight__consent-text a:hover {
+  text-decoration: underline;
+}
+
 .pp-telemed-preflight__actions {
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  margin-top: 8px;
+}
+.pp-telemed-preflight__enter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px 24px;
+  background: #1552f1;
+  color: #fff;
+  border: 0;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(21, 82, 241, 0.25);
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease,
+    transform 100ms ease;
+}
+.pp-telemed-preflight__enter:hover:not(:disabled) {
+  background: #0c3fcc;
+  box-shadow: 0 6px 20px rgba(21, 82, 241, 0.32);
+}
+.pp-telemed-preflight__enter:hover:not(:disabled) svg {
+  transform: translateX(2px);
+}
+.pp-telemed-preflight__enter:active:not(:disabled) {
+  transform: scale(0.99);
+}
+.pp-telemed-preflight__enter svg {
+  transition: transform 160ms ease;
+}
+.pp-telemed-preflight__enter:disabled {
+  background: #cbd5e1;
+  color: #fff;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 .pp-telemed-preflight__cancel {
-  flex: 1;
-  padding: 12px 16px;
-  background: #f1f5f9;
-  color: #475569;
+  width: 100%;
+  padding: 12px 24px;
+  background: transparent;
+  color: #64748b;
   border: 0;
-  border-radius: 10px;
+  border-radius: 14px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: background 120ms ease;
 }
 .pp-telemed-preflight__cancel:hover {
-  background: #e2e8f0;
-}
-.pp-telemed-preflight__enter {
-  flex: 2;
-  padding: 12px 16px;
-  background: #2563eb;
-  color: #fff;
-  border: 0;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 120ms ease;
-}
-.pp-telemed-preflight__enter:hover:not(:disabled) {
-  background: #1d4ed8;
-}
-.pp-telemed-preflight__enter:disabled {
-  background: #cbd5e1;
-  cursor: not-allowed;
+  background: rgba(15, 23, 42, 0.04);
+  color: #1c1b1b;
 }
 
-/* Mobile: empilha vertical, preview menor. */
-@media (max-width: 900px) {
-  .pp-telemed-preflight {
+/* Tablet & mobile — empilha vertical, preview encolhe pra caber. */
+@media (max-width: 960px) {
+  .pp-telemed-preflight__shell {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto;
-    padding: 16px;
-    gap: 16px;
+    gap: 32px;
     align-items: start;
   }
   .pp-telemed-preflight__panel {
     max-width: 100%;
   }
 }
-
-/* Sprint L — Consent UI no preflight + modal de termos */
-.pp-telemed-preflight__consent {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin-top: 16px;
-  padding: 10px 12px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 6px;
-  font-size: 12px;
-  line-height: 1.4;
-  color: rgba(255,255,255,0.85);
-  cursor: pointer;
-}
-.pp-telemed-preflight__consent-checkbox {
-  margin-top: 2px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.pp-telemed-preflight__consent-text a {
-  color: #6ab7ff;
-  text-decoration: underline;
-}
-.pp-telemed-preflight__enter:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+@media (max-width: 640px) {
+  .pp-telemed-preflight {
+    padding: 16px;
+  }
+  .pp-telemed-preflight__shell {
+    gap: 24px;
+  }
+  .pp-telemed-preflight__title {
+    font-size: 24px;
+  }
+  .pp-telemed-preflight__overlay-controls {
+    bottom: 14px;
+    gap: 12px;
+  }
+  .pp-telemed-preflight__ctrl {
+    width: 42px;
+    height: 42px;
+  }
+  .pp-telemed-preflight__security {
+    padding: 16px;
+  }
+  .pp-telemed-preflight__enter {
+    padding: 14px 20px;
+    font-size: 15px;
+  }
 }
 
 .pp-telemed-consent-modal {
-  position: fixed; inset: 0; z-index: 200;
-  background: rgba(0,0,0,0.6);
-  display: flex; align-items: center; justify-content: center;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 16px;
 }
 .pp-telemed-consent-modal__box {
-  background: white; color: #222;
-  padding: 24px; border-radius: 8px;
-  max-width: 560px; max-height: 80vh; overflow-y: auto;
-  font-size: 14px; line-height: 1.5;
+  background: white;
+  color: #222;
+  padding: 24px;
+  border-radius: 8px;
+  max-width: 560px;
+  max-height: 80vh;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.5;
 }
 .pp-telemed-consent-modal__box h3 {
-  margin-top: 0; font-size: 18px;
+  margin-top: 0;
+  font-size: 18px;
 }
 .pp-telemed-consent-modal__body p {
   margin: 8px 0;
 }
 .pp-telemed-consent-modal__box .pp-telemed-preflight__enter {
   margin-top: 12px;
-  background: #2563eb; color: white;
-  padding: 8px 16px; border-radius: 6px; border: 0;
+  background: #2563eb;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 0;
   cursor: pointer;
 }
 </style>

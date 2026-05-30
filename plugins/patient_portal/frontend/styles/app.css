@@ -15,6 +15,22 @@
   --pp-color-border: #e2e8f0;
   --pp-color-surface: #ffffff;
   --pp-color-bg: #f8fafc;
+
+  /* Layout — escala com o viewport.
+     Mobile: shell ocupa 100% até 640px.
+     Tablet: shell ganha respiro lateral (max 720px).
+     Desktop: sidebar de 240px + content até 1080px (total ~1320px). */
+  --pp-sidenav-width: 240px;
+  --pp-content-max: 1080px;
+  --pp-content-pad-x: 16px;
+}
+
+@media (min-width: 768px) {
+  :root { --pp-content-pad-x: 24px; }
+}
+
+@media (min-width: 1024px) {
+  :root { --pp-content-pad-x: 32px; }
 }
 
 html, body, #patient-portal-app {

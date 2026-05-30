@@ -9,6 +9,12 @@ ENV BUNDLE_PATH="/gems"
 ENV BUNDLE_BIN="/gems/bin"
 ENV PATH="${BUNDLE_BIN}:${PATH}"
 ENV NODE_OPTIONS="--max-old-space-size=4096 --openssl-legacy-provider"
+# Puppeteer (dependência do Grover, usado pelo plugin document_templates pra
+# HTML→PDF) baixa um Chrome próprio (~280MB) durante o pnpm install. Pulamos
+# no build pra ficar leve — em runtime apontamos pro chromium do sistema
+# (instalado no stage final, ENV PUPPETEER_EXECUTABLE_PATH abaixo).
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 RUN apt-get update && apt-get install -y \
   build-essential \
@@ -69,6 +75,14 @@ ENV RAILS_SERVE_STATIC_FILES=true
 # sobrescreva o plano enterprise definido localmente.
 ENV CHATWOOT_HUB_URL=https://hub.invalid/#
 
+# Chromium pro Grover (HTML→PDF, plugin document_templates). Puppeteer não
+# baixa o próprio Chrome no build (PUPPETEER_SKIP_DOWNLOAD=true no pre-builder)
+# pra manter a imagem leve — usamos o chromium do APT em runtime via
+# PUPPETEER_EXECUTABLE_PATH.
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
 RUN apt-get update && apt-get install -y \
   libpq5 \
   tzdata \
@@ -79,6 +93,22 @@ RUN apt-get update && apt-get install -y \
   python3 \
   ca-certificates \
   ffmpeg \
+  chromium \
+  fonts-liberation \
+  fonts-freefont-ttf \
+  fonts-noto-color-emoji \
+  libnss3 \
+  libatk-bridge2.0-0 \
+  libdrm2 \
+  libxkbcommon0 \
+  libxcomposite1 \
+  libxdamage1 \
+  libxfixes3 \
+  libxrandr2 \
+  libgbm1 \
+  libpango-1.0-0 \
+  libcairo2 \
+  libasound2 \
   && rm -rf /var/lib/apt/lists/* \
   && gem install bundler -v "2.5.16"
 

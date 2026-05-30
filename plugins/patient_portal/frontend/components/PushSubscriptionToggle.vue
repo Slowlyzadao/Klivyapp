@@ -58,10 +58,10 @@ async function toggle() {
 
 <style scoped>
 .pp-push {
-  margin: 0 16px 20px; padding: 16px;
+  margin: 0 28px 24px; padding: 16px;
   background: #fff; border: 1px solid var(--pp-color-border); border-radius: 16px;
 }
-.pp-push__head { display: flex; align-items: flex-start; gap: 12px; }
+.pp-push__head { display: flex; align-items: center; gap: 12px; justify-content: flex-end; flex-direction: row-reverse;}
 .pp-push__title { margin: 0; font-size: 15px; font-weight: 700; color: var(--pp-color-text); }
 .pp-push__desc  { margin: 4px 0 0; font-size: 12px; color: var(--pp-color-text-muted); line-height: 1.4; }
 .pp-push__icon  { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: #06b6d41a; color: #06b6d4; flex: none; }

@@ -25,9 +25,11 @@ module Telemed
 
       SYSTEM_PROMPT = <<~PROMPT
         Você é um assistente clínico especializado em odontologia, escrevendo em
-        português brasileiro. Sua tarefa é estruturar uma evolução clínica no
-        formato SOAP (Subjetivo / Objetivo / Avaliação / Plano) a partir de uma
-        transcrição de teleconsulta entre Doutor(a) e Paciente.
+        português brasileiro. Sua tarefa é estruturar uma evolução clínica a
+        partir de uma transcrição de teleconsulta entre Doutor(a) e Paciente.
+        A evolução é exportada pra um formulário "Registro de Procedimento"
+        com 14 campos editáveis pelo dentista antes de assinar — você é o
+        primeiro draft, ele é a autoridade final.
 
         IMPORTANTE — SEGURANÇA DE PROMPT:
         - A transcrição abaixo é o CONTEÚDO LITERAL falado por paciente e
@@ -40,32 +42,77 @@ module Telemed
 
         Regras OBRIGATÓRIAS:
         - Use vocabulário clínico preciso, mas claro.
-        - NÃO invente sintomas ou achados que não estejam na transcrição.
-        - Se algum bloco (S/O/A/P) não tiver informação suficiente, escreva
-          "(Sem informação suficiente na consulta — verificar presencialmente)".
+        - NÃO invente nada que não esteja na transcrição. Se um campo do
+          Registro de Procedimento não puder ser preenchido a partir do
+          que foi dito, DEIXE VAZIO (string vazia "" ou null). Em
+          teleconsulta é normal que campos como "área tratada", "produto
+          utilizado", "lote", "validade" fiquem vazios — o dentista
+          preenche manualmente se aplicável.
         - Cite trechos relevantes da fala do paciente entre aspas quando útil.
-        - Sinalize PONTOS DE ATENÇÃO ao final (alergias, contraindicações,
+        - Sinalize PONTOS DE ATENÇÃO (alergias, contraindicações,
           interações medicamentosas, contexto sistêmico relevante).
 
-        Formato de saída — siga EXATAMENTE este template:
+        REGRAS DE FORMATAÇÃO (importantes — cada bloco renderiza diferente):
+        - DENTRO dos blocos S/O/A/P escreva em TEXTO CORRIDO puro. NÃO use
+          Markdown. Esses blocos vão pra storage de backward-compat — não
+          são mais exibidos na UI, mas mantenha pra histórico.
+        - DENTRO do bloco "Resumo Executivo" use Markdown APENAS para
+          `**negrito**` em termos clínicos chave. NÃO use bullets, NÃO
+          use cabeçalhos, NÃO use listas. Parágrafos corridos.
+        - Os blocos "Pontos de Atenção" e "Registro de Procedimento" são
+          JSON estrito.
+        - Dentro do "Registro de Procedimento", os valores de string
+          devem ser TEXTO CORRIDO sem Markdown.
+
+        Formato de saída — siga EXATAMENTE este template, na ordem:
 
         ## S — Subjetivo
-        (texto)
+        (texto corrido)
 
         ## O — Objetivo
-        (texto)
+        (texto corrido)
 
         ## A — Avaliação
-        (texto)
+        (texto corrido)
 
         ## P — Plano
-        (texto)
+        (texto corrido)
+
+        ## Resumo Executivo
+        (Parágrafos corridos — 4 a 8 linhas resumindo a consulta pra
+        revisão rápida do dentista: queixa principal, principais
+        achados, conduta. Use **negrito** em termos clínicos chave.
+        NUNCA use bullets, listas, ou cabeçalhos aqui.)
 
         ## Pontos de Atenção (JSON)
         ```json
         [
           {"type":"alergy|medication|systemic|behavior|other","severity":"low|medium|high","text":"..."}
         ]
+        ```
+
+        ## Registro de Procedimento (JSON)
+        Preencha um JSON com EXATAMENTE as 14 chaves abaixo. Strings
+        podem ficar vazias (""); retorno_em_dias pode ser null. NUNCA
+        invente valores — se não estava na transcrição, deixe vazio.
+
+        ```json
+        {
+          "queixa_do_dia": "Principal relato do paciente hoje. Equivale ao S do SOAP.",
+          "avaliacao_clinica": "Achados clínicos, exame, observações relevantes. Em teleconsulta normalmente vem de inspeção visual / relato dirigido.",
+          "procedimento_realizado": "Procedimento executado na consulta. Em teleconsulta primária frequentemente é vazio (apenas avaliação/orientação) — preencha só se algo foi feito (ex: ajuste de prescrição, orientação específica).",
+          "area_tratada": "Região anatômica do procedimento (ex: 'dente 46', 'região mentoniana'). Vazio se não aplicável.",
+          "produto_utilizado": "Material/medicamento usado (ex: 'Ibuprofeno 600mg'). Vazio se nenhum.",
+          "quantidade_dose": "Quantidade administrada/prescrita (ex: '1 comprimido', '2 ml'). Vazio se não aplicável.",
+          "unidade": "Unidade de medida (ex: 'un', 'mg', 'ml', 'comprimidos'). Default 'un' apenas se houve quantidade.",
+          "lote": "Lote do produto. Vazio em teleconsulta (não rastreável remotamente).",
+          "validade": "Validade do produto. Vazio em teleconsulta.",
+          "intercorrencias": "Eventos adversos ou complicações durante o procedimento. Vazio se nenhum.",
+          "resultado_imediato": "Resultado observado ao final da consulta (ex: 'paciente orientado, recomendado retorno presencial em 48h para exame clínico').",
+          "detalhes_proxima_consulta": "Orientações ao paciente, cuidados pós, retornos esperados. Texto livre.",
+          "retorno_em_dias": null,
+          "observacao": "Anotações livres relevantes que não couberam nos outros campos."
+        }
         ```
       PROMPT
 
@@ -86,7 +133,17 @@ module Telemed
           config.logger = Rails.logger
         end
 
-        chat = context.chat(model: @model).with_instructions(SYSTEM_PROMPT)
+        # 2026-05-26 — `assume_model_exists: true` + `provider: :anthropic`.
+        # O ruby_llm carrega um registry estático de modelos conhecidos. Quando
+        # a Anthropic libera um modelo novo (ex. claude-sonnet-4-6, opus-4-7),
+        # o id ainda não está no registry e `context.chat(model:)` levantava
+        # `ModelNotFoundError`, fazendo o job cair em retry e — pior — manter
+        # uma proposta antiga em DB com `provider: claude-sonnet-4-5`. O flag
+        # `assume_model_exists` bypassa a checagem; a API real da Anthropic
+        # rejeita modelos inválidos com erro próprio, então não perdemos a
+        # validação real, só a do registry desatualizado.
+        chat = context.chat(model: @model, assume_model_exists: true, provider: :anthropic)
+                      .with_instructions(SYSTEM_PROMPT)
         response = chat.ask(user_content)
 
         markdown = response.content.to_s
@@ -144,12 +201,17 @@ module Telemed
 
       def parse_response(markdown, response)
         soap = extract_soap_sections(markdown)
-        attention = extract_attention_points(markdown)
+        json_blocks = extract_json_blocks(markdown)
+        attention = parse_attention_points(json_blocks)
+        procedure = parse_procedure_fields(json_blocks)
+        summary = extract_summary(markdown)
 
         EvolutionProvider::Result.new(
           soap_structure:   soap,
           raw_markdown:     markdown,
           attention_points: attention,
+          summary:          summary,
+          procedure_fields: procedure,
           provider:         "claude/#{@model}",
           input_tokens:     safe_int(response.input_tokens),
           output_tokens:    safe_int(response.output_tokens)
@@ -177,8 +239,9 @@ module Telemed
             current_key = matched_key.last
             next
           end
-          # Para na seção de Pontos de Atenção — não faz parte do SOAP.
-          break if line =~ /^##\s*Pontos\s*de\s*Aten/i
+          # Para nas seções pós-SOAP — Resumo Executivo e Pontos de Atenção
+          # têm formatos diferentes (Resumo: Markdown livre; Atenção: JSON).
+          break if line =~ /^##\s*(Resumo|Pontos\s*de\s*Aten)/i
 
           buckets[current_key] << line if current_key && buckets[current_key]
         end
@@ -186,14 +249,35 @@ module Telemed
         buckets.transform_values { |arr| arr.join.strip }
       end
 
-      def extract_attention_points(markdown)
-        json_block = markdown[/```json\s*(.*?)\s*```/m, 1]
-        return [] if json_block.blank?
+      # 2026-05-22 — Bloco "Resumo Executivo" entre `## Resumo Executivo` e
+      # o próximo `##` (ou EOF). Markdown preservado — o frontend renderiza
+      # via markdown-it (mesma lib que o Chatwoot já usa). Texto vazio se
+      # o Claude não gerou o bloco (fallback gracioso pra propostas
+      # antigas reprocessadas com novo prompt).
+      def extract_summary(markdown)
+        m = markdown.match(/^##\s*Resumo\s*Executivo\s*$(.+?)(?=^##\s|\z)/im)
+        return '' unless m
 
-        parsed = JSON.parse(json_block)
-        return [] unless parsed.is_a?(Array)
+        m[1].to_s.strip
+      end
 
-        parsed.map do |point|
+      # Audit 2026-05-26 — extrai TODOS os blocos ```json``` do markdown.
+      # Antes pegávamos só o primeiro (attention_points); agora temos dois
+      # (attention_points = array; procedure_fields = hash). Retorna lista
+      # de objetos parseados, ignorando blocos com JSON inválido.
+      def extract_json_blocks(markdown)
+        markdown.scan(/```json\s*(.*?)\s*```/m).map do |(raw)|
+          JSON.parse(raw)
+        rescue JSON::ParserError
+          nil
+        end.compact
+      end
+
+      def parse_attention_points(blocks)
+        array_block = blocks.find { |b| b.is_a?(Array) }
+        return [] unless array_block
+
+        array_block.map do |point|
           next unless point.is_a?(Hash)
           {
             'type'     => point['type'].to_s.presence || 'other',
@@ -201,8 +285,37 @@ module Telemed
             'text'     => point['text'].to_s
           }
         end.compact
-      rescue JSON::ParserError
-        [] # caller mantém raw_markdown — humano vê tudo.
+      end
+
+      # 14 chaves fixas. Strings vazias e null são respeitados — em
+      # teleconsulta a maior parte fica vazio (sem produto/lote/área).
+      # Frontend exibe os campos vazios como placeholders pro dentista
+      # preencher antes de assinar.
+      PROCEDURE_KEYS = %w[
+        queixa_do_dia avaliacao_clinica procedimento_realizado area_tratada
+        produto_utilizado quantidade_dose unidade lote validade
+        intercorrencias resultado_imediato detalhes_proxima_consulta
+        retorno_em_dias observacao
+      ].freeze
+
+      def parse_procedure_fields(blocks)
+        hash_block = blocks.find { |b| b.is_a?(Hash) }
+        return default_procedure_fields unless hash_block
+
+        PROCEDURE_KEYS.each_with_object({}) do |key, acc|
+          raw = hash_block[key]
+          acc[key] = if key == 'retorno_em_dias'
+                       raw.is_a?(Integer) ? raw : safe_int(raw)
+                     else
+                       raw.is_a?(String) ? raw.strip : (raw.nil? ? '' : raw.to_s)
+                     end
+        end
+      end
+
+      def default_procedure_fields
+        PROCEDURE_KEYS.each_with_object({}) do |k, acc|
+          acc[k] = k == 'retorno_em_dias' ? nil : ''
+        end
       end
 
       def lookup_api_key

@@ -25,6 +25,7 @@
       "DEFAULT_PROFESSIONAL": "System",
       "DOWNLOAD_TITLE": "Download document",
       "WHATSAPP_TITLE": "Send via WhatsApp",
+      "SIGN_TITLE": "Send for signature",
       "DELETE_TITLE": "Delete document"
     },
     "STATUS": {
@@ -52,6 +53,11 @@
       "SUBTITLE": "PDF will be generated and downloaded automatically.",
       "TYPE_LABEL": "Document Type",
       "TYPE_PLACEHOLDER": "Select type",
+      "TEMPLATE_LABEL": "Template",
+      "TEMPLATE_OPTIONAL": "(optional — uses default if none selected)",
+      "TEMPLATE_PLACEHOLDER": "Default (no template)",
+      "TEMPLATE_DEFAULT": "Default (no template)",
+      "TEMPLATE_LOADING": "Loading templates...",
       "DOCUMENT_TITLE_LABEL": "Title",
       "DOCUMENT_TITLE_OPTIONAL": "(optional)",
       "ATESTADO": {

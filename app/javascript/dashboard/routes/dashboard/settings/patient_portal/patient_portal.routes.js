@@ -17,7 +17,10 @@ export default {
           path: '',
           name: 'patient_portal_settings_wrapper',
           meta,
-          redirect: to => ({ name: 'patient_portal_settings_index', params: to.params }),
+          redirect: to => ({
+            name: 'patient_portal_settings_index',
+            params: to.params,
+          }),
         },
         {
           path: 'general',

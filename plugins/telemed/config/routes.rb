@@ -37,6 +37,18 @@ Telemed::Engine.routes.draw do
             resources :sessions, only: [:create] do
               collection do
                 post :event
+                # Doutor confirmou no modal pós-encerramento que de fato
+                # atendeu o paciente → transição manual pra 'completed'.
+                # Sem isso, status fica preso em in_progress (mudança de
+                # 2026-05-21: auto-mark_completed removido pra evitar
+                # marcar "atendido" quando a conexão do paciente falhou).
+                post :confirm_completed
+                # Doutor admite paciente que estava na sala de espera
+                # (libera canPublish=true via LiveKit UpdateParticipant).
+                post :admit_patient
+                # Botão manual de gravação (toolbar da sala).
+                post :start_recording
+                post :stop_recording
               end
             end
           end

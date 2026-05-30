@@ -1,0 +1,43 @@
+{
+  "SIGNATURES": {
+    "MODAL": {
+      "TITLE": "Send for Signature",
+      "INTRO": "Fill in the signer's details. The document will be sent via email (and WhatsApp, if filled).",
+      "SEND": "Send",
+      "SENDING": "Sending..."
+    },
+    "FIELDS": {
+      "SIGNER_NAME": "Signer name",
+      "SIGNER_EMAIL": "Email",
+      "SIGNER_PHONE": "WhatsApp / phone",
+      "MESSAGE": "Message to signer",
+      "MESSAGE_PLACEHOLDER": "e.g. Hi, please find the document for your signature..."
+    },
+    "STATUS": {
+      "PROVIDER_LABEL": "Provider",
+      "SIGNER": "Signer",
+      "ENVELOPE": "Envelope",
+      "SIGNING_URL": "Signing URL"
+    },
+    "TIMELINE": {
+      "SENT": "Sent",
+      "VIEWED": "Viewed",
+      "SIGNED": "Signed",
+      "COMPLETED": "Completed"
+    },
+    "ACTIONS": {
+      "REFRESH": "Refresh",
+      "RESEND": "Resend",
+      "CANCEL": "Cancel envelope"
+    },
+    "PROMPT": {
+      "CANCEL_REASON": "Cancellation reason (optional):"
+    },
+    "MESSAGES": {
+      "SENT": "Signature invitation sent.",
+      "CANCELLED": "Envelope cancelled.",
+      "RESENT": "Invitation resent.",
+      "REFRESHED": "Status refreshed."
+    }
+  }
+}

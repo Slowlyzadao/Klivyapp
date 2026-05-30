@@ -11,7 +11,7 @@ defineProps({
   consents: { type: Array, default: () => [] },
 });
 
-const emit = defineEmits(['view', 'send-remote', 'sign', 'revoke']);
+const emit = defineEmits(['view', 'send-remote', 'sign', 'send-for-signature', 'revoke']);
 
 const { t } = useI18n();
 
@@ -170,6 +170,15 @@ const statusLabel = status => {
                     :label="t('PATIENT_CONSENTS.TABLE.SIGN')"
                     :title="t('PATIENT_CONSENTS.TABLE.SIGN_TITLE')"
                     @click="emit('sign', consent.id)"
+                  />
+                  <BeclinicButton
+                    size="sm"
+                    variant="faded"
+                    color="blue"
+                    icon="i-lucide-pen-line"
+                    :label="t('PATIENT_CONSENTS.TABLE.SIGN_REMOTE')"
+                    :title="t('PATIENT_CONSENTS.TABLE.SIGN_REMOTE_TITLE')"
+                    @click="emit('send-for-signature', consent)"
                   />
                 </template>
                 <template v-if="consent.status === 'signed'">

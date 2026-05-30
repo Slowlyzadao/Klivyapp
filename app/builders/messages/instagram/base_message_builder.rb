@@ -9,7 +9,10 @@ class Messages::Instagram::BaseMessageBuilder < Messages::Messenger::MessageBuil
   end
 
   def perform
-    return if @inbox.channel.reauthorization_required?
+    if @inbox.channel.reauthorization_required?
+      Rails.logger.warn("[IG_AUDIT] BaseMessageBuilder skipped — reauthorization REQUIRED for inbox #{@inbox.id}")
+      return
+    end
 
     ActiveRecord::Base.transaction do
       build_message
@@ -96,11 +99,18 @@ class Messages::Instagram::BaseMessageBuilder < Messages::Messenger::MessageBuil
     # when a user is connected to the Instagram account through both Messenger and Instagram login.
     # There is chance for echo events to be sent for the same message.
     # Therefore, we need to check if the message already exists before creating it.
-    return if message_already_exists?
+    if message_already_exists?
+      Rails.logger.info("[IG_AUDIT] Message duplicate skipped, mid=#{@messaging.dig(:message, :mid).inspect}")
+      return
+    end
 
-    return if message_content.blank? && all_unsupported_files?
+    if message_content.blank? && all_unsupported_files?
+      Rails.logger.warn("[IG_AUDIT] Message dropped — content blank and all attachments unsupported. mid=#{@messaging.dig(:message, :mid).inspect}")
+      return
+    end
 
     @message = conversation.messages.create!(message_params)
+    Rails.logger.info("[IG_AUDIT] Message persisted, id=#{@message.id}, conversation=#{@message.conversation_id}, inbox=#{@inbox.id}")
     save_story_id
 
     attachments.each do |attachment|

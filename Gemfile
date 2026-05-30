@@ -214,6 +214,11 @@ gem 'shopify_api'
 gem 'prawn'
 gem 'prawn-table'
 
+# HTML → PDF via Chromium headless. Usado pelo plugin document_templates
+# (editor visual de templates de documentos). Coexiste com prawn enquanto a
+# migração dos PDFs legados acontece. Requer chromium + puppeteer no servidor.
+gem 'grover', '~> 1.2'
+
 ### Gems required only in specific deployment environments ###
 ##############################################################
 

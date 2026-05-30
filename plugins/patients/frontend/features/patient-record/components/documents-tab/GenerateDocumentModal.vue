@@ -9,6 +9,7 @@ import {
   FREE_CONTENT_TYPES,
   blankDocForm,
 } from '@plugins/patients/frontend/constants/documents';
+import { documentTemplatesApi } from '@plugins/document_templates/frontend/api/documentTemplates';
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -21,10 +22,64 @@ const { t } = useI18n();
 
 const form = ref(blankDocForm());
 
+// ── Templates do document-editor compatíveis com o tipo escolhido ──────────
+// Quando o user troca o tipo de documento, recarregamos os templates da
+// clínica + Klivy globais daquele tipo. Se há ≥ 1, mostramos o dropdown
+// "Modelo" pra ele escolher (ou ficar no "Padrão" = Prawn legado).
+const availableTemplates = ref([]);
+const templatesLoading = ref(false);
+
+const fetchTemplates = async docType => {
+  if (!docType) {
+    availableTemplates.value = [];
+    return;
+  }
+  templatesLoading.value = true;
+  try {
+    const [own, klivy] = await Promise.all([
+      documentTemplatesApi.list({ documentType: docType }),
+      documentTemplatesApi.klivyLibrary({ documentType: docType }),
+    ]);
+    // Próprios primeiro (clínica conhece os deles); Klivy depois.
+    availableTemplates.value = [
+      ...(own?.data?.data || []),
+      ...(klivy?.data?.data || []),
+    ];
+  } catch (_e) {
+    availableTemplates.value = [];
+  } finally {
+    templatesLoading.value = false;
+  }
+};
+
+const templateOptions = computed(() => [
+  // Default: usa o Prawn legado quando o user não escolhe template.
+  { value: null, label: t('PATIENT_DOCUMENTS.MODAL.TEMPLATE_DEFAULT') },
+  ...availableTemplates.value.map(tpl => ({
+    value: tpl.id,
+    label: tpl.is_klivy ? `${tpl.name} · Klivy` : tpl.name,
+  })),
+]);
+
+const hasTemplates = computed(() => availableTemplates.value.length > 0);
+
 watch(
   () => props.open,
   isOpen => {
-    if (isOpen) form.value = blankDocForm();
+    if (isOpen) {
+      form.value = blankDocForm();
+      fetchTemplates(form.value.document_type);
+    }
+  }
+);
+
+watch(
+  () => form.value.document_type,
+  newType => {
+    // Resetar seleção de template — um modelo de "atestado" não serve
+    // pra "receita".
+    form.value.document_template_id = null;
+    fetchTemplates(newType);
   }
 );
 
@@ -76,6 +131,28 @@ const handleGenerate = () => {
             v-model="form.document_type"
             :options="DOC_TYPE_OPTIONS"
             :placeholder="t('PATIENT_DOCUMENTS.MODAL.TYPE_PLACEHOLDER')"
+            auto-searchable
+          />
+        </div>
+
+        <!-- Dropdown "Modelo" — só aparece quando existem templates compatíveis
+             com o tipo selecionado. Se não há, segue o caminho default (Prawn).
+             Quando o user escolhe um template, o backend delega pro Grover. -->
+        <div v-if="hasTemplates" class="form-group">
+          <label class="form-label">
+            {{ t('PATIENT_DOCUMENTS.MODAL.TEMPLATE_LABEL') }}
+            <span class="text-slate-600">
+              {{ t('PATIENT_DOCUMENTS.MODAL.TEMPLATE_OPTIONAL') }}
+            </span>
+          </label>
+          <FormSelect
+            v-model="form.document_template_id"
+            :options="templateOptions"
+            :placeholder="
+              templatesLoading
+                ? t('PATIENT_DOCUMENTS.MODAL.TEMPLATE_LOADING')
+                : t('PATIENT_DOCUMENTS.MODAL.TEMPLATE_PLACEHOLDER')
+            "
             auto-searchable
           />
         </div>

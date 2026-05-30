@@ -1,0 +1,82 @@
+// Painel lateral direito do editor — abas Configurações / Variáveis.
+// Tokens M3 Klivy. Override form-stack pra single-col (sidebar é narrow).
+
+@use '../variables' as *;
+
+.editor-sidebar {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 320px;
+  border-left: 1px solid var(--kl-border-subtle);
+  background: var(--kl-surface-white);
+  font-family: var(--kl-font-family);
+
+  &__tabs {
+    display: flex;
+    border-bottom: 1px solid var(--kl-border-subtle);
+    background: var(--kl-surface-white);
+  }
+
+  &__tab {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 48px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--kl-secondary);
+    font-family: inherit;
+    font-size: var(--kl-font-body-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: color var(--kl-transition);
+
+    span {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      color: var(--kl-on-surface);
+    }
+
+    &--active {
+      color: var(--kl-primary);
+      box-shadow: inset 0 -2px 0 var(--kl-primary);
+    }
+  }
+
+  &__content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 20px;
+    background: var(--kl-bg);
+  }
+
+  // Override do form-stack (otimizado pra modal grid-2-col):
+  // na sidebar narrow, força single column.
+  &__content :deep(.form-stack) {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  &__content :deep(.form-stack__field--full) {
+    grid-column: auto;
+  }
+
+  &__variables {
+    // VariablePickerMenu reutilizado dentro da sidebar — remove o shadow/
+    // border próprio pra evitar duplicação visual.
+    :deep(.variable-picker) {
+      width: 100%;
+      max-height: none;
+      border: none;
+      box-shadow: none;
+      background: transparent;
+    }
+  }
+}

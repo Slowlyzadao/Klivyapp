@@ -1,0 +1,238 @@
+// Layout da página TemplateEditor.vue — header com back + título + status +
+// CTA Salvar; toolbar sticky; body (canvas + sidebar). Tokens M3 Klivy.
+
+@use '../variables' as *;
+
+.template-editor {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: var(--kl-bg);
+  color: var(--kl-on-surface);
+  font-family: var(--kl-font-family);
+
+  // ── Header ──────────────────────────────────────────────────────────
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 14px 24px;
+    background: var(--kl-surface-white);
+    border-bottom: 1px solid var(--kl-border-subtle);
+  }
+
+  // Back: ícone solto 20px, zero padding/background.
+  &__back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--kl-secondary);
+    font-family: inherit;
+    font-size: var(--kl-font-body-md);
+    font-weight: 500;
+    cursor: pointer;
+    transition: color var(--kl-transition);
+
+    span { width: 20px; height: 20px; }
+
+    &:hover { color: var(--kl-on-surface); }
+  }
+
+  &__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    min-width: 0;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--kl-on-surface);
+  }
+
+  &__title-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    color: var(--kl-secondary);
+  }
+
+  // Nome clicável (duplo-clique → edita). Visual de texto puro até hover.
+  &__title-name {
+    max-width: 420px;
+    padding: 4px 8px;
+    margin: 0 -8px;
+    border: none;
+    border-radius: var(--kl-radius-md);
+    background: transparent;
+    color: var(--kl-on-surface);
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: left;
+    cursor: text;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: background var(--kl-transition);
+
+    &:hover { background: var(--kl-surface-low); }
+    &:focus-visible { outline: none; box-shadow: var(--kl-ring); }
+  }
+
+  &__title-input {
+    width: 360px;
+    max-width: 50vw;
+    padding: 4px 8px;
+    margin: 0 -8px;
+    border: 1px solid var(--kl-primary);
+    border-radius: var(--kl-radius-md);
+    background: var(--kl-surface-white);
+    color: var(--kl-on-surface);
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: var(--kl-ring);
+
+    &:focus { outline: none; }
+  }
+
+  &__version {
+    flex-shrink: 0;
+    font-weight: 500;
+    color: var(--kl-text-muted);
+    font-size: var(--kl-font-body-md);
+  }
+
+  // Flag "modelo Klivy read-only" — informa que editar gera cópia.
+  &__klivy-flag {
+    flex-shrink: 0;
+    padding: 3px 10px;
+    border-radius: var(--kl-radius-pill);
+    background: var(--kl-surface-low);
+    color: var(--kl-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  // ── Status (autosave indicator) ─────────────────────────────────────
+  &__status {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--kl-secondary);
+    font-size: var(--kl-font-body-md);
+  }
+
+  &__status-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--kl-secondary);
+    animation: spin 1s linear infinite;
+
+    &--ok {
+      width: 16px;
+      height: 16px;
+      color: var(--kl-success);
+      animation: none;
+    }
+    &--error {
+      width: 16px;
+      height: 16px;
+      color: var(--kl-error);
+      animation: none;
+    }
+  }
+
+  &__retry-btn {
+    margin-left: 8px;
+    padding: 4px 12px;
+    border: 1px solid var(--kl-error);
+    border-radius: var(--kl-radius-md);
+    background: transparent;
+    color: var(--kl-error);
+    font-family: inherit;
+    font-size: var(--kl-font-label-md);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background var(--kl-transition);
+
+    &:hover { background: var(--kl-error-container); }
+  }
+
+  // ── Save CTA (primary) ──────────────────────────────────────────────
+  &__save-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 18px;
+    border: none;
+    border-radius: var(--kl-radius-lg);
+    background: var(--kl-primary);
+    color: var(--kl-on-primary);
+    font-family: inherit;
+    font-size: var(--kl-font-label-md);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    box-shadow: var(--kl-shadow-sm);
+    transition: background var(--kl-transition), opacity var(--kl-transition);
+
+    span { width: 16px; height: 16px; }
+
+    &:hover:not(:disabled) {
+      background: var(--kl-primary-container);
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--kl-shadow-sm), var(--kl-ring);
+    }
+  }
+
+  // ── Body / canvas / loading ─────────────────────────────────────────
+  &__body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  &__canvas {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  &__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--kl-secondary);
+
+    span {
+      width: 32px;
+      height: 32px;
+      animation: spin 1s linear infinite;
+    }
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

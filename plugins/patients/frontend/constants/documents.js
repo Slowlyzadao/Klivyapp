@@ -72,4 +72,7 @@ export const blankDocForm = () => ({
   encaminhado_para: '',
   especialidade: '',
   conteudo_livre: '',
+  // null = usar o template Prawn legado (caminho default).
+  // ID numérico = renderizar via DocumentTemplates::PdfGenerator (Grover).
+  document_template_id: null,
 });

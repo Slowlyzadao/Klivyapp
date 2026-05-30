@@ -1,0 +1,73 @@
+// Seção horizontal "Biblioteca Klivy" no topo de DocumentsIndex.
+
+@use '../variables' as *;
+
+.klivy-library-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 24px 24px;
+  border-bottom: 1px solid rgb(var(--slate-3));
+  background: rgb(var(--slate-1));
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgb(var(--slate-12));
+  }
+
+  &__title-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  &__see-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: rgb(var(--blue-11));
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: background 120ms ease;
+
+    span { width: 14px; height: 14px; }
+
+    &:hover {
+      background: rgba(var(--blue-3), 0.4);
+    }
+  }
+
+  &__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    color: rgb(var(--slate-11));
+
+    span {
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  &__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+}

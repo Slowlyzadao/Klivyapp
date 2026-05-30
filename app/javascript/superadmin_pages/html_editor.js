@@ -21,20 +21,45 @@ const PREVIEW_DEBOUNCE_MS = 300;
 const PURIFY_CONFIG = {
   ADD_TAGS: ['style'],
   ADD_ATTR: ['target'],
-  FORBID_TAGS: ['script', 'object', 'embed', 'base', 'form', 'input', 'button', 'textarea', 'select'],
+  FORBID_TAGS: [
+    'script',
+    'object',
+    'embed',
+    'base',
+    'form',
+    'input',
+    'button',
+    'textarea',
+    'select',
+  ],
   FORBID_ATTR: [
     // Event handlers (DOMPurify já remove on*, mas listamos por explicitude)
-    'onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur',
-    'onchange', 'onsubmit', 'onkeydown', 'onkeyup', 'onkeypress',
-    'onmouseenter', 'onmouseleave', 'onmousedown', 'onmouseup',
-    'onanimationend', 'onanimationstart', 'ontransitionend',
+    'onerror',
+    'onload',
+    'onclick',
+    'onmouseover',
+    'onfocus',
+    'onblur',
+    'onchange',
+    'onsubmit',
+    'onkeydown',
+    'onkeyup',
+    'onkeypress',
+    'onmouseenter',
+    'onmouseleave',
+    'onmousedown',
+    'onmouseup',
+    'onanimationend',
+    'onanimationstart',
+    'ontransitionend',
     // <meta http-equiv="refresh" content="0;url=javascript:..."> — vetor de
     // navegação maliciosa que sobrevive ao sandbox-sem-allow-scripts em alguns
     // browsers. Removendo o atributo, o meta fica inofensivo.
     'http-equiv',
     // formaction/formmethod sobrescrevem submit de form irmão, mas como
     // bloqueamos <form>/<input>/<button> via FORBID_TAGS, são redundantes.
-    'formaction', 'formmethod',
+    'formaction',
+    'formmethod',
   ],
   ALLOW_DATA_ATTR: true,
   ALLOW_UNKNOWN_PROTOCOLS: false,
@@ -77,18 +102,21 @@ function debounce(fn, ms) {
 }
 
 const SNIPPETS = {
-  h1:   { tpl: '<h1>${sel|Título}</h1>',                                          cursor: 4 },
-  h2:   { tpl: '<h2>${sel|Subtítulo}</h2>',                                        cursor: 4 },
-  h3:   { tpl: '<h3>${sel|Seção}</h3>',                                            cursor: 4 },
-  p:    { tpl: '<p>${sel|Parágrafo}</p>',                                          cursor: 3 },
-  b:    { tpl: '<strong>${sel|texto}</strong>',                                    cursor: 8 },
-  i:    { tpl: '<em>${sel|texto}</em>',                                            cursor: 4 },
-  u:    { tpl: '<u>${sel|texto}</u>',                                              cursor: 3 },
-  span: { tpl: '<span class="">${sel|texto}</span>',                               cursor: 13 },
-  link: { tpl: '<a href="https://" target="_blank" rel="noopener noreferrer">${sel|texto do link}</a>', cursor: 9 },
-  img:  { tpl: '<img src="https://" alt="${sel|descrição}" />',                    cursor: 11 },
-  ul:   { tpl: '<ul>\n  <li>${sel|item}</li>\n</ul>',                              cursor: 9 },
-  li:   { tpl: '<li>${sel|item}</li>',                                             cursor: 4 },
+  h1: { tpl: '<h1>${sel|Título}</h1>', cursor: 4 },
+  h2: { tpl: '<h2>${sel|Subtítulo}</h2>', cursor: 4 },
+  h3: { tpl: '<h3>${sel|Seção}</h3>', cursor: 4 },
+  p: { tpl: '<p>${sel|Parágrafo}</p>', cursor: 3 },
+  b: { tpl: '<strong>${sel|texto}</strong>', cursor: 8 },
+  i: { tpl: '<em>${sel|texto}</em>', cursor: 4 },
+  u: { tpl: '<u>${sel|texto}</u>', cursor: 3 },
+  span: { tpl: '<span class="">${sel|texto}</span>', cursor: 13 },
+  link: {
+    tpl: '<a href="https://" target="_blank" rel="noopener noreferrer">${sel|texto do link}</a>',
+    cursor: 9,
+  },
+  img: { tpl: '<img src="https://" alt="${sel|descrição}" />', cursor: 11 },
+  ul: { tpl: '<ul>\n  <li>${sel|item}</li>\n</ul>', cursor: 9 },
+  li: { tpl: '<li>${sel|item}</li>', cursor: 4 },
 };
 
 function applySnippet(textarea, snippet) {
@@ -118,16 +146,62 @@ function applySnippet(textarea, snippet) {
 // Pretty-print rudimentar (sem dependência externa).
 // Quebra linhas em tags de bloco e indenta.
 const BLOCK_TAGS = new Set([
-  'html','head','body','article','section','header','footer','nav','main',
-  'div','p','ul','ol','li','table','thead','tbody','tr','td','th','blockquote',
-  'h1','h2','h3','h4','h5','h6','figure','figcaption','pre','style','script',
-  'form','fieldset',
+  'html',
+  'head',
+  'body',
+  'article',
+  'section',
+  'header',
+  'footer',
+  'nav',
+  'main',
+  'div',
+  'p',
+  'ul',
+  'ol',
+  'li',
+  'table',
+  'thead',
+  'tbody',
+  'tr',
+  'td',
+  'th',
+  'blockquote',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'figure',
+  'figcaption',
+  'pre',
+  'style',
+  'script',
+  'form',
+  'fieldset',
 ]);
-const INLINE_VOID = new Set(['br','hr','img','input','meta','link','source','area','base','col','embed','param','track','wbr']);
+const INLINE_VOID = new Set([
+  'br',
+  'hr',
+  'img',
+  'input',
+  'meta',
+  'link',
+  'source',
+  'area',
+  'base',
+  'col',
+  'embed',
+  'param',
+  'track',
+  'wbr',
+]);
 
 function formatHtml(input) {
   const tokens = [];
-  const re = /(<!--[\s\S]*?-->)|(<!doctype[^>]*>)|(<\/?[a-zA-Z][^>]*>)|([^<]+)/gi;
+  const re =
+    /(<!--[\s\S]*?-->)|(<!doctype[^>]*>)|(<\/?[a-zA-Z][^>]*>)|([^<]+)/gi;
   let m;
   while ((m = re.exec(input)) !== null) {
     if (m[1] || m[2]) tokens.push({ kind: 'raw', text: m[1] || m[2] });
@@ -145,9 +219,9 @@ function formatHtml(input) {
 
   const out = [];
   let depth = 0;
-  const indent = (n) => '  '.repeat(Math.max(n, 0));
+  const indent = n => '  '.repeat(Math.max(n, 0));
   // Tags cujo conteúdo deve ser preservado literalmente entre abertura e fechamento
-  const PRE_LIKE = new Set(['pre','script','style','textarea']);
+  const PRE_LIKE = new Set(['pre', 'script', 'style', 'textarea']);
   let preserveDepth = 0;
 
   for (let i = 0; i < tokens.length; i++) {
@@ -174,14 +248,24 @@ function formatHtml(input) {
       const txt = t.text.replace(/\s+/g, ' ');
       if (txt.trim().length === 0) continue;
       const prev = tokens[i - 1];
-      if (prev && prev.kind === 'tag' && BLOCK_TAGS.has(prev.name) && !prev.isClose) {
+      if (
+        prev &&
+        prev.kind === 'tag' &&
+        BLOCK_TAGS.has(prev.name) &&
+        !prev.isClose
+      ) {
         out.push('\n' + indent(depth) + txt.trim());
       } else {
         out.push(txt);
       }
     }
   }
-  return out.join('').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+  return (
+    out
+      .join('')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim() + '\n'
+  );
 }
 
 function buildPreviewDoc(html) {
@@ -190,7 +274,8 @@ function buildPreviewDoc(html) {
   // (HelpArticleDrawer.vue) para que o preview reflita o render final.
   const isFullDoc = /^\s*<(!doctype|html\b)/i.test(html);
   if (isFullDoc) return html;
-  return `<!DOCTYPE html><html lang="pt-BR"><head>` +
+  return (
+    `<!DOCTYPE html><html lang="pt-BR"><head>` +
     `<meta charset="UTF-8">` +
     `<meta name="viewport" content="width=device-width, initial-scale=1.0">` +
     `<base target="_parent">` +
@@ -214,7 +299,8 @@ function buildPreviewDoc(html) {
       pre { padding: 12px 14px; overflow-x: auto; }
       pre code { background: none; padding: 0; }
     </style>` +
-    `</head><body>${html}</body></html>`;
+    `</head><body>${html}</body></html>`
+  );
 }
 
 // --- Syntax highlighting (overlay sobre textarea) ---
@@ -226,10 +312,7 @@ function buildPreviewDoc(html) {
 // e funciona com qualquer tamanho de conteúdo sem custo de runtime alto.
 
 function escapeForOverlay(s) {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function highlightTagInner(tag) {
@@ -239,7 +322,8 @@ function highlightTagInner(tag) {
   const [, openBracket, name, attrsRaw, closeBracket] = m;
 
   // Atributos: nome opcional[ = "valor" | 'valor' | sem aspas ]
-  const attrRe = /(\s+)([a-zA-Z_:][\w:.-]*)(\s*=\s*("[^"]*"|'[^']*'|[^\s>]+))?/g;
+  const attrRe =
+    /(\s+)([a-zA-Z_:][\w:.-]*)(\s*=\s*("[^"]*"|'[^']*'|[^\s>]+))?/g;
   let attrsHtml = '';
   let lastIdx = 0;
   let am;
@@ -270,12 +354,15 @@ function highlightTagInner(tag) {
 
 function highlightHtml(input) {
   if (!input) return '';
-  const re = /(<!--[\s\S]*?-->)|(<!doctype[^>]*>)|(<\/?[a-zA-Z][^>]*>)|([^<]+)/gi;
+  const re =
+    /(<!--[\s\S]*?-->)|(<!doctype[^>]*>)|(<\/?[a-zA-Z][^>]*>)|([^<]+)/gi;
   let out = '';
   let m;
   while ((m = re.exec(input)) !== null) {
-    if (m[1]) out += `<span class="hl-comment">${escapeForOverlay(m[1])}</span>`;
-    else if (m[2]) out += `<span class="hl-doctype">${escapeForOverlay(m[2])}</span>`;
+    if (m[1])
+      out += `<span class="hl-comment">${escapeForOverlay(m[1])}</span>`;
+    else if (m[2])
+      out += `<span class="hl-doctype">${escapeForOverlay(m[2])}</span>`;
     else if (m[3]) out += highlightTagInner(m[3]);
     else if (m[4]) out += escapeForOverlay(m[4]);
   }
@@ -340,7 +427,11 @@ function init(wrap) {
       clean = sanitize(raw);
       const removed = DOMPurify.removed || [];
       if (removed.length) {
-        setStatus(statusEl, `Sanitização removeu ${removed.length} elemento(s) inseguro(s).`, 'warn');
+        setStatus(
+          statusEl,
+          `Sanitização removeu ${removed.length} elemento(s) inseguro(s).`,
+          'warn'
+        );
       } else {
         setStatus(statusEl, '', null);
       }
@@ -371,21 +462,22 @@ function init(wrap) {
     syncGutterScroll(textarea, gutter);
     syncHighlightScroll();
   });
-  textarea.addEventListener('keydown', (e) => {
+  textarea.addEventListener('keydown', e => {
     // Tab insere 2 espaços em vez de mudar foco
     if (e.key === 'Tab') {
       e.preventDefault();
       const s = textarea.selectionStart;
       const en = textarea.selectionEnd;
-      textarea.value = textarea.value.slice(0, s) + '  ' + textarea.value.slice(en);
+      textarea.value =
+        textarea.value.slice(0, s) + '  ' + textarea.value.slice(en);
       textarea.setSelectionRange(s + 2, s + 2);
       sync();
     }
   });
 
   // Snippets
-  wrap.querySelectorAll('[data-snippet]').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
+  wrap.querySelectorAll('[data-snippet]').forEach(btn => {
+    btn.addEventListener('click', e => {
       e.preventDefault();
       applySnippet(textarea, btn.dataset.snippet);
     });
@@ -404,8 +496,8 @@ function init(wrap) {
   }
 
   // Botões de ação
-  wrap.querySelectorAll('[data-action]').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
+  wrap.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', e => {
       e.preventDefault();
       const action = btn.dataset.action;
       if (action === 'format') {

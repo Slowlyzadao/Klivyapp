@@ -20,21 +20,33 @@ module Telemed
     # O token segue sendo descartável (cada clique gera um novo).
     DEFAULT_TTL = 2.hours
 
-    Result = Struct.new(:url, :token, :room, :room_code, :identity, :name, :role, :ttl_seconds, :dev_mode, keyword_init: true) do
+    Result = Struct.new(:url, :token, :room, :room_code, :identity, :name, :role, :ttl_seconds, :dev_mode, :admitted, keyword_init: true) do
       def to_h
         {
           url: url, token: token, room: room, room_code: room_code,
           identity: identity, name: name, role: role,
-          ttl_seconds: ttl_seconds, dev_mode: dev_mode
+          ttl_seconds: ttl_seconds, dev_mode: dev_mode, admitted: admitted
         }
       end
     end
 
-    def initialize(event:, participant:, role: 'patient', ttl: DEFAULT_TTL)
+    # 2026-05-21 — Waiting room SERVER-SIDE.
+    # Antes: token emitido com `canPublish: true` SEMPRE, e a "sala de espera"
+    # era só uma overlay no client (paciente publicava câmera/mic antes do
+    # doutor clicar "Aceitar" — vazamento clínico). Agora: paciente recebe
+    # token com `canPublish: false`; doutor chama UpdateParticipant via
+    # ParticipantAdmitter pra liberar publish após apertar Aceitar. LiveKit
+    # dispara ParticipantPermissionsChanged no client do paciente, que aí
+    # publica câmera/mic.
+    def initialize(event:, participant:, role: 'patient', ttl: DEFAULT_TTL, admitted: nil)
       @event       = event
       @participant = participant
       @role        = role.to_s
       @ttl         = ttl
+      # Default: doutor já entra admitido; paciente sempre fica em waiting
+      # room até o doutor admitir explicitamente. Caller pode forçar via
+      # `admitted: true/false` (ex: reissue token após admit).
+      @admitted    = admitted.nil? ? (@role == 'doctor') : admitted
       @creds       = CredentialsResolver.new(account: event.account).call
     end
 
@@ -51,7 +63,9 @@ module Telemed
       token.video_grant = LiveKit::VideoGrant.new(
         roomJoin:     true,
         room:         room_name,
-        canPublish:   true,
+        # Paciente em waiting room só pode subscribe (vê doutor) mas NÃO
+        # publica até ser admitido. Doutor publica de cara.
+        canPublish:   @admitted,
         canSubscribe: true
       )
 
@@ -64,7 +78,8 @@ module Telemed
         name:        participant_name,
         role:        @role,
         ttl_seconds: @ttl.to_i,
-        dev_mode:    @creds.dev_mode?
+        dev_mode:    @creds.dev_mode?,
+        admitted:    @admitted
       )
     end
 

@@ -70,6 +70,17 @@ class Api::V1::Accounts::Telemed::TeleconsultasController < Api::V1::Accounts::B
     recording = latest_recording_for(@event)
     return render json: { error: 'Sem gravação disponível' }, status: :not_found unless recording
 
+    # AUDIT 2026-05-25 — guard contra race entre `latest_recording_for` e a
+    # leitura da key. EnforceRecordingQuotaJob pode marcar `archived_at` e
+    # deletar o objeto no R2 entre a query (40ms atrás) e este ponto.
+    # Resultado: signed URL emitida pra objeto inexistente (404 no player) ou,
+    # pior, ainda existente in-flight de delete — exibindo áudio recém-arquivado
+    # que deveria estar inacessível.
+    if recording.archived?
+      return render json: { error: 'Gravação arquivada', code: 'recording_archived' },
+                    status: :not_found
+    end
+
     key = pick_storage_key(recording, params[:kind])
     return render json: { error: 'Tipo de arquivo inválido ou não disponível' }, status: :unprocessable_entity if key.blank?
 
@@ -128,7 +139,14 @@ class Api::V1::Accounts::Telemed::TeleconsultasController < Api::V1::Accounts::B
   end
 
   def per_page
-    [[params[:per_page].to_i, PER_PAGE_DEFAULT].max, PER_PAGE_MAX].min
+    # AUDIT 2026-05-25 — antes `[[to_i, DEFAULT].max, MAX].min` clampava
+    # qualquer valor < DEFAULT pra DEFAULT (per_page=5 virava 20). Agora
+    # respeita o pedido se positivo, cai pra DEFAULT em 0/negativo/nil,
+    # e clampa no MAX.
+    requested = params[:per_page].to_i
+    return PER_PAGE_DEFAULT unless requested.positive?
+
+    [requested, PER_PAGE_MAX].min
   end
 
   def offset
@@ -145,11 +163,17 @@ class Api::V1::Accounts::Telemed::TeleconsultasController < Api::V1::Accounts::B
   # entre requests (Rails recria o controller).
   def latest_recording_for(event)
     @latest_recording ||= {}
-    @latest_recording[event.id] ||= if event.association(:telemed_recordings).loaded?
-                                      event.telemed_recordings.max_by(&:created_at)
-                                    else
-                                      event.telemed_recordings.order(created_at: :desc).first
-                                    end
+    # AUDIT 2026-05-25 — `||=` em hash retorna nil quando a key existe com
+    # valor nil, repetindo a query a cada chamada. `fetch ... { }` armazena
+    # o nil também, satisfazendo o objetivo de memoização real.
+    @latest_recording.fetch(event.id) do
+      @latest_recording[event.id] =
+        if event.association(:telemed_recordings).loaded?
+          event.telemed_recordings.max_by(&:created_at)
+        else
+          event.telemed_recordings.order(created_at: :desc).first
+        end
+    end
   end
 
   def pick_storage_key(recording, kind)
@@ -165,6 +189,13 @@ class Api::V1::Accounts::Telemed::TeleconsultasController < Api::V1::Accounts::B
   def serialize_summary(event)
     recording = latest_recording_for(event)
     evolution = recording&.latest_proposed_evolution
+    patient   = event.contact&.patient
+    # Patient é fonte da verdade do nome (cadastro clínico). Contact (Chatwoot)
+    # pode estar dessincronizado — ex.: contato criado via WhatsApp com nome do
+    # número e depois vinculado a um Patient com nome real. Audit teleconsulta
+    # 2026-05-25.
+    patient_name = patient&.name.presence || event.contact&.name
+    service      = event.agenda_service
     {
       id:          event.id,
       title:       event.title,
@@ -173,20 +204,37 @@ class Api::V1::Accounts::Telemed::TeleconsultasController < Api::V1::Accounts::B
       status:      event.status,
       patient: {
         contact_id: event.contact_id,
-        patient_id: event.contact&.patient&.id,
-        name:       event.contact&.name
+        patient_id: patient&.id,
+        name:       patient_name
       },
       professional: {
         user_id: event.user_id,
         name:    event.user&.name
       },
+      # 2026-05-25 — `service` (treatment selecionado) e `reason` (descrição)
+      # são o motivo verdadeiro da consulta. `title` NÃO entra aqui porque o
+      # modal auto-preenche com nome do paciente p/ label do calendário; usar
+      # como motivo gerava "Bruna Lopes Oliveira" no campo "Motivo" do card.
+      service: service && {
+        id:    service.id,
+        name:  service.name,
+        color: service.respond_to?(:color) ? service.color : nil
+      },
+      reason: event.description.to_s.strip.presence,
       duration_minutes: ((event.ends_at - event.starts_at) / 60).to_i,
       recording: recording && {
         id:                recording.id,
         status:            recording.status,
         duration_seconds:  recording.duration_seconds,
         started_at:        recording.created_at,
-        has_transcript:    recording.transcript_text.present?
+        # has_transcript via STATUS, não acessando recording.transcript_text
+        # diretamente. O atributo é `encrypts :transcript_text`, e em
+        # ambientes sem `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY` configurado
+        # (dev sem ENV set) qualquer leitura do atributo levanta
+        # ActiveRecord::Encryption::Errors::Configuration → 500 no /finished.
+        # Status >= 'transcribed' implica transcript persistido, é o mesmo
+        # sinal sem precisar de decryption.
+        has_transcript:    %w[transcribed evolving ready].include?(recording.status)
       },
       evolution: evolution && {
         id:     evolution.id,
@@ -200,11 +248,21 @@ class Api::V1::Accounts::Telemed::TeleconsultasController < Api::V1::Accounts::B
     evolution = recording&.latest_proposed_evolution
     summary   = serialize_summary(event)
 
+    # AUDIT 2026-05-25 — antes lia `recording.transcript_text` e
+    # `transcript_segments` sem checar status. `transcript_text` é
+    # `encrypts` (LGPD) — em ambientes sem ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+    # qualquer leitura levanta Encryption::Errors::Configuration → 500 na
+    # tela de detalhe. `serialize_summary` já tinha o guard via `has_transcript`;
+    # aqui replicamos a mesma defesa: só lê se o status indica transcript
+    # persistido. `transcript_segments` é jsonb plaintext mas seguimos a mesma
+    # gate por simetria/UX (não faz sentido entregar segments sem texto).
+    transcript_ready = %w[transcribed evolving ready].include?(recording&.status)
+
     summary.merge(
       room_code: Telemed::RoomCode.from_event(event, patient: event.contact),
       recording: recording && recording.to_summary_hash.merge(
-        transcript_segments: recording.transcript_segments,
-        transcript_text:     recording.transcript_text
+        transcript_segments: transcript_ready ? recording.transcript_segments : nil,
+        transcript_text:     transcript_ready ? recording.transcript_text     : nil
       ),
       evolution: evolution && {
         id:               evolution.id,
@@ -212,7 +270,13 @@ class Api::V1::Accounts::Telemed::TeleconsultasController < Api::V1::Accounts::B
         provider:         evolution.provider,
         soap_structure:   evolution.soap_structure,
         raw_markdown:     evolution.raw_markdown,
+        # 2026-05-22 — Resumo Executivo (Markdown). UI renderiza via
+        # markdown-it. Vazio em evoluções antigas (pré-fix) até reprocessar.
+        summary:          evolution.summary.to_s,
         attention_points: evolution.attention_points,
+        # 2026-05-26 — Registro de Procedimento (14 campos editáveis).
+        # Vazio {} em evoluções antigas (pré-audit) até reprocessar.
+        procedure_fields: evolution.procedure_fields || {},
         reviewed_by:      evolution.reviewed_by&.name,
         reviewed_at:      evolution.reviewed_at,
         clinical_note_id: evolution.clinical_note_id

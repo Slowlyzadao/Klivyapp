@@ -159,10 +159,12 @@ onUnmounted(() => {
           :class="{
             'bg-green-500/10 border-green-500/20 text-green-700': isConnected,
             'bg-orange-500/10 border-orange-500/20 text-orange-700': isStale,
-            'bg-yellow-500/10 border-yellow-500/20 text-yellow-700': isAwaitingQR,
+            'bg-yellow-500/10 border-yellow-500/20 text-yellow-700':
+              isAwaitingQR,
             'bg-n-alpha-2 border-n-weak text-n-slate-10':
               bridgeStatus === 'disconnected' || bridgeStatus === 'loading',
-            'bg-red-500/10 border-red-500/20 text-red-700': bridgeStatus === 'error',
+            'bg-red-500/10 border-red-500/20 text-red-700':
+              bridgeStatus === 'error',
           }"
         >
           <span
@@ -191,7 +193,9 @@ onUnmounted(() => {
           <span class="i-ri-phone-fill text-white size-6" />
         </div>
         <div>
-          <p class="text-xs font-bold text-n-slate-10 uppercase tracking-wide">Número Conectado</p>
+          <p class="text-xs font-bold text-n-slate-10 uppercase tracking-wide">
+            Número Conectado
+          </p>
           <p class="text-lg font-black text-n-slate-12">
             {{ formatPhone(ownNumber) }}
           </p>
@@ -204,8 +208,12 @@ onUnmounted(() => {
         class="flex items-center gap-4 p-4 bg-n-alpha-2 rounded-xl border border-n-weak"
       >
         <div class="relative w-6 h-6 flex-shrink-0">
-          <div class="absolute inset-0 border-2 border-n-brand/20 rounded-full"></div>
-          <div class="absolute inset-0 border-2 border-n-brand border-t-transparent rounded-full animate-spin"></div>
+          <div
+            class="absolute inset-0 border-2 border-n-brand/20 rounded-full"
+          />
+          <div
+            class="absolute inset-0 border-2 border-n-brand border-t-transparent rounded-full animate-spin"
+          />
         </div>
         <p class="text-sm font-medium text-n-slate-11">
           Limpando sessão e gerando novo QR Code...
@@ -251,8 +259,10 @@ onUnmounted(() => {
           v-if="isConnected && !qrCode"
           class="text-center p-8 bg-n-alpha-2 rounded-2xl border border-n-weak w-full flex flex-col items-center"
         >
-          <div class="w-14 h-14 bg-green-500/10 rounded-full flex items-center justify-center mb-4">
-             <span class="i-ri-check-double-line size-8 text-green-500" />
+          <div
+            class="w-14 h-14 bg-green-500/10 rounded-full flex items-center justify-center mb-4"
+          >
+            <span class="i-ri-check-double-line size-8 text-green-500" />
           </div>
           <p class="text-sm font-bold text-n-slate-12">
             WhatsApp já está conectado
@@ -262,28 +272,40 @@ onUnmounted(() => {
           </p>
         </div>
         <div v-else-if="qrCode" class="flex flex-col items-center gap-4">
-          <div class="p-4 bg-white rounded-2xl border border-n-weak shadow-inner">
+          <div
+            class="p-4 bg-white rounded-2xl border border-n-weak shadow-inner"
+          >
             <img
               :src="qrCode"
               alt="WhatsApp QR Code"
               class="w-52 h-52 rounded-lg"
             />
           </div>
-          <div class="flex items-center gap-2 text-xs text-n-slate-10 font-medium bg-n-alpha-2 px-4 py-2 rounded-full">
+          <div
+            class="flex items-center gap-2 text-xs text-n-slate-10 font-medium bg-n-alpha-2 px-4 py-2 rounded-full"
+          >
             <span class="i-ri-information-fill" />
             Abra o WhatsApp > Dispositivos Conectados > Conectar
           </div>
         </div>
         <div v-else class="flex items-center gap-4 p-6">
-          <div class="w-6 h-6 border-2 border-n-brand/30 border-t-n-brand rounded-full animate-spin" />
-          <p class="text-sm font-medium text-n-slate-10 italic">Gerando QR Code...</p>
+          <div
+            class="w-6 h-6 border-2 border-n-brand/30 border-t-n-brand rounded-full animate-spin"
+          />
+          <p class="text-sm font-medium text-n-slate-10 italic">
+            Gerando QR Code...
+          </p>
         </div>
       </div>
     </div>
 
     <!-- Card informativo -->
-    <div class="rounded-xl border border-n-weak bg-n-alpha-1 p-5 flex gap-4 transition-all hover:border-n-brand/30">
-      <div class="w-10 h-10 bg-n-alpha-2 rounded-lg flex items-center justify-center flex-shrink-0">
+    <div
+      class="rounded-xl border border-n-weak bg-n-alpha-1 p-5 flex gap-4 transition-all hover:border-n-brand/30"
+    >
+      <div
+        class="w-10 h-10 bg-n-alpha-2 rounded-lg flex items-center justify-center flex-shrink-0"
+      >
         <span class="i-ri-shield-check-line text-n-brand size-6" />
       </div>
       <div class="text-sm text-n-slate-10 space-y-1.5">
@@ -292,7 +314,8 @@ onUnmounted(() => {
           entrada possui um ambiente exclusivo para maior estabilidade.
         </p>
         <p>
-          <strong class="text-n-slate-12">Segurança:</strong> As credenciais são criptografadas e o reset limpa todos os dados temporários.
+          <strong class="text-n-slate-12">Segurança:</strong> As credenciais são
+          criptografadas e o reset limpa todos os dados temporários.
         </p>
       </div>
     </div>
@@ -313,9 +336,7 @@ onUnmounted(() => {
             <span class="i-ri-error-warning-fill size-10 text-red-500" />
           </div>
           <div class="space-y-2">
-            <h3 class="text-xl font-black text-n-slate-12">
-              Reset da Sessão
-            </h3>
+            <h3 class="text-xl font-black text-n-slate-12">Reset da Sessão</h3>
             <p class="text-sm text-n-slate-11 leading-relaxed">
               Isso irá limpar as credenciais salvas desta caixa de entrada.
               <strong class="text-n-slate-12 block mt-1">Apenas esta caixa será afetada.</strong>

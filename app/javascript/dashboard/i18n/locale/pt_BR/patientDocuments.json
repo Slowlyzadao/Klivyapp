@@ -26,6 +26,7 @@
       "PREVIEW_TITLE": "Visualizar documento",
       "DOWNLOAD_TITLE": "Baixar documento",
       "WHATSAPP_TITLE": "Enviar via WhatsApp",
+      "SIGN_TITLE": "Enviar pra assinatura",
       "DELETE_TITLE": "Excluir documento"
     },
     "PREVIEW": {
@@ -57,6 +58,11 @@
       "SUBTITLE": "O PDF será gerado e baixado automaticamente.",
       "TYPE_LABEL": "Tipo de Documento",
       "TYPE_PLACEHOLDER": "Selecione o tipo",
+      "TEMPLATE_LABEL": "Modelo",
+      "TEMPLATE_OPTIONAL": "(opcional — use o padrão se não escolher)",
+      "TEMPLATE_PLACEHOLDER": "Padrão (sem modelo)",
+      "TEMPLATE_DEFAULT": "Padrão (sem modelo)",
+      "TEMPLATE_LOADING": "Carregando modelos...",
       "DOCUMENT_TITLE_LABEL": "Título",
       "DOCUMENT_TITLE_OPTIONAL": "(opcional)",
       "ATESTADO": {

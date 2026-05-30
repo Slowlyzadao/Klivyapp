@@ -1,0 +1,43 @@
+{
+  "SIGNATURES": {
+    "MODAL": {
+      "TITLE": "Enviar pra Assinatura",
+      "INTRO": "Preencha os dados do signatário. Vamos enviar o documento por e-mail (e WhatsApp, se preenchido).",
+      "SEND": "Enviar",
+      "SENDING": "Enviando..."
+    },
+    "FIELDS": {
+      "SIGNER_NAME": "Nome do signatário",
+      "SIGNER_EMAIL": "E-mail",
+      "SIGNER_PHONE": "WhatsApp / telefone",
+      "MESSAGE": "Mensagem ao signatário",
+      "MESSAGE_PLACEHOLDER": "Ex: Olá, segue o termo pra sua assinatura. Em caso de dúvidas..."
+    },
+    "STATUS": {
+      "PROVIDER_LABEL": "Provedor",
+      "SIGNER": "Signatário",
+      "ENVELOPE": "Envelope",
+      "SIGNING_URL": "Link de assinatura"
+    },
+    "TIMELINE": {
+      "SENT": "Enviado",
+      "VIEWED": "Visualizado",
+      "SIGNED": "Assinado",
+      "COMPLETED": "Concluído"
+    },
+    "ACTIONS": {
+      "REFRESH": "Atualizar",
+      "RESEND": "Reenviar",
+      "CANCEL": "Cancelar envelope"
+    },
+    "PROMPT": {
+      "CANCEL_REASON": "Motivo do cancelamento (opcional):"
+    },
+    "MESSAGES": {
+      "SENT": "Convite de assinatura enviado.",
+      "CANCELLED": "Envelope cancelado.",
+      "RESENT": "Convite reenviado.",
+      "REFRESHED": "Status atualizado."
+    }
+  }
+}

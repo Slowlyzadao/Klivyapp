@@ -1,6 +1,10 @@
 <script setup>
 import { h, ref, computed, onMounted } from 'vue';
-import { provideSidebarContext, useSidebarResize } from './provider';
+import {
+  provideSidebarContext,
+  useSidebarResize,
+  useSidebarForceCollapse,
+} from './provider';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useKbd } from 'dashboard/composables/utils/useKbd';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -88,11 +92,22 @@ const {
   snapToCollapsed,
   snapToExpanded,
   COLLAPSED_THRESHOLD,
+  MIN_WIDTH,
 } = useSidebarResize();
+
+// Override transiente (telas de edição full-screen). Quando ativo, força o
+// colapso sem tocar na largura persistida do usuário.
+const { forcedCollapsed } = useSidebarForceCollapse();
 
 // On mobile, sidebar is always expanded (flyout mode)
 const isEffectivelyCollapsed = computed(
-  () => !isMobile.value && isCollapsed.value
+  () => !isMobile.value && (isCollapsed.value || forcedCollapsed.value)
+);
+
+// Largura efetiva: quando forçado a colapsar, vai pra MIN_WIDTH (sem
+// persistir); senão usa a largura escolhida pelo usuário.
+const effectiveWidth = computed(() =>
+  forcedCollapsed.value ? MIN_WIDTH : sidebarWidth.value
 );
 
 // Resize handle logic
@@ -234,6 +249,9 @@ const SIDEBAR_NAME_TO_MODULE = {
   Agenda: 'agenda',
   Teleconsulta: 'agenda', // Sprint L — reaproveita o módulo Agenda (mesma RBAC)
   Patients: 'patients',
+  Documents: 'patients', // Fase 0 — reusa o módulo Patients (mesma RBAC).
+  //                       Fase 1 pode separar em módulo próprio se a clínica
+  //                       quiser permissão dedicada pra editar templates.
   Financial: 'financial',
   Contacts: 'contacts',
   Reports: 'reports',
@@ -277,20 +295,20 @@ const CHILD_GATES = {
     rules: {
       // Itens unificados pós-deprecação v1 (Etapa 1, 2026-05-11) — labels v1
       // mantidos mas todos apontam pras rotas v2 (financial_v2_*).
-      'Financial Dashboard':         ['financial', 'view_dashboard'],
-      'Financial Cash Flow':         ['financial', 'view_cashflow'],
-      'Financial Receivables':       ['financial', 'view_receivables'],
-      'Financial Payables':          ['financial', 'view_payables'],
-      'Financial DRE':               ['financial', 'view_dre'],
-      'Financial Commissions':       ['financial', 'view_reports'],
-      'Financial Reports Hub':       ['financial', 'view_reports'],
-      'Financial Audit':             ['financial', 'view_reports'],
-      'Financial Backups':           ['financial', 'manage_settings'],
+      'Financial Dashboard': ['financial', 'view_dashboard'],
+      'Financial Cash Flow': ['financial', 'view_cashflow'],
+      'Financial Receivables': ['financial', 'view_receivables'],
+      'Financial Payables': ['financial', 'view_payables'],
+      'Financial DRE': ['financial', 'view_dre'],
+      'Financial Commissions': ['financial', 'view_reports'],
+      'Financial Reports Hub': ['financial', 'view_reports'],
+      'Financial Audit': ['financial', 'view_reports'],
+      'Financial Backups': ['financial', 'manage_settings'],
       'Financial Accountant Export': ['financial', 'view_reports'],
-      'Financial LGPD':              ['financial', 'manage_settings'],
-      'Financial Cash Register':     ['financial', 'view_cash_register'],
-      'Financial Reclassify':        ['financial', 'view_reports'],
-      'Financial Settings':          ['financial', 'manage_settings'],
+      'Financial LGPD': ['financial', 'manage_settings'],
+      'Financial Cash Register': ['financial', 'view_cash_register'],
+      'Financial Reclassify': ['financial', 'view_reports'],
+      'Financial Settings': ['financial', 'manage_settings'],
     },
   },
   Contacts: {
@@ -605,6 +623,17 @@ const menuItems = computed(() => {
       to: accountScopedRoute('patients_dashboard_index'),
       activeOn: ['patients_dashboard_index'],
     },
+    // Aba Documentos: editor visual de templates (TipTap) + variáveis dinâmicas
+    // + biblioteca Klivy + geração de PDF via Grover. Vive em
+    // plugins/document_templates/. Posicionada após Patients porque os
+    // templates alimentam as áreas Documentos/Consentimentos dentro do paciente.
+    {
+      name: 'Documents',
+      icon: 'i-lucide-file-text',
+      label: t('SIDEBAR.DOCUMENTS', 'Documentos'),
+      to: accountScopedRoute('documents_dashboard_index'),
+      activeOn: ['documents_dashboard_index'],
+    },
     {
       name: 'Financial',
       icon: 'i-lucide-wallet',
@@ -653,8 +682,13 @@ const menuItems = computed(() => {
         {
           name: 'Financial Reports Hub',
           label: t('SIDEBAR.FINANCIAL_REPORTS', 'Relatórios'),
-          to: accountScopedRoute('financial_v2_reports_hub_tab', { tab: 'expenses' }),
-          activeOn: ['financial_v2_reports_hub', 'financial_v2_reports_hub_tab'],
+          to: accountScopedRoute('financial_v2_reports_hub_tab', {
+            tab: 'expenses',
+          }),
+          activeOn: [
+            'financial_v2_reports_hub',
+            'financial_v2_reports_hub_tab',
+          ],
         },
         {
           name: 'Financial Audit',
@@ -695,7 +729,9 @@ const menuItems = computed(() => {
         {
           name: 'Financial Settings',
           label: t('SIDEBAR.FINANCIAL_SETTINGS', 'Configurações'),
-          to: accountScopedRoute('financial_v2_settings_tab', { tab: 'categories' }),
+          to: accountScopedRoute('financial_v2_settings_tab', {
+            tab: 'categories',
+          }),
           activeOn: ['financial_v2_settings', 'financial_v2_settings_tab'],
         },
       ],
@@ -1069,7 +1105,7 @@ const menuItems = computed(() => {
           !isResizing,
       },
     ]"
-    :style="isMobile ? undefined : { width: `${sidebarWidth}px` }"
+    :style="isMobile ? undefined : { width: `${effectiveWidth}px` }"
   >
     <section
       class="grid"
@@ -1078,7 +1114,8 @@ const menuItems = computed(() => {
       <div
         class="flex gap-2 min-w-0"
         :class="{
-          'items-center justify-center px-1 flex-col py-1': isEffectivelyCollapsed,
+          'items-center justify-center px-1 flex-col py-1':
+            isEffectivelyCollapsed,
           'items-center px-2': !isEffectivelyCollapsed,
         }"
       >
@@ -1107,7 +1144,11 @@ const menuItems = computed(() => {
           <button
             class="flex flex-shrink-0 items-center justify-center size-8 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-n-brand text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-2 transition-colors ml-auto -mr-1"
             title="Recolher menu"
-            @click="isMobileSidebarOpen ? closeMobileSidebar() : onResizeHandleDoubleClick()"
+            @click="
+              isMobileSidebarOpen
+                ? closeMobileSidebar()
+                : onResizeHandleDoubleClick()
+            "
           >
             <i class="i-lucide-panel-left-close text-lg xl:text-xl" />
           </button>

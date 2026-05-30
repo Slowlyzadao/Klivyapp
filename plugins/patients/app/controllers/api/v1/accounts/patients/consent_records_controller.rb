@@ -34,8 +34,17 @@ module Api
           end
 
           # POST /api/v1/accounts/:account_id/patients/:patient_id/consents
+          #
+          # Dois caminhos:
+          #   - `document_template_id` presente → gera via plugin
+          #     document_templates (Renderer + Grover → rendered_html).
+          #   - Sem template_id → caminho legado (body em texto puro,
+          #     preenchido pelo frontend a partir de consentTemplates.js).
           def create
             authorize ConsentRecord
+
+            return create_from_template if params[:document_template_id].present?
+
             @consent = ConsentRecord.new(consent_params)
             @consent.patient    = @patient
             @consent.account    = Current.account
@@ -51,6 +60,37 @@ module Api
             else
               render json: { errors: @consent.errors.full_messages }, status: :unprocessable_entity
             end
+          end
+
+          # Caminho novo via DocumentTemplate. Espera `document_template_id`
+          # com escopo da account corrente. O builder valida que o template
+          # é de consentimento e popula rendered_html + integrity_hash.
+          def create_from_template
+            template = ::DocumentTemplate.for_account(Current.account)
+                                         .find(params[:document_template_id])
+
+            result = ::DocumentTemplates::ConsentRecordBuilder.call(
+              template: template,
+              patient: @patient,
+              professional: current_user,
+              clinic: Current.account,
+              title: params[:title].presence || template.name,
+              observations: params[:observations],
+              expires_after_days: params[:expires_after_days]
+            )
+
+            if result.success?
+              @consent = result.consent
+              PatientAuditLog.log!(
+                account: Current.account, patient: @patient, action: 'create',
+                actor: current_user, resource: @consent, ip_address: request.remote_ip
+              )
+              render :show, status: :created
+            else
+              render_error(result.error, status: :unprocessable_entity)
+            end
+          rescue ActiveRecord::RecordNotFound
+            render_error('Template não encontrado ou sem acesso', status: :not_found)
           end
 
           # POST /api/v1/accounts/:account_id/patients/:patient_id/consents/:id/sign

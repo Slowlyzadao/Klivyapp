@@ -1,0 +1,49 @@
+// Stepper de tamanho de fonte [−][campo][+] — estilo Google Docs.
+// Botões com ícone solto; campo numérico estreito com contorno sutil.
+
+.font-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--kl-secondary);
+    cursor: pointer;
+    transition: color var(--kl-transition);
+
+    span { width: 16px; height: 16px; }
+
+    &:hover { color: var(--kl-on-surface); }
+    &:focus-visible { outline: none; color: var(--kl-primary); }
+  }
+
+  &__input {
+    width: 2.5ch;
+    box-sizing: content-box;
+    height: 30px;
+    padding: 0 6px;
+    border: 1px solid var(--kl-border-subtle);
+    border-radius: var(--kl-radius-md);
+    background: var(--kl-surface-white);
+    color: var(--kl-on-surface);
+    font-family: var(--kl-font-family);
+    font-size: var(--kl-font-body-md);
+    text-align: center;
+    transition: border-color var(--kl-transition), box-shadow var(--kl-transition);
+
+    &:hover { border-color: var(--kl-border-strong); }
+    &:focus {
+      outline: none;
+      border-color: var(--kl-primary);
+      box-shadow: 0 0 0 1px var(--kl-primary);
+    }
+  }
+}

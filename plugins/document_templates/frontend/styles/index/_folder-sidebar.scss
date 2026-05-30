@@ -1,0 +1,87 @@
+// Sidebar de pastas — card branco arredondado, label "ORGANIZAÇÃO".
+// Ícones do header (+ e -/+) SEM padding nem background. Só o glifo.
+
+.folder-sidebar {
+  flex-shrink: 0;
+  width: var(--kl-sidebar-width);
+
+  &__card {
+    padding: 16px;
+    border: 1px solid var(--kl-border-subtle);
+    border-radius: var(--kl-radius-xl);
+    background: var(--kl-surface-white);
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  &__label {
+    margin: 0;
+    font-family: inherit;
+    font-size: var(--kl-font-label-md);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--kl-secondary);
+  }
+
+  &__header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--kl-secondary);
+    cursor: pointer;
+    transition: color var(--kl-transition);
+
+    span {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      background: transparent;
+      color: var(--kl-on-surface);
+    }
+
+    &:focus-visible {
+      outline: none;
+      color: var(--kl-primary);
+    }
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__divider {
+    height: 1px;
+    margin: 8px 4px;
+    background: var(--kl-border-subtle);
+  }
+}
+
+@media (max-width: 900px) {
+  .folder-sidebar {
+    width: 100%;
+  }
+}

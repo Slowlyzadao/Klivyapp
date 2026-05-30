@@ -62,6 +62,7 @@ module Telemed
         return rejected(current, new_status, :not_allowed) unless allowed?(current, new_status)
 
         @event.update!(status: new_status.to_s)
+        clear_admissions_if_final(new_status.to_s)
         log_transition(current, new_status.to_s, source)
         ok(current, new_status.to_s)
       end
@@ -87,6 +88,18 @@ module Telemed
 
     def allowed?(current, new_status)
       ALLOWED_FROM.fetch(new_status.to_s, []).include?(current.to_s)
+    end
+
+    # 2026-05-22 — Admissões server-side ficam por evento em
+    # custom_attributes. Quando o evento entra em estado final, limpa
+    # pra que se um dia o mesmo agenda_event_id for reaberto (caso
+    # raro, mas possível via UI de undo), não venha com admissão
+    # antiga grudada. A leitura via AdmissionWindow JÁ rejeita
+    # admissão em status final — esse cleanup é defesa em profundidade
+    # + economia de JSON.
+    def clear_admissions_if_final(new_status)
+      return unless AdmissionWindow::FINAL_STATUSES.include?(new_status)
+      AdmissionWindow.clear_for!(@event)
     end
 
     def log_transition(from, to, source)

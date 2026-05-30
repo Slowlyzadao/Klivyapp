@@ -8,6 +8,13 @@
 #   3. Defaults dev (ws://localhost:7880, devkey/secret)
 #      → `livekit-server --dev` rodando local
 #
+# Em DEV, se `tmp/telemed-tunnels.json` existir (escrito pelo
+# `plugins/telemed/bin/dev-bootstrap`), a URL do LiveKit é trocada pela URL
+# pública do tunnel cloudflared (wss://*.trycloudflare.com). Sem isso, o
+# token emitido pro paciente externo aponta pra ws://localhost:7880 — que
+# não existe no laptop dele, e ainda é mixed-content quando a página vem
+# por HTTPS. As credenciais (key/secret) seguem vindo do ENV ou defaults.
+#
 # Service idempotente, leitura pura. Sem side effects.
 module Telemed
   class CredentialsResolver
@@ -17,13 +24,15 @@ module Telemed
       api_secret: 'secret'
     }.freeze
 
+    DEV_TUNNELS_FILE = 'tmp/telemed-tunnels.json'
+
     Credentials = Struct.new(:url, :api_key, :api_secret, :source, keyword_init: true) do
       def configured?
         url.present? && api_key.present? && api_secret.present?
       end
 
       def dev_mode?
-        source == :dev_defaults
+        source == :dev_defaults || source == :dev_tunnel
       end
     end
 
@@ -32,10 +41,39 @@ module Telemed
     end
 
     def call
-      from_account_setting || from_env || from_dev_defaults
+      creds = from_account_setting || from_env || from_dev_defaults
+      apply_dev_tunnel_override(creds)
     end
 
     private
+
+    # Override só da URL quando o dev-bootstrap subiu um tunnel pro LiveKit.
+    # Account setting (caso self_hosted real) NÃO é sobrescrito — a clínica
+    # tem URL própria e deve ser respeitada mesmo em dev.
+    def apply_dev_tunnel_override(creds)
+      return creds unless Rails.env.development?
+      return creds if creds.source == :account_setting
+
+      tunnel_url = dev_tunnel_livekit_url
+      return creds unless tunnel_url
+
+      Credentials.new(
+        url:        tunnel_url,
+        api_key:    creds.api_key,
+        api_secret: creds.api_secret,
+        source:     :dev_tunnel
+      )
+    end
+
+    def dev_tunnel_livekit_url
+      path = Rails.root.join(DEV_TUNNELS_FILE)
+      return nil unless File.exist?(path)
+
+      JSON.parse(File.read(path))['livekit_url'].presence
+    rescue StandardError => e
+      Rails.logger.warn("[CredentialsResolver] falha ao ler #{DEV_TUNNELS_FILE}: #{e.class}: #{e.message}")
+      nil
+    end
 
     def from_account_setting
       cfg = @account&.patient_portal_setting&.scheduling&.dig('telemedicine')

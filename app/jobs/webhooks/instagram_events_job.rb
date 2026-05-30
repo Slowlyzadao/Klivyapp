@@ -39,10 +39,22 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
       instagram_id = instagram_id(messaging)
       channel = find_channel(instagram_id)
 
-      next if channel.blank?
+      if channel.blank?
+        Rails.logger.warn(
+          "[IG_AUDIT] No channel found for instagram_id=#{instagram_id.inspect}. " \
+          "Channel::Instagram IDs registered: #{Channel::Instagram.pluck(:instagram_id).inspect}. " \
+          "Channel::FacebookPage instagram_ids registered: #{Channel::FacebookPage.where.not(instagram_id: nil).pluck(:instagram_id).inspect}. " \
+          'Message will be discarded.'
+        )
+        next
+      end
+
+      Rails.logger.info("[IG_AUDIT] Channel matched: #{channel.class.name}##{channel.id} (inbox=#{channel.inbox&.id})")
 
       if (event_name = event_name(messaging))
         send(event_name, messaging, channel)
+      else
+        Rails.logger.warn("[IG_AUDIT] Event type not supported, keys=#{messaging.keys.inspect}, supported=#{SUPPORTED_EVENTS.inspect}")
       end
     end
   end

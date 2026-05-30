@@ -1,0 +1,108 @@
+// Klivy Design System — paleta M3 + tipografia + tokens.
+//
+// Tokens escopados em classes raiz do plugin pra não vazar pro resto do
+// dashboard que ainda usa Radix tokens (rgb(var(--slate-N))).
+//
+// A paleta segue Material 3 (surface tonal palette):
+//   • primary (#003cc1) é o tom default das ações; primary-container
+//     (#1552f1) é a versão "brighter" usada em hover/focus
+//   • surface-* é a escala neutra (bg page, cards, lines, etc.)
+//   • on-* são os textos/ícones que vão SOBRE cada superfície
+//
+// Font Plus Jakarta Sans carregada via CSS @import — propaga via
+// font-family no .documents-index e descendentes.
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+// IMPORTANTE: este partial deve ser carregado em <style> NÃO-scoped pra
+// que :root resolva pro elemento <html> de verdade. Em <style scoped> o
+// Vue transforma `:root` em `:root[data-v-xxx]` que nunca casa.
+// Pattern correto: importar em <style lang="scss"> (sem scoped) nas
+// rotas raiz (DocumentsIndex, TemplateEditor) — emite globalmente e
+// todos os componentes teleportados (modais, popovers) recebem os
+// tokens via cascade do DOM.
+:root,
+.documents-index,
+.template-editor-page,
+.document-templates-scope {
+  // ── Surfaces (escala tonal neutra) ──────────────────────────────────────
+  --kl-bg: #fcf9f8;                  // page main bg
+  --kl-surface: #fcf9f8;
+  --kl-surface-white: #FFFFFF;       // card surface, sidebar inner
+  --kl-surface-low: #f6f3f2;         // card preview bg, active sidebar item, view-toggle bg
+  --kl-surface-container: #f0edec;
+  --kl-surface-high: #ebe7e7;        // inactive count badge bg
+  --kl-surface-dim: #dcd9d9;         // preview body lines, divisors fortes
+  --kl-surface-variant: #e5e2e1;
+  --kl-inverse-surface: #313030;     // count chip inside active tab
+
+  // ── On-surface (texto / ícone sobre surface) ────────────────────────────
+  --kl-on-surface: #1c1b1b;          // headings, body text, Klivy badge bg
+  --kl-on-surface-variant: #434656;  // sub-text
+  --kl-on-background: #1c1b1b;
+
+  // ── Secondary / muted ──────────────────────────────────────────────────
+  --kl-secondary: #555d7b;           // sub-text padrão
+  --kl-text-muted: #64748B;
+  --kl-outline: #747687;
+  --kl-outline-variant: #c3c5d8;
+
+  // ── Primary ────────────────────────────────────────────────────────────
+  --kl-primary: #003cc1;             // default CTAs (deep blue)
+  --kl-primary-container: #1552f1;   // hover, active state alternates
+  --kl-on-primary: #FFFFFF;
+  --kl-on-primary-container: #dadfff;
+  --kl-primary-fixed: #dde1ff;       // "Personalizado" badge bg
+  --kl-on-primary-fixed-variant: #0038b6; // "Personalizado" badge text
+  --kl-primary-fixed-dim: #b7c4ff;
+
+  // ── Borders ────────────────────────────────────────────────────────────
+  --kl-border-subtle: #E5E7EB;
+  --kl-border-strong: #c3c5d8;
+
+  // ── Semantic ───────────────────────────────────────────────────────────
+  --kl-error: #ba1a1a;
+  --kl-error-container: #ffdad6;
+  --kl-on-error: #FFFFFF;
+
+  // ── Radii ──────────────────────────────────────────────────────────────
+  --kl-radius-sm: 0.25rem;   // 4px
+  --kl-radius-md: 0.5rem;    // 8px
+  --kl-radius-lg: 0.5rem;    // 8px
+  --kl-radius-xl: 0.75rem;   // 12px
+  --kl-radius-pill: 9999px;
+
+  // ── Spacing ────────────────────────────────────────────────────────────
+  --kl-stack-sm: 8px;
+  --kl-stack-md: 16px;
+  --kl-stack-lg: 24px;
+  --kl-gutter: 24px;
+  --kl-container-padding: 32px;
+  --kl-sidebar-width: 256px;
+
+  // ── Typography (sizes) ─────────────────────────────────────────────────
+  --kl-font-headline-lg: 32px;       // 32/1.2/-0.02em/700
+  --kl-font-headline-md: 24px;       // 24/1.3/-0.01em/700
+  --kl-font-headline-sm: 18px;       // 18/1.4/600
+  --kl-font-body-lg: 16px;           // 16/1.6/400
+  --kl-font-body-md: 14px;           // 14/1.5/400
+  --kl-font-label-md: 12px;          // 12/1.2/0.05em/600
+
+  // ── Font family ────────────────────────────────────────────────────────
+  --kl-font-family: 'Plus Jakarta Sans', system-ui, -apple-system,
+    'Segoe UI', Roboto, sans-serif;
+
+  // ── Sombras ────────────────────────────────────────────────────────────
+  --kl-shadow-card: 0 4px 20px rgba(7, 16, 42, 0.05);
+  --kl-shadow-sm: 0 1px 2px rgba(7, 16, 42, 0.06);
+  --kl-shadow-md: 0 4px 12px rgba(7, 16, 42, 0.06);
+  --kl-ring: 0 0 0 3px rgba(21, 82, 241, 0.18);
+
+  // ── Transitions ────────────────────────────────────────────────────────
+  --kl-transition: 160ms ease;
+
+  // ── Aplicação: font family + smoothing ──────────────────────────────────
+  font-family: var(--kl-font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

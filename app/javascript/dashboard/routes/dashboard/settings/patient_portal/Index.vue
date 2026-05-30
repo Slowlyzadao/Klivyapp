@@ -61,14 +61,28 @@ export default {
   },
   computed: {
     ...mapGetters({ accountId: 'getCurrentAccountId' }),
-    activePreset() { return this.setting?.active_preset ?? 'autonomy_guided'; },
-    presets()      { return PRESETS; },
-    scheduling()   { return this.setting?.scheduling ?? {}; },
-    financial()    { return this.setting?.financial ?? {}; },
-    messaging()    { return this.setting?.messaging ?? {}; },
-    documents()    { return this.setting?.documents ?? {}; },
+    activePreset() {
+      return this.setting?.active_preset ?? 'autonomy_guided';
+    },
+    presets() {
+      return PRESETS;
+    },
+    scheduling() {
+      return this.setting?.scheduling ?? {};
+    },
+    financial() {
+      return this.setting?.financial ?? {};
+    },
+    messaging() {
+      return this.setting?.messaging ?? {};
+    },
+    documents() {
+      return this.setting?.documents ?? {};
+    },
   },
-  mounted() { this.load(); },
+  mounted() {
+    this.load();
+  },
   methods: {
     async load() {
       this.loading = true;
@@ -76,7 +90,10 @@ export default {
         const { data } = await PatientPortalSettingsAPI.show();
         this.setting = data.data;
       } catch (e) {
-        useAlert(this.$t('GENERAL_SETTINGS.UPDATE.ERROR') || 'Não foi possível carregar.');
+        useAlert(
+          this.$t('GENERAL_SETTINGS.UPDATE.ERROR') ||
+            'Não foi possível carregar.'
+        );
       } finally {
         this.loading = false;
       }
@@ -89,7 +106,9 @@ export default {
         this.setting = data.data;
         useAlert('Preset aplicado com sucesso.');
       } catch (e) {
-        useAlert(e?.response?.data?.errors?.[0]?.message || 'Falha ao aplicar preset.');
+        useAlert(
+          e?.response?.data?.errors?.[0]?.message || 'Falha ao aplicar preset.'
+        );
       } finally {
         this.applying = null;
       }
@@ -101,13 +120,13 @@ export default {
 <template>
   <SettingsLayout
     :is-loading="loading"
-    :loading-message="'Carregando configurações...'"
+    loading-message="Carregando configurações..."
   >
     <template #header>
       <BaseSettingsHeader
         title="Portal do Paciente"
         description="Defina como os pacientes interagem com sua clínica via portal — preset, agendamento, mensageria e pagamento."
-        :link-text="''"
+        link-text=""
         feature-name="patient_portal"
       />
     </template>
@@ -142,11 +161,26 @@ export default {
           subtitle="Regras vigentes que o portal aplica ao paciente."
         >
           <KeyValueRow label="Modo" :value="scheduling.scheduling_mode" />
-          <KeyValueRow label="Primeira consulta" :value="scheduling.first_visit_mode" />
-          <KeyValueRow label="Antecedência mínima (h)" :value="scheduling.min_lead_time_hours" />
-          <KeyValueRow label="Janela futura (dias)" :value="scheduling.max_future_days" />
-          <KeyValueRow label="Permite no mesmo dia" :value="!!scheduling.allow_same_day" />
-          <KeyValueRow label="Bloqueia se inadimplente" :value="!!scheduling.block_if_overdue" />
+          <KeyValueRow
+            label="Primeira consulta"
+            :value="scheduling.first_visit_mode"
+          />
+          <KeyValueRow
+            label="Antecedência mínima (h)"
+            :value="scheduling.min_lead_time_hours"
+          />
+          <KeyValueRow
+            label="Janela futura (dias)"
+            :value="scheduling.max_future_days"
+          />
+          <KeyValueRow
+            label="Permite no mesmo dia"
+            :value="!!scheduling.allow_same_day"
+          />
+          <KeyValueRow
+            label="Bloqueia se inadimplente"
+            :value="!!scheduling.block_if_overdue"
+          />
         </SettingSection>
 
         <!-- Financial read-only -->
@@ -154,9 +188,18 @@ export default {
           title="Financeiro"
           subtitle="Quais ações de pagamento ficam liberadas no portal."
         >
-          <KeyValueRow label="Métodos de pagamento" :value="financial.payment_methods || []" />
-          <KeyValueRow label="Mostra histórico" :value="!!financial.show_paid_history" />
-          <KeyValueRow label="Bloqueia portal por dias em atraso" :value="financial.block_portal_if_overdue_days" />
+          <KeyValueRow
+            label="Métodos de pagamento"
+            :value="financial.payment_methods || []"
+          />
+          <KeyValueRow
+            label="Mostra histórico"
+            :value="!!financial.show_paid_history"
+          />
+          <KeyValueRow
+            label="Bloqueia portal por dias em atraso"
+            :value="financial.block_portal_if_overdue_days"
+          />
         </SettingSection>
 
         <!-- Messaging read-only -->
@@ -164,10 +207,22 @@ export default {
           title="Mensageria"
           subtitle="Conversa no portal. As keywords de urgência disparam o modal de triagem."
         >
-          <KeyValueRow label="Habilitada" :value="!!messaging.messaging_enabled" />
-          <KeyValueRow label="Direta com profissional" :value="!!messaging.allow_direct_professional" />
-          <KeyValueRow label="Keywords de urgência" :value="messaging.urgent_keyword_list || []" />
-          <KeyValueRow label="Ação ao detectar urgência" :value="messaging.urgent_action" />
+          <KeyValueRow
+            label="Habilitada"
+            :value="!!messaging.messaging_enabled"
+          />
+          <KeyValueRow
+            label="Direta com profissional"
+            :value="!!messaging.allow_direct_professional"
+          />
+          <KeyValueRow
+            label="Keywords de urgência"
+            :value="messaging.urgent_keyword_list || []"
+          />
+          <KeyValueRow
+            label="Ação ao detectar urgência"
+            :value="messaging.urgent_action"
+          />
         </SettingSection>
 
         <!-- Documents read-only -->
@@ -175,14 +230,27 @@ export default {
           title="Documentos"
           subtitle="Quais tipos ficam expostos no portal e quais podem ser pedidos."
         >
-          <KeyValueRow label="Tipos visíveis" :value="documents.document_types_exposed || []" />
-          <KeyValueRow label="Solicitação habilitada" :value="!!documents.allow_document_request" />
-          <KeyValueRow label="Aprovação automática (simples)" :value="!!documents.auto_approve_simple_requests" />
-          <KeyValueRow label="TTL link compartilhado (min)" :value="documents.document_link_ttl_minutes" />
+          <KeyValueRow
+            label="Tipos visíveis"
+            :value="documents.document_types_exposed || []"
+          />
+          <KeyValueRow
+            label="Solicitação habilitada"
+            :value="!!documents.allow_document_request"
+          />
+          <KeyValueRow
+            label="Aprovação automática (simples)"
+            :value="!!documents.auto_approve_simple_requests"
+          />
+          <KeyValueRow
+            label="TTL link compartilhado (min)"
+            :value="documents.document_link_ttl_minutes"
+          />
         </SettingSection>
 
         <p class="text-xs text-n-slate-11 mt-2">
-          Edição granular dos jsonbs entra em fase futura. Hoje, alterar via preset ou via API
+          Edição granular dos jsonbs entra em fase futura. Hoje, alterar via
+          preset ou via API
           <code class="px-1 py-0.5 bg-n-solid-2 rounded">PATCH /api/v1/accounts/:id/patient_portal/setting</code>.
         </p>
       </div>

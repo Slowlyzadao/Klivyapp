@@ -19,6 +19,9 @@ class ProposedEvolution < ApplicationRecord
   # `support_unencrypted_data = true` permite migração suave.
   encrypts :raw_markdown
   encrypts :reviewer_notes
+  # 2026-05-22 — Resumo Executivo dedicado (Markdown renderizado pela UI;
+  # SOAP S/O/A/P fica em texto corrido nos cards). Mesma config encrypted.
+  encrypts :summary
 
   belongs_to :telemed_recording
   belongs_to :clinical_note, optional: true
@@ -55,17 +58,20 @@ class ProposedEvolution < ApplicationRecord
     )
   end
 
-  # Update parcial do SOAP/markdown sem mudar status — usado quando dentista
-  # edita antes de aprovar. Marca como `edited` na primeira modificação.
-  def apply_edit!(soap_structure: nil, raw_markdown: nil, actor:)
+  # Update parcial do SOAP/markdown/procedure_fields sem mudar status — usado
+  # quando dentista edita antes de aprovar. Marca como `edited` na primeira
+  # modificação. 2026-05-26: procedure_fields adicionado pro novo formulário
+  # de Registro de Procedimento.
+  def apply_edit!(soap_structure: nil, raw_markdown: nil, procedure_fields: nil, actor:)
     raise 'Proposta já aprovada' if status == 'approved'
 
     attrs = {}
-    attrs[:soap_structure] = soap_structure if soap_structure.present?
-    attrs[:raw_markdown]   = raw_markdown   if raw_markdown.present?
-    attrs[:status]         = 'edited' if status == 'pending_review'
-    attrs[:reviewed_by]    = actor
-    attrs[:reviewed_at]    = Time.current
+    attrs[:soap_structure]   = soap_structure   if soap_structure.present?
+    attrs[:raw_markdown]     = raw_markdown     if raw_markdown.present?
+    attrs[:procedure_fields] = procedure_fields if procedure_fields.is_a?(Hash)
+    attrs[:status]           = 'edited' if status == 'pending_review'
+    attrs[:reviewed_by]      = actor
+    attrs[:reviewed_at]      = Time.current
 
     update!(attrs)
   end

@@ -1,0 +1,52 @@
+// Layout da tela DocumentsIndex.vue (lista de templates).
+//
+// Estrutura (matches mockup M3 Klivy):
+//   ┌─── header (hero + toolbar) ───────────────────┐
+//   ├──────┬────────────────────────────────────────┤
+//   │ side │  template-grid OR template-list        │  ← owned
+//   │ bar  │                                        │
+//   ├──────┴────────────────────────────────────────┤
+//   ou só
+//   ├───────────────────────────────────────────────┤
+//   │  template-grid/list full-width                │  ← klivy
+//   └───────────────────────────────────────────────┘
+//
+// Importa tokens Klivy aqui pq é o partial-raiz da página — todos os filhos
+// herdam as custom properties --kl-* via cascade DOM.
+
+@use '../variables' as *;
+// klivy-tokens é importado via <style> não-scoped no DocumentsIndex.vue
+// pra que :root atinja <html> globalmente (Teleports inclusos).
+
+.documents-index {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  background: var(--kl-bg);
+  color: var(--kl-on-surface);
+  overflow-y: auto;
+
+  &__body {
+    display: flex;
+    flex: 1;
+    gap: var(--kl-gutter);
+    padding: 0 var(--kl-container-padding) 48px;
+    min-height: 0;
+  }
+
+  &__main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .documents-index__body {
+    flex-direction: column;
+    padding: 0 20px 32px;
+  }
+}

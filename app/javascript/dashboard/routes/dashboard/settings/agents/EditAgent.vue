@@ -66,7 +66,9 @@ const agentCredentials = ref({ email: props.email });
 const agendaProvider = ref(props.isAgendaProvider);
 
 const agendaProviderInherited = computed(
-  () => props.isAgendaProviderOverride === null || props.isAgendaProviderOverride === undefined
+  () =>
+    props.isAgendaProviderOverride === null ||
+    props.isAgendaProviderOverride === undefined
 );
 const agendaProviderHelpText = computed(() => {
   if (!agendaProviderInherited.value) {

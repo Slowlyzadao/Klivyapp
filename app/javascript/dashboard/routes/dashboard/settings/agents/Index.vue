@@ -271,10 +271,7 @@ const confirmDeletion = () => {
                     </div>
                   </div>
                 </span>
-                <span
-                  v-else
-                  class="block w-fit text-body-main text-n-slate-11"
-                >
+                <span v-else class="block w-fit text-body-main text-n-slate-11">
                   {{ getAgentRoleName(agent) }}
                 </span>
                 <div class="w-px h-3 bg-n-strong rounded-lg" />

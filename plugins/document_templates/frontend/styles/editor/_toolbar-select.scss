@@ -1,0 +1,44 @@
+// Select da toolbar (fonte / tamanho). Visual minimalista estilo Google Docs:
+// sem borda em repouso, hover/focus revelam o contorno.
+
+.tb-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+
+  &__el {
+    width: 100%;
+    height: 100%;
+    padding: 0 28px 0 10px;
+    border: 1px solid transparent;
+    border-radius: var(--kl-radius-md);
+    background: transparent;
+    color: var(--kl-on-surface);
+    font-family: var(--kl-font-family);
+    font-size: var(--kl-font-body-md);
+    cursor: pointer;
+    appearance: none;
+    transition: border-color var(--kl-transition), background var(--kl-transition);
+
+    &:hover {
+      border-color: var(--kl-border-subtle);
+      background: var(--kl-surface-low);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--kl-primary);
+      box-shadow: 0 0 0 1px var(--kl-primary);
+    }
+  }
+
+  &__chevron {
+    position: absolute;
+    right: 8px;
+    width: 16px;
+    height: 16px;
+    color: var(--kl-secondary);
+    pointer-events: none;
+  }
+}

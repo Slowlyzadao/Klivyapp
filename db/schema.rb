@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_05_21_000002) do
+ActiveRecord::Schema[7.1].define(version: 2026_05_27_000005) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1341,8 +1341,11 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_21_000002) do
     t.text "body"
     t.string "document_type"
     t.text "observations"
+    t.bigint "document_template_id"
+    t.text "rendered_html"
     t.index ["account_id"], name: "index_consent_records_on_account_id"
     t.index ["deleted_at"], name: "index_consent_records_on_deleted_at"
+    t.index ["document_template_id"], name: "index_consent_records_on_document_template_id"
     t.index ["expires_at"], name: "index_consent_records_on_expires_at"
     t.index ["form_template_id"], name: "index_consent_records_on_form_template_id"
     t.index ["patient_id", "status"], name: "index_consent_records_on_patient_id_and_status"
@@ -1600,6 +1603,50 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_21_000002) do
     t.index ["kind"], name: "index_discount_coupons_on_kind"
   end
 
+  create_table "document_template_folders", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "parent_id"
+    t.string "name", limit: 120, null: false
+    t.integer "position", default: 0, null: false
+    t.string "color", limit: 16
+    t.string "icon", limit: 32
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "name"], name: "idx_doc_tpl_folders_unique_root_name_per_account", unique: true, where: "(parent_id IS NULL)"
+    t.index ["account_id", "parent_id", "position"], name: "idx_doc_tpl_folders_account_parent_position"
+    t.index ["account_id"], name: "index_document_template_folders_on_account_id"
+    t.index ["parent_id"], name: "index_document_template_folders_on_parent_id"
+  end
+
+  create_table "document_templates", force: :cascade do |t|
+    t.bigint "account_id"
+    t.bigint "folder_id"
+    t.bigint "created_by_user_id"
+    t.bigint "source_template_id"
+    t.string "name", limit: 200, null: false
+    t.text "description"
+    t.string "document_type", null: false
+    t.jsonb "content_json", default: {}, null: false
+    t.text "content_html_cached"
+    t.string "source", default: "clinic", null: false
+    t.string "status", default: "active", null: false
+    t.integer "version", default: 1, null: false
+    t.string "paper_size", default: "A4"
+    t.string "orientation", default: "portrait"
+    t.jsonb "metadata", default: {}
+    t.datetime "archived_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "document_type", "status"], name: "idx_doc_tpls_account_type_status"
+    t.index ["account_id", "folder_id"], name: "idx_doc_tpls_account_folder"
+    t.index ["account_id"], name: "index_document_templates_on_account_id"
+    t.index ["archived_at"], name: "index_document_templates_on_archived_at"
+    t.index ["created_by_user_id"], name: "index_document_templates_on_created_by_user_id"
+    t.index ["folder_id"], name: "index_document_templates_on_folder_id"
+    t.index ["source", "document_type"], name: "idx_doc_tpls_klivy_library", where: "(account_id IS NULL)"
+    t.index ["source_template_id"], name: "index_document_templates_on_source_template_id"
+  end
+
   create_table "documents", force: :cascade do |t|
     t.bigint "patient_id", null: false
     t.bigint "account_id", null: false
@@ -1620,12 +1667,17 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_21_000002) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "document_template_id"
+    t.text "rendered_html"
+    t.string "pdf_hash", limit: 64
     t.index ["account_id"], name: "index_documents_on_account_id"
     t.index ["deleted_at"], name: "index_documents_on_deleted_at"
+    t.index ["document_template_id"], name: "index_documents_on_document_template_id"
     t.index ["document_type"], name: "index_documents_on_document_type"
     t.index ["form_template_id"], name: "index_documents_on_form_template_id"
     t.index ["patient_id", "document_type"], name: "index_documents_on_patient_id_and_document_type"
     t.index ["patient_id"], name: "index_documents_on_patient_id"
+    t.index ["pdf_hash"], name: "index_documents_on_pdf_hash"
     t.index ["status"], name: "index_documents_on_status"
   end
 
@@ -3250,10 +3302,14 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_21_000002) do
     t.integer "output_tokens"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "summary"
+    t.jsonb "procedure_fields", default: {}, null: false
     t.index ["clinical_note_id"], name: "index_proposed_evolutions_on_clinical_note_id"
     t.index ["reviewed_by_id"], name: "index_proposed_evolutions_on_reviewed_by_id"
+    t.index ["status", "updated_at"], name: "idx_proposed_evolutions_status_updated"
     t.index ["status"], name: "index_proposed_evolutions_on_status"
     t.index ["telemed_recording_id", "created_at"], name: "index_proposed_evolutions_on_recording_and_created"
+    t.index ["telemed_recording_id"], name: "idx_proposed_evolutions_unique_pending_per_recording", unique: true, where: "((status)::text = 'pending_review'::text)"
     t.index ["telemed_recording_id"], name: "index_proposed_evolutions_on_telemed_recording_id"
   end
 
@@ -3356,6 +3412,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_21_000002) do
     t.datetime "patient_signature_remote_link_expires_at"
     t.string "patient_signature_ip"
     t.text "patient_signature_device_info"
+    t.bigint "proposed_evolution_id"
     t.index ["account_id"], name: "index_session_logs_on_account_id"
     t.index ["appointment_id"], name: "index_session_logs_on_appointment_id"
     t.index ["deleted_at"], name: "index_session_logs_on_deleted_at"
@@ -3368,9 +3425,42 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_21_000002) do
     t.index ["patient_signature_remote_token"], name: "idx_session_logs_patient_signature_token", unique: true, where: "(patient_signature_remote_token IS NOT NULL)"
     t.index ["performed_at"], name: "index_session_logs_on_performed_at"
     t.index ["professional_id"], name: "index_session_logs_on_professional_id"
+    t.index ["proposed_evolution_id"], name: "index_session_logs_on_proposed_evolution_id"
     t.index ["signed_by_id"], name: "index_session_logs_on_signed_by_id"
     t.index ["treatment_item_id"], name: "index_session_logs_on_treatment_item_id"
     t.index ["treatment_plan_id"], name: "index_session_logs_on_treatment_plan_id"
+  end
+
+  create_table "signature_requests", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "signable_type", null: false
+    t.bigint "signable_id", null: false
+    t.bigint "requested_by_user_id"
+    t.string "provider", default: "mock", null: false
+    t.string "external_id", limit: 128
+    t.string "signing_url", limit: 2048
+    t.string "status", default: "pending", null: false
+    t.string "signer_name", limit: 200
+    t.string "signer_email", limit: 255
+    t.string "signer_phone", limit: 32
+    t.string "signer_cpf", limit: 14
+    t.text "message"
+    t.datetime "sent_at"
+    t.datetime "viewed_at"
+    t.datetime "signed_at"
+    t.datetime "completed_at"
+    t.datetime "cancelled_at"
+    t.datetime "expires_at"
+    t.jsonb "audit_log", default: [], null: false
+    t.string "original_pdf_hash", limit: 64
+    t.string "signed_pdf_hash", limit: 64
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "idx_signature_requests_account_status"
+    t.index ["account_id"], name: "index_signature_requests_on_account_id"
+    t.index ["provider", "external_id"], name: "idx_signature_requests_external_id_unique", unique: true, where: "(external_id IS NOT NULL)"
+    t.index ["requested_by_user_id"], name: "index_signature_requests_on_requested_by_user_id"
+    t.index ["signable_type", "signable_id"], name: "index_signature_requests_on_signable"
   end
 
   create_table "sla_events", force: :cascade do |t|
@@ -3508,8 +3598,10 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_21_000002) do
     t.string "composite_audio_key"
     t.datetime "archived_at"
     t.string "recording_kind", default: "audio", null: false
+    t.index ["account_id", "created_at"], name: "idx_telemed_recordings_active_account_created", where: "(archived_at IS NULL)"
     t.index ["account_id", "created_at"], name: "index_telemed_recordings_on_account_id_and_created_at"
     t.index ["account_id"], name: "index_telemed_recordings_on_account_id"
+    t.index ["agenda_event_id", "created_at"], name: "idx_telemed_recordings_event_created_desc", order: { created_at: :desc }
     t.index ["agenda_event_id"], name: "index_telemed_recordings_on_agenda_event_id"
     t.index ["archived_at"], name: "index_telemed_recordings_on_archived_at"
     t.index ["composite_egress_id"], name: "index_telemed_recordings_on_composite_egress_id", unique: true, where: "(composite_egress_id IS NOT NULL)"
@@ -3732,8 +3824,16 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_21_000002) do
   add_foreign_key "clinical_notes", "accounts"
   add_foreign_key "clinical_notes", "patients"
   add_foreign_key "clinical_notes", "proposed_evolutions", on_delete: :nullify
+  add_foreign_key "consent_records", "document_templates"
   add_foreign_key "critical_alerts", "accounts"
   add_foreign_key "critical_alerts", "patients"
+  add_foreign_key "document_template_folders", "accounts"
+  add_foreign_key "document_template_folders", "document_template_folders", column: "parent_id"
+  add_foreign_key "document_templates", "accounts"
+  add_foreign_key "document_templates", "document_template_folders", column: "folder_id"
+  add_foreign_key "document_templates", "document_templates", column: "source_template_id"
+  add_foreign_key "document_templates", "users", column: "created_by_user_id"
+  add_foreign_key "documents", "document_templates"
   add_foreign_key "form_templates", "accounts"
   add_foreign_key "inboxes", "portals"
   add_foreign_key "internal_chat_attachments", "internal_chat_messages", column: "message_id", on_delete: :cascade
@@ -3791,6 +3891,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_21_000002) do
   add_foreign_key "proposed_evolutions", "clinical_notes"
   add_foreign_key "proposed_evolutions", "telemed_recordings"
   add_foreign_key "proposed_evolutions", "users", column: "reviewed_by_id"
+  add_foreign_key "session_logs", "proposed_evolutions", on_delete: :nullify
+  add_foreign_key "signature_requests", "accounts"
+  add_foreign_key "signature_requests", "users", column: "requested_by_user_id"
   add_foreign_key "telemed_consents", "accounts"
   add_foreign_key "telemed_consents", "patients"
   add_foreign_key "telemed_recordings", "accounts"

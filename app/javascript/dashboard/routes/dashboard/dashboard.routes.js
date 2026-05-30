@@ -12,6 +12,7 @@ import { routes as captainRoutes } from './captain/captain.routes';
 import { routes as agendaRoutes } from '@plugins/agenda/frontend/routes/routes';
 import { routes as telemedRoutes } from '@plugins/telemed/frontend/dashboard/routes/routes';
 import { routes as patientRoutes } from '@plugins/patients/frontend/routes/patients/routes';
+import { routes as documentTemplateRoutes } from '@plugins/document_templates/frontend/routes/routes';
 import { routes as financialRoutes } from '@plugins/financial/frontend/features/financial/routes';
 import { routes as ajudaRoutes } from '@plugins/ajuda/frontend/routes/routes';
 import AppContainer from './Dashboard.vue';
@@ -38,6 +39,7 @@ export default {
         ...agendaRoutes,
         ...telemedRoutes,
         ...patientRoutes,
+        ...documentTemplateRoutes,
         ...financialRoutes,
         ...ajudaRoutes,
       ],

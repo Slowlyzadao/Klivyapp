@@ -15,6 +15,7 @@ import TeleconsultaRecordingPlayer from './TeleconsultaRecordingPlayer.vue';
 import TeleconsultaTranscript from './TeleconsultaTranscript.vue';
 import TeleconsultaSummary from './TeleconsultaSummary.vue';
 import TeleconsultaEvolutionEditor from './TeleconsultaEvolutionEditor.vue';
+import TeleconsultaProcedureRegister from './TeleconsultaProcedureRegister.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -23,6 +24,24 @@ const isLoading = ref(true);
 const error = ref(null);
 const playerRef = ref(null);
 const editorRef = ref(null);
+// 2026-05-26 — Agora a edição vive no ProcedureRegister (bloco full-width
+// abaixo do grid). O guard onBeforeRouteLeave consulta este ref.
+const procedureRef = ref(null);
+
+// 2026-05-25 — ponte player → transcrição. Atualizado pelo `@time-update`
+// do TeleconsultaRecordingPlayer (~4 Hz, rate nativo do `timeupdate` do
+// elemento <audio>). TeleconsultaTranscript usa pra destacar o segmento
+// atual em modo "karaokê".
+const playerCurrentTime = ref(0);
+
+// AUDIT 2026-05-25 — sequencer anti-stale.
+// ActionCable dispara `fetchDetail` em cada transição relevante
+// (transcribed → ready). Requests podem retornar fora de ordem
+// (ex.: ready respondido antes do transcribed em conexão lenta) e o
+// segundo write sobrescreveria evolução já carregada com payload stale.
+// `fetchSeq` incrementa a cada chamada; só aplica resultado se a geração
+// continua sendo a mais recente quando a Promise resolve.
+let fetchSeq = 0;
 
 const eventId = computed(() => route.params.eventId);
 
@@ -36,16 +55,37 @@ const recordingPending = computed(() => {
   return recording && !isRecordingReady.value;
 });
 
+// 2026-05-22 — Antes a tela mostrava o enum cru ("Gravação em processamento
+// (failed)…"), expondo o status em inglês no meio de uma frase PT-BR.
+// Mapeia pros rótulos do usuário; default cai no próprio status (defesa
+// se um dia o backend introduzir novo status sem atualizar o front).
+const RECORDING_STATUS_LABELS = {
+  pending: 'aguardando início',
+  recording: 'gravando',
+  uploaded: 'enviada, na fila de transcrição',
+  transcribing: 'transcrevendo',
+  transcribed: 'transcrição concluída',
+  failed: 'falhou',
+  ready: 'pronta',
+};
+const recordingStatusLabel = computed(() => {
+  const status = detail.value?.recording?.status;
+  return RECORDING_STATUS_LABELS[status] || status || '';
+});
+
 const fetchDetail = async () => {
+  const mySeq = ++fetchSeq;
   isLoading.value = true;
   error.value = null;
   try {
     const { data } = await teleconsultasApi.show(eventId.value);
+    if (mySeq !== fetchSeq) return; // outra chamada já tomou a frente
     detail.value = data.data;
   } catch (e) {
+    if (mySeq !== fetchSeq) return;
     error.value = e?.response?.data?.error || e.message;
   } finally {
-    isLoading.value = false;
+    if (mySeq === fetchSeq) isLoading.value = false;
   }
 };
 
@@ -119,7 +159,9 @@ onBeforeUnmount(() => {
 // fechar aba/refresh; este cobre rotas internas (browser nativo não
 // dispara beforeunload em SPA navigation).
 onBeforeRouteLeave(() => {
-  if (editorRef.value?.hasUnsavedChanges?.value) {
+  const editorDirty    = editorRef.value?.hasUnsavedChanges?.value;
+  const procedureDirty = procedureRef.value?.hasUnsavedChanges?.value;
+  if (editorDirty || procedureDirty) {
     return window.confirm(
       'Você tem alterações não salvas na evolução. Sair mesmo assim?'
     );
@@ -168,6 +210,7 @@ onBeforeRouteLeave(() => {
             ref="playerRef"
             :event-id="detail.id"
             :recording="detail.recording"
+            @time-update="playerCurrentTime = $event"
           />
           <section v-else-if="recordingPending" class="tcd-card">
             <h3 class="tcd-card__title">
@@ -175,7 +218,7 @@ onBeforeRouteLeave(() => {
               <span>Gravação da Consulta</span>
             </h3>
             <p class="tcd-summary__empty">
-              Gravação em processamento ({{ detail.recording.status }})…
+              Gravação em processamento ({{ recordingStatusLabel }})…
             </p>
           </section>
 
@@ -184,12 +227,15 @@ onBeforeRouteLeave(() => {
             :text="detail.recording?.transcript_text"
             :doctor-name="detail.professional?.name || 'Dr.'"
             :patient-name="detail.patient?.name || 'Paciente'"
+            :current-time="playerCurrentTime"
             @segment-click="onSegmentClick"
           />
 
+          <!-- 2026-05-22 — `summary` agora vem do Resumo Executivo dedicado
+               do Claude (Markdown). Removido `fallback` pro raw_markdown:
+               este duplicava o SOAP dos cards e era cortado por MAX_LEN. -->
           <TeleconsultaSummary
-            :summary="detail.summary || ''"
-            :fallback="detail.evolution?.raw_markdown || ''"
+            :summary="detail.evolution?.summary || ''"
           />
         </div>
 
@@ -198,23 +244,33 @@ onBeforeRouteLeave(() => {
             v-if="detail.evolution"
             ref="editorRef"
             :evolution="detail.evolution"
-            @saved="onEvolutionSaved"
-            @approved="onEvolutionApproved"
-            @rejected="onEvolutionRejected"
           />
-          <section v-else class="tcd-evolution" aria-label="Evolução do paciente">
-            <header class="tcd-evolution__head">
-              <h3 class="tcd-evolution__title">
-                <i class="i-lucide-sparkles w-5 h-5 tcd-evolution__title-icon" />
-                <span>Evolução do Paciente</span>
+          <section v-else class="tcd-attention-panel" aria-label="Pontos de atenção">
+            <header class="tcd-attention-panel__head">
+              <h3 class="tcd-attention-panel__title">
+                <i class="i-lucide-alert-triangle w-5 h-5 tcd-attention-panel__title-icon" />
+                <span>Pontos de Atenção</span>
               </h3>
             </header>
-            <p class="tcd-summary__empty">
-              Evolução ainda não gerada — aguardando processamento da gravação.
+            <p class="tcd-attention-panel__empty">
+              Aguardando processamento da gravação para identificar pontos de atenção.
             </p>
           </section>
         </div>
       </div>
+
+      <!-- Audit 2026-05-26 — bloco full-width abaixo do grid com o
+           formulário de Registro de Procedimento (substitui os cards
+           SOAP que ficavam na lateral direita). -->
+      <TeleconsultaProcedureRegister
+        v-if="detail.evolution"
+        ref="procedureRef"
+        :detail="detail"
+        :evolution="detail.evolution"
+        @saved="onEvolutionSaved"
+        @approved="onEvolutionApproved"
+        @rejected="onEvolutionRejected"
+      />
     </template>
   </div>
 </template>

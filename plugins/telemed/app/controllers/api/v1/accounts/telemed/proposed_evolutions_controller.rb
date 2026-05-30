@@ -16,9 +16,10 @@ class Api::V1::Accounts::Telemed::ProposedEvolutionsController < Api::V1::Accoun
     authorize @proposed_evolution, :update?
 
     @proposed_evolution.apply_edit!(
-      soap_structure: soap_structure_params,
-      raw_markdown:   params[:raw_markdown],
-      actor:          Current.user
+      soap_structure:   soap_structure_params,
+      raw_markdown:     params[:raw_markdown],
+      procedure_fields: procedure_fields_params,
+      actor:            Current.user
     )
 
     render json: { data: serialize(@proposed_evolution) }
@@ -62,6 +63,22 @@ class Api::V1::Accounts::Telemed::ProposedEvolutionsController < Api::V1::Accoun
     params.require(:soap_structure).permit(*SOAP_PERMITTED_KEYS).to_h
   end
 
+  # Audit 2026-05-26 — Registro de Procedimento (14 chaves fixas). Mesmo
+  # padrão de whitelist do SOAP: bloqueia mass assignment via JSONB. Aceita
+  # strings vazias e nil (retorno_em_dias) como valores válidos.
+  PROCEDURE_PERMITTED_KEYS = %i[
+    queixa_do_dia avaliacao_clinica procedimento_realizado area_tratada
+    produto_utilizado quantidade_dose unidade lote validade
+    intercorrencias resultado_imediato detalhes_proxima_consulta
+    retorno_em_dias observacao
+  ].freeze
+
+  def procedure_fields_params
+    return nil if params[:procedure_fields].blank?
+
+    params.require(:procedure_fields).permit(*PROCEDURE_PERMITTED_KEYS).to_h
+  end
+
   def load_proposed_evolution
     # Scope obrigatório por account — garante isolamento mesmo se o ID
     # vazar entre tenants.
@@ -79,6 +96,8 @@ class Api::V1::Accounts::Telemed::ProposedEvolutionsController < Api::V1::Accoun
       soap_structure:   evolution.soap_structure,
       raw_markdown:     evolution.raw_markdown,
       attention_points: evolution.attention_points,
+      procedure_fields: evolution.procedure_fields || {},
+      summary:          evolution.summary.to_s,
       reviewed_by:      evolution.reviewed_by&.name,
       reviewed_at:      evolution.reviewed_at,
       clinical_note_id: evolution.clinical_note_id,

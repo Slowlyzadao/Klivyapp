@@ -17,6 +17,7 @@ import DocumentsHeader from '@plugins/patients/frontend/features/patient-record/
 import DocumentsTable from '@plugins/patients/frontend/features/patient-record/components/documents-tab/DocumentsTable.vue';
 import GenerateDocumentModal from '@plugins/patients/frontend/features/patient-record/components/documents-tab/GenerateDocumentModal.vue';
 import DocumentPreviewModal from '@plugins/patients/frontend/features/patient-record/components/documents-tab/DocumentPreviewModal.vue';
+import SendForSignatureModal from '@plugins/signatures/frontend/components/SendForSignatureModal.vue';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -41,6 +42,7 @@ const showPreviewModal = ref(false);
 const previewSrc = ref('');
 const previewTitle = ref('');
 const previewDoc = ref(null);
+const signingDoc = ref(null);
 
 // ── Handlers ───────────────────────────────────────────────
 const openGenerateModal = () => {
@@ -94,6 +96,19 @@ const downloadFromPreview = () => {
   if (previewDoc.value) download(previewDoc.value);
 };
 
+// ── Assinatura eletrônica (plugin signatures) ──────────────
+// Abre o SendForSignatureModal pra um documento específico. O modal lida
+// com criação + status (lista pedidos existentes pro mesmo signable e mostra
+// timeline). Pre-fill do signer pode ser expandido depois quando tivermos
+// `usePatient` composable.
+const openSignModal = doc => {
+  signingDoc.value = doc;
+};
+
+const closeSignModal = () => {
+  signingDoc.value = null;
+};
+
 onMounted(() => {
   fetchDocuments();
 });
@@ -109,6 +124,7 @@ onMounted(() => {
       @preview="openPreview"
       @download="download"
       @send-whatsapp="sendWhatsApp"
+      @sign="openSignModal"
       @delete="requestDelete"
     />
 
@@ -134,6 +150,13 @@ onMounted(() => {
       :src="previewSrc"
       @close="closePreview"
       @download="downloadFromPreview"
+    />
+
+    <SendForSignatureModal
+      v-if="signingDoc"
+      signable-type="Document"
+      :signable-id="signingDoc.id"
+      @close="closeSignModal"
     />
   </div>
 </template>

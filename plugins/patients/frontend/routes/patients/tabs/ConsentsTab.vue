@@ -20,6 +20,7 @@ import NewConsentForm from '@plugins/patients/frontend/features/patient-record/c
 import ConsentsTable from '@plugins/patients/frontend/features/patient-record/components/consents-tab/ConsentsTable.vue';
 import SignatureModal from '@plugins/patients/frontend/features/patient-record/components/consents-tab/SignatureModal.vue';
 import ConsentViewModal from '@plugins/patients/frontend/features/patient-record/components/consents-tab/ConsentViewModal.vue';
+import SendForSignatureModal from '@plugins/signatures/frontend/components/SendForSignatureModal.vue';
 
 defineProps({
   patient: { type: Object, required: true },
@@ -47,6 +48,7 @@ const signingConsentId = ref(null);
 const showViewModal = ref(false);
 const consentInView = ref(null);
 const formRef = ref(null);
+const remoteSigningConsent = ref(null);
 
 // ── Computeds ──────────────────────────────────────────────
 const stats = computed(() => ({
@@ -94,6 +96,18 @@ const handleSignFromView = consentId => {
   openSignModal(consentId);
 };
 
+// ── Assinatura eletrônica externa (plugin signatures) ──────
+// Caminho paralelo ao SignatureModal (que coleta assinatura canvas local).
+// Aqui mandamos o consent pra um provider externo (Clicksign quando ativo,
+// MockProvider em dev) — signer recebe link por e-mail/WhatsApp.
+const openRemoteSignModal = consent => {
+  remoteSigningConsent.value = consent;
+};
+
+const closeRemoteSignModal = () => {
+  remoteSigningConsent.value = null;
+};
+
 onMounted(() => {
   fetchConsents();
 });
@@ -138,6 +152,7 @@ onMounted(() => {
       @view="openViewModal"
       @send-remote="sendRemote"
       @sign="openSignModal"
+      @send-for-signature="openRemoteSignModal"
       @revoke="revoke"
     />
 
@@ -153,6 +168,19 @@ onMounted(() => {
       :consent="consentInView"
       @close="showViewModal = false"
       @sign="handleSignFromView"
+    />
+
+    <SendForSignatureModal
+      v-if="remoteSigningConsent"
+      signable-type="ConsentRecord"
+      :signable-id="remoteSigningConsent.id"
+      :default-signer="{
+        name: patient?.name,
+        email: patient?.email,
+        phone: patient?.phone,
+        cpf: patient?.cpf,
+      }"
+      @close="closeRemoteSignModal"
     />
   </div>
 </template>

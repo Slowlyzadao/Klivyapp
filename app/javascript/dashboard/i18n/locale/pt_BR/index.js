@@ -47,6 +47,8 @@ import patientAudit from './patientAudit.json';
 import patientDocuments from './patientDocuments.json';
 import patientEvolution from './patientEvolution.json';
 import patientTimeline from './patientTimeline.json';
+import documentTemplates from '@plugins/document_templates/frontend/i18n/pt_BR.json';
+import signatures from '@plugins/signatures/frontend/i18n/pt_BR.json';
 
 export default {
   ...advancedFilters,
@@ -98,4 +100,6 @@ export default {
   ...patientDocuments,
   ...patientEvolution,
   ...patientTimeline,
+  ...documentTemplates,
+  ...signatures,
 };

@@ -75,15 +75,6 @@ import { CONVERSATION_EVENTS } from '../helper/AnalyticsHelper/events';
 import { ASSIGNEE_TYPE_TAB_PERMISSIONS } from 'dashboard/constants/permissions.js';
 import { usePermissions } from 'dashboard/composables/usePermissions';
 
-// Maps Chatwoot tab keys to Klivy chat sub-permissions. Tabs without a mapping
-// (e.g. 'me') are not gated by Klivy.
-const KLIVY_TAB_PERMISSIONS = {
-  unassigned: 'view_unassigned',
-  all: 'view_all',
-};
-
-import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
-
 const props = defineProps({
   conversationInbox: { type: [String, Number], default: 0 },
   teamId: { type: [String, Number], default: 0 },
@@ -95,6 +86,16 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['conversationLoad']);
+
+// Maps Chatwoot tab keys to Klivy chat sub-permissions. Tabs without a mapping
+// (e.g. 'me') are not gated by Klivy.
+const KLIVY_TAB_PERMISSIONS = {
+  unassigned: 'view_unassigned',
+  all: 'view_all',
+};
+
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
+
 const { uiSettings } = useUISettings();
 const { t } = useI18n();
 const router = useRouter();
@@ -494,7 +495,10 @@ const conversationList = computed(() => {
       const name = (conv.meta?.sender?.name || '').toLowerCase();
       if (name.includes(q)) return true;
       if (qDigits.length >= 4) {
-        const phone = (conv.meta?.sender?.phone_number || '').replace(/\D/g, '');
+        const phone = (conv.meta?.sender?.phone_number || '').replace(
+          /\D/g,
+          ''
+        );
         if (phone && phone.includes(qDigits)) return true;
       }
       return false;

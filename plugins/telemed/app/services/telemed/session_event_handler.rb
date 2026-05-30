@@ -53,9 +53,23 @@ module Telemed
       @scheduler.schedule_in_progress_if_both_present(session)
       @scheduler.schedule_no_show_if_doctor_alone(session, joining_role: @role)
 
-      # Sprint L — dispara gravação no momento em que ambos chegam.
-      # Idempotente (RecordingOrchestrator pula se já tem gravação ativa).
-      start_recording_if_needed(session)
+      # 2026-05-22 — Auto-trigger de gravação no `joined!` REMOVIDO.
+      # Motivo: o orchestrator rodava no exato instante do join, antes do
+      # microfone do paciente publicar o track de áudio. Resultado:
+      # `list_participants` devolvia `patient.tracks = []`, TrackEgress por
+      # participante não disparava (sem track_sid), e o recording era criado
+      # só com o composite. Quando o doutor depois clicava "Gravar", o
+      # orchestrator via o recording existente e dava `skip(:already_active)`
+      # — TrackEgress NUNCA era tentado de novo → transcrição perdia
+      # diarização (tudo virava 1 speaker "Participante").
+      #
+      # Agora gravação é 100% manual via `start_recording` controller. No
+      # momento do clique, os 2 microfones já publicaram (latência típica
+      # 500-2000ms após o join), então `list_participants` retorna tracks
+      # completos e TrackEgress dispara corretamente. Casa com o comentário
+      # já existente em `SessionsController#start_recording` que diz que o
+      # doutor tem controle direto. Limpeza que faltava da Sprint L.
+      # start_recording_if_needed(session)
 
       result(session, transition_result)
     end
@@ -64,14 +78,28 @@ module Telemed
       session = @tracker.record_left!(@role, at: @now)
       transition_result = nil
 
-      # Encerramento natural: ambos saíram E a sessão chegou a ser
-      # in_progress (ou seja, doutor + paciente conversaram ≥ 5min). Sem
-      # esse guard, sair antes do timer marcaria a consulta como
-      # completed sem ter atendido.
-      if session.nobody_present? && @event.status == 'in_progress'
-        transition_result = @transition.mark_completed!
-        # Sprint L — encerra LiveKit Egress. Webhook do LiveKit finaliza
-        # upload no R2 e enfileira TranscribeRecordingJob.
+      # 2026-05-21 — auto `mark_completed!` REMOVIDO. Antes, quando ambos
+      # saíam E status era in_progress, o backend marcava completed
+      # automaticamente. Problema: doutor podia ter ficado 5+ min tentando
+      # admitir o paciente mas a chamada não rolou (internet do paciente
+      # ruim, paciente entrou e saiu correndo). Auto-completed marcava
+      # como "atendido" mesmo sem atendimento de fato.
+      #
+      # Agora: status permanece in_progress até o doutor confirmar via
+      # `confirm_completed` (clica "Sim, atendi" no modal pós-encerramento).
+      # Se ele responder "Não consegui", status fica em in_progress —
+      # cabe ao doutor mudar manualmente pelo calendário (cancelado/no_show).
+      #
+      # Recording continua sendo finalizado aqui — a gravação ACABOU de
+      # fato (LiveKit Egress tem que encerrar pro pipeline de transcrição/
+      # evolução rodar). Independente de status do evento.
+      #
+      # 2026-05-22 — Doutor saindo encerra a gravação MESMO com paciente
+      # ainda presente. Antes só parava em `nobody_present?`, mas se o
+      # doutor encerrava antes do paciente desconectar, o Egress ficava
+      # rodando sozinho (consumindo recurso e atrasando a transcrição).
+      # Doutor = fim da consulta, sempre.
+      if @event.status == 'in_progress' && (session.nobody_present? || @role == 'doctor')
         stop_recording_if_active
       end
 

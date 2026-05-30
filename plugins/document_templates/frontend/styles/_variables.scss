@@ -1,0 +1,26 @@
+// Tokens locais do plugin document_templates.
+//
+// Herda os tokens globais do projeto (cores via custom properties
+// `rgb(var(--slate-N))`, dark mode automático). Aqui só adicionamos tokens
+// específicos da feature (canvas A4 do editor, chip de variável, etc.).
+//
+// Convenção: usar @use 'variables' as *; em cada partial pra ter acesso a
+// esses tokens.
+
+// ── Editor / canvas A4 ─────────────────────────────────────────────────────
+$editor-paper-bg: #ffffff;
+$editor-paper-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+$editor-paper-margin: 20mm;
+$editor-paper-width: 210mm;
+$editor-paper-height: 297mm;
+
+// ── Chip de variável (inserido no editor) ──────────────────────────────────
+// Cores aplicadas via rgb(var(--<token>)) pra suportar dark mode automático.
+$variable-chip-radius: 6px;
+$variable-chip-padding-x: 8px;
+$variable-chip-padding-y: 2px;
+
+// ── Layout da biblioteca de templates ──────────────────────────────────────
+$template-card-radius: 12px;
+$template-card-aspect-ratio: 8.5 / 11; // proporção A4
+$folder-sidebar-width: 220px;

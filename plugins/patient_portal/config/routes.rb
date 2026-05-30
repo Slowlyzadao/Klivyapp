@@ -139,7 +139,24 @@ PatientPortal::Engine.routes.draw do
   #             pelo celular sem precisar de subdomínio próprio).
   # Usamos `host:` em vez de `subdomain:` porque com hostnames multi-level (lvh.me),
   # Rails extrai subdomain="pacientes.lvh" — o regex de host é mais previsível.
-  constraints(host: /^pacientes\.|\.localhost$|\.ngrok-free\.app$|\.ngrok\.app$|\.ngrok\.io$|\.trycloudflare\.com$/) do
+  #
+  # 2026-05-25 — Lambda combinada (host + path) em vez de `constraints(host:)` puro.
+  # O constraint só-host capturava QUALQUER path em `.trycloudflare.com` —
+  # `/auth/sign_in`, `/app/accounts/...`, `/super_admin/...` todos viravam SPA do
+  # portal porque o catch-all `/*params` engolia tudo. Resultado: tunnel cloudflare
+  # ficava 100% portal, impossível acessar dashboard via tunnel pra demos remotas.
+  # Agora exclui paths conhecidos do dashboard/Devise/Rails antes de cair no SPA.
+  DASHBOARD_PATH_PREFIXES = %w[
+    /app /auth /super_admin /rails /api /webhooks /omniauth /widget
+    /vite-dev /vite-prod /assets /packs /__vite /__rails /__brakeman
+    /sidekiq /letter_opener /pghero /up
+  ].freeze
+  HOST_REGEX = /\Apacientes\.|\.localhost\z|\.ngrok-free\.app\z|\.ngrok\.app\z|\.ngrok\.io\z|\.trycloudflare\.com\z/
+
+  constraints(lambda { |req|
+    HOST_REGEX.match?(req.host) &&
+      DASHBOARD_PATH_PREFIXES.none? { |p| req.path == p || req.path.start_with?("#{p}/") }
+  }) do
     root to: 'patient_portal_pages#index', as: :patient_portal_root
     get '/*params', to: 'patient_portal_pages#index', as: :patient_portal_catchall, format: false
   end

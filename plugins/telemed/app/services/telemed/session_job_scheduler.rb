@@ -14,7 +14,11 @@
 #   - NO_SHOW_GRACE_SECONDS: tempo doutor sozinho antes de no_show
 module Telemed
   class SessionJobScheduler
-    MIN_BOTH_PRESENT_SECONDS = 5.minutes
+    # 2026-05-21 — reduzido de 5 → 2 min a pedido do usuário. Cobre casos
+    # em que a consulta arranca rápido (paciente + doutor já presentes
+    # 1-2 min de check-in) e o status do calendário precisa refletir
+    # "em atendimento" antes do 5º minuto.
+    MIN_BOTH_PRESENT_SECONDS = 2.minutes
     NO_SHOW_GRACE_SECONDS    = 5.minutes
 
     def initialize(event:)

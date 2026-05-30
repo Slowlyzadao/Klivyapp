@@ -71,6 +71,9 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
       'captain' => %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL CAPTAIN_OPEN_AI_ENDPOINT],
       # Sprint L — Teleconsulta: chaves de IA pra transcricao (Whisper) e
       # evolucao SOAP (Claude). Mesma UI dos demais app_configs.
+      # 2026-05-25 — Removidos GEMINI_API_KEY e TELEMED_GEMINI_REVIEW.
+      # A camada de pós-revisão Gemini foi descontinuada do pipeline de
+      # transcrição (não trouxe ganho perceptível vs gpt-4o-transcribe-diarize).
       'ai' => %w[
         OPENAI_WHISPER_KEY
         ANTHROPIC_API_KEY
@@ -130,6 +133,7 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
   rescue StandardError => e
     { ok: false, message: "Erro de rede: #{e.class}: #{e.message.first(200)}" }
   end
+
 end
 
 SuperAdmin::AppConfigsController.prepend_mod_with('SuperAdmin::AppConfigsController')

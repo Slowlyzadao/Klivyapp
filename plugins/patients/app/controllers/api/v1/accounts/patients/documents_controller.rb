@@ -38,7 +38,11 @@ module Api
               variables: (params[:variables]&.to_unsafe_h || {}).symbolize_keys,
               generated_by: current_user,
               title: params[:title],
-              form_template_id: params[:form_template_id]
+              form_template_id: params[:form_template_id],
+              # Fase 3 do projeto document-editor: se passar template_id, o
+              # Patients::PdfGenerator delega pra DocumentTemplates::PdfGenerator
+              # (Grover/Chromium). Sem template_id, Prawn legado continua.
+              document_template_id: params[:document_template_id]
             )
 
             if result.success?

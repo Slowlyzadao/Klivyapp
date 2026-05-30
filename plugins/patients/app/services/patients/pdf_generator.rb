@@ -30,25 +30,59 @@ module Patients
       new(**args).run
     end
 
-    def initialize(patient:, document_type:, variables: {}, generated_by: nil, title: nil, form_template_id: nil)
-      @patient          = patient
-      @account          = patient.account
-      @document_type    = document_type
-      @variables        = variables || {}
-      @generated_by     = generated_by
-      @title            = title || default_title(document_type)
-      @form_template_id = form_template_id
+    def initialize(patient:, document_type:, variables: {}, generated_by: nil, title: nil, form_template_id: nil, document_template_id: nil)
+      @patient              = patient
+      @account              = patient.account
+      @document_type        = document_type
+      @variables            = variables || {}
+      @generated_by         = generated_by
+      @title                = title || default_title(document_type)
+      @form_template_id     = form_template_id
+      @document_template_id = document_template_id
     end
 
+    # Decisão de rota (Fase 3 do projeto document-editor):
+    #   - document_template_id presente → delega pro DocumentTemplates::PdfGenerator
+    #     (caminho novo: editor visual + Grover + variáveis dinâmicas).
+    #   - Sem template_id → executa o Prawn legado intocado.
+    #
+    # Result struct é compatível entre os dois caminhos pra o controller
+    # não precisar saber de qual lado veio.
     def run
-      pdf_data = call
+      return delegate_to_template_engine if @document_template_id.present?
 
+      pdf_data = call
       document = save_document(pdf_data)
 
       Result.new(success?: true, document: document, pdf_data: pdf_data, error: nil)
     rescue StandardError => e
       Rails.logger.error("[PdfGenerator] Erro ao gerar PDF: #{e.message}")
       Result.new(success?: false, document: nil, pdf_data: nil, error: e.message)
+    end
+
+    # Caminho novo (Grover). Carrega o template escopado pela account
+    # corrente — se a clínica não tiver acesso (não é dela nem é Klivy
+    # global), RecordNotFound vira erro tratável no Result.
+    def delegate_to_template_engine
+      template = ::DocumentTemplate.for_account(@account).find(@document_template_id)
+
+      result = ::DocumentTemplates::PdfGenerator.call(
+        template: template,
+        patient: @patient,
+        professional: @generated_by,
+        clinic: @account,
+        title: @title
+      )
+
+      Result.new(
+        success?: result.success?,
+        document: result.document,
+        pdf_data: result.pdf_data,
+        error: result.error
+      )
+    rescue ActiveRecord::RecordNotFound => e
+      Rails.logger.warn("[PdfGenerator] template_id=#{@document_template_id} inacessível: #{e.message}")
+      Result.new(success?: false, document: nil, pdf_data: nil, error: 'Template não encontrado ou sem acesso')
     end
 
     private

@@ -9,8 +9,16 @@
 # Gemini Flash audio nativo via `with(:gemini_flash)` no provider factory.
 module Telemed
   module TranscriptionProvider
-    Segment = Struct.new(:start, :end_, :text, keyword_init: true) do
-      def to_h = { start: start, end: end_, text: text }
+    # 2026-05-23 — `speaker` adicionado (opcional). Providers que diarizam
+    # internamente (gpt-4o-transcribe-diarize) preenchem com a label que
+    # vem da API ("speaker_0", "speaker_1"); providers sem diarização
+    # deixam nil e o caller decide o speaker pela origem do arquivo.
+    Segment = Struct.new(:start, :end_, :text, :speaker, keyword_init: true) do
+      def to_h
+        h = { start: start, end: end_, text: text }
+        h[:speaker] = speaker if speaker
+        h
+      end
     end
 
     Result = Struct.new(:segments, :raw_text, :provider, keyword_init: true) do
@@ -23,6 +31,8 @@ module Telemed
     # quando virarem necessários.
     def self.for(name)
       case name.to_s
+      when 'gpt-4o-transcribe-diarize', 'diarize'
+        Gpt4oDiarize.new
       when 'whisper', '', nil
         Whisper.new
       when 'gemini'

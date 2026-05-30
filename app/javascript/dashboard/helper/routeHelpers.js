@@ -268,10 +268,7 @@ const validateActiveAccountRoutes = (to, user, klivyPermissions) => {
   // sidebar e o backend Pundit fazem o gating real.
   if (!isNativeAdmin && isKlivyPermissionsLoaded(klivyPermissions)) {
     const requiredRule = klivyRequiredRule(to.name);
-    if (
-      requiredRule &&
-      !klivyHasPermission(klivyPermissions, requiredRule)
-    ) {
+    if (requiredRule && !klivyHasPermission(klivyPermissions, requiredRule)) {
       return defaultRedirectPage(to, userPermissions);
     }
   }
@@ -379,7 +376,9 @@ export const isNotificationRoute = routeName =>
 
 const readLastOpenedConversationMap = () => {
   try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEYS.LAST_OPENED_CONVERSATION);
+    const raw = localStorage.getItem(
+      LOCAL_STORAGE_KEYS.LAST_OPENED_CONVERSATION
+    );
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === 'object' ? parsed : {};

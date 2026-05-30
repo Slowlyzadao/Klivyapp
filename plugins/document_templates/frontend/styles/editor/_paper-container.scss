@@ -1,0 +1,32 @@
+// Canvas A4 do editor — fundo da área + papel branco com sombra.
+// O papel em si SEMPRE é branco (WYSIWYG do PDF), só o fundo usa
+// token (var(--kl-bg)) pra harmonizar com a página.
+
+@use '../variables' as *;
+
+.paper-container {
+  display: flex;
+  justify-content: center;
+  padding: 40px 24px;
+  background: var(--kl-bg);
+  overflow-y: auto;
+
+  &__sheet {
+    width: 100%;
+    max-width: $editor-paper-width;
+    padding: $editor-paper-margin;
+    background: $editor-paper-bg;       // sempre #ffffff
+    box-shadow: $editor-paper-shadow;
+    border-radius: 4px;
+    min-height: 800px;
+  }
+
+  // A5 → mais estreito
+  &--a5-portrait &__sheet { max-width: 148mm; }
+  &--a5-landscape &__sheet { max-width: 210mm; }
+
+  &--letter-portrait &__sheet  { max-width: 215.9mm; }
+  &--letter-landscape &__sheet { max-width: 279.4mm; }
+
+  &--a4-landscape &__sheet { max-width: $editor-paper-height; }
+}

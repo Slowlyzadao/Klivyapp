@@ -61,7 +61,9 @@ module Telemed
           provider:          result.provider,
           soap_structure:    result.soap_structure || {},
           raw_markdown:      result.raw_markdown,
+          summary:           result.summary.to_s,
           attention_points:  result.attention_points || [],
+          procedure_fields:  result.procedure_fields || {},
           input_tokens:      result.input_tokens,
           output_tokens:     result.output_tokens,
           status:            'pending_review'
@@ -78,7 +80,9 @@ module Telemed
           provider:         result.provider,
           soap_structure:   result.soap_structure || {},
           raw_markdown:     result.raw_markdown,
+          summary:          result.summary.to_s,
           attention_points: result.attention_points || [],
+          procedure_fields: result.procedure_fields || {},
           input_tokens:     result.input_tokens,
           output_tokens:    result.output_tokens
         )
@@ -120,7 +124,12 @@ module Telemed
                      .map { |n| "#{n.note_date}: #{n.assessment.to_s.first(200)}" }
 
       {
-        name:        patient.contact&.name || patient.full_name,
+        # Patient.name é coluna NOT NULL (cadastro clínico). Contact.name é
+        # fallback histórico — pode ser número de WhatsApp em contatos
+        # inbound. Audit teleconsulta 2026-05-25: invertida a ordem e removido
+        # `patient.full_name` (método inexistente — quebraria se contact.name
+        # fosse nil).
+        name:        patient.name.presence || patient.contact&.name,
         age:         patient_age(patient),
         allergies:   safe_attr(patient, :allergies),
         medications: safe_attr(patient, :current_medications),

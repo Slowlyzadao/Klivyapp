@@ -1,0 +1,62 @@
+// Popover ⋮ do TemplateCard. Tokens M3 Klivy (ícones soltos, fundo sólido).
+
+.template-context-menu {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  width: 200px;
+  padding: 6px;
+  border: 1px solid var(--kl-border-subtle);
+  border-radius: var(--kl-radius-xl);
+  background: var(--kl-surface-white);
+  box-shadow:
+    0 12px 28px rgba(7, 16, 42, 0.16),
+    0 0 0 1px rgba(7, 16, 42, 0.04);
+  font-family: var(--kl-font-family);
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: var(--kl-radius-md);
+    background: transparent;
+    color: var(--kl-on-surface);
+    font-family: inherit;
+    font-size: var(--kl-font-body-md);
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--kl-transition), color var(--kl-transition);
+
+    // Ícones soltos — zero padding/background no glifo.
+    span {
+      width: 16px;
+      height: 16px;
+      color: var(--kl-secondary);
+      flex-shrink: 0;
+    }
+
+    &:hover {
+      background: var(--kl-surface-low);
+    }
+
+    &--danger {
+      color: var(--kl-error);
+
+      span { color: var(--kl-error); }
+
+      &:hover {
+        background: var(--kl-error-container);
+      }
+    }
+  }
+
+  &__divider {
+    height: 1px;
+    margin: 6px 4px;
+    background: var(--kl-border-subtle);
+  }
+}

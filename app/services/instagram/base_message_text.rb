@@ -10,10 +10,16 @@ class Instagram::BaseMessageText < Instagram::WebhooksBaseService
     connected_instagram_id, contact_id = instagram_and_contact_ids
     inbox_channel(connected_instagram_id)
 
-    return if @inbox.blank?
+    if @inbox.blank?
+      Rails.logger.warn(
+        "[IG_AUDIT] No inbox found for connected_instagram_id=#{connected_instagram_id.inspect} " \
+        "(channel=#{@channel.class.name}##{@channel.id}). Message dropped."
+      )
+      return
+    end
 
     if @inbox.channel.reauthorization_required?
-      Rails.logger.info("Skipping message processing as reauthorization is required for inbox #{@inbox.id}")
+      Rails.logger.warn("[IG_AUDIT] Skipping message processing — reauthorization REQUIRED for inbox #{@inbox.id} (channel=#{@inbox.channel.class.name}##{@inbox.channel.id}). User must reconnect.")
       return
     end
 

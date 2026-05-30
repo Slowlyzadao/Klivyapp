@@ -12,6 +12,18 @@ Rails.application.routes.draw do
   # entre patient_portal e agenda; agora consolidado.
   mount Telemed::Engine, at: '/'
 
+  # ── Document Templates: editor visual (TipTap) de modelos de documentos, ────
+  # variáveis dinâmicas, biblioteca Klivy e geração de PDF via Grover. Vive em
+  # plugins/document_templates/. As rotas reais (/api/v1/accounts/:id/document_templates/*)
+  # entram na Fase 1; engine vazio na Fase 0 só pra reservar o mount.
+  mount DocumentTemplates::Engine, at: '/'
+
+  # ── Signatures: assinatura eletrônica de documentos via providers ──────────
+  # externos (Clicksign, D4Sign etc.). Endpoints da clínica em
+  # /api/v1/accounts/:id/signature_requests/*. Webhook do Clicksign em
+  # /webhooks/clicksign. Vive em plugins/signatures/.
+  mount Signatures::Engine, at: '/'
+
   # ── Letter Opener Web: UI navegável dos emails interceptados em dev. ────────
   # Útil quando o disparo do email veio de outro dispositivo (celular via
   # tunnel, etc.) — abre no navegador do Mac em /letter_opener.

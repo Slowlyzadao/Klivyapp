@@ -17,6 +17,7 @@ const emit = defineEmits([
   'preview',
   'download',
   'send-whatsapp',
+  'sign',
   'delete',
 ]);
 
@@ -160,6 +161,15 @@ const statusLabel = status =>
                     color="teal"
                     icon="i-ri-whatsapp-fill"
                     @click="emit('send-whatsapp', doc.id)"
+                  />
+                </Tooltip>
+                <Tooltip :label="t('PATIENT_DOCUMENTS.TABLE.SIGN_TITLE')">
+                  <BeclinicButton
+                    size="sm"
+                    variant="ghost"
+                    color="blue"
+                    icon="i-lucide-pen-line"
+                    @click="emit('sign', doc)"
                   />
                 </Tooltip>
                 <Tooltip :label="t('PATIENT_DOCUMENTS.TABLE.DELETE_TITLE')">

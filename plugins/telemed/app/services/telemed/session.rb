@@ -8,14 +8,15 @@
 #
 # Janela default (configurável via setting `appointments.telemedicine_pre_minutes`
 # e `appointments.telemedicine_post_minutes`):
-#   - pre  = 10 min antes de starts_at
+#   - pre  = 60 min antes de starts_at  (paciente entra em sala de espera até
+#            dentista admitir — padrão Google Meet)
 #   - post = 30 min depois de ends_at
 #
 # Service idempotente, leitura pura. Pode ser chamado em qualquer ponto sem
 # side effect (controllers, jobs, serializers).
 module Telemed
   class Session
-    DEFAULT_PRE_MINUTES  = 10
+    DEFAULT_PRE_MINUTES  = 60
     DEFAULT_POST_MINUTES = 30
     JOINABLE_STATUSES    = %w[scheduled confirmed arrived in_progress].freeze
 
@@ -67,6 +68,23 @@ module Telemed
       @event   = event
       @account = account || event&.account
       @now     = now
+    end
+
+    # Verdadeiro se `at` cai dentro da janela [starts_at - pre_min,
+    # ends_at + post_min] desse evento. Fonte ÚNICA da verdade da
+    # janela — `Telemed::AdmissionWindow` delega aqui pra decidir se
+    # uma admissão de paciente continua válida (ver comentário longo
+    # nesse service sobre por que a admissão segue a janela do evento,
+    # não o ciclo de vida da sala LiveKit).
+    #
+    # NÃO checa status do evento aqui — só horários. Status final
+    # (completed/cancelled/no_show) é responsabilidade do caller, pra
+    # esse método continuar com responsabilidade única e reutilizável.
+    def in_admission_window?(at:)
+      return false unless @event&.starts_at && @event&.ends_at
+      open  = @event.starts_at - pre_minutes.minutes
+      close = @event.ends_at   + post_minutes.minutes
+      at >= open && at <= close
     end
 
     def call

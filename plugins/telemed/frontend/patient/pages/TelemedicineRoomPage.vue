@@ -70,6 +70,14 @@ function goBack() {
     params: { id: route.params.id },
   });
 }
+
+// Doutor encerrou a chamada (broadcast `{type:'call_ended'}` via data
+// channel, ver TelemedicineRoom). Paciente é levado pra home — UX deixa
+// claro que a consulta terminou, sem ficar num appointment "passado" que
+// confunde ("posso entrar de novo? ainda dá?").
+function onEndedByHost() {
+  router.replace({ name: 'home' });
+}
 </script>
 
 <!-- eslint-disable vue/no-bare-strings-in-template -->
@@ -85,8 +93,9 @@ function goBack() {
     <button class="pp-telemed-page-btn" @click="goBack">Voltar</button>
   </div>
 
-  <!-- Sala. Paciente entra com requires-admit=true quando o backend marcou
-       outside_window — fica na sala de espera local. -->
+  <!-- Sala. Paciente SEMPRE entra com requires-admit=true (waiting room
+       server-side: token vem com canPublish=false, dentista chama
+       admit_patient que faz UpdateParticipant no LiveKit). -->
   <TelemedicineRoom
     v-else
     :url="session.url"
@@ -94,9 +103,10 @@ function goBack() {
     :dev-mode="session.dev_mode"
     :room-code="session.room_code"
     role="patient"
-    :requires-admit="session.outside_window"
+    :requires-admit="true"
     @leave="goBack"
     @session-event="onSessionEvent"
+    @ended-by-host="onEndedByHost"
   />
 </template>
 

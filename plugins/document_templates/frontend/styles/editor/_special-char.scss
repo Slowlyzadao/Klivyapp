@@ -1,0 +1,43 @@
+// Picker de caracteres especiais — grade de glifos clicáveis.
+
+.special-char {
+  position: relative;
+  display: inline-flex;
+
+  &__pop {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 60;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+    width: 280px;
+    padding: 8px;
+    border: 1px solid var(--kl-border-subtle);
+    border-radius: var(--kl-radius-lg);
+    background: var(--kl-surface-white);
+    box-shadow: 0 12px 28px rgba(7, 16, 42, 0.16), 0 0 0 1px rgba(7, 16, 42, 0.04);
+  }
+
+  &__glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    border-radius: var(--kl-radius-md);
+    background: transparent;
+    color: var(--kl-on-surface);
+    font-family: var(--kl-font-family);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background var(--kl-transition);
+
+    &:hover { background: var(--kl-surface-low); }
+    &:focus-visible { outline: none; box-shadow: var(--kl-ring); }
+  }
+}

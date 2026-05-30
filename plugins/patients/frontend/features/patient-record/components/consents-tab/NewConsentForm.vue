@@ -8,6 +8,7 @@ import {
   EXPIRY_OPTIONS,
 } from '@plugins/patients/frontend/constants/consents';
 import { fillConsentTemplate } from '@plugins/patients/frontend/features/patient-record/utils/consentTemplates';
+import { documentTemplatesApi } from '@plugins/document_templates/frontend/api/documentTemplates';
 
 const props = defineProps({
   patient: { type: Object, required: true },
@@ -24,6 +25,9 @@ const blankForm = () => ({
   body: '',
   expires_in_months: 12,
   observations: '',
+  // null = caminho legado (body em texto puro vindo de consentTemplates.js).
+  // ID numérico = caminho via DocumentTemplate (Grover renderiza rendered_html).
+  document_template_id: null,
 });
 
 const form = ref(blankForm());
@@ -45,22 +49,79 @@ const consentTypeDetail = computed(() =>
   CONSENT_TYPES.find(c => c.value === form.value.consent_type)
 );
 
+// ── Templates de consent compatíveis (plugin document_templates) ───────
+// Quando o user troca o tipo de consent, carregamos templates daquele
+// document_type (próprios + Klivy globais). Se há ≥ 1, aparece o dropdown
+// "Modelo"; senão, segue o caminho legado preenchendo body via fillTemplate.
+const availableTemplates = ref([]);
+const templatesLoading = ref(false);
+
+const fetchTemplates = async docType => {
+  if (!docType) {
+    availableTemplates.value = [];
+    return;
+  }
+  templatesLoading.value = true;
+  try {
+    const [own, klivy] = await Promise.all([
+      documentTemplatesApi.list({ documentType: docType }),
+      documentTemplatesApi.klivyLibrary({ documentType: docType }),
+    ]);
+    availableTemplates.value = [
+      ...(own?.data?.data || []),
+      ...(klivy?.data?.data || []),
+    ];
+  } catch (_e) {
+    availableTemplates.value = [];
+  } finally {
+    templatesLoading.value = false;
+  }
+};
+
+const templateOptions = computed(() => [
+  { value: null, label: t('PATIENT_CONSENTS.FORM.TEMPLATE_DEFAULT') },
+  ...availableTemplates.value.map(tpl => ({
+    value: tpl.id,
+    label: tpl.is_klivy ? `${tpl.name} · Klivy` : tpl.name,
+  })),
+]);
+
+const hasTemplates = computed(() => availableTemplates.value.length > 0);
+
+const usingTemplate = computed(() => Boolean(form.value.document_template_id));
+
 const onTypeChange = () => {
+  // Reseta seleção de template — um "LGPD" não serve pra "imagem".
+  form.value.document_template_id = null;
+  fetchTemplates(form.value.consent_type);
+
   const detail = consentTypeDetail.value;
   if (!detail) return;
   form.value.title = detail.label;
+  // Body do legado fica preenchido como fallback; se user escolher template,
+  // o backend ignora `body` e renderiza via rendered_html.
   form.value.body = fillConsentTemplate(detail.template, props.patient);
 };
 
 const handleCreate = () => {
   if (!form.value.consent_type || !form.value.title) return;
-  emit('create', {
+
+  const payload = {
     title: form.value.title,
     document_type: form.value.consent_type,
-    body: form.value.body,
     expires_after_days: form.value.expires_in_months * 30,
     observations: form.value.observations,
-  });
+  };
+
+  if (form.value.document_template_id) {
+    // Caminho novo: backend renderiza via DocumentTemplate, body é ignorado.
+    payload.document_template_id = form.value.document_template_id;
+  } else {
+    // Caminho legado: body texto puro vai pro ConsentRecord.body.
+    payload.body = form.value.body;
+  }
+
+  emit('create', payload);
 };
 
 defineExpose({
@@ -140,6 +201,28 @@ defineExpose({
         </div>
       </div>
 
+      <!-- Dropdown "Modelo" — só aparece se há templates compatíveis com o
+           tipo. Quando o user escolhe um, o backend renderiza via Grover
+           (plugin document_templates). Default = caminho legado. -->
+      <div v-if="hasTemplates" class="form-group">
+        <label class="form-label">
+          {{ t('PATIENT_CONSENTS.FORM.TEMPLATE_LABEL') }}
+          <span class="text-slate-600">
+            {{ t('PATIENT_CONSENTS.FORM.TEMPLATE_OPTIONAL') }}
+          </span>
+        </label>
+        <FormSelect
+          v-model="form.document_template_id"
+          :options="templateOptions"
+          :placeholder="
+            templatesLoading
+              ? t('PATIENT_CONSENTS.FORM.TEMPLATE_LOADING')
+              : t('PATIENT_CONSENTS.FORM.TEMPLATE_PLACEHOLDER')
+          "
+          auto-searchable
+        />
+      </div>
+
       <div class="form-group">
         <label class="form-label">
           {{ t('PATIENT_CONSENTS.FORM.OBSERVATIONS_LABEL') }}
@@ -155,7 +238,10 @@ defineExpose({
         />
       </div>
 
-      <div class="form-group">
+      <!-- Body em texto puro — usado apenas no caminho legado. Quando o user
+           escolhe um Modelo, o conteúdo vem renderizado do DocumentTemplate
+           e a edição é feita na aba Documentos (não aqui). -->
+      <div v-if="!usingTemplate" class="form-group">
         <div class="flex items-center justify-between mb-1.5">
           <label class="form-label">
             {{ t('PATIENT_CONSENTS.FORM.BODY_LABEL') }}
@@ -176,6 +262,18 @@ defineExpose({
           class="form-input font-mono leading-relaxed resize-y"
           style="min-height: 400px"
         />
+      </div>
+
+      <!-- Aviso quando o caminho via template está ativo. Substitui a área
+           do textarea, que não faz sentido nesse modo. -->
+      <div
+        v-else
+        class="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4 text-sm text-blue-300 flex items-start gap-2"
+      >
+        <i class="i-lucide-info w-4 h-4 mt-0.5 flex-shrink-0" />
+        <p class="leading-relaxed">
+          {{ t('PATIENT_CONSENTS.FORM.TEMPLATE_NOTICE') }}
+        </p>
       </div>
 
       <div class="flex items-center justify-between pt-2 border-t border-white/5">

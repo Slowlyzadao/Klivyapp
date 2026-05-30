@@ -9,10 +9,11 @@ class Api::V1::PatientPortal::Telemed::SessionsController < Api::V1::PatientPort
 
   # POST /api/v1/patient_portal/telemed/sessions?event_id=:id
   #
-  # 2026-05-19 (Google Meet pattern): paciente pode entrar a qualquer hora
-  # — fora da janela ele cai em "sala de espera" client-side e aguarda o
-  # doutor admitir via Data Channel. Só recusamos quando o evento está
-  # permanentemente bloqueado.
+  # 2026-05-21 — Waiting room SERVER-SIDE.
+  # Paciente sempre entra com `canPublish: false`. Doutor precisa chamar
+  # `admit_patient` (admin) pra liberar publish via LiveKit UpdateParticipant.
+  # `outside_window` continua sendo retornado pra UX mostrar "sua consulta é
+  # daqui a X min" — mas NÃO é mais o que controla a sala de espera.
   def create
     telemed = Telemed::Session.new(event: @event, account: current_account).call
 
@@ -25,10 +26,19 @@ class Api::V1::PatientPortal::Telemed::SessionsController < Api::V1::PatientPort
     # `current_acting_patient` = quem realmente está logado (responsável OU paciente).
     # Cada participante precisa de identity ÚNICA. Quando um responsável entra
     # atuando como dependente, identidades distintas evitam confusão no LiveKit.
+    #
+    # 2026-05-21 — Reidratação de admissão: se o paciente já foi admitido
+    # nesta sala antes (F5, reconexão, troca de aba), pula o waiting room
+    # e emite token JÁ admitido. Sem isso, paciente que recarregava a
+    # página caía de novo na fila do dentista — atrito desnecessário no
+    # meio de uma consulta.
+    already_admitted = patient_already_admitted?(@event, current_acting_patient)
+
     session = Telemed::SessionIssuer.new(
       event:       @event,
       participant: current_acting_patient,
-      role:        'patient'
+      role:        'patient',
+      admitted:    already_admitted
     ).call
 
     log!('telemedicine_join', @event)
@@ -102,6 +112,17 @@ class Api::V1::PatientPortal::Telemed::SessionsController < Api::V1::PatientPort
     # Falha não bloqueia entrada — orchestrator simplesmente não inicia gravação
     # se consent não persistir.
     Rails.logger.warn("[PatientPortal::Telemed::Sessions#event] consent persist falhou: #{e.class} #{e.message}")
+  end
+
+  # Checa se o patient_id atual já foi admitido pelo dentista anteriormente
+  # E se essa admissão ainda é válida (dentro da janela do evento + status
+  # não-final). Delegado pra Telemed::AdmissionWindow — mesmo helper que o
+  # admin usa em `accounts/telemed/sessions#create`, garantindo critério
+  # idêntico nos dois lados (admissão por nonce/identity teria divergido
+  # outra vez se cada lado filtrasse com sua própria lógica).
+  def patient_already_admitted?(event, patient)
+    return false unless patient
+    Telemed::AdmissionWindow.new(event: event).admitted?(patient_id: patient.id)
   end
 
   def load_event

@@ -1,0 +1,195 @@
+// Header da DocumentsIndex — matches mockup M3 Klivy.
+
+.docs-header {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding: 32px var(--kl-container-padding) 24px;
+  background: var(--kl-bg);
+
+  // ── Row 1: título + CTA primário ─────────────────────────────────────
+  &__hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  &__hero-text {
+    min-width: 0;
+  }
+
+  &__title {
+    margin: 0 0 8px;
+    font-family: inherit;
+    font-size: var(--kl-font-headline-lg);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: var(--kl-on-surface);
+  }
+
+  &__subtitle {
+    margin: 0;
+    font-size: var(--kl-font-body-md);
+    line-height: 1.5;
+    color: var(--kl-secondary);
+  }
+
+  &__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 42px;
+    padding: 0 24px;
+    border: none;
+    border-radius: var(--kl-radius-lg);
+    background: var(--kl-primary);
+    color: var(--kl-on-primary);
+    font-family: inherit;
+    font-size: var(--kl-font-label-md);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background var(--kl-transition), color var(--kl-transition),
+      box-shadow var(--kl-transition);
+
+    &:hover {
+      background: var(--kl-primary-container);
+      color: var(--kl-on-primary-container);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--kl-ring);
+    }
+  }
+
+  &__cta-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  // ── Row 2: tabs + filtros ────────────────────────────────────────────
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  &__filters {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  // ── Busca ────────────────────────────────────────────────────────────
+  &__search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 256px;
+  }
+
+  &__search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: var(--kl-secondary);
+    pointer-events: none;
+  }
+
+  &__search-input {
+    width: 100%;
+    height: 42px;
+    padding: 0 14px 0 42px;
+    border: 1px solid var(--kl-border-subtle);
+    border-radius: var(--kl-radius-lg);
+    background: var(--kl-surface-white);
+    color: var(--kl-on-surface);
+    font-family: inherit;
+    font-size: var(--kl-font-body-md);
+    transition: border-color var(--kl-transition), box-shadow var(--kl-transition);
+    appearance: none;
+
+    &::placeholder { color: var(--kl-secondary); }
+
+    &:focus {
+      outline: none;
+      border-color: var(--kl-primary-container);
+      box-shadow: 0 0 0 1px var(--kl-primary-container);
+    }
+
+    &::-webkit-search-cancel-button { appearance: none; }
+  }
+
+  // ── Select de tipo ───────────────────────────────────────────────────
+  &__select-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  &__select {
+    width: 192px;
+    height: 42px;
+    padding: 0 38px 0 16px;
+    border: 1px solid var(--kl-border-subtle);
+    border-radius: var(--kl-radius-lg);
+    background: var(--kl-surface-white);
+    color: var(--kl-on-surface);
+    font-family: inherit;
+    font-size: var(--kl-font-body-md);
+    cursor: pointer;
+    appearance: none;
+    transition: border-color var(--kl-transition), box-shadow var(--kl-transition);
+
+    &:hover { border-color: var(--kl-border-strong); }
+
+    &:focus {
+      outline: none;
+      border-color: var(--kl-primary-container);
+      box-shadow: 0 0 0 1px var(--kl-primary-container);
+    }
+  }
+
+  &__select-chevron {
+    position: absolute;
+    right: 12px;
+    width: 18px;
+    height: 18px;
+    color: var(--kl-secondary);
+    pointer-events: none;
+  }
+}
+
+// ── Responsivo ─────────────────────────────────────────────────────────
+@media (max-width: 900px) {
+  .docs-header {
+    padding: 24px 20px 16px;
+    gap: 24px;
+
+    &__filters {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    &__search {
+      flex: 1;
+      min-width: 200px;
+      width: auto;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .docs-header__select { width: 100%; }
+  .docs-header__select-wrap { width: 100%; }
+}

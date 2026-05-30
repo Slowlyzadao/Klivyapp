@@ -1,0 +1,169 @@
+// Form grid 2-col com labels uppercase + inputs estilo M3 Klivy.
+// Inputs e selects altos (44px), focus em primary border + ring sutil.
+// Botões footer: ghost (cancel) e primary container blue (CTA).
+
+.form-stack {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 16px;
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+
+    &--full {
+      grid-column: 1 / -1;
+    }
+  }
+
+  &__label {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    font-family: var(--kl-font-family);
+    font-size: var(--kl-font-label-md);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--kl-secondary);
+  }
+
+  &__label-hint {
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--kl-text-muted);
+  }
+
+  &__input,
+  &__select {
+    width: 100%;
+    height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--kl-border-subtle);
+    border-radius: var(--kl-radius-lg);
+    background: var(--kl-surface-white);
+    color: var(--kl-on-surface);
+    font-family: var(--kl-font-family);
+    font-size: var(--kl-font-body-md);
+    transition: border-color var(--kl-transition), box-shadow var(--kl-transition);
+    appearance: none;
+
+    &::placeholder {
+      color: var(--kl-surface-dim);
+    }
+
+    &:hover {
+      border-color: var(--kl-border-strong);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--kl-primary);
+      box-shadow: 0 0 0 1px var(--kl-primary);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  // Wrapper select pra colocar chevron à direita.
+  &__select-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  &__select {
+    padding-right: 42px;
+    cursor: pointer;
+  }
+
+  &__select-chevron {
+    position: absolute;
+    right: 14px;
+    width: 18px;
+    height: 18px;
+    color: var(--kl-secondary);
+    pointer-events: none;
+  }
+
+  // ── Botões do footer ────────────────────────────────────────────────
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 42px;
+    padding: 0 24px;
+    border-radius: var(--kl-radius-lg);
+    font-family: var(--kl-font-family);
+    font-size: var(--kl-font-label-md);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background var(--kl-transition), color var(--kl-transition),
+      box-shadow var(--kl-transition);
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &--secondary {
+      border: none;
+      background: transparent;
+      color: var(--kl-secondary);
+
+      &:hover:not(:disabled) {
+        background: var(--kl-surface-high);
+        color: var(--kl-on-surface);
+      }
+    }
+
+    &--primary {
+      border: none;
+      background: var(--kl-primary-container);
+      color: var(--kl-on-primary);
+      box-shadow: var(--kl-shadow-sm);
+
+      &:hover:not(:disabled) {
+        background: var(--kl-primary);
+      }
+
+      &:focus-visible {
+        outline: none;
+        box-shadow: var(--kl-shadow-sm), var(--kl-ring);
+      }
+    }
+
+    &--danger {
+      border: none;
+      background: var(--kl-error);
+      color: var(--kl-on-error);
+      box-shadow: var(--kl-shadow-sm);
+
+      &:hover:not(:disabled) {
+        filter: brightness(0.92);
+      }
+
+      &:focus-visible {
+        outline: none;
+        box-shadow: var(--kl-shadow-sm), 0 0 0 3px rgba(186, 26, 26, 0.22);
+      }
+    }
+  }
+}
+
+@media (max-width: 540px) {
+  .form-stack {
+    grid-template-columns: 1fr;
+
+    &__field--full {
+      grid-column: auto;
+    }
+  }
+}

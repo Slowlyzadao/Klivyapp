@@ -75,7 +75,15 @@ export default {
       );
     },
     initials() {
-      const source = this.event?.title || '';
+      // Audit 2026-05-25: iniciais sempre do paciente (contact.name) para
+      // consultation/telemedicine — antes vinham de `event.title`, que pode
+      // ser um título customizado pelo usuário ("Avaliação", "Retorno"…)
+      // e gerava iniciais sem relação com o paciente.
+      const source =
+        (this.eventTypeMeta?.value === 'consultation' &&
+          this.event?.contact?.name) ||
+        this.event?.title ||
+        '';
       const parts = source.trim().split(/\s+/).filter(Boolean);
       if (!parts.length) return '?';
       if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
@@ -465,32 +473,37 @@ export default {
             </div>
           </div>
 
-          <!-- Footer Actions -->
-          <div class="p-3 bg-white dark:bg-slate-800 flex gap-2">
-            <button
-              class="flex-1 h-10 flex items-center justify-center gap-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm transition-all active:scale-95"
-              @click="$emit('edit', event)"
-            >
-              <i class="i-lucide-pencil size-4" />
-              Editar
-            </button>
-            <!-- Sprint K — Botão "Entrar na sala". Renderiza-se sozinho
-                 condicionalmente (telemedicine_enabled + user é o profissional
-                 responsável + janela aberta). Quando não aplica, o componente
-                 retorna nada e o layout do footer continua certinho. -->
+          <!-- Footer Actions.
+               Linha 1: Editar + Prontuário lado a lado (ações secundárias).
+               Linha 2: Entrar na sala (CTA principal pra teleconsulta) full
+               width, abaixo. Só aparece quando isTelemedicine — pra eventos
+               regulares, o footer fica só com a linha 1. -->
+          <div class="p-3 bg-white dark:bg-slate-800 flex flex-col gap-2">
+            <div class="flex gap-2">
+              <button
+                class="flex-1 h-10 flex items-center justify-center gap-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm transition-all active:scale-95"
+                @click="$emit('edit', event)"
+              >
+                <i class="i-lucide-pencil size-4" />
+                Editar
+              </button>
+              <button
+                v-if="event.contact_id"
+                class="flex-1 h-10 flex items-center justify-center gap-2 bg-blue-600 dark:bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-500 text-white font-bold text-sm rounded-lg shadow-sm shadow-blue-200 dark:shadow-none transition-all active:scale-95"
+                @click="$emit('open-patient', event)"
+              >
+                <i class="i-lucide-external-link size-4" />
+                Prontuário
+              </button>
+            </div>
+            <!-- Sprint K — "Entrar na sala". Renderiza condicionalmente
+                 (telemed_enabled + user é o profissional + janela aberta).
+                 Full width na linha de baixo. -->
             <TelemedicineJoinButton
               v-if="isTelemedicine"
               :event="event"
-              class="flex-1"
+              class="w-full"
             />
-            <button
-              v-if="event.contact_id"
-              class="flex-1 h-10 flex items-center justify-center gap-2 bg-blue-600 dark:bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-500 text-white font-bold text-sm rounded-lg shadow-sm shadow-blue-200 dark:shadow-none transition-all active:scale-95"
-              @click="$emit('open-patient', event)"
-            >
-              <i class="i-lucide-external-link size-4" />
-              Prontuário
-            </button>
           </div>
         </div>
       </div>

@@ -1,0 +1,129 @@
+// Menu de inserção de variável — popover (tippy) e sidebar.
+// Tokens M3 Klivy. Ícones soltos.
+
+@use '../variables' as *;
+
+.variable-picker {
+  display: flex;
+  flex-direction: column;
+  max-height: 360px;
+  width: 320px;
+  overflow: hidden;
+  border-radius: var(--kl-radius-xl);
+  background: var(--kl-surface-white);
+  box-shadow:
+    0 12px 28px rgba(7, 16, 42, 0.16),
+    0 0 0 1px rgba(7, 16, 42, 0.04);
+  border: 1px solid var(--kl-border-subtle);
+  font-family: var(--kl-font-family);
+
+  &__search {
+    position: relative;
+    padding: 10px;
+    border-bottom: 1px solid var(--kl-border-subtle);
+  }
+
+  &__search-icon {
+    position: absolute;
+    top: 50%;
+    left: 22px;
+    width: 16px;
+    height: 16px;
+    transform: translateY(-50%);
+    color: var(--kl-secondary);
+    pointer-events: none;
+  }
+
+  &__search-input {
+    width: 100%;
+    height: 34px;
+    padding: 0 10px 0 32px;
+    border: 1px solid var(--kl-border-subtle);
+    border-radius: var(--kl-radius-md);
+    background: var(--kl-surface-white);
+    color: var(--kl-on-surface);
+    font-family: inherit;
+    font-size: var(--kl-font-body-md);
+    transition: border-color var(--kl-transition), box-shadow var(--kl-transition);
+
+    &::placeholder { color: var(--kl-surface-dim); }
+
+    &:focus {
+      outline: none;
+      border-color: var(--kl-primary);
+      box-shadow: 0 0 0 1px var(--kl-primary);
+    }
+  }
+
+  &__empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--kl-secondary);
+    font-size: var(--kl-font-body-md);
+  }
+
+  &__group {
+    overflow-y: auto;
+  }
+
+  &__group-title {
+    position: sticky;
+    top: 0;
+    margin: 0;
+    padding: 8px 12px;
+    background: var(--kl-surface-low);
+    color: var(--kl-secondary);
+    font-family: inherit;
+    font-size: var(--kl-font-label-md);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  &__list {
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: var(--kl-radius-md);
+    background: transparent;
+    color: var(--kl-on-surface);
+    font-family: inherit;
+    font-size: var(--kl-font-body-md);
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--kl-transition), color var(--kl-transition);
+
+    &:hover {
+      background: var(--kl-surface-low);
+    }
+
+    &--active {
+      background: var(--kl-primary-fixed);
+      color: var(--kl-on-primary-fixed-variant);
+    }
+  }
+
+  &__item-label {
+    flex-shrink: 0;
+  }
+
+  &__item-example {
+    flex: 1;
+    text-align: right;
+    color: var(--kl-text-muted);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

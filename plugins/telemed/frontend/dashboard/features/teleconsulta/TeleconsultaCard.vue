@@ -44,7 +44,20 @@ const cardClass = computed(() => ({
 }));
 
 const initials = computed(() => initialsFromName(props.item.patient?.name));
-const motivo = computed(() => props.item.title?.trim() || 'Consulta');
+// Audit 2026-05-25: motivo NÃO pode ser `item.title` — o modal auto-preenche
+// title com nome do paciente p/ label do calendário, então usar como motivo
+// duplicava o paciente na linha "Motivo". Fontes verdadeiras, em ordem:
+//   1. service.name (treatment selecionado no agendamento)
+//   2. reason       (descrição/observação do agendamento)
+//   3. null         → UI mostra "—" em vez de inventar texto genérico
+const motivo = computed(() => {
+  const service = props.item.service?.name?.trim();
+  if (service) return service;
+  const reason = props.item.reason?.trim();
+  if (reason) return reason;
+  return null;
+});
+const motivoLabel = computed(() => motivo.value || '—');
 const professional = computed(() => props.item.professional?.name || '—');
 
 const upcomingDateLabel = computed(() => formatStartDateLabel(props.item.starts_at));
@@ -95,7 +108,7 @@ const canEnter = computed(() => variant.value === 'live');
           <i class="i-lucide-stethoscope w-4 h-4 tc-info-row__icon" />
           <div class="tc-info-row__content">
             <span class="tc-info-row__label">Motivo</span>
-            <span class="tc-info-row__value">{{ motivo }}</span>
+            <span class="tc-info-row__value">{{ motivoLabel }}</span>
           </div>
         </div>
         <div class="tc-info-row">
@@ -123,7 +136,7 @@ const canEnter = computed(() => variant.value === 'live');
           <i class="i-lucide-stethoscope w-4 h-4 tc-info-row__icon" />
           <div class="tc-info-row__content">
             <span class="tc-info-row__label">Motivo</span>
-            <span class="tc-info-row__value">{{ motivo }}</span>
+            <span class="tc-info-row__value">{{ motivoLabel }}</span>
           </div>
         </div>
       </template>
@@ -134,7 +147,7 @@ const canEnter = computed(() => variant.value === 'live');
           <i class="i-lucide-stethoscope w-4 h-4 tc-info-row__icon" />
           <div class="tc-info-row__content">
             <span class="tc-info-row__label">Motivo</span>
-            <span class="tc-info-row__value">{{ motivo }}</span>
+            <span class="tc-info-row__value">{{ motivoLabel }}</span>
           </div>
         </div>
         <div class="tc-info-row tc-info-row--inline">
@@ -152,7 +165,7 @@ const canEnter = computed(() => variant.value === 'live');
           <i class="i-lucide-stethoscope w-4 h-4 tc-info-row__icon" />
           <div class="tc-info-row__content">
             <span class="tc-info-row__label">Motivo</span>
-            <span class="tc-info-row__value">{{ motivo }}</span>
+            <span class="tc-info-row__value">{{ motivoLabel }}</span>
           </div>
         </div>
         <div class="tc-info-row">

@@ -4,10 +4,10 @@
 // decide o que fazer (mostrar confirmação, aplicar via API, etc.).
 defineProps({
   presetKey: { type: String, required: true },
-  title:     { type: String, required: true },
-  summary:   { type: String, required: true },
-  active:    { type: Boolean, default: false },
-  disabled:  { type: Boolean, default: false },
+  title: { type: String, required: true },
+  summary: { type: String, required: true },
+  active: { type: Boolean, default: false },
+  disabled: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['select']);
@@ -35,6 +35,8 @@ const emit = defineEmits(['select']);
         Ativo
       </span>
     </div>
-    <p class="text-xs text-n-slate-11 m-0 mt-2 leading-relaxed">{{ summary }}</p>
+    <p class="text-xs text-n-slate-11 m-0 mt-2 leading-relaxed">
+      {{ summary }}
+    </p>
   </button>
 </template>

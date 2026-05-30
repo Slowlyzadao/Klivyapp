@@ -15,10 +15,15 @@ module Telemed
     DEFAULT_PROVIDER = 'claude-sonnet-4.6'.freeze
 
     # Resposta normalizada que o caller persiste em ProposedEvolution.
-    # `soap_structure` é hash com chaves estáveis em PT-BR pra a UI ficar
-    # provider-agnostic. `raw_markdown` é o markdown bruto retornado.
+    # `soap_structure` é hash com chaves estáveis em PT-BR (backward-compat,
+    # não exibido na UI atual). `raw_markdown` é o markdown bruto retornado.
+    # `summary` é o bloco "Resumo Executivo" (Markdown renderizado na UI).
+    # `procedure_fields` é hash com 14 chaves do "Registro de Procedimento"
+    # (audit 2026-05-26) — formato editável que substituiu os cards SOAP
+    # na UI da clínica.
     Result = Struct.new(
-      :soap_structure, :raw_markdown, :attention_points,
+      :soap_structure, :raw_markdown, :attention_points, :summary,
+      :procedure_fields,
       :provider, :input_tokens, :output_tokens,
       keyword_init: true
     )
