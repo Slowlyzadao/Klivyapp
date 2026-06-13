@@ -1,4 +1,6 @@
 class Api::V1::Accounts::InternalChat::MentionsController < Api::V1::Accounts::BaseController
+  before_action -> { authorize(InternalChat::Mention, policy_class: InternalChat::MentionPolicy) }
+
   # GET /accounts/:id/internal_chat/mentions
   # ?status=unread (default) | all
   def index
@@ -36,10 +38,21 @@ class Api::V1::Accounts::InternalChat::MentionsController < Api::V1::Accounts::B
       message_id: mention.message_id,
       room_id: msg&.room_id,
       room_name: msg&.room ? msg.room.display_name_for(Current.user) : nil,
-      sender: msg&.sender ? { id: msg.sender.id, name: msg.sender.available_name } : nil,
+      sender: msg&.sender ? serialize_sender(msg.sender) : nil,
       content_preview: (msg&.content || '')[0, 200],
       read_at: mention.read_at,
       created_at: mention.created_at,
+    }
+  end
+
+  # Mesmo formato usado em message_serializer/room_serializer pra User —
+  # `available_name` cai pra display_name/name e `avatar_url` é o método
+  # padrão do Chatwoot que retorna a URL pública do attachment ActiveStorage.
+  def serialize_sender(user)
+    {
+      id: user.id,
+      name: user.available_name,
+      avatar_url: user.respond_to?(:avatar_url) ? user.avatar_url : nil,
     }
   end
 end

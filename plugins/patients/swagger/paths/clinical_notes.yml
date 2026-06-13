@@ -1,0 +1,56 @@
+get:
+  tags:
+    - Evoluções Clínicas
+  summary: Listar evoluções clínicas
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  responses:
+    '200':
+      description: Lista (ordem `note_date DESC, created_at DESC`)
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/ClinicalNote.yml'
+post:
+  tags:
+    - Evoluções Clínicas
+  summary: Criar evolução clínica
+  description: |
+    `professional` é o `current_user`. `note_date` default = hoje. Aceita
+    optimistic locking via `lock_version`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [clinical_note]
+          properties:
+            clinical_note:
+              type: object
+              properties:
+                appointment_id: { type: integer }
+                form_template_id: { type: integer }
+                note_date: { type: string, format: date, description: "Default = hoje" }
+                complaint_of_day: { type: string }
+                assessment: { type: string }
+                conduct: { type: string }
+                complications: { type: string }
+                guidance_given: { type: string }
+                return_recommended: { type: string, format: date }
+                lock_version: { type: integer }
+  responses:
+    '201':
+      description: Criada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/ClinicalNote.yml'
+    '422':
+      description: Erro de validação

@@ -1,0 +1,37 @@
+post:
+  tags:
+    - Bea — Notificações Internas
+  summary: Restaurar template ao default
+  description: |
+    Restaura o template ao default do EventCatalog. NÃO preserva o estado
+    atual — força:
+      - `name` ← label do EventCatalog
+      - `body` ← `default_body` do EventCatalog (com `strip`)
+      - `target_type` ← `room`
+      - `target_id` ← id da sala `system_role='reception'` (pode ser `null`
+        se a conta não tiver sala de recepção)
+      - `enabled` ← `true`
+
+    Ou seja, `enabled` e `target_type` que o usuário tinha são SOBRESCRITOS
+    (o template volta ativo e apontando pra recepção). Sem corpo de request.
+
+    Autorização: admin OR Klivy `captain.manage_templates`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Restaurado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/InternalNotificationTemplate.yml'
+    '403':
+      description: Sem permissão (`captain.manage_templates`)
+    '404':
+      description: Template não encontrado
+    '422':
+      description: |
+        `event_key` do template não tem default no EventCatalog (entrada
+        órfã) — não há de onde restaurar. Body: `{ errors: ['event_key sem
+        default no catálogo'] }`.

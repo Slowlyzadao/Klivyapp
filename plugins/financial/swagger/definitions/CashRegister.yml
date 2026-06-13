@@ -1,0 +1,40 @@
+type: object
+description: |
+  Sessão de caixa (`Financial::CashRegister`). Workflow:
+  `open` → operador conta `counted_balance_cents` → `close` calcula
+  `difference_cents`. ADMIN/GERENTE pode `reopen` com motivo. Operações
+  acessórias: `withdraw` (sangria) e `supplement` (suprimento) — geram
+  `CashMovement`s + `Entry`s automáticas.
+properties:
+  id: { type: integer }
+  bank_account_id: { type: integer, description: "FK `financial_bank_account_id`" }
+  operator_id: { type: integer, nullable: true }
+  session_date: { type: string, format: date }
+  status:
+    type: string
+    enum: [aberto, fechado, reaberto]
+  opening_balance_cents: { type: integer }
+  expected_balance_cents:
+    type: integer
+    nullable: true
+    description: Saldo esperado no fechamento (calculado pelo backend).
+  counted_balance_cents:
+    type: integer
+    nullable: true
+    description: Saldo contado físico no momento do close.
+  difference_cents:
+    type: integer
+    nullable: true
+    description: "counted − expected. Quebra de caixa quando ≠ 0."
+  opened_at: { type: string, format: date-time }
+  closed_at: { type: string, format: date-time, nullable: true }
+  opening_note: { type: string, nullable: true }
+  closing_note: { type: string, nullable: true }
+  calculated_expected_cents:
+    type: integer
+    description: Saldo recalculado em tempo real (útil pra UI mostrar o valor antes de fechar).
+  movements:
+    type: array
+    description: "Embedded em `include_movements=true`."
+    items:
+      $ref: './CashMovement.yml'

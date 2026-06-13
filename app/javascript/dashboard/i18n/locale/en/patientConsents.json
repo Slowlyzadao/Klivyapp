@@ -1,0 +1,114 @@
+{
+  "PATIENT_CONSENTS": {
+    "HEADER": {
+      "TITLE": "Consents and Signatures",
+      "SUBTITLE": "Legal management of terms — LGPD, image authorizations, aesthetic procedures and more.",
+      "NEW": "New Consent",
+      "CANCEL": "Cancel"
+    },
+    "KPI": {
+      "TOTAL": "Total",
+      "SIGNED": "Signed",
+      "PENDING": "Pending",
+      "EXPIRED": "Expired"
+    },
+    "FORM": {
+      "TITLE": "New Consent",
+      "SUBTITLE": "Fill in the data and content of the term",
+      "TEMPLATE_LABEL": "Generate from a template",
+      "TEMPLATE_OPTIONAL": "(optional)",
+      "TEMPLATE_PLACEHOLDER": "Choose a library template",
+      "TEMPLATE_NONE": "None — fill manually",
+      "TEMPLATE_HINT": "The term is generated from the template, filled with the patient's data. The content below doesn't apply.",
+      "TYPE_LABEL": "Consent Type",
+      "TYPE_PLACEHOLDER": "Select the type...",
+      "DOCUMENT_TITLE_LABEL": "Document Title",
+      "DOCUMENT_TITLE_PLACEHOLDER": "e.g. Botox Consent Term",
+      "VALIDITY_LABEL": "Validity",
+      "VALIDITY_PLACEHOLDER": "Validity",
+      "OBSERVATIONS_LABEL": "Additional Notes",
+      "OBSERVATIONS_OPTIONAL": "(optional)",
+      "OBSERVATIONS_PLACEHOLDER": "e.g. Application on the frontal and glabella — session 1/3",
+      "BODY_LABEL": "Term Content",
+      "BODY_HINT": "(editable — click to customize)",
+      "BODY_CHARS": "{count} characters",
+      "BODY_PLACEHOLDER": "Select a consent type above to pre-fill the template...",
+      "CLOSE": "Close",
+      "FOOTER_PREFIX": "The consent will be created as",
+      "FOOTER_PENDING": "pending",
+      "FOOTER_SUFFIX": "until signed",
+      "CANCEL": "Cancel",
+      "CREATE": "Create Consent",
+      "CREATING": "Creating..."
+    },
+    "EMPTY": {
+      "TITLE": "No consents recorded",
+      "HINT": "Click \"New Consent\" to add the first term"
+    },
+    "TABLE": {
+      "TITLE": "Recorded Terms",
+      "SUBTITLE": "Patient consent history",
+      "DOCUMENT": "Document",
+      "CATEGORY": "Category",
+      "VALIDITY": "Validity",
+      "STATUS": "Status",
+      "ACTIONS": "Actions",
+      "DEFAULT_TITLE": "Consent Term",
+      "VERSION_PREFIX": "v",
+      "HASH_PREFIX": "Hash:",
+      "VIEW": "View",
+      "VIEW_TITLE": "View term",
+      "SEND": "Send",
+      "SEND_TITLE": "Send signature link via WhatsApp",
+      "SIGN": "Sign",
+      "SIGN_TITLE": "Sign in person",
+      "SIGN_REMOTE": "E-signature",
+      "SIGN_REMOTE_TITLE": "Send for external e-signature",
+      "HASH": "Hash",
+      "HASH_TITLE": "View integrity",
+      "REVOKE": "Revoke",
+      "REVOKE_TITLE": "Revoke consent"
+    },
+    "STATUS": {
+      "PENDING": "Pending",
+      "SIGNED": "Signed",
+      "EXPIRED": "Expired",
+      "REVOKED": "Revoked"
+    },
+    "SIGN_MODAL": {
+      "TITLE": "Digital Signature",
+      "SUBTITLE": "Sign with finger or mouse in the field below",
+      "PLACEHOLDER": "Sign here",
+      "CLEAR": "Clear",
+      "HASH_HINT": "SHA-256 hash auto-generated",
+      "CANCEL": "Cancel",
+      "CONFIRM": "Confirm Signature"
+    },
+    "VIEW_MODAL": {
+      "DEFAULT_TITLE": "Consent Term",
+      "EMPTY_BODY": "(Content unavailable)",
+      "AUDIT_TITLE": "Forensic Audit",
+      "SIGNED_AT": "Signed on {date}",
+      "IP_LABEL": "IP:",
+      "SIGNATURE_LABEL": "Recorded signature:",
+      "SIGNATURE_ALT": "Signature",
+      "SIGN_NOW": "Sign Now",
+      "CLOSE": "Close"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Error loading consents.",
+      "MISSING_TYPE": "Select the consent type.",
+      "CREATE_SUCCESS": "Consent created successfully!",
+      "CREATE_ERROR_PREFIX": "Error creating consent: {detail}",
+      "CREATE_ERROR_FALLBACK": "Try again.",
+      "SIGN_MISSING": "Please sign in the field above.",
+      "SIGN_SUCCESS": "Consent signed successfully!",
+      "SIGN_ERROR_PREFIX": "Error signing: {detail}",
+      "SEND_REMOTE_SUCCESS": "Signature link sent successfully to patient's WhatsApp!",
+      "SEND_REMOTE_ERROR": "Error sending signature link.",
+      "REVOKE_CONFIRM": "Are you sure you want to revoke this consent? This action cannot be undone.",
+      "REVOKE_SUCCESS": "Consent revoked.",
+      "REVOKE_ERROR": "Error revoking consent."
+    }
+  }
+}

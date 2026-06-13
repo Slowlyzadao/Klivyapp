@@ -1,5 +1,6 @@
 # Serviço responsável por processar mensagens recebidas do motor WhatsApp QR (Baileys)
-# Payload: { id, from, sender_jid, sender_name, text, timestamp, is_group, attachment }
+# Payload: { id, from, sender_jid, sender_name, sender_avatar_url, text, timestamp,
+#            is_group, group_name, group_avatar_url, attachment, from_me }
 # attachment: { url, mime_type, type, filename } — URL servida pelo bridge em localhost:3002
 class Whatsapp::IncomingMessageQrService
   pattr_initialize [:inbox!, :params!]
@@ -20,6 +21,7 @@ class Whatsapp::IncomingMessageQrService
     group_name   = message_data[:group_name]
     is_from_me   = message_data[:from_me] == true
     sender_avatar_url = message_data[:sender_avatar_url].presence
+    group_avatar_url  = message_data[:group_avatar_url].presence
 
     Rails.logger.info("[WHATSAPP_QR] Mensagem de #{sender_jid} (#{display_name}) | grupo=#{is_group} | from_me=#{is_from_me} | attachment=#{attachment_params&.dig(:type) || 'nenhum'}")
 
@@ -95,10 +97,13 @@ class Whatsapp::IncomingMessageQrService
     end
 
     # Sincroniza avatar de perfil (1:1). Para grupos, o avatar do contato-grupo
-    # vem do groupMetadata e o avatar individual será sincronizado mais abaixo
-    # quando criamos `actual_sender`. AvatarFromUrlJob é idempotente, rate-limita
-    # 1min e dedupe por hash da URL — seguro chamar sempre que tivermos URL.
-    if sender_avatar_url.present? && !is_group
+    # vem de `group_avatar_url` (foto do grupo) e o avatar individual será
+    # sincronizado mais abaixo quando criamos `actual_sender`. AvatarFromUrlJob
+    # é idempotente, rate-limita 1min e dedupe por hash da URL — seguro chamar
+    # sempre que tivermos URL.
+    if is_group
+      Avatar::AvatarFromUrlJob.perform_later(@contact, group_avatar_url) if group_avatar_url.present?
+    elsif sender_avatar_url.present?
       Avatar::AvatarFromUrlJob.perform_later(@contact, sender_avatar_url)
     end
 

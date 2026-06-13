@@ -1,0 +1,12 @@
+delete:
+  tags:
+    - Fila de Espera
+  summary: Remover entrada da fila
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204':
+      description: Removida
+    '404':
+      description: Entrada não encontrada

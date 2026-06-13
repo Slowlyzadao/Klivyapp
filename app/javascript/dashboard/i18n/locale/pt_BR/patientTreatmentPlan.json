@@ -1,0 +1,138 @@
+{
+  "PATIENT_TREATMENT_PLAN": {
+    "HEADER": {
+      "TITLE": "Plano de Tratamento",
+      "SUBTITLE": "Planejamento clínico, orçamentos propostos e status de execução.",
+      "NEW_PLAN": "Novo Plano"
+    },
+    "NEW_FORM": {
+      "TITLE": "Novo Plano de Tratamento",
+      "SUBTITLE": "Descreva a queixa do paciente e a hipótese diagnóstica.",
+      "JUSTIFICATION_LABEL": "Queixa principal",
+      "JUSTIFICATION_PLACEHOLDER": "Paciente apresenta escurecimento generalizado nos dentes e má oclusão leve...",
+      "DIAGNOSIS_LABEL": "Hipótese diagnóstica (CID)",
+      "DIAGNOSIS_PLACEHOLDER": "Ex: Esmalte escurecido (K03.7) + má oclusão leve",
+      "CANCEL": "Cancelar",
+      "SUBMIT": "Criar plano",
+      "SUBMIT_LOADING": "Criando..."
+    },
+    "EMPTY": {
+      "TITLE": "Nenhum plano de tratamento criado ainda.",
+      "HINT": "Preencha os campos acima e clique em \"Novo Plano\"."
+    },
+    "PLAN": {
+      "TITLE": "Plano de Tratamento",
+      "EMPTY_HEADLINE": "Plano sem procedimentos",
+      "EMPTY_HINT": "Adicione um procedimento para começar.",
+      "MULTI_HEADLINE": "{name} +{rest}",
+      "HEADER_META": "{sessions} sessão(ões) · {total}",
+      "NO_DIAGNOSIS": "Sem hipótese definida",
+      "STATUS_APPROVED": "Aprovado",
+      "ACTION_EDIT": "Editar Plano",
+      "ACTION_SAVE": "Salvar Plano",
+      "ACTION_APPROVE": "Aprovar"
+    },
+    "DIAGNOSIS_SECTION": {
+      "TITLE": "Diagnóstico e Hipótese",
+      "JUSTIFICATION_LABEL": "Justificativa Clínica / Queixa Principal",
+      "DIAGNOSIS_LABEL": "Hipótese Diagnóstica / CID",
+      "JUSTIFICATION_VIEW_LABEL": "Justificativa / Queixa Principal",
+      "JUSTIFICATION_FALLBACK": "O paciente não informou a queixa principal.",
+      "DIAGNOSIS_VIEW_LABEL": "Hipótese / CID",
+      "DIAGNOSIS_FALLBACK": "Nenhum CID informado."
+    },
+    "PROCEDURES": {
+      "TITLE": "Procedimentos Planejados",
+      "ADD": "Adicionar",
+      "PROCEDURE": "Procedimento",
+      "REGION": "Região",
+      "SESSIONS": "Sessões",
+      "UNIT_PRICE": "Valor Un.",
+      "DISCOUNT": "Desconto",
+      "SUBTOTAL": "Subtotal",
+      "STATUS": "Status",
+      "ACTION": "Ação",
+      "EMPTY": "Nenhum procedimento adicionado a este plano.",
+      "PROGRESS_TITLE": "{percent}% concluído",
+      "TOTAL_LABEL": "Total Estimado",
+      "EDIT_TITLE": "Editar",
+      "REMOVE_TITLE": "Remover"
+    },
+    "OBSERVATIONS": {
+      "TITLE": "Observações e Previsão",
+      "DURATION_LABEL": "Previsão de Conclusão",
+      "DURATION_PLACEHOLDER": "Ex: Aprox. 45 dias",
+      "DURATION_FALLBACK": "Não informada",
+      "PROFESSIONAL_LABEL": "Profissional Responsável",
+      "PROFESSIONAL_FALLBACK": "Profissional da Conta",
+      "NOTES_LABEL": "Observações dos procedimentos",
+      "APPROVED_AT": "Plano aprovado em {date}",
+      "PENDING_APPROVAL": "Plano pendente de aprovação.",
+      "VIEW_PDF": "Visualizar PDF",
+      "LOADING_PDF": "Gerando PDF..."
+    },
+    "ITEM_MODAL": {
+      "TITLE_NEW": "Novo Procedimento",
+      "TITLE_EDIT": "Editar Procedimento",
+      "SUBTITLE": "Defina os detalhes da intervenção planejada",
+      "PROCEDURE_LABEL": "Nome do Procedimento",
+      "PROCEDURE_PLACEHOLDER": "Selecione um serviço...",
+      "REGION_LABEL": "Região",
+      "REGION_PLACEHOLDER": "Ex: Terço superior da face",
+      "SESSIONS_LABEL": "Qtd. Sessões",
+      "UNIT_PRICE_LABEL": "Valor unitário (R$)",
+      "UNIT_PRICE_HINT": "Vem do serviço, mas pode ser editado.",
+      "UNIT_PRICE_REQUIRED": "Informe um valor maior que R$ 0,00.",
+      "DISCOUNT_LABEL": "Desconto",
+      "DISCOUNT_TYPE_FIXO": "R$",
+      "DISCOUNT_TYPE_PERCENTUAL": "%",
+      "DISCOUNT_NONE": "Sem desconto",
+      "DISCOUNT_VALUE_PLACEHOLDER": "0",
+      "NOTES_LABEL": "Observações",
+      "NOTES_PLACEHOLDER": "Anotações livres sobre o procedimento (técnica, ordem, contraindicações específicas)...",
+      "SUMMARY_GROSS": "Subtotal bruto",
+      "SUMMARY_DISCOUNT": "Desconto",
+      "SUMMARY_NET": "Total",
+      "CANCEL": "Cancelar",
+      "CONFIRM": "Salvar Procedimento",
+      "SKIP": "Adicionar depois"
+    },
+    "STATUS": {
+      "PROPOSTO": "Proposto",
+      "APROVADO": "Aprovado",
+      "EM_EXECUCAO": "Em execução",
+      "CONCLUIDO": "Concluído",
+      "CANCELADO": "Cancelado"
+    },
+    "DELETE_PLAN_MODAL": {
+      "TITLE": "Excluir Plano de Tratamento?",
+      "MESSAGE": "Tem certeza que deseja excluir este plano? Esta ação é irreversível e todos os procedimentos serão apagados.",
+      "CONFIRM": "Excluir"
+    },
+    "DELETE_ITEM_MODAL": {
+      "TITLE": "Excluir Procedimento?",
+      "MESSAGE": "Esta ação não pode ser desfeita. O procedimento será removido permanentemente do plano de tratamento selecionado.",
+      "CONFIRM": "Excluir"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Erro ao carregar planos de tratamento.",
+      "CREATE_SUCCESS": "Novo plano criado!",
+      "CREATE_ERROR": "Erro ao criar plano.",
+      "UPDATE_SUCCESS": "Plano atualizado com sucesso!",
+      "UPDATE_ERROR": "Erro ao atualizar plano.",
+      "VERSION_CONFLICT": "Outro usuário editou este plano enquanto você editava. Recarregando para evitar perda de dados.",
+      "VERSION_CONFLICT_BEFORE_ITEM": "Outro usuário editou este plano. Recarregando antes de adicionar procedimento.",
+      "APPROVE_SUCCESS": "Plano aprovado e comissionamento disparado!",
+      "APPROVE_ERROR": "Erro ao aprovar plano.",
+      "DELETE_SUCCESS": "Plano excluído com sucesso!",
+      "DELETE_ERROR": "Erro ao excluir plano.",
+      "ITEM_MISSING_PROCEDURE": "Selecione um procedimento.",
+      "ITEM_INVALID_PRICE": "Preço inválido para este procedimento. Confirme se o serviço está cadastrado em Agenda > Serviços.",
+      "ITEM_CREATED": "Procedimento adicionado!",
+      "ITEM_UPDATED": "Procedimento atualizado!",
+      "ITEM_SAVE_ERROR": "Erro ao salvar procedimento.",
+      "ITEM_REMOVED": "Procedimento removido!",
+      "ITEM_REMOVE_ERROR": "Erro ao remover procedimento."
+    }
+  }
+}

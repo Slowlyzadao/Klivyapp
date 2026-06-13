@@ -1,0 +1,138 @@
+{
+  "PATIENT_TREATMENT_PLAN": {
+    "HEADER": {
+      "TITLE": "Treatment Plan",
+      "SUBTITLE": "Clinical planning, proposed estimates and execution status.",
+      "NEW_PLAN": "New Plan"
+    },
+    "NEW_FORM": {
+      "TITLE": "New Treatment Plan",
+      "SUBTITLE": "Describe the patient's complaint and the diagnostic hypothesis.",
+      "JUSTIFICATION_LABEL": "Main complaint",
+      "JUSTIFICATION_PLACEHOLDER": "Patient presents generalized darkening of teeth and mild malocclusion...",
+      "DIAGNOSIS_LABEL": "Diagnostic hypothesis (ICD)",
+      "DIAGNOSIS_PLACEHOLDER": "e.g. Darkened enamel (K03.7) + mild malocclusion",
+      "CANCEL": "Cancel",
+      "SUBMIT": "Create plan",
+      "SUBMIT_LOADING": "Creating..."
+    },
+    "EMPTY": {
+      "TITLE": "No treatment plan created yet.",
+      "HINT": "Fill in the fields above and click \"New Plan\"."
+    },
+    "PLAN": {
+      "TITLE": "Treatment Plan",
+      "EMPTY_HEADLINE": "Plan with no procedures",
+      "EMPTY_HINT": "Add a procedure to get started.",
+      "MULTI_HEADLINE": "{name} +{rest}",
+      "HEADER_META": "{sessions} session(s) · {total}",
+      "NO_DIAGNOSIS": "No hypothesis defined",
+      "STATUS_APPROVED": "Approved",
+      "ACTION_EDIT": "Edit Plan",
+      "ACTION_SAVE": "Save Plan",
+      "ACTION_APPROVE": "Approve"
+    },
+    "DIAGNOSIS_SECTION": {
+      "TITLE": "Diagnosis and Hypothesis",
+      "JUSTIFICATION_LABEL": "Clinical Justification / Main Complaint",
+      "DIAGNOSIS_LABEL": "Diagnostic Hypothesis / ICD",
+      "JUSTIFICATION_VIEW_LABEL": "Justification / Main Complaint",
+      "JUSTIFICATION_FALLBACK": "Patient did not report main complaint.",
+      "DIAGNOSIS_VIEW_LABEL": "Hypothesis / ICD",
+      "DIAGNOSIS_FALLBACK": "No ICD informed."
+    },
+    "PROCEDURES": {
+      "TITLE": "Planned Procedures",
+      "ADD": "Add",
+      "PROCEDURE": "Procedure",
+      "REGION": "Region",
+      "SESSIONS": "Sessions",
+      "UNIT_PRICE": "Unit Price",
+      "DISCOUNT": "Discount",
+      "SUBTOTAL": "Subtotal",
+      "STATUS": "Status",
+      "ACTION": "Action",
+      "EMPTY": "No procedure added to this plan.",
+      "PROGRESS_TITLE": "{percent}% complete",
+      "TOTAL_LABEL": "Estimated Total",
+      "EDIT_TITLE": "Edit",
+      "REMOVE_TITLE": "Remove"
+    },
+    "OBSERVATIONS": {
+      "TITLE": "Notes and Forecast",
+      "DURATION_LABEL": "Estimated Completion",
+      "DURATION_PLACEHOLDER": "e.g. Approx. 45 days",
+      "DURATION_FALLBACK": "Not informed",
+      "PROFESSIONAL_LABEL": "Responsible Professional",
+      "PROFESSIONAL_FALLBACK": "Account Professional",
+      "NOTES_LABEL": "Procedure notes",
+      "APPROVED_AT": "Plan approved on {date}",
+      "PENDING_APPROVAL": "Plan pending approval.",
+      "VIEW_PDF": "View PDF",
+      "LOADING_PDF": "Generating PDF..."
+    },
+    "ITEM_MODAL": {
+      "TITLE_NEW": "New Procedure",
+      "TITLE_EDIT": "Edit Procedure",
+      "SUBTITLE": "Define the details of the planned intervention",
+      "PROCEDURE_LABEL": "Procedure Name",
+      "PROCEDURE_PLACEHOLDER": "Select a service...",
+      "REGION_LABEL": "Region",
+      "REGION_PLACEHOLDER": "e.g. Upper face third",
+      "SESSIONS_LABEL": "Sessions",
+      "UNIT_PRICE_LABEL": "Unit price (R$)",
+      "UNIT_PRICE_HINT": "Comes from the service, but can be edited.",
+      "UNIT_PRICE_REQUIRED": "Enter a value greater than R$ 0.00.",
+      "DISCOUNT_LABEL": "Discount",
+      "DISCOUNT_TYPE_FIXO": "R$",
+      "DISCOUNT_TYPE_PERCENTUAL": "%",
+      "DISCOUNT_NONE": "No discount",
+      "DISCOUNT_VALUE_PLACEHOLDER": "0",
+      "NOTES_LABEL": "Notes",
+      "NOTES_PLACEHOLDER": "Free notes about the procedure (technique, order, specific contraindications)...",
+      "SUMMARY_GROSS": "Gross subtotal",
+      "SUMMARY_DISCOUNT": "Discount",
+      "SUMMARY_NET": "Total",
+      "CANCEL": "Cancel",
+      "CONFIRM": "Save Procedure",
+      "SKIP": "Add later"
+    },
+    "STATUS": {
+      "PROPOSTO": "Proposed",
+      "APROVADO": "Approved",
+      "EM_EXECUCAO": "In execution",
+      "CONCLUIDO": "Completed",
+      "CANCELADO": "Cancelled"
+    },
+    "DELETE_PLAN_MODAL": {
+      "TITLE": "Delete Treatment Plan?",
+      "MESSAGE": "Are you sure you want to delete this plan? This action is irreversible and all procedures will be deleted.",
+      "CONFIRM": "Delete"
+    },
+    "DELETE_ITEM_MODAL": {
+      "TITLE": "Delete Procedure?",
+      "MESSAGE": "This action cannot be undone. The procedure will be permanently removed from the selected treatment plan.",
+      "CONFIRM": "Delete"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Error loading treatment plans.",
+      "CREATE_SUCCESS": "New plan created!",
+      "CREATE_ERROR": "Error creating plan.",
+      "UPDATE_SUCCESS": "Plan updated successfully!",
+      "UPDATE_ERROR": "Error updating plan.",
+      "VERSION_CONFLICT": "Another user edited this plan while you were editing. Reloading to prevent data loss.",
+      "VERSION_CONFLICT_BEFORE_ITEM": "Another user edited this plan. Reloading before adding procedure.",
+      "APPROVE_SUCCESS": "Plan approved and commissioning triggered!",
+      "APPROVE_ERROR": "Error approving plan.",
+      "DELETE_SUCCESS": "Plan deleted successfully!",
+      "DELETE_ERROR": "Error deleting plan.",
+      "ITEM_MISSING_PROCEDURE": "Select a procedure.",
+      "ITEM_INVALID_PRICE": "Invalid price for this procedure. Confirm the service is registered in Schedule > Services.",
+      "ITEM_CREATED": "Procedure added!",
+      "ITEM_UPDATED": "Procedure updated!",
+      "ITEM_SAVE_ERROR": "Error saving procedure.",
+      "ITEM_REMOVED": "Procedure removed!",
+      "ITEM_REMOVE_ERROR": "Error removing procedure."
+    }
+  }
+}

@@ -1,0 +1,17 @@
+get:
+  tags:
+    - Financeiro · Relatórios · Charts
+  summary: Projeção de fluxo de caixa
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: horizon
+      in: query
+      schema: { type: integer, default: 60, minimum: 7, maximum: 365 }
+  responses:
+    '200':
+      description: Projeção
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

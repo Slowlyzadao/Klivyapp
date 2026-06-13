@@ -1,0 +1,358 @@
+@use "../variables" as *;
+
+/* ── Inputs / form fields globais ───────────────────── */
+.form-input {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-5)) !important;
+  color: rgb(var(--slate-12)) !important;
+  box-shadow: none !important;
+}
+.form-input:focus {
+  border-color: rgb(var(--blue-8)) !important;
+  background: rgb(var(--slate-1)) !important;
+  box-shadow: none !important;
+}
+.form-input::placeholder {
+  color: rgb(var(--slate-8)) !important;
+}
+.form-input:disabled {
+  background: rgb(var(--slate-3)) !important;
+  color: rgb(var(--slate-8)) !important;
+}
+
+.form-group label {
+  color: rgb(var(--slate-11)) !important;
+}
+
+/* ── reg-* form system ──────────────────────────────── */
+.reg-section {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+.reg-section-toggle:not([style*="cursor: default"]):hover {
+  background: rgb(var(--slate-3)) !important;
+}
+.reg-section-title { color: rgb(var(--slate-12)) !important; }
+.reg-section-subtitle { color: rgb(var(--slate-9)) !important; }
+.reg-section-body { border-top: 1px solid rgb(var(--slate-4)) !important; }
+.reg-divider { background: rgb(var(--slate-4)) !important; }
+.reg-subsection-label { color: rgb(var(--slate-9)) !important; }
+.reg-chevron { color: rgb(var(--slate-9)) !important; }
+.reg-required { color: $brand-danger !important; }
+.reg-field-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: rgb(var(--slate-9));
+}
+
+/* Section icons */
+.reg-section-icon.reg-icon-blue { background: rgba($brand-info-bright,0.12) !important; color: $brand-info !important; }
+.reg-section-icon.reg-icon-green { background: rgba($brand-success,0.12) !important; color: $brand-success !important; }
+.reg-section-icon.reg-icon-amber { background: rgba($brand-amber,0.10) !important; color: $brand-amber !important; }
+.reg-section-icon.reg-icon-purple { background: rgba($brand-purple,0.10) !important; color: $brand-purple !important; }
+
+/* Opt-in cards */
+.reg-opt-in-card {
+  background: rgb(var(--slate-3)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   FORMULÁRIOS COMPARTILHADOS — `.reg-*`, `.form-*`, `.check-item*`
+   Layout shared entre todas as abas de prontuário (Record.vue +
+   tabs/AnamnesisTab.vue + tabs/RegistrationTab.vue + ...).
+   Cores/temas continuam em scoped (overrides com !important acima).
+   ════════════════════════════════════════════════════════════════ */
+
+/* Header genérico das abas (botões à direita).
+   Mobile: empilha título + botões verticalmente. Botões wrappam pra
+   não estourar nem precisar de scroll horizontal (decisão UX 2026-05-07). */
+.reg-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  /* O container dos botões à direita (sempre `<div class="flex ...">`)
+     ganha flex-wrap em qualquer largura — em desktop fica em uma linha,
+     em mobile quebra naturalmente. */
+  > .flex {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .reg-header {
+    align-items: flex-start;
+
+    /* Em mobile, título ocupa linha inteira e botões viram bloco abaixo. */
+    > div:first-child {
+      flex: 1 1 100%;
+    }
+
+    > .flex {
+      flex: 1 1 100%;
+      /* Botões em uma linha só, justificados ao final (alinha com Tailwind). */
+      justify-content: flex-end;
+    }
+
+    /* Mobile: botões do header viram icon-only para caber numa linha.
+       NextButton renderiza:
+         <button>
+           <span class="i-lucide-printer flex-shrink-0" />  <!-- ícone -->
+           <span class="min-w-0 truncate">{{ label }}</span>  <!-- label -->
+         </button>
+       Seletor `.truncate` é específico do label (Tailwind no NextButton);
+       o ícone vem do componente Icon que renderiza span com `i-lucide-*`,
+       sem `.truncate`. Sem essa especificidade ambos sumiam. */
+    > .flex button > span.truncate {
+      display: none;
+    }
+
+    /* Compensa o padding: aspecto mais quadrado (icon-only). */
+    > .flex button {
+      padding-left: 12px;
+      padding-right: 12px;
+      gap: 0;
+    }
+  }
+}
+
+/* Layout das seções */
+.reg-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Seção: layout (cores já definidas em .reg-section acima) */
+.reg-section {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Seção colapsável */
+.reg-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  transition: background 0.15s;
+}
+
+.reg-section-toggle:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.reg-section-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.reg-section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.reg-icon-blue   { background: rgba($brand-info-bright, 0.12); color: $brand-info-light; }
+.reg-icon-green  { background: rgba($brand-success-bright, 0.10);  color: $brand-success-light; }
+.reg-icon-amber  { background: rgba(251, 191, 36, 0.10); color: $brand-amber-strong; }
+.reg-icon-purple { background: rgba(168, 85, 247, 0.10); color: #c084fc; }
+.reg-icon-cyan   { background: rgba(6, 182, 212, 0.10);  color: #22d3ee; }
+.reg-icon-red    { background: rgba($brand-danger-bright, 0.10);  color: $brand-danger-light; }
+.reg-icon-orange { background: rgba(249, 115, 22, 0.10); color: #fb923c; }
+
+.reg-section-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.reg-section-subtitle {
+  display: block;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Corpo expandido da seção */
+.reg-section-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Grids de campos */
+.reg-field-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.reg-field-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.reg-field-grid-cep {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 768px) {
+  .reg-field-grid-2,
+  .reg-field-grid-3,
+  .reg-field-grid-cep {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Required asterisk */
+.reg-required {
+  color: $brand-danger-light;
+  margin-left: 2px;
+}
+
+/* Form labels e inputs */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label,
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--slate-11));
+  margin-bottom: 0;
+}
+
+.form-input {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: $brand-info-bright;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.form-input::placeholder {
+  color: $brand-slate-mid;
+}
+
+select.form-input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 40px;
+}
+
+/* Checkbox customizado (.check-item) */
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.check-item input[type='checkbox'] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.check-item-box {
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid rgb(var(--slate-3));
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.check-item:hover .check-item-box {
+  border-color: rgb(var(--slate-4));
+}
+
+.check-item input[type='checkbox']:checked + .check-item-box {
+  background: $brand-info-bright;
+  border-color: $brand-info-bright;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 5l3 3 7-7' stroke='white' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 10px;
+}
+
+.check-item input[type='checkbox']:disabled + .check-item-box {
+  background: rgb(var(--slate-2));
+  border-color: rgb(var(--slate-3));
+  cursor: not-allowed;
+}
+
+.check-item input[type='checkbox']:checked:disabled + .check-item-box {
+  background: $brand-info-bright;
+  border-color: $brand-info-bright;
+  opacity: 0.7;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 5l3 3 7-7' stroke='white' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 10px;
+}
+
+.check-item-label {
+  font-size: 14px;
+  color: rgb(var(--slate-11));
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.check-item input[type='checkbox']:disabled ~ .check-item-label {
+  color: rgb(var(--slate-8));
+}
+

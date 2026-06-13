@@ -1,0 +1,17 @@
+get:
+  tags:
+    - Consentimentos (LGPD)
+  summary: Detalhar consentimento
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Consentimento
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/ConsentRecord.yml'
+    '404':
+      description: Não encontrado

@@ -1,0 +1,19 @@
+type: object
+description: |
+  Crédito do paciente (`Financial::PatientCredit`). Ledger de saldo:
+  positivo = a favor do paciente, negativo = consumido. `origin` registra
+  a fonte (`ajuste_manual` quando criado por `POST /patient_credits`,
+  `estorno` quando vem de refund que gerou crédito, etc).
+properties:
+  id: { type: integer }
+  patient_id: { type: integer }
+  amount_cents:
+    type: integer
+    description: "Positivo = entrada de crédito, negativo = consumo."
+  origin:
+    type: string
+    description: "Ex.: ajuste_manual, estorno, troco, transferencia"
+  origin_type: { type: string, nullable: true }
+  origin_id: { type: integer, nullable: true }
+  description: { type: string, nullable: true }
+  occurred_at: { type: string, format: date-time }

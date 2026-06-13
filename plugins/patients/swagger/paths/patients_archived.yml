@@ -1,0 +1,36 @@
+get:
+  tags:
+    - Pacientes
+  summary: Listar pacientes arquivados
+  description: Lista pacientes com `deleted_at IS NOT NULL` (soft-deletados).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: q
+      in: query
+      description: Busca em nome/email (ILIKE).
+      schema:
+        type: string
+    - name: page
+      in: query
+      schema: { type: integer, default: 1 }
+    - name: per_page
+      in: query
+      schema: { type: integer, default: 25, maximum: 500 }
+  responses:
+    '200':
+      description: Lista paginada de arquivados
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              payload:
+                type: array
+                items:
+                  $ref: '../definitions/Patient.yml'
+              meta:
+                type: object
+                properties:
+                  total_count: { type: integer }
+                  current_page: { type: integer }
+                  total_pages: { type: integer }

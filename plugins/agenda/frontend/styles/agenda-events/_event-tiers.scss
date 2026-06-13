@@ -1,0 +1,95 @@
+/* ── Event Size Tiers ─────────────────────────────── */
+
+/* PILL (≤32px) — tag horizontal linha única */
+.timeline-evt.evt-pill {
+  padding: 4px 8px;
+  border-radius: 6px;
+  gap: 0;
+}
+
+.evt-pill-body {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  width: 100%;
+  line-height: 1.3;
+}
+
+.evt-pill-name {
+  font-size: 12px;
+  font-weight: 600;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.evt-pill-sep {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.evt-pill-time {
+  font-size: 11px;
+  font-weight: 500;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* SMALL (27–44px) — nome dominante + hora início */
+.timeline-evt.evt-small {
+  padding: 3px 6px;
+  border-radius: 6px;
+  gap: 0;
+}
+
+.evt-small-body {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.evt-small-name {
+  @apply text-sm;
+  font-weight: 600;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.evt-small-time {
+  @apply text-sm;
+  font-weight: 500;
+  flex-shrink: 0;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+/* MEDIUM (45–68px) — fonte ligeiramente menor para caber título + range */
+.timeline-evt.evt-medium {
+  padding: 3px 8px;
+  gap: 1px;
+}
+
+.timeline-evt.evt-medium .evt-sbs-title {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.timeline-evt.evt-medium .evt-sbs-time {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+/* Título medium em UMA linha (line-clamp:2 não cabe em cards próximos de 45px) */
+.evt-sbs-title--clamp {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

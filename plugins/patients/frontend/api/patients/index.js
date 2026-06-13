@@ -1,13 +1,21 @@
 /* global axios */
 import ApiClient from 'dashboard/api/ApiClient';
 
-export const buildPatientParams = ({ page, perPage, sort, search, status }) => {
+export const buildPatientParams = ({
+  page,
+  perPage,
+  sort,
+  search,
+  status,
+  financialStatus,
+}) => {
   const params = new URLSearchParams();
   params.set('page', page);
   params.set('per_page', perPage);
   if (sort) params.set('sort', sort);
   if (search) params.set('q', search);
   if (status && status !== 'Todos') params.set('status', status);
+  if (financialStatus) params.set('financial_status', financialStatus);
   return params.toString();
 };
 
@@ -26,6 +34,7 @@ class PatientsAPI extends ApiClient {
     sort = 'name_asc',
     search = '',
     status = '',
+    financialStatus = '',
   } = {}) {
     const requestURL = `${this.url}?${buildPatientParams({
       page,
@@ -33,6 +42,7 @@ class PatientsAPI extends ApiClient {
       sort,
       search,
       status,
+      financialStatus,
     })}`;
     return axios.get(requestURL);
   }

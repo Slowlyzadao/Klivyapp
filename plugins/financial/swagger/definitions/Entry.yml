@@ -1,0 +1,57 @@
+type: object
+description: |
+  Lançamento no Fluxo de Caixa (`Financial::Entry`). Pode ser **manual**
+  (criado por `POST /entries` com `kind=manual_entry`) ou **automático**
+  (gerado por `ReceivePayment`/`RefundPayment`/`PayExpense`/`CashRegister.withdraw/supplement`
+  com `source_type` setado). Apenas manuais são editáveis/excluíveis;
+  automáticas só aceitam reclassificação de categoria (F-28).
+properties:
+  id: { type: integer }
+  direction:
+    type: string
+    enum: [in, out]
+  kind:
+    type: string
+    enum: [receita, despesa, transferencia, sangria, suprimento, quebra_caixa, estorno_receita, estorno_despesa, juros, multa, desconto, manual_entry]
+  kind_label:
+    type: string
+    description: Label em PT-BR pronta para a UI.
+  amount_cents: { type: integer }
+  description: { type: string, nullable: true }
+  competence_date: { type: string, format: date }
+  cash_date: { type: string, format: date }
+  payment_method: { type: string, nullable: true }
+  bank_account:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      kind: { type: string }
+  category:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      kind: { type: string }
+  patient:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      avatar_url: { type: string, nullable: true }
+  source_type:
+    type: string
+    nullable: true
+    description: "Classe do recurso de origem (ex.: Financial::PaymentReceipt, Financial::Expense, Financial::CashRegister)"
+  source_id: { type: integer, nullable: true }
+  source_label: { type: string, nullable: true, description: "Label em PT-BR de source_type" }
+  affects_dre: { type: boolean }
+  affects_cashflow: { type: boolean }
+  registered_by_id: { type: integer, nullable: true }
+  editable:
+    type: boolean
+    description: "True apenas para `kind=manual_entry`."
+  created_at: { type: string, format: date-time }

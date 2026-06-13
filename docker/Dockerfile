@@ -47,7 +47,15 @@ RUN cd lib/whatsapp && npm install
 COPY . /app
 
 # generate production assets
-RUN RAILS_SERVE_STATIC_FILES=true SECRET_KEY_BASE=precompile_placeholder RAILS_LOG_TO_STDOUT=enabled bundle exec rake assets:precompile && \
+# Dummy ACTIVE_RECORD_ENCRYPTION_* satisfy config/initializers/active_record_encryption.rb
+# during build; real keys are injected by the runtime env (e.g. Easypanel).
+RUN RAILS_SERVE_STATIC_FILES=true \
+    SECRET_KEY_BASE=precompile_placeholder \
+    ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY=precompile_dummy_primary_key_xxxxxxxxxxxx \
+    ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY=precompile_dummy_determ_key_xxxxxxxxxxx \
+    ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT=precompile_dummy_salt_xxxxxxxxxxxxxxxxx \
+    RAILS_LOG_TO_STDOUT=enabled \
+    bundle exec rake assets:precompile && \
   rm -rf spec node_modules tmp/cache
 
 RUN git rev-parse HEAD > /app/.git_sha || echo "unknown" > /app/.git_sha
@@ -71,8 +79,22 @@ RUN apt-get update && apt-get install -y \
   curl \
   python3 \
   ca-certificates \
+  gnupg \
+  lsb-release \
   && rm -rf /var/lib/apt/lists/* \
   && gem install bundler -v "2.5.16"
+
+# PostgreSQL client matching server major (16+) — instalamos do repo oficial
+# do PostgreSQL pra evitar version mismatch no pg_dump (default Debian
+# bookworm vem com client v15, mas o server roda v16 → pg_dump aborta).
+# Necessário pro F-32 backup automático.
+RUN curl -sSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    | gpg --dearmor > /etc/apt/trusted.gpg.d/postgresql.gpg \
+  && echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+    > /etc/apt/sources.list.d/pgdg.list \
+  && apt-get update \
+  && apt-get install -y postgresql-client-16 \
+  && rm -rf /var/lib/apt/lists/*
 
 COPY --from=node /usr/local/bin/node /usr/local/bin/
 COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules

@@ -1,0 +1,40 @@
+post:
+  tags:
+    - Permissões e Funções
+  summary: Atribuir função a um usuário
+  description: |
+    Atribui a `KlivyRole` ao `AccountUser` informado. Ao trocar de função,
+    **o override per-user de `is_agenda_provider` é limpo** (`= nil`) para
+    que o novo papel ditado pelo preset volte a valer — evita que um
+    usuário backfilled como `true` continue aparecendo na agenda depois
+    de virar Recepcionista/Gerente.
+
+    Requer `settings.users_edit` (não `roles_edit`).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [user_id]
+          properties:
+            user_id:
+              type: integer
+              description: ID do `User`. Precisa existir como `AccountUser` da conta.
+  responses:
+    '200':
+      description: Atribuída
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              user_id: { type: integer }
+              klivy_role_id: { type: integer }
+    '403':
+      description: "Sem permissão (`settings.users_edit`)"
+    '404':
+      description: Usuário não pertence a esta conta

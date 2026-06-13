@@ -1,0 +1,55 @@
+post:
+  tags:
+    - Financeiro · Categorias DRE
+  summary: Restaurar categorias DRE padrão (canon)
+  description: |
+    Restaura o canon do Plano de Contas via `Financial::Bootstrap::SeedDefaultCategories`
+    (o mesmo service do bootstrap de conta nova). **ADITIVO e IDEMPOTENTE**: recria
+    apenas as categorias padrão que estiverem faltando. NÃO apaga nem renomeia
+    categorias personalizadas e NÃO mexe em lançamentos.
+
+    Requer **ADMIN**. Idempotência opcional via header `Idempotency-Key`.
+
+    A resposta traz `{ created, skipped, total }` para a UI mostrar o efeito real
+    (sem mentir sucesso quando nada mudou).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+  responses:
+    '200':
+      description: Seed concluído (idempotente).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: object
+                properties:
+                  account_id: { type: integer }
+                  created: { type: integer, description: "Categorias padrão criadas nesta chamada." }
+                  skipped: { type: integer, description: "Categorias já existentes (não recriadas)." }
+                  total: { type: integer, description: "Total de categorias vivas da conta após o seed." }
+    '403':
+      description: Sem permissão (requer ADMIN).
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'
+    '422':
+      description: Erro ao semear (validação de registro).
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'
+    '412':
+      description: Setup financeiro incompleto (wizard obrigatório).
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'

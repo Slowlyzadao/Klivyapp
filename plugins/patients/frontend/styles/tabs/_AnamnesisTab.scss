@@ -1,0 +1,122 @@
+@use "../variables" as *;
+
+/* ── Grid de checkboxes (2 colunas para histórico de saúde) ── */
+.anm-check-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+/* ── Coluna de checkboxes (1 coluna para cirúrgico) ── */
+.anm-check-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Tags de alergias / medicamentos ── */
+.anm-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.anm-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 10px;
+  border-radius: 99px;
+  border: 1px solid transparent;
+}
+
+.anm-tag--red {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+.anm-tag-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  padding: 0;
+  width: 14px;
+  height: 14px;
+  border: none;
+  background: transparent;
+  color: currentColor;
+  opacity: 0.6;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: opacity 0.15s, background 0.15s;
+}
+.anm-tag-remove:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.anm-tag--blue {
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+/* ── Label de alerta (alergias) ── */
+.anm-label-danger {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #f87171;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+/* ── Input de alergias com borda vermelha sutil ── */
+.anm-input-danger {
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+.anm-input-danger:focus {
+  border-color: #ef4444 !important;
+}
+
+/* ── Card de observações confidenciais ──
+   Mesmo padrão de contraste usado em _audit-tab.scss
+   ($brand-amber base, $brand-amber-bright em dark) */
+.anm-notes-card {
+  background: rgba($brand-amber, 0.10);
+  border: 1px solid rgba($brand-amber, 0.30);
+  border-radius: 10px;
+  padding: 16px;
+}
+.dark .anm-notes-card {
+  background: rgba($brand-amber-bright, 0.12);
+  border-color: rgba($brand-amber-bright, 0.35);
+}
+
+.anm-notes-header-icon,
+.anm-notes-header-label {
+  color: #b45309; /* amber-700 — alto contraste em fundo claro */
+}
+.dark .anm-notes-header-icon,
+.dark .anm-notes-header-label {
+  color: #fbbf24; /* amber-400 — alto contraste em fundo escuro */
+}
+
+.anm-notes-input {
+  border-color: rgba($brand-amber, 0.30) !important;
+}
+
+.anm-notes-input:focus {
+  border-color: rgba($brand-amber, 0.60) !important;
+}
+
+.dark .anm-notes-input {
+  border-color: rgba($brand-amber-bright, 0.35) !important;
+}
+.dark .anm-notes-input:focus {
+  border-color: rgba($brand-amber-bright, 0.65) !important;
+}

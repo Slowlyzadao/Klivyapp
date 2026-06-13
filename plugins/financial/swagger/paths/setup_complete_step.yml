@@ -1,0 +1,31 @@
+post:
+  tags:
+    - Financeiro · Setup
+  summary: Marcar step como concluído
+  description: |
+    Quando todos os steps obrigatórios viram `true`, `status` é promovido
+    para `completed` automaticamente. Requer role ADMIN/GERENTE.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [step]
+          properties:
+            step:
+              type: string
+              enum: [step_categories_done, step_bank_accounts_done, step_commission_rules_done, step_recurring_expenses_done, step_revenue_goal_done]
+  responses:
+    '200':
+      description: Estado atualizado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/SetupState.yml'
+    '422':
+      description: Step inválido
+    '403':
+      description: Sem permissão (ADMIN/GERENTE)

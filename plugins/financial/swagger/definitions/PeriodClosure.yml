@@ -1,0 +1,47 @@
+type: object
+description: |
+  Fechamento contábil de um mês (`Financial::PeriodClosure`, tabela
+  `financial_period_closures`). Evento append-only: bloqueia edição retroativa
+  de Entry/Installment/Expense com data dentro do período fechado (levanta
+  `Financial::Errors::PeriodClosed` → `423 Locked` nos outros recursos).
+
+  Reabertura NÃO cria registro novo — atualiza o mesmo, mudando `status` para
+  `reopened` e populando `reopened_at`/`reopened_by_id`/`reopen_reason`. Para
+  fechar de novo depois, cria-se um NOVO registro.
+properties:
+  id: { type: integer }
+  period_year:
+    type: integer
+    description: Ano contábil (2020..2100).
+  period_month:
+    type: integer
+    description: Mês contábil (1..12).
+  status:
+    type: string
+    enum: [closed, reopened]
+  closed_at:
+    type: string
+    format: date-time
+    description: Quando o mês foi fechado.
+  closed_by_id:
+    type: integer
+    description: Usuário (ADMIN) que fechou.
+  notes:
+    type: string
+    nullable: true
+    description: Observações do fechamento.
+  reopened_at:
+    type: string
+    format: date-time
+    nullable: true
+    description: Quando foi reaberto (apenas quando `status=reopened`).
+  reopened_by_id:
+    type: integer
+    nullable: true
+    description: Usuário (ADMIN) que reabriu (apenas quando `status=reopened`).
+  reopen_reason:
+    type: string
+    nullable: true
+    description: Motivo da reabertura (obrigatório quando `status=reopened`).
+  created_at: { type: string, format: date-time }
+  updated_at: { type: string, format: date-time }

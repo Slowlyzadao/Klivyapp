@@ -8,7 +8,7 @@ ENV BUNDLER_VERSION=2.5.16
 ENV BUNDLE_PATH="/gems"
 ENV BUNDLE_BIN="/gems/bin"
 ENV PATH="${BUNDLE_BIN}:${PATH}"
-ENV NODE_OPTIONS="--max-old-space-size=4096 --openssl-legacy-provider"
+ENV NODE_OPTIONS="--max-old-space-size=8192 --openssl-legacy-provider"
 
 RUN apt-get update && apt-get install -y \
   build-essential \
@@ -28,7 +28,7 @@ COPY --from=node /usr/local/bin/node /usr/local/bin/
 COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
   && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
-  && npm install -g pnpm foreman
+  && npm install -g pnpm@10.2.0 foreman
 
 # Install Ruby Dependencies
 COPY Gemfile Gemfile.lock ./
@@ -51,7 +51,15 @@ COPY . /app
 RUN chmod +x /app/bin/*
 
 # generate production assets
-RUN RAILS_SERVE_STATIC_FILES=true SECRET_KEY_BASE=precompile_placeholder RAILS_LOG_TO_STDOUT=enabled bundle exec rake assets:precompile && \
+# Dummy ACTIVE_RECORD_ENCRYPTION_* satisfy config/initializers/active_record_encryption.rb
+# during build; real keys are injected by the runtime env (e.g. Easypanel).
+RUN RAILS_SERVE_STATIC_FILES=true \
+    SECRET_KEY_BASE=precompile_placeholder \
+    ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY=precompile_dummy_primary_key_xxxxxxxxxxxx \
+    ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY=precompile_dummy_determ_key_xxxxxxxxxxx \
+    ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT=precompile_dummy_salt_xxxxxxxxxxxxxxxxx \
+    RAILS_LOG_TO_STDOUT=enabled \
+    bundle exec rake assets:precompile && \
   rm -rf spec node_modules tmp/cache
 
 RUN git rev-parse HEAD > /app/.git_sha || echo "unknown" > /app/.git_sha

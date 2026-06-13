@@ -1,0 +1,47 @@
+// Chip da variável renderizado dentro do editor (NodeView Vue).
+//
+// Cores FIXAS (não usar custom props dual-mode) porque o chip vive dentro
+// do paper branco do editor — precisa ser legível ali, não depende do tema
+// dark/light da clínica.
+
+@use '../variables' as *;
+
+.tiptap-variable-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: $variable-chip-padding-y $variable-chip-padding-x;
+  margin: 0 1px;
+  border-radius: $variable-chip-radius;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.875em;
+  font-weight: 500;
+  line-height: 1.4;
+  cursor: default;
+  user-select: none;
+  white-space: nowrap;
+  vertical-align: baseline;
+  transition: background 120ms ease, transform 120ms ease;
+
+  &:hover {
+    background: #bfdbfe;
+  }
+
+  &--selected {
+    background: #93c5fd;
+    outline: 2px solid #2563eb;
+    outline-offset: 1px;
+  }
+
+  &__icon {
+    width: 12px;
+    height: 12px;
+    opacity: 0.7;
+  }
+
+  &__label {
+    white-space: nowrap;
+  }
+}
+

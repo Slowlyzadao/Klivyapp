@@ -5,11 +5,26 @@ class GlobalConfig
 
   class << self
     def get(*args)
-      config_keys = *args
-      config = {}
+      config_keys = args.flatten
+      cache_keys  = config_keys.map { |config_key| cache_key_for(config_key) }
 
-      config_keys.each do |config_key|
-        config[config_key] = load_from_cache(config_key)
+      # Um único round-trip pro Redis em vez de 1 GET por chave (eram ~22 GETs
+      # seriais por render do dashboard/login). O fallback pro banco + set só
+      # roda em cache miss (cold cache), idêntico ao comportamento anterior.
+      cached_values = $alfred.with do |conn|
+        conn.pipelined { |pipeline| cache_keys.each { |ck| pipeline.get(ck) } }
+      end
+
+      config = {}
+      config_keys.each_with_index do |config_key, index|
+        raw_value = cached_values[index]
+
+        if raw_value.blank?
+          raw_value = { value: db_fallback(config_key) }.to_json
+          $alfred.with { |conn| conn.set(cache_keys[index], raw_value, { ex: DEFAULT_EXPIRY }) }
+        end
+
+        config[config_key] = JSON.parse(raw_value)['value']
       end
 
       typecast_config(config)
@@ -29,6 +44,10 @@ class GlobalConfig
 
     private
 
+    def cache_key_for(config_key)
+      "#{VERSION}:#{KEY_PREFIX}:#{config_key}"
+    end
+
     def typecast_config(config)
       general_configs = ConfigLoader.new.general_configs
       config.each do |config_key, config_value|
@@ -38,7 +57,7 @@ class GlobalConfig
     end
 
     def load_from_cache(config_key)
-      cache_key = "#{VERSION}:#{KEY_PREFIX}:#{config_key}"
+      cache_key = cache_key_for(config_key)
       cached_value = $alfred.with { |conn| conn.get(cache_key) }
 
       if cached_value.blank?

@@ -1,0 +1,63 @@
+get:
+  tags:
+    - Financeiro · Regras de Comissão
+  summary: Listar regras
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: professional_id
+      in: query
+      schema: { type: integer }
+    - name: active
+      in: query
+      schema: { type: boolean }
+  responses:
+    '200':
+      description: Lista (ordem `valid_from DESC`)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/CommissionRule.yml'
+post:
+  tags:
+    - Financeiro · Regras de Comissão
+  summary: Criar regra
+  description: Requer ADMIN. Idempotência via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [commission_rule]
+          properties:
+            commission_rule:
+              type: object
+              required: [professional_id, kind, base, valid_from]
+              properties:
+                professional_id: { type: integer }
+                financial_dre_category_id: { type: integer }
+                kind: { type: string }
+                base: { type: string }
+                percent_basis_points: { type: integer, description: "1% = 100" }
+                fixed_amount_cents: { type: integer }
+                procedure_name: { type: string }
+                specialty: { type: string }
+                deduct_mdr: { type: boolean }
+                deduct_lab: { type: boolean }
+                valid_from: { type: string, format: date }
+                valid_until: { type: string, format: date }
+                active: { type: boolean, default: true }
+  responses:
+    '201':
+      description: Criada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/CommissionRule.yml'

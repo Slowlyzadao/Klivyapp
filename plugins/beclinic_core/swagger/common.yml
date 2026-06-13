@@ -1,0 +1,8 @@
+components:
+  parameters:
+    accountId:
+      name: account_id
+      in: path
+      required: true
+      schema:
+        type: integer

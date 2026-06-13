@@ -9,7 +9,14 @@ class ChatwootFbProvider < Facebook::Messenger::Configuration::Providers::Base
   end
 
   def access_token_for(page_id)
-    Channel::FacebookPage.where(page_id: page_id).last.page_access_token
+    # `.last` sem ordering era não-determinístico e quebrava (NoMethodError) quando o channel não existia.
+    # Order + limit(2) detecta ambiguidade cross-account (mesmo page_id em 2 accounts) e loga warn.
+    channels = Channel::FacebookPage.where(page_id: page_id).order(:account_id).limit(2).to_a
+    if channels.size > 1
+      Rails.logger.warn "[ChatwootFbProvider] page_id=#{page_id} maps to #{channels.size} channels " \
+                        "in different accounts. Selecting account_id=#{channels.first.account_id}."
+    end
+    channels.first&.page_access_token
   end
 
   private

@@ -1,0 +1,99 @@
+{
+  "PATIENT_ANAMNESIS": {
+    "HEADER": {
+      "TITLE": "Questionário Clínico",
+      "SUBTITLE": "Histórico de saúde, queixa principal, alergias e restrições.",
+      "READONLY_BADGE": "Somente leitura (Assinada)",
+      "LAST_UPDATED": "Última alteração: {date}",
+      "VIEW_PDF": "Visualizar PDF",
+      "NEW": "Nova Anamnese",
+      "SAVE_DRAFT": "Salvar Rascunho",
+      "SAVE_DRAFT_DIRTY": "Salvar Rascunho *",
+      "FINALIZE": "Assinar e Finalizar",
+      "HISTORY": "Histórico ({count})",
+      "CLINIC_SETTINGS_TOOLTIP": "Configurar especialidades atendidas pela clínica"
+    },
+    "HISTORY": {
+      "TITLE": "Histórico de Anamneses",
+      "SUBTITLE": "Versões anteriores deste questionário clínico.",
+      "EMPTY": "Nenhuma anamnese registrada ainda.",
+      "DATE_LABEL": "Atualizada em {date}",
+      "STATUS_FINALIZED": "Finalizada",
+      "STATUS_DRAFT": "Rascunho",
+      "VIEW_PDF": "Ver PDF",
+      "NO_PDF": "Sem PDF (rascunho)",
+      "NO_SPECIALTY": "Sem especialidade",
+      "CLOSE": "Fechar"
+    },
+    "CLINIC_SPECIALTIES": {
+      "TITLE": "Especialidades da Clínica",
+      "SUBTITLE": "Define quais especialidades aparecem no select e qual é a padrão.",
+      "ENABLED_LABEL": "Especialidades atendidas",
+      "ENABLED_HINT": "Marque as especialidades que sua clínica atende. Se nada for marcado, todas ficam disponíveis.",
+      "DEFAULT_LABEL": "Especialidade padrão",
+      "DEFAULT_HINT": "Pré-preenchida em novas anamneses. Reduz o atrito de digitação repetitiva.",
+      "DEFAULT_PLACEHOLDER": "Selecione uma especialidade padrão",
+      "SAVE": "Salvar",
+      "CANCEL": "Cancelar",
+      "SAVE_SUCCESS": "Especialidades da clínica atualizadas.",
+      "SAVE_ERROR": "Não foi possível salvar as especialidades."
+    },
+    "SECTIONS": {
+      "CHIEF_COMPLAINT": {
+        "TITLE": "Motivo da Consulta",
+        "SUBTITLE": "Especialidade, queixa principal e objetivo",
+        "SPECIALTY_LABEL": "Especialidade / Foco Principal",
+        "SPECIALTY_PLACEHOLDER": "Selecione a especialidade",
+        "COMPLAINT_LABEL": "Queixa Principal",
+        "COMPLAINT_PLACEHOLDER": "Descreva com as palavras do paciente o que o trouxe à clínica..."
+      },
+      "MEDICAL_HISTORY": {
+        "TITLE": "Histórico de Saúde",
+        "SUBTITLE": "Doenças preexistentes e condições sistêmicas",
+        "HYPERTENSION": "Hipertensão ou problemas cardiovasculares",
+        "PREGNANT": "Gestante / Lactante",
+        "DIABETES": "Diabetes",
+        "ONCOLOGY": "Tratamento oncológico (Atual ou prévio)",
+        "BLEEDING": "Distúrbios de coagulação / hemorragia",
+        "HEPATITIS": "Hepatite / Doenças hepáticas",
+        "OTHER_LABEL": "Outras Doenças ou Condições",
+        "OTHER_PLACEHOLDER": "Especifique detalhadamente se houver..."
+      },
+      "ALLERGIES": {
+        "TITLE": "Alergias e Medicamentos",
+        "SUBTITLE": "Alergias conhecidas e uso contínuo",
+        "ALLERGIES_LABEL": "Alergias Conhecidas",
+        "ALLERGIES_PLACEHOLDER": "Ex: Dipirona, Iodo — separadas por vírgula",
+        "MEDICATIONS_LABEL": "Medicamentos de Uso Contínuo",
+        "MEDICATIONS_PLACEHOLDER": "Ex: Losartana 50mg, AAS...",
+        "REMOVE_ARIA": "Remover {name}"
+      },
+      "SURGICAL": {
+        "TITLE": "Histórico Cirúrgico e Implantes",
+        "SUBTITLE": "Cirurgias recentes, implantes e reações a anestesia",
+        "RECENT_SURGERIES": "Realizou cirurgias nos últimos 6 meses?",
+        "IMPLANTS": "Possui implantes, próteses ou marcapasso?",
+        "ANESTHESIA": "Teve complicações ou reações com anestesia no passado?",
+        "DETAILS_LABEL": "Detalhes das Intervenções Recentes",
+        "DETAILS_PLACEHOLDER": "Especifique os procedimentos, áreas e reações adversas..."
+      },
+      "HABITS": {
+        "TITLE": "Hábitos e Estilo de Vida",
+        "SUBTITLE": "Tabagismo, álcool, atividade física e observações",
+        "SMOKER_LABEL": "Fumante?",
+        "ALCOHOL_LABEL": "Consumo de Álcool",
+        "SPORTS_LABEL": "Prática de Esportes",
+        "SELECT_PLACEHOLDER": "Selecione",
+        "NOTES_TITLE": "Observações Confidenciais",
+        "NOTES_PLACEHOLDER": "Contraindicações, restrições específicas da prática clínica..."
+      }
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Não foi possível carregar a anamnese.",
+      "SAVE_DRAFT_SUCCESS": "Anamnese salva como rascunho com sucesso!",
+      "SAVE_FINALIZED_SUCCESS": "Anamnese assinada e finalizada com sucesso!",
+      "SAVE_ERROR": "Erro ao salvar anamnese.",
+      "DIRTY_LEAVE_CONFIRM": "Você tem alterações não salvas na anamnese. Tem certeza que deseja sair? As alterações serão perdidas."
+    }
+  }
+}

@@ -155,6 +155,12 @@ gem 'email_reply_trimmer'
 
 gem 'html2text'
 
+# PDF text extraction (ai_agent::Documents::TextExtractor)
+gem 'pdf-reader'
+
+# Unzip de exports de conversa do WhatsApp (ai_agent::Training::ZipExtractor)
+gem 'rubyzip', require: 'zip'
+
 # to calculate working hours
 gem 'working_hours'
 
@@ -208,6 +214,15 @@ gem 'shopify_api'
 # For PDF Generation
 gem 'prawn'
 gem 'prawn-table'
+# HTML → PDF via Chromium headless (plugin document_templates: editor TipTap →
+# rendered_html → Grover). Requer chromium/puppeteer disponível no servidor.
+gem 'grover', '~> 1.2'
+
+##-- Telemedicina (LiveKit) --##
+# SDK oficial pra gerar tokens JWT de acesso. O servidor LiveKit roda separado
+# (LiveKit Cloud ou self-host). Boot-blocker: vários arquivos do plugin telemed
+# fazem `require 'livekit'` no topo.
+gem 'livekit-server-sdk', '~> 0.9'
 
 ### Gems required only in specific deployment environments ###
 ##############################################################
@@ -277,6 +292,3 @@ group :development, :test do
 end
 
 gem "mini_racer", "~> 0.20.0"
-
-# AI Agent (Bea) — text extraction for PDF documents fed to RAG.
-gem 'pdf-reader', '~> 2.12'

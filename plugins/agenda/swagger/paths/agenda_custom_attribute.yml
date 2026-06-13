@@ -1,0 +1,49 @@
+get:
+  tags:
+    - Atributos Customizados
+  summary: Detalhar atributo
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Atributo
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaCustomAttribute.yml'
+patch:
+  tags:
+    - Atributos Customizados
+  summary: Atualizar atributo
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [agenda_custom_attribute]
+          properties:
+            agenda_custom_attribute:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atributo atualizado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaCustomAttribute.yml'
+delete:
+  tags:
+    - Atributos Customizados
+  summary: Excluir atributo
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Atributo excluído (hard-delete)

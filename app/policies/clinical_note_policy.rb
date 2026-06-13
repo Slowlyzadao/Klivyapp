@@ -27,6 +27,15 @@ class ClinicalNotePolicy < ApplicationPolicy
     beclinic_can?(:patients, :sign_clinical_notes)
   end
 
+  # Errata: só notas assinadas e ainda válidas; permissão alinhada à de assinar
+  # (quem assina é responsável por flagar registros incorretos).
+  def mark_erratum?
+    return false unless record.status_signed?
+    return false if record.erratum?
+
+    beclinic_can?(:patients, :sign_clinical_notes)
+  end
+
   class Scope < ApplicationPolicy::Scope
     def resolve
       scope.where(account_id: account.id)

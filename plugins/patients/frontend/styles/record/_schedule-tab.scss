@@ -1,0 +1,138 @@
+@use "../variables" as *;
+
+/* ============================================================
+   ABA: AGENDA E HISTÓRICO — sched-* system
+   ============================================================ */
+
+/* KPI cards */
+.sched-kpi-card {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+.sched-kpi-card--green { background: rgba($brand-success,0.07) !important; border-color: rgba($brand-success,0.15) !important; }
+.sched-kpi-card--blue  { background: rgba($brand-info-bright,0.07) !important; border-color: rgba($brand-info-bright,0.15) !important; }
+.sched-kpi-card--red   { background: rgba($brand-danger,0.07) !important; border-color: rgba($brand-danger,0.15) !important; }
+
+.sched-kpi-icon { background: rgb(var(--slate-3)) !important; color: rgb(var(--slate-9)) !important; }
+.sched-kpi-icon--green { background: rgba($brand-success,0.12) !important;  color: $brand-success !important; }
+.sched-kpi-icon--blue  { background: rgba($brand-info-bright,0.12) !important; color: $brand-info !important; }
+.sched-kpi-icon--red   { background: rgba($brand-danger,0.12) !important;  color: $brand-danger !important; }
+.sched-kpi-label { color: rgb(var(--slate-9)) !important; }
+.sched-kpi-value { color: rgb(var(--slate-12)) !important; }
+
+/* Filtros pill */
+.sched-filter-btn {
+  color: rgb(var(--slate-9)) !important;
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+.sched-filter-btn:hover {
+  color: rgb(var(--slate-11)) !important;
+  background: rgb(var(--slate-3)) !important;
+}
+.sched-filter-btn--active {
+  background: rgba($brand-info-bright, 0.10) !important;
+  border-color: rgba($brand-info-bright, 0.22) !important;
+  color: $brand-info !important;
+}
+.sched-filter-badge {
+  background: rgb(var(--slate-3)) !important;
+  color: rgb(var(--slate-9)) !important;
+}
+
+/* Empty state */
+.sched-empty {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px dashed rgb(var(--slate-5)) !important;
+}
+.sched-empty-icon {
+  background: rgb(var(--slate-3)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+  color: rgb(var(--slate-7)) !important;
+}
+.sched-empty-title { color: rgb(var(--slate-10)) !important; }
+.sched-empty-hint  { color: rgb(var(--slate-8)) !important; }
+
+/* Timeline de agendamentos */
+.sched-timeline-line {
+  background: linear-gradient(to bottom, rgb(var(--slate-4)) 80%, transparent) !important;
+}
+
+.sched-apt-card {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+.sched-apt-card:hover {
+  background: rgb(var(--slate-3)) !important;
+  border-color: rgb(var(--slate-5)) !important;
+}
+
+.sched-apt-date { color: rgb(var(--slate-12)) !important; }
+.sched-apt-time { color: rgb(var(--slate-9)) !important; }
+.sched-type-badge {
+  background: rgb(var(--slate-3)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+  color: rgb(var(--slate-9)) !important;
+}
+.sched-info-label { color: rgb(var(--slate-8)) !important; }
+.sched-info-value { color: rgb(var(--slate-11)) !important; }
+.sched-info-empty { color: rgb(var(--slate-7)) !important; }
+
+.sched-notes {
+  color: rgb(var(--slate-9)) !important;
+  background: rgb(var(--slate-3)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+.sched-apt-actions {
+  border-top: 1px solid rgb(var(--slate-4)) !important;
+}
+/* Estilos de cor base / hover migraram para tabs/_ScheduleTab.scss
+   com variants `.sched-action-btn--info`/--amber/--danger pintando idle.
+   Aqui só forçamos os custom properties dual-theme do default. */
+.sched-action-btn:not(.sched-action-btn--info):not(.sched-action-btn--amber):not(.sched-action-btn--danger):not(.sched-action-btn--whatsapp) {
+  border-color: rgb(var(--slate-5)) !important;
+  background: rgb(var(--slate-3)) !important;
+  color: rgb(var(--slate-11)) !important;
+}
+
+.sched-timeline-end-line {
+  background: linear-gradient(to right, rgb(var(--slate-4)), transparent) !important;
+}
+.sched-timeline-end-label { color: rgb(var(--slate-8)) !important; }
+
+/* ── Alerta Retorno Pendente (ScheduleTab) ────────────── */
+.sched-recall-alert {
+  background: rgba($brand-amber-bright, 0.08) !important;
+  border: 1px solid rgba($brand-amber-bright, 0.30) !important;
+}
+.sched-recall-icon {
+  background: rgba($brand-amber-bright, 0.18) !important;
+  color: #b45309 !important;
+}
+.sched-recall-title { color: #92400e !important; }
+.sched-recall-desc { color: rgb(var(--slate-11)) !important; }
+.sched-recall-btn-ghost {
+  background: rgb(var(--slate-1)) !important;
+  border-color: rgb(var(--slate-5)) !important;
+  color: rgb(var(--slate-11)) !important;
+}
+.sched-recall-btn-ghost:hover {
+  background: rgb(var(--slate-2)) !important;
+  border-color: rgb(var(--slate-6)) !important;
+  color: rgb(var(--slate-12)) !important;
+}
+.sched-dismiss-text { color: rgb(var(--slate-9)) !important; }
+.sched-dismiss-text:hover { color: rgb(var(--slate-11)) !important; }
+.sched-dismiss-x { color: rgb(var(--slate-9)) !important; }
+.sched-dismiss-x:hover { color: rgb(var(--slate-12)) !important; }
+
+.dark .sched-recall-alert {
+  background: rgba($brand-amber-bright, 0.06) !important;
+  border-color: rgba($brand-amber-bright, 0.25) !important;
+}
+.dark .sched-recall-icon {
+  background: rgba($brand-amber-bright, 0.18) !important;
+  color: $brand-amber-strong !important;
+}
+.dark .sched-recall-title { color: #fcd34d !important; }
+

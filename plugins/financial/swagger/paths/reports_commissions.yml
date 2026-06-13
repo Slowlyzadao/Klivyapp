@@ -1,0 +1,27 @@
+get:
+  tags:
+    - Financeiro · Relatórios
+  summary: Apuração de comissões (canon F-29)
+  description: |
+    Profissional comum vê só as próprias comissões (filter automático);
+    GERENTE/ADMIN/AUDITOR veem todas. Para mutar (pagar), use
+    `POST /commission_entries/:id/pay` ou `bulk_pay`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+    - name: professional_id
+      in: query
+      schema: { type: integer }
+  responses:
+    '200':
+      description: Comissões agregadas por profissional
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

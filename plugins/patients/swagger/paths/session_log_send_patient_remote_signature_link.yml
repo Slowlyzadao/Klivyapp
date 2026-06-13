@@ -1,0 +1,23 @@
+post:
+  tags:
+    - Sessões Clínicas
+  summary: Gerar link de assinatura remota do paciente
+  description: |
+    Gera `patient_signature_remote_token` + `patient_signature_remote_link_expires_at`
+    (48h). Envio via WhatsApp/SMS é PR follow-up — aqui só geramos o token.
+    Audit log `patient_signature_link_sent`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Token gerado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string }
+              remote_token: { type: string }
+              expires_at: { type: string, format: date-time }

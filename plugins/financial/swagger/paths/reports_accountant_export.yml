@@ -1,0 +1,39 @@
+get:
+  tags:
+    - Financeiro · Relatórios
+  summary: Download do CSV pro contador (F-33)
+  description: |
+    Gera o CSV do `type` solicitado. Filename: `<type>_<from>_a_<to>.csv`.
+    Requer ADMIN/AUDITOR.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: type
+      in: query
+      required: true
+      description: "Dataset a exportar (ex.: receitas, despesas, comissoes, dre)"
+      schema: { type: string }
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+  responses:
+    '200':
+      description: CSV (UTF-8)
+      content:
+        text/csv:
+          schema:
+            type: string
+            format: binary
+    '400':
+      description: Tipo inválido
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+              allowed:
+                type: array
+                items: { type: string }

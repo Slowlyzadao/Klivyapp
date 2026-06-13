@@ -1,0 +1,92 @@
+delete:
+  tags:
+    - Chat Interno — Stickers
+  summary: Deletar sticker
+  description: |
+    Autorização (StickerPolicy):
+    - **default stickers** (`kind='default'`, `account_id=NULL`) são imutáveis
+      via API — gerencia só via console (SuperAdmin) ou rake task. Retorna 403
+      mesmo pra admin da conta.
+    - admin da conta: pode deletar qualquer sticker custom da conta
+    - Klivy `internal_chat.manage_stickers`: pode deletar qualquer sticker
+      custom da conta
+    - autor sem `manage_stickers`: pode deletar SÓ os que criou
+
+    Sucesso responde `200 OK` (corpo vazio), não `204`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Deletado (corpo vazio)
+    '403':
+      description: Sem permissão (sticker default, ou não é admin/autor)
+    '404':
+      description: Não encontrado
+favorite:
+  post:
+    tags:
+      - Chat Interno — Stickers
+    summary: Favoritar sticker
+    description: |
+      Salva o sticker na coleção do requester (favorito por
+      `user + account + sticker`). Para `kind='default'` não há persistência —
+      defaults já são visíveis — mas a resposta retorna `is_favorite: true` e
+      `default: true` para evitar UI inconsistente. Responde `200 OK`.
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+      - $ref: '../common.yml#/components/parameters/id'
+    responses:
+      '200':
+        description: Favoritado
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  properties:
+                    sticker_id: { type: integer }
+                    is_favorite:
+                      type: boolean
+                      enum: [true]
+                    default:
+                      type: boolean
+                      description: Presente (e `true`) apenas quando `kind='default'`.
+      '404':
+        description: Não encontrado
+  delete:
+    tags:
+      - Chat Interno — Stickers
+    summary: Desfavoritar sticker
+    description: |
+      Remove o sticker da coleção do requester nesta conta. Se ninguém em
+      nenhuma conta favoritar mais o sticker custom, ele é apagado fisicamente
+      (cascade) e `deleted` vem `true`. Defaults da Klivy não podem ser
+      removidos (`403`). Responde `200 OK`.
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+      - $ref: '../common.yml#/components/parameters/id'
+    responses:
+      '200':
+        description: Desfavoritado
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  properties:
+                    sticker_id: { type: integer }
+                    is_favorite:
+                      type: boolean
+                      enum: [false]
+                    deleted:
+                      type: boolean
+                      description: True se o sticker foi apagado fisicamente (cascade).
+      '403':
+        description: Sticker default não pode ser removido
+      '404':
+        description: Não encontrado

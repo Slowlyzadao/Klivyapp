@@ -16,10 +16,11 @@ class Patient < ApplicationRecord
   has_many :treatment_plans, -> { where(deleted_at: nil) }, dependent: :destroy
   has_many :treatment_items, through: :treatment_plans
   has_many :session_logs, -> { where(deleted_at: nil) }, dependent: :destroy
-  # Bloco 4: Financeiro do Paciente
-  has_many :financial_estimates, -> { where(deleted_at: nil) }, dependent: :destroy
-  has_many :transactions, -> { where(deleted_at: nil) }, dependent: :destroy
-  has_many :installments, -> { where(deleted_at: nil) }, dependent: :destroy
+  # Bloco 4: Financeiro do Paciente — modelos v1 (Transaction/FinancialEstimate/
+  # Installment global) deletados na Fase A de 2026-05-11. Dados financeiros do
+  # paciente agora vivem em `Financial::Budget`/`Financial::Installment` (v2);
+  # paciente acessa via Financial::Budget.where(patient_id: id) ou helpers
+  # equivalentes em controllers/services do plugin financial.
   # Bloco 5: Mídia, Documentos e Consentimentos
   has_many :exam_medias, -> { where(deleted_at: nil) }, dependent: :destroy
   has_many :documents, -> { where(deleted_at: nil) }, dependent: :destroy
@@ -58,11 +59,20 @@ class Patient < ApplicationRecord
 
   GUARDIAN_REQUIRED_FIELDS = %w[name cpf phone relationship].freeze
 
+  # Formato de e-mail mais estrito que URI::MailTo (exige TLD) — rejeita
+  # "teste@mensa". Espelhado no frontend (beclinic_core/helpers/contactValidators.js).
+  EMAIL_FORMAT = /\A[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}\z/
+
   # Validations
   validates :name, presence: true, length: { minimum: 2, maximum: 255 }
   validates :account, presence: true
   validates :cpf, format: { with: /\A\d{11}\z/, message: :invalid_cpf }, allow_blank: true
-  validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
+  # E-mail e telefone: valida formato APENAS quando o campo muda (grandfathering).
+  # Registros legados com dado inválido continuam salvando em edições não
+  # relacionadas e em saves internos (status/recall/jobs); só valor novo ou
+  # editado precisa ser válido. O frontend (contactValidators.js) espelha a regra.
+  validate :email_format_valid, if: :email_changed?
+  validate :phone_format_valid, if: :phone_changed?
   validates :patient_status, inclusion: { in: patient_statuses.keys }
   validates :sex, inclusion: { in: sexes.keys }, allow_blank: true
   validates :marital_status, inclusion: { in: marital_statuses.keys }, allow_blank: true
@@ -118,6 +128,17 @@ class Patient < ApplicationRecord
     avatar_url
   end
 
+  # Telefone BR válido: DDD + número (10 dígitos fixo / 11 celular). Ignora o
+  # DDI 55 só em E164 (12-13 dígitos), preservando DDD 55 (RS). Usado na
+  # validação e na rake task patients:scan_invalid_contacts.
+  def self.valid_phone_format?(phone)
+    return true if phone.blank?
+
+    digits = phone.to_s.gsub(/\D/, '')
+    digits = digits[2..] if digits.length > 11 && digits.start_with?('55')
+    [10, 11].include?(digits.length)
+  end
+
   private
 
   def strip_cpf
@@ -150,6 +171,20 @@ class Patient < ApplicationRecord
     return if cpf_value.match?(/\A\d{11}\z/)
 
     errors.add(:guardian_cpf, :invalid_cpf)
+  end
+
+  def email_format_valid
+    return if email.blank?
+    return if email.strip.match?(EMAIL_FORMAT)
+
+    errors.add(:base, 'E-mail inválido — inclua um domínio completo (ex.: nome@dominio.com).')
+  end
+
+  def phone_format_valid
+    return if phone.blank?
+    return if self.class.valid_phone_format?(phone)
+
+    errors.add(:base, 'Telefone inválido — informe DDD + número (10 ou 11 dígitos).')
   end
 
   def update_needs_recall

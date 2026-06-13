@@ -64,6 +64,16 @@ export default {
     const { can: klivyCan } = usePermissions();
     return { klivyCan };
   },
+  data() {
+    return {
+      showAgentsList: false,
+      showUpdateActions: false,
+      showLabelActions: false,
+      showTeamsList: false,
+      popoverPositions: {},
+      showCustomTimeSnoozeModal: false,
+    };
+  },
   computed: {
     canBulkAssignLabel() {
       return this.klivyCan('chat', 'reply');
@@ -77,16 +87,6 @@ export default {
     canBulkAssignTeam() {
       return this.klivyCan('chat', 'assign_conversation');
     },
-  },
-  data() {
-    return {
-      showAgentsList: false,
-      showUpdateActions: false,
-      showLabelActions: false,
-      showTeamsList: false,
-      popoverPositions: {},
-      showCustomTimeSnoozeModal: false,
-    };
   },
   mounted() {
     emitter.on(

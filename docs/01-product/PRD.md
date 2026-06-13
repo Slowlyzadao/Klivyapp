@@ -1,10 +1,10 @@
 # PRD — BeClinic Platform
-## Product Requirements Document (v1.1)
+## Product Requirements Document (v1.0)
 
 **Produto:** BeClinic (KlivyApp)
 **Base:** Chatwoot (comunicacao omnichannel)
 **Escopo deste documento:** Exclusivamente modulos customizados, adicionados sobre o core do Chatwoot.
-**Data:** Maio 2026 (atualizado 2026-05-07)
+**Data:** Abril 2026
 
 ---
 
@@ -15,10 +15,8 @@
 3. [Modulo: Pacientes (Prontuario Clinico)](#3-modulo-pacientes-prontuario-clinico)
 4. [Modulo: Financeiro Central](#4-modulo-financeiro-central)
 5. [Modulo: Configuracoes do Sistema](#5-modulo-configuracoes-do-sistema)
-6. [Modulo: Bea (Assistente Virtual com IA)](#6-modulo-bea-assistente-virtual-com-ia)
-7. [Integracao entre Modulos](#7-integracao-entre-modulos)
-8. [Visao de Produto](#8-visao-de-produto)
-9. [Mudanças no Core (auditoria)](#9-mudanças-no-core-registro-de-auditoria)
+6. [Integracao entre Modulos](#6-integracao-entre-modulos)
+7. [Visao de Produto](#7-visao-de-produto)
 
 ---
 
@@ -91,12 +89,11 @@ Clinicas dependem de agendas em papel, planilhas ou ferramentas desconectadas do
 - `ends_at` deve ser posterior a `starts_at`.
 - Slot interval aceita apenas 15, 30 ou 60 minutos.
 - Regras do tipo `reminder` exigem `trigger_offset_hours`.
-- Notificacao de confirmacao eh disparada automaticamente ao criar evento com `contact_id` — exceto quando `status == 'pending_confirmation'` (Bea/IA), caso em que a notificacao fica retida ate humano aprovar.
+- Notificacao de confirmacao eh disparada automaticamente ao criar evento com `contact_id`.
 - `AgendaOnlineConfig` eh unico por conta (`account_id` UNIQUE).
 - `AgendaSetting` eh unico por conta.
 - Lista de espera impede duplicata de contato por conta.
 - Campos do formulario publico possuem campos de sistema (nao removiveis): nome, sobrenome, CPF, celular, email.
-- Status do `AgendaEvent` aceita: `pending_confirmation`, `scheduled`, `confirmed`, `arrived`, `in_progress`, `completed`, `cancelled`, `no_show`. `pending_confirmation` eh reservado a eventos criados pela Bea (IA) que aguardam validacao humana — quando o status muda para `scheduled` ou `confirmed`, as notificacoes ao paciente sao disparadas (callback `approved_after_pending?`).
 
 ### 2.7 Modelo de Dados
 
@@ -565,10 +562,10 @@ Clinicas perdem visibilidade financeira por usarem planilhas ou controles manuai
 - Caixa fisico: **implementado** (CashRegister.vue — 34KB).
 - Relatorios com 16 componentes analiticos: **implementado** (Reports.vue — 45KB).
 - Configuracoes financeiras: **implementado** (FinancialSettings.vue — 65KB).
-- Backend completo: **implementado** (controllers: financial_dashboard, financial_reports 19KB, account_transactions 9KB, bank_accounts, cash_registers 5KB, commission_rules, financial_categories, recurring_expenses, financial_goals, financial_pdfs).
-- Services dedicados: **implementados** (15 servicos + 1 subdir de PDF).
-- Jobs: **implementado** (1 job de despesas recorrentes).
-- Exportacao PDF: **implementada**.
+- Backend V2 completo em `plugins/financial/` (Rails Engine): models `Financial::*` (Entry, Installment, Budget, Expense, BankAccount, CashRegister, CommissionRule, RecurringExpense, RevenueGoal, AuditLog, etc.) sobre tabelas `financial_*`. Substituiu a tabela legada `account_transactions` (V1) em 2026-05.
+- Services dedicados em `plugins/financial/app/services/`: dashboard KPIs, DRE waterfall, projeção 60d, aging, comissões, importação Clinicorp, anonimização LGPD, backups com mirror R2.
+- Jobs: pg_dump diário (Sidekiq cron 3h AM), despesas recorrentes, gateway webhooks.
+- Exportação PDF (Prawn) e CSV contador (4 arquivos, UTF-8 BOM + `;`).
 
 ---
 
@@ -645,149 +642,7 @@ Reutiliza as entidades ja documentadas nos modulos de Agenda e Financeiro:
 
 ---
 
-## 6. Modulo: Bea (Assistente Virtual com IA)
-
-> Plano detalhado e roadmap completo em [`ai-agent-configuration-plan.md`](ai-agent-configuration-plan.md). Esta seção captura a visão funcional de produto.
-
-### 6.1 Visao Geral
-
-Bea (Beatriz) é a assistente virtual da Klivy que atende pacientes via WhatsApp em linguagem natural PT-BR. Roda como agente único multi-tool sobre o stack Chatwoot+Klivy: ouve mensagens (texto, áudio, imagem, vídeo), consulta bases de conhecimento e dados estruturados (agenda, pacientes, financeiro), executa ações reversíveis (book, reschedule, cancel — sempre como reserva pendente que humano valida), classifica emergências antes de qualquer LLM e escala para humano nos casos certos. Plugin auto-contido em [`plugins/ai_agent/`](../../plugins/ai_agent/), com 5 mudanças no core devidamente registradas em §8.
-
-### 6.2 Problema que Resolve
-
-Clínicas brasileiras (odontológicas, estéticas, psicológicas) recebem alto volume de WhatsApp 24/7 com perguntas repetitivas (horário, preço, agendamento, remarcação). Recepção fica saturada nos picos, paciente espera horas pra resposta simples, no-show alto por falta de confirmação proativa. Bea resolve atendimento de primeira linha (~80% das interações típicas) sem terceirizar diagnóstico clínico nem escapar de exigências CFM 2.454/2026 e LGPD.
-
-### 6.3 Publico-Alvo
-
-- **Paciente**: WhatsApp como canal único, sem instalar app, atendimento 24/7.
-- **Recepção/clínica**: vê reservas pendentes da Bea na agenda (badge laranja), valida em 1 clique. Notas internas privadas com contexto rico do que paciente disse + classificação automática (emergência, receita, foto clínica, etc).
-- **Médico responsável técnico**: identificado em cada conta (CFM 2.454/2026), nome+CRM/CRO injetado no system prompt da Bea pra responder corretamente quando paciente pergunta quem é o(a) responsável.
-- **Super admin Klivy**: liga/desliga Bea por conta, escolhe persona (odonto / estética / bem-estar), define teto de tokens/mês, sobe PDFs pra RAG, vê dashboard de uso e custo.
-
-### 6.4 Funcionalidades Principais
-
-**Núcleo conversacional:**
-- Datetime context per-turn (PT-BR: "amanhã" → 07/05; clinic open/closed agora; feriados próximos).
-- Memória cross-conversation 24h por contato (paciente reabre conversa nova, Bea ainda lembra).
-- State machine determinística pra confirmações curtas ("Sim", "Ok") sem precisar do LLM.
-- Active service intent: paciente em fluxo de "remoção de pontos" continua nele mesmo se LLM tentar voltar pra serviço anterior bem-sucedido.
-- Pre-LLM short-circuits: emergência clínica (SAMU 192), ideação suicida (CVV 188), opt-out de recall.
-
-**Ações na agenda (Sprint B*):**
-- Tools: `clinic_info` (catálogo + horário + serviços por profissional), `search_available_slots` (HABTM Service↔User), `book_appointment`, `reschedule_appointment`, `cancel_appointment`, `list_appointments`.
-- Toda criação/remarcação entra como `pending_confirmation` (badge laranja "Aguardando confirmação"). Notificação ao paciente só sai quando humano valida.
-- Critique determinístico antes de book/reschedule: bloqueia data passada, fora do horário, profissional que não realiza o serviço, duração absurda.
-
-**Multimodal:**
-- Voice notes (PTT WhatsApp) → transcrição via Whisper PT-BR, persistida em `Message.content`.
-- Imagem classificada via OpenAI Vision em 5 categorias (receita, foto clínica, exame, documento, outro) + vídeo. Sempre escala humano com nota interna específica. **Bea não interpreta clinicamente** (CFM).
-
-**Compliance:**
-- Tool `erasure_request` (LGPD art. 18 VI): registra `AuditLog` + nota privada + responde paciente com prazo 15 dias úteis. Não apaga automaticamente (D-23: humano que decide o que pode ser apagado vs retido por CFM 1.821/2007).
-- Médico responsável técnico identificável (CFM 2.454/2026) configurado por conta no super admin.
-- Validator pós-LLM bloqueia diagnóstico, prescrição, garantia.
-- Sentinel pós-LLM em high-stakes (toggle `CAPTAIN_BEA_SENTINEL_ENABLED`): LLM-as-judge leve audita resposta antes de enviar e marca verdict no Trace.
-
-**Recall proativo (Sprint G):**
-- Cron diário 14h SP busca pacientes dormentes ≥6 meses sem agendamento futuro, manda 1 mensagem com opt-out claro.
-- "NÃO" do paciente em até 7 dias após recall → opt-out automático determinístico (sem LLM), respeitado eternamente em runs futuros.
-
-**Memória semantic (Sprint D):**
-- Cron noturno 4h SP destila histórico do paciente (últimas 30 entries + 30 mensagens) num perfil compacto: `preferred_time_of_day`, `preferred_professional`, `frequent_services`, `tone`, `health_notes`, `summary`. Merge preserva keys manuais (`recall_opt_out`, etc).
-
-**Follow-ups configuráveis (Sprint G2 + G2.1):**
-- UI dedicada na sidebar BEA → Follow-ups (`/accounts/:id/ai_agent/follow_ups`). Clínica cria N regras configuráveis com cards visuais por tipo de gatilho (calendário/check/X/sem-resposta/raio).
-- 5 triggers: `pre_appointment` (N antes do horário), `post_appointment` (N depois), `no_show` (N após faltar), `no_response` (paciente parado há N), `custom` (apenas via API externa).
-- Offset com unidade selecionável: **segundos / minutos / horas** (limites: 1–14400s, 1–2880min, 1–720h). Cron roda a cada 1min com janela ±1min — suporta tanto disparos rápidos pra teste quanto agendamentos com lead time de dias.
-- Filtro de origem (`applies_to`): "Em qualquer agendamento" (default), "Apenas se a Bea agendou", "Apenas se um humano agendou". Permite que automações pré-existentes do agendamento manual coexistam sem dupla notificação.
-- Mensagem gerada agênticamente pela Bea via LLM leve (Gemini 3 Flash Preview / GPT-4.1-mini) usando o `context_brief` que a clínica escreve em linguagem natural. Tom herdado do CAPTAIN_BEA_SYSTEM_PROMPT (PT-BR profissional, sem gíria, ≤3 frases).
-- Cap por paciente/consulta (`max_per_target`) anti-flood. Idempotência forte via UNIQUE no banco em `(rule_id, contact_id, agenda_event_id, target_at)`.
-- Auditoria completa por disparo em `FollowUpExecution` (status: pending/sent/skipped/failed + `skip_reason` legível).
-
-### 6.5 Regras de Negocio
-
-- Toda criação ou remarcação pela Bea entra como `pending_confirmation` — humano valida antes de virar `scheduled`/`confirmed`. Decisão D-16 do plano.
-- `cancel_appointment` é exceção: paciente cancelando o próprio compromisso é direito do paciente, executa direto.
-- Emergência (regex PT-BR de risco-vida) e ideação suicida são classificadas **antes** do LLM ver — Mount Sinai 2026 mostrou 52% de undertriage em LLMs. Templates fixos com SAMU 192 / CVV 188.
-- Tools high-stakes (book/reschedule/cancel/clinic_info/financial_status/erasure_request) podem disparar Sentinel quando habilitado; resposta atual é registrada com tag `sentinel:ok|reproved:<reason>` em `Trace.guardrail_violations` (modo telemetria — não regenera).
-- Vocabulário obrigatório no system prompt: "reserva pendente / a clínica vai confirmar" em vez de "agendada / agendamento feito" — paciente não recebe mensagem com falsa certeza enquanto humano não validou.
-- Recall não auto-executa em paciente com agendamento futuro ativo nem em quem fez opt-out. Cooldown 90 dias entre recalls.
-- Memória semantic (cron Sprint D) só sobrescreve as 6 keys do Distiller. Keys manuais (`recall_opt_out`, `last_recall_at`, `_distiller_at`) sempre preservadas.
-- **Follow-ups configuráveis** (Sprint G2): cada `FollowUpRule` é validada em criação (`trigger_type ∈ TRIGGER_TYPES`, `offset_unit ∈ {seconds, minutes, hours}`, `applies_to ∈ {both, ai_agent, manual}`). `offset_seconds = offset_value × seconds_per_unit` é a fonte canônica usada pelo CandidateFinder.
-- **`applies_to` filter (Sprint G2.1)**: aplicado SOMENTE em triggers que envolvem AgendaEvent (`pre_appointment`, `post_appointment`, `no_show`). Em `no_response` e `custom` o filtro é ignorado pelo CandidateFinder e o campo fica oculto na UI.
-- **`AgendaEvent.source`** é setado em UM único ponto por origem: Bea via `book_appointment_tool` (`'ai_agent'`), recepção via API REST padrão (`'manual'` via default), auto-agendamento público (`'public_booking'`), importação Clinicorp (`'manual'` por default; pode ser ajustado pra `'import'` se necessário). Nenhuma heurística — é seteado no create.
-- **Bea reativa cancelamento recente** em vez de criar duplicata: se paciente cancela e logo pede pra remarcar no mesmo horário (≤60min após cancel), `book_appointment_tool` reativa o evento cancelled (status volta a `pending_confirmation`) ao invés de criar uma 2ª linha no calendário.
-- **Idempotência de Follow-up disparado**: UNIQUE constraint em `(rule_id, contact_id, agenda_event_id, target_at)` no banco. Cron rodar duas vezes seguidas, retry de Sidekiq, click duplo de operador → todos caem no mesmo registro `FollowUpExecution`, sem duplicação.
-- **Mensagem proativa não agenda nada**: `MessageGenerator` (Sprint G2) chama LLM SEM tools registradas. A mensagem que a Bea envia em follow-up é só texto — não pode book, reschedule ou cancel automático. Modificações na agenda continuam exigindo conversa explícita iniciada pelo paciente.
-
-### 6.6 Modelo de Dados
-
-| Entidade | Descricao |
-|---|---|
-| `AiAgent::AccountSetting` | Config por conta: `enabled`, `chat_model`, `monthly_token_budget`, `persona_id`, `system_prompt_prefix`, `enabled_tools` (jsonb), `responsible_physician_id` (FK User), `responsible_physician_council` (CRM/CRO/CRP/COREN), `responsible_physician_crm` ("123456/SP") |
-| `AiAgent::GlobalSetting` | Provider (gemini/openai), modelos default, tetos globais |
-| `AiAgent::PersonaTemplate` | 3 personas builtin (odonto / estética / bem-estar) + custom |
-| `AiAgent::ToolDefinition` | Catálogo de tools registráveis (`erasure_request`, `book_appointment`, `clinic_info`, etc) |
-| `AiAgent::Document` + `ParentChunk` + `ChildChunk` | RAG hierárquico com pgvector |
-| `AiAgent::Trace` | 1 row por turno: model, provider, latência, tokens, custo, sentiment, escalation_reason, guardrail_violations (jsonb), short_circuited |
-| `AiAgent::ConversationState` | working_memory (jsonb): pending_offer, last_completed, active_service, recent_listed_appointment_id |
-| `AiAgent::PatientMemory` | Por contact: preferences (jsonb), history (jsonb capped 50), last_consolidated_at |
-| `AiAgent::UsageCounter` | Tokens/custo por conta/mês |
-| `AiAgent::AuditLog` | Append-only de mudanças globais/por conta + LGPD erasure_request |
-| `AgendaServiceUser` | HABTM `User <-> AgendaService` (Sprint B1.5 — multi-doutor por especialidade) |
-| `AiAgent::FollowUpRule` (Sprint G2) | Por conta: `name`, `trigger_type`, `offset_hours` (valor) + `offset_unit` (`seconds`/`minutes`/`hours`), `context_brief` (texto livre que vira prompt), `max_per_target`, `applies_to` (`both`/`ai_agent`/`manual`), `enabled`, `position`, `status_filter` (jsonb opcional). |
-| `AiAgent::FollowUpExecution` (Sprint G2) | Audit + idempotência: 1 row por disparo. `rule_id`, `contact_id`, `conversation_id`, `agenda_event_id`, `target_at`, `sent_at`, `status` (`pending`/`sent`/`skipped`/`failed`), `skip_reason`, `message_id`. UNIQUE em `(rule_id, contact_id, agenda_event_id, target_at)`. |
-| `AgendaEvent.source` (Sprint G2.1) | Coluna nova em `agenda_events` (string, default `'manual'`, NOT NULL). Valores: `'manual'` (recepção), `'ai_agent'` (Bea), `'public_booking'` (auto-agendamento online), `'import'` (Clinicorp/CSV). Usado pelo filtro `applies_to` dos Follow-ups. |
-
-### 6.7 Integracoes
-
-- **Chatwoot Messages**: `MessageListener` escuta `after_create_commit` em mensagens incoming. Filtros: bot habilitado, inbox ligado a Beatriz, conversa não escalada, sem assignee humano. Aceita mensagens com attachment mesmo sem content (áudio/imagem puros).
-- **Agenda**: `AgendaEvent` ganhou status `pending_confirmation`. Notificações de confirmação ficam seguradas até humano aprovar (callback `approved_after_pending?` dispara WhatsApp).
-- **Pacientes**: `Patient` resolvido via `Contact.contact_id` em todas as tools. Histórico clínico (alergias, condições) pode ser consultado via `patient_lookup`.
-- **Financeiro**: `financial_status` tool retorna situação atual (saldo, parcelas vencidas) sem expor valores comprometedores.
-- **Whisper API** (OpenAI): voice notes transcritas em PT-BR.
-- **Vision API** (OpenAI `gpt-4o-mini`): imagem classificada em 5 categorias.
-- **Sidekiq::Cron::Job**: 3 crons — `ProactiveOutreachJob` (diário 14h SP), `ConsolidatePatientMemoryJob` (diário 4h SP) e `FollowUpDispatcherJob` (a cada 1min). Todos registrados via initializer no engine, sem tocar `config/schedule.yml` do core.
-- **AgendaEvent.source**: Bea `'ai_agent'` (single point in `book_appointment_tool`), recepção `'manual'` (default da migration), auto-agendamento `'public_booking'` (set em `Public::Api::V1::Agenda::PublicController`). Usado pelo CandidateFinder pra filtrar regras por origem.
-- **RubyLLM 1.9.2 + Gemini 3 Flash Preview**: monkey-patch no plugin (`AiAgent::GeminiThoughtSignaturePatch`) captura e reinjeta `thoughtSignature` em function calls, permitindo usar o Gemini 3 com tools mesmo enquanto o gem oficial não suporta. Idempotente em reload — initializer aplica uma vez por boot.
-
-### 6.8 Edge Cases
-
-- Paciente fora da janela WhatsApp 24h: recall pode falhar — em produção exige WhatsApp Business template aprovado (Sprint G2 futura).
-- Paciente sem `Contact` vinculado (inbox sem identificação): tools que precisam de `contact_id` retornam erro descritivo, Bea direciona "preciso da sua identificação primeiro".
-- LLM tenta book com profissional que não realiza o serviço: Critique reprova antes de executar, retorna erro estruturado (`critique_failed: true`) e Bea pergunta o que falta.
-- LLM alucina e tenta voltar pra serviço anterior bem-sucedido após paciente pedir outro: hard override em `wrap_tool_for_state_capture` sobrescreve `service_id` baseado em `active_service`.
-- API LLM down: `with_provider_fallback` tenta OpenAI fallback, depois retry no mesmo modelo após backoff.
-- Whisper/Vision indisponível: fallback determinístico ao paciente ("Não consegui ouvir" / "Recebi sua imagem, equipe vai avaliar"), sempre escala humano.
-- Mensagem repetida 5x (loop): `EscalationRules` escala humano com reason `user_loop`.
-- **Follow-up sem conversa aberta**: paciente nunca interagiu via WhatsApp → não tem `Conversation` ativa. `SendFollowUpJob` marca `FollowUpExecution.status='skipped'` com `skip_reason='no_open_conversation'`. Não cria conversa do zero (exigiria WhatsApp Business template aprovado pela Meta — fora do escopo G2/G2.1, fica pra Sprint G3).
-- **Follow-up sem `contact_id`**: AgendaEvent criado como bloqueio interno (lanche, reunião) não dispara — CandidateFinder filtra `where.not(contact_id: nil)`.
-- **Follow-up "reagendar sem cancelar antes"**: paciente cancela e logo pede pra remarcar mesmo horário. `book_appointment_tool` reativa o cancelado em vez de criar duplicata, evitando 2 cards no calendário.
-- **`a gente` no PT-BR informal**: paciente diz "a gente consegue reagendar?" — NÃO escala humano. Regex de pedido explícito de humano (`EXPLICIT_HUMAN_REQUEST` em `EscalationRules`) ignora "a gente" isolado, exige verbo + complemento de transferência.
-- **MessageGenerator no Sidekiq**: workers podem rodar antes do initializer carregar a key Gemini/OpenAI. Solução: `Llm::Config.initialize!` é chamado idempotentemente no início de `MessageGenerator#call` — sem custo nas chamadas seguintes.
-
-### 6.9 Estado Atual (2026-05-07)
-
-- **16 sprints concluídas e ativas em produção**: A, B1, B1.5, B2, B3, C, D, E, F MVP, F2, G MVP, **G2** (motor de Follow-ups configurável), **G2.1** (filtro `applies_to` Bea/humano/ambos), I, M, S.
-- **Provider LLM principal**: Gemini 3 Flash Preview (`gemini-3-flash-preview`) via `CAPTAIN_GEMINI_MODEL`. OpenAI (`gpt-4.1-mini`) configurado como fallback automático em `with_provider_fallback`. Pricing tabelado em USD oficial Google ($0.50 in / $3.00 out por 1M tokens — output inclui thinking tokens).
-- **Sentinel ligado** em modo telemetria (`CAPTAIN_BEA_SENTINEL_ENABLED=true`).
-- **Crons ativos** registrados no Sidekiq::Cron::Job: `ProactiveOutreachJob` (recall, 14h SP), `ConsolidatePatientMemoryJob` (memória semantic, 4h SP), `FollowUpDispatcherJob` (a cada 1min).
-- **Dashboard super admin** com 8 KPIs: deflection, custo, escaladas, tokens, latency p95, sentiment distribution.
-- **Polimentos de qualidade entregues em 2026-05-07** (não-sprint, mas ativos):
-  - **Tom da Bea humanizado**: `CAPTAIN_BEA_SYSTEM_PROMPT` reescrito com **Regra do Espelho** (reconhece o pedido do paciente antes de oferecer alternativa), 4 few-shots de rejeição empática, anti-monotonia (variar abertura), zero gíria/regionalismo (lista de 13 expressões proibidas: "pô", "tô", "rola", "deu ruim", "tipo", etc).
-  - **Tool `search_available_slots`** retorna `gap_context` quando o horário pedido pelo paciente difere do disponível (`after_closing` / `before_opening` / `closed_day` / `lunch_break` / `time_unavailable`). O `note_for_bea` instrui o LLM a fazer espelho empático ("Entendi que 18h seria melhor, mas a clínica fecha 17h..." em vez de listar horários direto).
-  - **`book_appointment_tool` reativa cancelados recentes**: se há um AgendaEvent cancelled do mesmo paciente/horário/profissional nas últimas 60min, reativa em vez de criar duplicata.
-  - **Memory cross-conversation 24h**: usa `.reorder('messages.created_at DESC, messages.id DESC')` + `.to_a.reverse` pra contornar `Message.default_scope { order(created_at: :asc) }` que silenciosamente sobrescrevia a ordem; sem isso, LLM recebia histórico em ordem inversa.
-  - **Audio race**: `AudioTranscriber` rescues `ActiveStorage::FileNotFoundError`, retry 3× com sleep 1s, retorna `:file_not_ready` sentinel; `ChatResponseJob` reenfileira com `wait: 5.seconds`, máx 3 tentativas (~24s total). Cobre o caso onde WhatsApp commitou Message antes do upload do blob terminar.
-  - **`gemini-3-flash-preview` com tools**: monkey-patch `AiAgent::GeminiThoughtSignaturePatch` em RubyLLM 1.9.2 captura `thoughtSignature` da response e reinjeta nas próximas requests, satisfazendo o requisito do Gemini 3 sem esperar release oficial do gem.
-  - **Pricing corrigido**: tabela tinha preço de Gemini 1.5 Flash mascarado de 2.5 (subestimando custo em ~6×). Atualizada com preços oficiais 2026 + lookup smart por prefixo (modelos com sufixo `-preview-09-2026` resolvem corretamente). USD/BRL atualizado pra 5.5.
-- **Pendentes opcionais (não bloqueiam piloto)**:
-  - **G3** (extensões de Follow-up): cadastro de WhatsApp Business templates aprovados pela Meta, criação de conversa nova quando paciente não tem inbox aberta, A/B testing de variações de `context_brief`, dashboard de "follow-ups disparados na semana".
-  - **H** (qualidade): A/B testing de personas + regen no Sentinel quando reprovar (hoje só telemetria) + LLM-as-judge async em sample 10% dos turnos.
-
----
-
-## 7. Integracao entre Modulos
+## 6. Integracao entre Modulos
 
 ### 6.1 Diagrama de Dependencias
 
@@ -857,13 +712,13 @@ Clínicas brasileiras (odontológicas, estéticas, psicológicas) recebem alto v
 
 ---
 
-## 8. Visao de Produto
+## 7. Visao de Produto
 
-### 8.1 Posicionamento
+### 7.1 Posicionamento
 
 BeClinic eh uma plataforma de gestao clinica completa que unifica comunicacao (Chatwoot), agenda, prontuario eletronico e financeiro em um unico sistema. Posiciona-se como solucao vertical para clinicas odontologicas, esteticas e de saude que precisam de uma ferramenta integrada e acessivel.
 
-### 8.2 Diferencial Competitivo
+### 7.2 Diferencial Competitivo
 
 | Diferencial | Descricao |
 |---|---|
@@ -876,7 +731,7 @@ BeClinic eh uma plataforma de gestao clinica completa que unifica comunicacao (C
 | Agendamento online | Booking publico sem necessidade de app externo |
 | Timeline automatizada | 15 tipos de eventos registrados automaticamente |
 
-### 8.3 Stack do Produto
+### 7.3 Stack do Produto
 
 | Camada | Tecnologia |
 |---|---|
@@ -888,7 +743,7 @@ BeClinic eh uma plataforma de gestao clinica completa que unifica comunicacao (C
 | PDF | Prawn (geracao server-side) |
 | Notificacoes | Via Chatwoot inbox (WhatsApp, Email, etc.) |
 
-### 8.4 Metricas de Maturidade
+### 7.4 Metricas de Maturidade
 
 | Modulo | Maturidade | Justificativa |
 |---|---|---|
@@ -898,7 +753,7 @@ BeClinic eh uma plataforma de gestao clinica completa que unifica comunicacao (C
 | Configuracoes | **Producao** | Frontend robusto (agenda 154KB, financeiro 65KB), APIs completas |
 | Integracao entre modulos | **Beta** | Sincronizacao bidirecional implementada; pode necessitar maturacao em edge cases complexos |
 
-### 8.5 Volumetria de Codigo Customizado
+### 7.5 Volumetria de Codigo Customizado
 
 | Area | Metrica |
 |---|---|
@@ -915,45 +770,3 @@ BeClinic eh uma plataforma de gestao clinica completa que unifica comunicacao (C
 ---
 
 *Documento gerado a partir de analise direta do codigo-fonte, estrutura de pastas, models, controllers, services, jobs, migrations, rotas frontend, stores, APIs e componentes Vue.*
-
----
-
-## 9. Mudanças no Core (registro de auditoria)
-
-Esta seção registra **todas as edições** feitas em arquivos do core do Chatwoot necessárias para suportar features da Klivy. Toda entrada aqui foi explicitamente aprovada antes de codar e está espelhada no documento da feature correspondente.
-
-| Data | Arquivo | Feature/Sprint | Justificativa | Aprovação |
-|---|---|---|---|---|
-| 2026-05-06 | [`app/javascript/dashboard/routes/dashboard/settings/agents/EditAgent.vue`](../../app/javascript/dashboard/routes/dashboard/settings/agents/EditAgent.vue) | Bea Sprint B1.5a (multi-doutor specialties) | Vue não tem hook de extensão como Rails. Pra adicionar campo "Serviços oferecidos" no modal de Editar Agente, é necessário editar o arquivo. Backend (controller + models) fica em plugin via prepend. | ✅ Leandro, 2026-05-06 |
-| 2026-05-06 | [`app/views/api/v1/models/_agent.json.jbuilder`](../../app/views/api/v1/models/_agent.json.jbuilder) | Bea Sprint B1.5b (multi-doutor specialties) | jbuilder não tem prepend. 1 linha adicionada (`json.agenda_service_ids`) pra trazer os IDs no GET /agents, evitando 2 fetches no front. Arquivo já tinha customizações Klivy (`agenda_public_id`, `klivy_role`, `beclinic_super_admin`). | ✅ Leandro, 2026-05-06 |
-| 2026-05-06 | [`app/views/super_admin/accounts/bea.html.erb`](../../app/views/super_admin/accounts/bea.html.erb) | Bea Sprint E (LGPD + CFM 2.454/2026) | Fieldset "Responsável técnico" com select de User + Conselho (CRM/CRO/CRP/COREN) + número/UF. Arquivo já era Klivy (criado na fase de implementação da Bea). | ✅ pré-aprovado (arquivo Klivy) |
-| 2026-05-06 | [`app/controllers/super_admin/accounts_controller.rb`](../../app/controllers/super_admin/accounts_controller.rb) | Bea Sprint E (LGPD + CFM 2.454/2026) | `bea_setting_params` ganhou 3 campos no permit (`responsible_physician_id`, `responsible_physician_council`, `responsible_physician_crm`) + normalização uppercase do conselho antes do save. Arquivo já tinha customizações Klivy (`bea`, `update_bea`, `bea_setting_params` adicionados anteriormente); manutenção da customização existente. | ✅ Leandro, 2026-05-06 (autonomia delegada) |
-| 2026-05-07 | [`config/routes.rb`](../../config/routes.rb) | Bea Sprint G2 (follow-ups configuráveis) | 1 bloco `resources :ai_agent_follow_up_rules` apontando pra controller no plugin (`/ai_agent/api/v1/accounts/follow_up_rules`). Mesmo padrão já em uso em `ai_agent_documents`. | ✅ Leandro, 2026-05-07 |
-| 2026-05-07 | [`app/javascript/dashboard/store/index.js`](../../app/javascript/dashboard/store/index.js) | Bea Sprint G2 (follow-ups configuráveis) | 1 import + 1 registro no `modules: { ... }` do Vuex via `@plugins/ai_agent/frontend/store/aiAgentFollowUpRules`. Vue não tem hook de extensão; mesmo padrão já em uso pra `agendaNotificationRules`, `agendaServices`, etc. | ✅ Leandro, 2026-05-07 |
-| 2026-05-07 | [`app/javascript/dashboard/routes/dashboard/dashboard.routes.js`](../../app/javascript/dashboard/routes/dashboard/dashboard.routes.js) | Bea Sprint G2 (follow-ups configuráveis) | 1 import + 1 spread `...aiAgentRoutes` via `@plugins/ai_agent/frontend/routes/routes`. Mesmo padrão já em uso pra `agendaRoutes`, `patientRoutes`, etc. | ✅ Leandro, 2026-05-07 |
-| 2026-05-07 | [`app/javascript/dashboard/components-next/sidebar/Sidebar.vue`](../../app/javascript/dashboard/components-next/sidebar/Sidebar.vue) | Bea Sprint G2 (follow-ups configuráveis) | Item "Follow-ups" adicionado nos children do menu BEA, apontando pra rota Vue `ai_agent_follow_ups_index`; entrada `FollowUps: ['captain', 'manage_settings']` no permission gate. Vue não tem hook de extensão (precedente B1.5a). | ✅ Leandro, 2026-05-07 |
-| 2026-05-07 | [`app/controllers/public/api/v1/agenda/public_controller.rb`](../../app/controllers/public/api/v1/agenda/public_controller.rb) | Bea Sprint G2.1 (filtro `applies_to`) | 1 linha: `source: 'public_booking'` no `agenda_events.create!` do auto-agendamento online. Permite que Follow-ups distinga origem do evento (Bea / humano / booking público) sem heurística. | ✅ Leandro, 2026-05-07 |
-| 2026-05-07 | [`db/migrate/20260507110000_add_source_to_agenda_events.rb`](../../db/migrate/20260507110000_add_source_to_agenda_events.rb) | Bea Sprint G2.1 (filtro `applies_to`) | Migration root (tecnicamente core do projeto): adiciona `source` em `agenda_events` (string, default `'manual'`, NOT NULL) + índice `(account_id, source)`. Eventos antigos ficam como `'manual'` automaticamente — sem backfill manual. | ✅ Leandro, 2026-05-07 |
-| 2026-05-07 | [`db/migrate/20260507180000_add_default_category_to_agenda_services.rb`](../../db/migrate/20260507180000_add_default_category_to_agenda_services.rb) | Bea — categoria default por serviço | Migration root: adiciona `default_category_id` (FK pra `agenda_categories`, nullify on delete) em `agenda_services`. Permite que cada serviço tenha categoria padrão sugerida — Bea usa pra preencher `AgendaEvent.category_id` ao agendar; recepção também (pode trocar manualmente). Substitui o mapeamento por nome (que era frágil). | ✅ Leandro, 2026-05-07 |
-| 2026-05-07 | [`app/views/api/v1/models/_agenda_service.json.jbuilder`](../../app/views/api/v1/models/_agenda_service.json.jbuilder) | Bea — categoria default por serviço | jbuilder partial sem hook de extensão. 1 linha (`json.default_category_id`) pra trazer o campo no GET /agenda_services. Mesmo padrão do `_agent.json.jbuilder` (Sprint B1.5b). | ✅ Leandro, 2026-05-07 |
-
-**Sprints sem core change registradas como auditoria de transparência:**
-
-| Sprint | Resumo | Onde mexeu | Core change? |
-|---|---|---|---|
-| Bea Sprint A (datetime injection) | Per-turn datetime context, holiday calendar | `plugins/ai_agent/` (novo) | ❌ Não |
-| Bea Sprint B1 (search_available_slots) | Tool de busca de slots vagos | `plugins/ai_agent/tools/` (novo) | ❌ Não |
-| Bea Sprint B2 (reschedule + cancel) | Tools de remarcação e cancelamento | `plugins/ai_agent/tools/` (novo) | ❌ Não |
-| Bea Sprint M (memória cross-conversation 24h) | Histórico do paciente entre conversas | `plugins/ai_agent/memory/` (novo), `plugins/ai_agent/jobs/` (edit) | ❌ Não |
-| Bea Sprint S (state machine determinística) | Confirmação curta + active_service intent | `plugins/ai_agent/state_machine/` (novo), `plugins/ai_agent/services/chat_service.rb` (edit) | ❌ Não |
-| Bea Sprint C (emergency layer) | Detector de emergência clínica/suicida (SAMU 192 / CVV 188) antes do LLM | `plugins/ai_agent/emergency/` (novo), `plugins/ai_agent/services/chat_service.rb` (edit) | ❌ Não |
-| Bea Sprint B3 (pending_confirmation + Reflection) | Eventos da Bea entram como reserva pendente; Critique determinístico antes de book/reschedule; UI badge laranja "Aguardando confirmação" | `plugins/agenda/app/models/agenda_event.rb` (edit), `plugins/ai_agent/tools/book_*.rb` e `reschedule_*.rb` (edit), `plugins/ai_agent/humanization/critique.rb` (novo), `plugins/ai_agent/services/chat_service.rb` (edit), `plugins/agenda/frontend/utils/agenda-constants.js` (edit) | ❌ Não |
-| Bea Sprint G2 (motor de follow-ups) | 2 migrations (`follow_up_rules`, `follow_up_executions`), 2 models (`FollowUpRule`, `FollowUpExecution`), 2 services (`CandidateFinder`, `MessageGenerator`), 2 jobs (`FollowUpDispatcherJob` cron 1min, `SendFollowUpJob`), 1 controller REST (`FollowUpRulesController`), 1 página Vue (`Index.vue` com modal completo), 1 store Vuex, 1 API client, edit em `engine.rb` (cron). | ⚠️ Sim (4 core edits — sidebar, store, dashboard.routes, config/routes — registrados acima) |
-| Bea Sprint G2.1 (filtro `applies_to` por origem) | Migration `add_applies_to_to_follow_up_rules.rb`, edit em `FollowUpRule` model (constantes + helper `agenda_source_filter`), edit em `CandidateFinder` (`filter_by_source`), edit em `book_appointment_tool` (set `source: 'ai_agent'`), edit em `Index.vue` (radio cards "Aplicar quando" + badge no card). | ⚠️ Sim (3 core edits — public_controller.rb 1 linha, migration db/migrate root, plugins/agenda/agenda_event.rb — registrados acima) |
-
-**Procedimento padrão:**
-1. Justificativa por escrito antes de editar.
-2. Aprovação explícita do Leandro.
-3. Entrada nesta tabela.
-4. Update no doc da feature (`docs/01-product/ai-agent-configuration-plan.md` §11 ou equivalente).
-5. Update no changelog quando commit for feito.

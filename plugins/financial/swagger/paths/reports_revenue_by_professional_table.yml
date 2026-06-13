@@ -1,0 +1,64 @@
+get:
+  tags:
+    - Financeiro · Relatórios
+  summary: Receitas por profissional (tabela / Hub Relatórios)
+  description: |
+    Agrega receita (Entries `direction=in`, `affects_dre=true`,
+    kind ∈ [receita, manual_entry]) por `professional_id` no período de
+    competência. Versão TABULAR completa (diferente do chart
+    `revenue_by_professional`): total, qty, pacientes únicos, ticket médio e
+    `percent_of_total`. Entries sem profissional caem em "Sem profissional".
+    Exige role GERENTE/ADMIN/AUDITOR.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+  responses:
+    '200':
+      description: Agregação por profissional (ordenada por total desc)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              period:
+                type: object
+                properties:
+                  from: { type: string, format: date }
+                  to: { type: string, format: date }
+              summary:
+                type: object
+                properties:
+                  total_cents: { type: integer }
+                  professionals_count: { type: integer }
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    professional:
+                      type: object
+                      properties:
+                        id: { type: integer, nullable: true }
+                        name: { type: string }
+                        avatar_url: { type: string, nullable: true }
+                    qty: { type: integer }
+                    patients_count: { type: integer }
+                    total_cents: { type: integer }
+                    ticket_avg_cents: { type: integer, nullable: true }
+                    percent_of_total: { type: number }
+    '403':
+      description: Sem permissão (exige GERENTE/ADMIN/AUDITOR)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string, example: forbidden }
+              required_roles:
+                type: array
+                items: { type: string }

@@ -1,0 +1,18 @@
+type: object
+description: |
+  Pasta para organizar exames/mídias do paciente. Suporta hierarquia
+  via `parent_id` (subpastas). Excluir pasta move arquivos para raiz
+  (não para a pasta-pai) — alinhado com a UX atual.
+properties:
+  id: { type: integer }
+  account_id: { type: integer }
+  patient_id: { type: integer }
+  parent_id:
+    type: integer
+    nullable: true
+    description: ID da pasta-pai. `null`/`"root"` = raiz.
+  name: { type: string }
+  color: { type: string, description: "Hex color" }
+  position: { type: integer }
+  created_at: { type: string, format: date-time }
+  updated_at: { type: string, format: date-time }

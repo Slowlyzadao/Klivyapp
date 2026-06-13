@@ -1,7 +1,7 @@
 import AiAgentInternalNotificationTemplates from '@plugins/ai_agent/frontend/api/internalNotificationTemplates';
 import { throwErrorMessage } from 'dashboard/store/utils/api';
 
-const state = {
+const initialState = () => ({
   records: [],
   catalog: { events: [], rooms: [], users: [] },
   uiFlags: {
@@ -12,7 +12,9 @@ const state = {
     isDeleting: false,
     isResetting: false,
   },
-};
+});
+
+const state = initialState();
 
 const getters = {
   getRecords: $state => $state.records,
@@ -98,6 +100,27 @@ const actions = {
       commit('SET_UI_FLAG', { isResetting: false });
     }
   },
+
+  // UX-fix 2026-05-19: toggle dedicado que PROPAGA o erro original (não
+  // converte em string como `update` faz via `throwErrorMessage`). Isso
+  // permite o caller distinguir 422 com `code='destination_required'`
+  // (precisa abrir modal de edição) de outros erros. Comportamento de
+  // sucesso é idêntico ao `update`.
+  toggleEnabled: async ({ commit }, { id, enabled }) => {
+    commit('SET_UI_FLAG', { isUpdating: true });
+    try {
+      const response = await AiAgentInternalNotificationTemplates.update(id, { enabled });
+      commit('REPLACE_RECORD', response.data);
+      return response.data;
+    } finally {
+      commit('SET_UI_FLAG', { isUpdating: false });
+    }
+  },
+
+  // MT-19 — defesa em profundidade pra account-switch. Nome `resetStore`
+  // (não `reset`) porque `reset(id)` acima já é semanticamente "restaurar
+  // template ao default via API" — fica reservado pro caso de uso público.
+  resetStore: ({ commit }) => commit('RESET'),
 };
 
 const mutations = {
@@ -119,6 +142,9 @@ const mutations = {
   },
   REMOVE_RECORD($state, id) {
     $state.records = $state.records.filter(r => r.id !== id);
+  },
+  RESET($state) {
+    Object.assign($state, initialState());
   },
 };
 

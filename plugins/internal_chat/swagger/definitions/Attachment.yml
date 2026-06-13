@@ -1,0 +1,52 @@
+type: object
+description: |
+  Anexo de uma mensagem da sala, conforme `attachment_payload` do
+  `AttachmentsController` (aba "Arquivos"). `download_url` aponta pra rota
+  custom de download (reconverte WebP → JPG/PNG) quando `content_type` é
+  `image/webp`; para os demais tipos é a URL direta do ActiveStorage.
+properties:
+  id: { type: integer }
+  file_type:
+    type: string
+    enum: [image, video, file]
+    description: |
+      `media` (index) agrega `image`+`video`; `documents` agrega `file`.
+  file_name:
+    type: string
+    nullable: true
+  content_type:
+    type: string
+    nullable: true
+    description: MIME do blob (imagens normalmente `image/webp`).
+  file_size:
+    type: integer
+    nullable: true
+  file_url:
+    type: string
+    nullable: true
+    description: URL direta do ActiveStorage.
+  thumb_url:
+    type: string
+    nullable: true
+    description: Miniatura — presente só para `file_type='image'`, senão `null`.
+  download_url:
+    type: string
+    nullable: true
+    description: |
+      Rota custom de download que reconverte WebP → JPG/PNG; para outros tipos,
+      a própria URL direta do ActiveStorage.
+  message_id:
+    type: integer
+    description: ID da mensagem dona do anexo.
+  message_created_at:
+    type: string
+    format: date-time
+    description: '`created_at` da mensagem (chave de ordenação da lista).'
+  sender:
+    type: object
+    nullable: true
+    description: Autor da mensagem que enviou o anexo. `null` quando ausente.
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      avatar_url: { type: string, nullable: true }

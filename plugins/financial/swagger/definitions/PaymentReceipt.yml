@@ -1,0 +1,42 @@
+type: object
+description: |
+  Recibo de pagamento (`Financial::PaymentReceipt`). Gerado por
+  `ReceivePayment` — agrupa as parcelas quitadas + juros/multas/descontos
+  + crédito aplicado. Reembolso via `POST /refund` cria o estorno
+  contábil (Entry de saída) e ajusta as parcelas.
+properties:
+  id: { type: integer }
+  receipt_number: { type: string }
+  patient_id: { type: integer, nullable: true }
+  bank_account_id: { type: integer, nullable: true, description: "FK `financial_bank_account_id`" }
+  entry_id: { type: integer, nullable: true, description: "Entry de entrada gerada (`financial_entry_id`)" }
+  payment_method: { type: string }
+  gross_amount_cents: { type: integer }
+  interest_amount_cents: { type: integer }
+  fine_amount_cents: { type: integer }
+  discount_amount_cents: { type: integer }
+  credit_applied_cents: { type: integer }
+  net_amount_cents: { type: integer }
+  received_at: { type: string, format: date-time }
+  notes: { type: string, nullable: true }
+  created_at: { type: string, format: date-time }
+  items:
+    type: array
+    description: "Embedded em `include_items=true`."
+    items:
+      type: object
+      properties:
+        id: { type: integer }
+        installment_id: { type: integer }
+        amount_cents: { type: integer }
+  new_installments:
+    type: array
+    description: |
+      Só aparece na resposta de `create` — lista as novas parcelas
+      geradas quando houve baixa parcial com `keep_installment_open=true`.
+    items:
+      type: object
+      properties:
+        id: { type: integer }
+        amount_cents: { type: integer }
+        due_date: { type: string, format: date }

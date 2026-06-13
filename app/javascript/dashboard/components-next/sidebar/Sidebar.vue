@@ -1,6 +1,10 @@
 <script setup>
 import { h, ref, computed, onMounted } from 'vue';
-import { provideSidebarContext, useSidebarResize } from './provider';
+import {
+  provideSidebarContext,
+  useSidebarResize,
+  useSidebarForceCollapse,
+} from './provider';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useKbd } from 'dashboard/composables/utils/useKbd';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -88,11 +92,21 @@ const {
   snapToCollapsed,
   snapToExpanded,
   COLLAPSED_THRESHOLD,
+  MIN_WIDTH,
 } = useSidebarResize();
+
+// Override transiente de colapso (ex.: editor de documentos em tela cheia).
+const { forcedCollapsed } = useSidebarForceCollapse();
 
 // On mobile, sidebar is always expanded (flyout mode)
 const isEffectivelyCollapsed = computed(
-  () => !isMobile.value && isCollapsed.value
+  () => !isMobile.value && (isCollapsed.value || forcedCollapsed.value)
+);
+
+// Largura efetiva: quando forçado a colapsar, usa a largura mínima sem
+// gravar a preferência salva do usuário (volta ao normal ao liberar).
+const effectiveSidebarWidth = computed(() =>
+  forcedCollapsed.value ? MIN_WIDTH : sidebarWidth.value
 );
 
 // Resize handle logic
@@ -174,6 +188,10 @@ onMounted(() => {
   store.dispatch('attributes/get');
   store.dispatch('customViews/get', 'conversation');
   store.dispatch('customViews/get', 'contact');
+  // Klivy: popula o badge "Chat Interno" do menu mesmo quando o usuário
+  // não abriu o módulo ainda. Subsequent updates vêm via websocket
+  // (`internalChatRooms/bumpUnread` no message.created).
+  store.dispatch('internalChatRooms/fetchUnreadSummary');
 });
 
 const sortedInboxes = computed(() =>
@@ -230,10 +248,12 @@ const { can, moduleEnabled } = usePermissions();
 const SIDEBAR_NAME_TO_MODULE = {
   Inbox: 'inbox',
   Conversation: 'chat',
-  InternalChat: 'internal_chat',
   Captain: 'captain',
+  'Internal Chat': 'internal_chat',
   Agenda: 'agenda',
+  Teleconsulta: 'agenda',
   Patients: 'patients',
+  Documents: 'patients',
   Financial: 'financial',
   Contacts: 'contacts',
   Reports: 'reports',
@@ -261,20 +281,35 @@ const CHILD_GATES = {
     mode: 'filter',
     rules: {
       Calendar: ['agenda', 'view'],
-      'Agenda Settings': ['agenda', 'view_settings'],
-      'Agenda Custom Attributes': ['agenda', 'manage_custom_attributes'],
+      // Categories propositadamente fora — visível pra qualquer agent com agenda.view
+      // (item leve, sem editar nada sensível). Pra ocultar, adicionar entry aqui.
+      // Bug pré-existente corrigido junto com auditoria A-3: as keys eram
+      // 'Agenda Settings' e 'Agenda Custom Attributes' (prefixo "Agenda ") mas
+      // `child.name` no menu lateral é só 'Settings'/'Custom Attributes' — o
+      // lookup `gate.rules[child.name]` retornava undefined e os items passavam
+      // sem filtro, sumindo só após o clique (via router guard).
+      Settings: ['agenda', 'view_settings'],
+      'Custom Attributes': ['agenda', 'manage_custom_attributes'],
     },
   },
   Financial: {
     mode: 'filter',
     rules: {
+      // Itens unificados pós-deprecação v1 (Etapa 1, 2026-05-11) — labels v1
+      // mantidos mas todos apontam pras rotas v2 (financial_v2_*).
       'Financial Dashboard': ['financial', 'view_dashboard'],
-      'Cash Flow': ['financial', 'view_cashflow'],
-      Receivables: ['financial', 'view_receivables'],
-      Payables: ['financial', 'view_payables'],
-      DRE: ['financial', 'view_dre'],
-      'Financial Reports': ['financial', 'view_reports'],
-      'Cash Register': ['financial', 'view_cash_register'],
+      'Financial Cash Flow': ['financial', 'view_cashflow'],
+      'Financial Receivables': ['financial', 'view_receivables'],
+      'Financial Payables': ['financial', 'view_payables'],
+      'Financial DRE': ['financial', 'view_dre'],
+      'Financial Commissions': ['financial', 'view_reports'],
+      'Financial Reports Hub': ['financial', 'view_reports'],
+      'Financial Audit': ['financial', 'view_reports'],
+      'Financial Backups': ['financial', 'manage_settings'],
+      'Financial Accountant Export': ['financial', 'view_reports'],
+      'Financial LGPD': ['financial', 'manage_settings'],
+      'Financial Cash Register': ['financial', 'view_cash_register'],
+      'Financial Reclassify': ['financial', 'view_reports'],
       'Financial Settings': ['financial', 'manage_settings'],
     },
   },
@@ -319,15 +354,17 @@ const CHILD_GATES = {
       Playground: ['captain', 'use_playground'],
       Inboxes: ['captain', 'manage_inboxes'],
       Tools: ['captain', 'manage_tools'],
-      FollowUps: ['captain', 'manage_settings'],
-      InternalNotificationTemplates: ['captain', 'manage_settings'],
       Settings: ['captain', 'manage_settings'],
+      'Bea Follow Ups': ['captain', 'manage_follow_ups'],
+      'Bea Templates': ['captain', 'manage_templates'],
+      'Bea Training': ['captain', 'manage_faqs'],
     },
   },
   Settings: {
     mode: 'filter',
     rules: {
       'Settings Account Settings': ['settings', 'account_view'],
+      'Settings Clinic Data': ['settings', 'account_view'],
       'Settings Agents': ['settings', 'users_view'],
       'Settings Teams': ['settings', 'teams_view'],
       'Settings Custom Attributes': ['settings', 'custom_attributes_view'],
@@ -345,6 +382,7 @@ const CHILD_GATES = {
       'Settings Custom Roles': ['settings', 'roles_view'],
       'Settings Security': ['settings', 'security_view'],
       'Settings Billing': ['settings', 'billing_view'],
+      'Settings Patient Portal': ['patients', 'edit'],
     },
   },
 };
@@ -475,17 +513,6 @@ const menuItems = computed(() => {
       ],
     },
     {
-      name: 'InternalChat',
-      label: 'Chat interno',
-      icon: 'i-lucide-messages-square',
-      to: accountScopedRoute('internal_chat_home'),
-      activeOn: ['internal_chat_home', 'internal_chat_room'],
-      getterKeys: {
-        count: 'internalChatRooms/getTotalUnread',
-        badge: 'internalChatMentions/hasUnreadMentions',
-      },
-    },
-    {
       name: 'Captain',
       icon: 'i-woot-captain',
       label: t('SIDEBAR.CAPTAIN'),
@@ -543,18 +570,6 @@ const menuItems = computed(() => {
           }),
         },
         {
-          name: 'FollowUps',
-          label: 'Follow-ups',
-          activeOn: ['ai_agent_follow_ups_index'],
-          to: accountScopedRoute('ai_agent_follow_ups_index'),
-        },
-        {
-          name: 'InternalNotificationTemplates',
-          label: 'Templates',
-          activeOn: ['ai_agent_internal_notification_templates_index'],
-          to: accountScopedRoute('ai_agent_internal_notification_templates_index'),
-        },
-        {
           name: 'Settings',
           label: t('SIDEBAR.CAPTAIN_SETTINGS'),
           activeOn: [
@@ -566,7 +581,46 @@ const menuItems = computed(() => {
             navigationPath: 'captain_assistants_settings_index',
           }),
         },
+        // ai_agent plugin — extensões da Bea além do stack Captain legado.
+        // Roteiam pra controllers em plugins/ai_agent/app/controllers/.
+        {
+          name: 'Bea Follow Ups',
+          label: t('SIDEBAR.AI_AGENT_FOLLOW_UPS'),
+          to: accountScopedRoute('ai_agent_follow_ups_index'),
+          activeOn: ['ai_agent_follow_ups_index'],
+        },
+        {
+          name: 'Bea Templates',
+          label: t('SIDEBAR.AI_AGENT_TEMPLATES'),
+          to: accountScopedRoute(
+            'ai_agent_internal_notification_templates_index'
+          ),
+          activeOn: ['ai_agent_internal_notification_templates_index'],
+        },
+        {
+          name: 'Bea Training',
+          label: t('SIDEBAR.AI_AGENT_TRAINING'),
+          to: accountScopedRoute('ai_agent_training_index'),
+          activeOn: ['ai_agent_training_index'],
+        },
       ],
+    },
+    {
+      name: 'Internal Chat',
+      icon: 'i-lucide-message-square',
+      label: t('SIDEBAR.INTERNAL_CHAT'),
+      to: accountScopedRoute('internal_chat_home'),
+      activeOn: [
+        'internal_chat_home',
+        'internal_chat_room',
+        'internal_chat_mentions',
+      ],
+      // Badge de mensagens não lidas — soma de todas as salas (DMs + grupos).
+      // `getTotalUnread` é populado pelo `fetchUnreadSummary` (ChatShell
+      // dispara on mount + on websocket reconnect).
+      getterKeys: {
+        count: 'internalChatRooms/getTotalUnread',
+      },
     },
     {
       name: 'Agenda',
@@ -600,6 +654,17 @@ const menuItems = computed(() => {
       ],
     },
     {
+      name: 'Teleconsulta',
+      icon: 'i-lucide-video',
+      label: t('SIDEBAR.TELECONSULTA', 'Teleconsulta'),
+      to: accountScopedRoute('teleconsultas_index'),
+      activeOn: [
+        'teleconsultas_index',
+        'teleconsulta_detail',
+        'agenda_telemed_room',
+      ],
+    },
+    {
       name: 'Patients',
       icon: 'i-lucide-users',
       label: t('SIDEBAR.PATIENTS', 'Pacientes'),
@@ -607,57 +672,97 @@ const menuItems = computed(() => {
       activeOn: ['patients_dashboard_index'],
     },
     {
+      name: 'Documents',
+      icon: 'i-lucide-file-text',
+      label: t('SIDEBAR.DOCUMENTS', 'Documentos'),
+      to: accountScopedRoute('documents_dashboard_index'),
+      activeOn: ['documents_dashboard_index', 'documents_dashboard_edit'],
+    },
+    {
       name: 'Financial',
       icon: 'i-lucide-wallet',
       label: t('SIDEBAR.FINANCIAL', 'Financeiro'),
       children: [
         {
+          // Itens v1 do menu removidos em [Deprecation Etapa 1, 2026-05-11].
+          // Rotas v1 continuam vivas no backend pra fallback; redirect server-side
+          // de /financial/* → /financial/v2/* trata bookmarks antigos.
+          // Etapa 4 (30 dias após go-live) deletará o código legado totalmente.
           name: 'Financial Dashboard',
           label: t('SIDEBAR.FINANCIAL_DASHBOARD', 'Dashboard'),
-          to: accountScopedRoute('financial_dashboard_index'),
-          activeOn: ['financial_dashboard_index'],
+          to: accountScopedRoute('financial_v2_dashboard'),
+          activeOn: ['financial_v2_dashboard'],
         },
         {
-          name: 'Cash Flow',
+          name: 'Financial Cash Flow',
           label: t('SIDEBAR.FINANCIAL_CASH_FLOW', 'Fluxo de Caixa'),
-          to: accountScopedRoute('financial_cash_flow'),
-          activeOn: ['financial_cash_flow'],
+          to: accountScopedRoute('financial_v2_cash_flow'),
+          activeOn: ['financial_v2_cash_flow'],
         },
         {
-          name: 'Receivables',
+          name: 'Financial Receivables',
           label: t('SIDEBAR.FINANCIAL_RECEIVABLES', 'A Receber'),
-          to: accountScopedRoute('financial_receivables'),
-          activeOn: ['financial_receivables'],
+          to: accountScopedRoute('financial_v2_receivables'),
+          activeOn: ['financial_v2_receivables'],
         },
         {
-          name: 'Payables',
+          name: 'Financial Payables',
           label: t('SIDEBAR.FINANCIAL_PAYABLES', 'A Pagar'),
-          to: accountScopedRoute('financial_payables'),
-          activeOn: ['financial_payables'],
+          to: accountScopedRoute('financial_v2_payables'),
+          activeOn: ['financial_v2_payables'],
         },
         {
-          name: 'DRE',
+          name: 'Financial DRE',
           label: t('SIDEBAR.FINANCIAL_DRE', 'DRE'),
-          to: accountScopedRoute('financial_dre'),
-          activeOn: ['financial_dre'],
+          to: accountScopedRoute('financial_v2_dre'),
+          activeOn: ['financial_v2_dre'],
         },
         {
-          name: 'Financial Reports',
+          name: 'Financial Commissions',
+          label: 'Comissões',
+          to: accountScopedRoute('financial_v2_commissions'),
+          activeOn: ['financial_v2_commissions'],
+        },
+        {
+          name: 'Financial Reports Hub',
           label: t('SIDEBAR.FINANCIAL_REPORTS', 'Relatórios'),
-          to: accountScopedRoute('financial_reports'),
-          activeOn: ['financial_reports'],
+          to: accountScopedRoute('financial_v2_reports_hub_tab', {
+            tab: 'expenses',
+          }),
+          activeOn: [
+            'financial_v2_reports_hub',
+            'financial_v2_reports_hub_tab',
+          ],
         },
         {
-          name: 'Cash Register',
+          name: 'Financial Cash Register',
           label: t('SIDEBAR.FINANCIAL_CASH_REGISTER', 'Caixa'),
-          to: accountScopedRoute('financial_cash_register'),
-          activeOn: ['financial_cash_register'],
+          to: accountScopedRoute('financial_v2_cash_register'),
+          activeOn: ['financial_v2_cash_register'],
         },
+        // PR audit 2026-05-21: Auditoria, Backups, Contador, LGPD e
+        // Reclassificar movidos pra dentro de "Configurações" como tabs.
+        // Reduz ruído do menu principal (5 items menos visíveis pro user
+        // final). URLs antigas (`/financial/v2/audit` etc.) seguem
+        // funcionando via redirect 302 → settings/<tab>. Ver routes.js.
         {
           name: 'Financial Settings',
           label: t('SIDEBAR.FINANCIAL_SETTINGS', 'Configurações'),
-          to: accountScopedRoute('financial_settings'),
-          activeOn: ['financial_settings'],
+          to: accountScopedRoute('financial_v2_settings_tab', {
+            tab: 'categories',
+          }),
+          activeOn: [
+            'financial_v2_settings',
+            'financial_v2_settings_tab',
+            // Mantém o item Configurações destacado quando o user acessa
+            // qualquer uma das 5 telas movidas via URL antiga (redirect
+            // mantém o nome da rota original no histórico do router).
+            'financial_v2_audit',
+            'financial_v2_backups',
+            'financial_v2_accountant_export',
+            'financial_v2_lgpd',
+            'financial_v2_reclassify',
+          ],
         },
       ],
     },
@@ -819,6 +924,12 @@ const menuItems = computed(() => {
           icon: 'i-lucide-briefcase',
           to: accountScopedRoute('general_settings_index'),
         },
+        {
+          name: 'Settings Clinic Data',
+          label: t('SIDEBAR.CLINIC_DATA'),
+          icon: 'i-lucide-hospital',
+          to: accountScopedRoute('clinic_settings_index'),
+        },
         // {
         //   name: 'Settings Captain',
         //   label: t('SIDEBAR.CAPTAIN_AI'),
@@ -959,6 +1070,16 @@ const menuItems = computed(() => {
           icon: 'i-lucide-credit-card',
           to: accountScopedRoute('billing_settings_index'),
         },
+        {
+          name: 'Settings Patient Portal',
+          label: t('SIDEBAR.PATIENT_PORTAL', 'Portal do Paciente'),
+          icon: 'i-lucide-globe',
+          to: accountScopedRoute('patient_portal_settings_index'),
+          activeOn: [
+            'patient_portal_settings_index',
+            'patient_portal_settings_wrapper',
+          ],
+        },
       ],
     },
     {
@@ -1030,7 +1151,7 @@ const menuItems = computed(() => {
           !isResizing,
       },
     ]"
-    :style="isMobile ? undefined : { width: `${sidebarWidth}px` }"
+    :style="isMobile ? undefined : { width: `${effectiveSidebarWidth}px` }"
   >
     <section
       class="grid"
@@ -1039,7 +1160,8 @@ const menuItems = computed(() => {
       <div
         class="flex gap-2 min-w-0"
         :class="{
-          'items-center justify-center px-1 flex-col py-1': isEffectivelyCollapsed,
+          'items-center justify-center px-1 flex-col py-1':
+            isEffectivelyCollapsed,
           'items-center px-2': !isEffectivelyCollapsed,
         }"
       >
@@ -1068,7 +1190,11 @@ const menuItems = computed(() => {
           <button
             class="flex flex-shrink-0 items-center justify-center size-8 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-n-brand text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-2 transition-colors ml-auto -mr-1"
             title="Recolher menu"
-            @click="isMobileSidebarOpen ? closeMobileSidebar() : onResizeHandleDoubleClick()"
+            @click="
+              isMobileSidebarOpen
+                ? closeMobileSidebar()
+                : onResizeHandleDoubleClick()
+            "
           >
             <i class="i-lucide-panel-left-close text-lg xl:text-xl" />
           </button>

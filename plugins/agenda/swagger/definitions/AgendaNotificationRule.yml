@@ -1,0 +1,63 @@
+type: object
+description: |
+  Regra de notificação automática. `rule_type=reminder` exige
+  `trigger_offset_hours`. Campos `iconColor`/`message` são duplicados
+  em camelCase para compatibilidade com o frontend atual.
+properties:
+  id:
+    type: integer
+    example: 1
+  account_id:
+    type: integer
+    example: 1
+  title:
+    type: string
+    example: "Lembrete 24h antes"
+  rule_type:
+    type: string
+    enum: [reminder, confirmation, followup, birthday, custom]
+    example: reminder
+  icon:
+    type: string
+    example: "i-lucide-bell"
+  icon_color:
+    type: string
+    example: "blue"
+  iconColor:
+    type: string
+    description: "Alias camelCase de `icon_color` (compat frontend)."
+    example: "blue"
+  trigger_offset_hours:
+    type: number
+    format: float
+    nullable: true
+    description: "Obrigatório quando `rule_type=reminder`. Ex.: 24, 2, 0.5."
+    example: 24
+  message_template:
+    type: string
+    description: Conteúdo da mensagem (pode conter placeholders).
+    example: "Olá {{paciente}}, sua consulta é amanhã às {{hora}}."
+  message:
+    type: string
+    description: Alias de `message_template` (compat frontend).
+  inboxes:
+    type: array
+    description: Lista de inboxes WhatsApp/SMS associadas.
+    items:
+      type: object
+      properties:
+        label: { type: string }
+        inbox_id: { type: integer }
+        color: { type: string }
+  enabled:
+    type: boolean
+    example: true
+  position:
+    type: integer
+    example: 0
+  created_at:
+    type: string
+    format: date-time
+  updated_at:
+    type: string
+    format: date-time

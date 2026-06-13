@@ -1,5 +1,11 @@
 class Api::V1::Accounts::CannedResponsesController < Api::V1::Accounts::BaseController
   before_action :fetch_canned_response, only: [:update, :destroy]
+  # Pundit gating via `CannedResponsePolicy` (auditoria A-7). Antes do fix,
+  # nenhuma action chamava `authorize`/`check_authorization` — qualquer agent
+  # autenticado da conta conseguia CRUDar respostas prontas livremente.
+  # `check_authorization` (definido em `Api::BaseController`) chama
+  # `authorize(CannedResponse)` que invoca `CannedResponsePolicy#<action>?`.
+  before_action :check_authorization
 
   def index
     render json: canned_responses

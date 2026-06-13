@@ -60,8 +60,11 @@ class InternalChatMessagesAPI extends ApiClient {
     return axios.delete(`${this.url}/${roomId}/messages/${messageId}/favorite`);
   }
 
-  listFavorites(roomId) {
-    return axios.get(`${this.url}/${roomId}/messages/favorites`);
+  // FE-21 (auditoria 2026-05-18): aceita params opcional pra paginação.
+  // Backend retorna `meta: { page, per_page, total }`. Default mantém
+  // página 1 (200 itens) — backwards-compatible.
+  listFavorites(roomId, params = {}) {
+    return axios.get(`${this.url}/${roomId}/messages/favorites`, { params });
   }
 
   react(roomId, messageId, emoji) {

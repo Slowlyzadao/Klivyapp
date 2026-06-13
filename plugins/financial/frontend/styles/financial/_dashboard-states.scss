@@ -1,0 +1,124 @@
+/* ── Loading skeleton ───────────────────────────────────────── */
+.financial-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgb(var(--s-100)) 25%,
+    rgb(var(--s-50)) 50%,
+    rgb(var(--s-100)) 75%
+  );
+  background-size: 200% 100%;
+  animation: financial-shimmer 1.5s infinite;
+  border-radius: 0.375rem;
+}
+
+body.dark .financial-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgb(var(--s-700)) 25%,
+    rgb(var(--s-750)) 50%,
+    rgb(var(--s-700)) 75%
+  );
+  background-size: 200% 100%;
+}
+
+@keyframes financial-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Empty state ────────────────────────────────────────────── */
+.financial-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  text-align: center;
+  gap: 0.75rem;
+  color: rgb(var(--s-400));
+}
+
+.financial-empty__icon {
+  width: 3rem;
+  height: 3rem;
+  opacity: 0.4;
+}
+
+.financial-empty__text {
+  font-size: 0.875rem;
+  color: rgb(var(--s-500));
+}
+
+.financial-empty__cta {
+  margin-top: 0.5rem;
+  text-decoration: none;
+}
+
+/* ── Placeholder pages (Onda 2+) ────────────────────────────── */
+.financial-coming-soon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 1rem;
+  text-align: center;
+  color: rgb(var(--s-400));
+}
+
+.financial-coming-soon__icon {
+  font-size: 3rem;
+  opacity: 0.3;
+}
+
+.financial-coming-soon__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: rgb(var(--s-600));
+}
+
+body.dark .financial-coming-soon__title {
+  color: rgb(var(--s-300));
+}
+
+.financial-coming-soon__desc {
+  font-size: 0.875rem;
+  color: rgb(var(--s-400));
+  max-width: 28rem;
+}
+
+/* ── Financial titles & subtitles ───────────────────────────── */
+.financial-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: rgb(var(--s-900));
+  margin: 0;
+}
+body.dark .financial-title { color: rgb(var(--s-50)); }
+
+.financial-subtitle {
+  font-size: 0.8125rem;
+  color: rgb(var(--s-500));
+  margin: 0.25rem 0 0;
+}
+
+/* ── Loading state ──────────────────────────────────────────── */
+.financial-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 40vh;
+  color: rgb(var(--s-400));
+  font-size: 0.875rem;
+}
+
+.financial-loading__spinner {
+  font-size: 2rem;
+  animation: financial-spin 1s linear infinite;
+}
+
+@keyframes financial-spin {
+  to { transform: rotate(360deg); }
+}

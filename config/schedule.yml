@@ -84,9 +84,19 @@ agenda_notification_dispatcher_job:
 
 # executed daily at 0200 UTC
 # processa criacao e propagacao de despesas recorrentes
+# canonical v2 — gera Financial::Expense (canon §4.4).
 process_recurring_expenses_job:
   cron: '0 2 * * *'
-  class: 'Financial::ProcessRecurringExpensesJob'
+  class: 'Financial::RecurringExpensesCronJob'
+  queue: scheduled_jobs
+
+# executed daily at 0300 UTC (1h depois do generate)
+# paga automaticamente despesas vencendo cujo `auto_pay=true` na RecurringExpense.
+# Em falha (saldo insuficiente, conta ausente, etc): grava motivo em
+# Expense.metadata.auto_pay_error pra UI mostrar warning em A Pagar.
+auto_pay_due_expenses_job:
+  cron: '0 3 * * *'
+  class: 'Financial::AutoPayDueExpensesJob'
   queue: scheduled_jobs
 
 # executed monthly at 0400 UTC on the 1st
@@ -95,4 +105,39 @@ purge_unattached_blobs_job:
   cron: '0 4 1 * *'
   class: 'Internal::PurgeUnattachedBlobsJob'
   queue: housekeeping
+
+# executed daily at 0300 UTC
+# detecta consentimentos vencidos (expires_at < now), muda status para 'vencido'
+# e emite evento `consent_expired` na timeline do paciente.
+expire_consent_records_job:
+  cron: '0 3 * * *'
+  class: 'Patients::ExpireConsentRecordsJob'
+  queue: scheduled_jobs
+
+# executed daily at 0230 UTC
+# Gera Budget+Installment de cada Financial::RecurringBilling ativo cujo
+# next_generation_at <= hoje. Roda ANTES do AutoSettleCardInstallmentsJob
+# (03:30) pra que parcelas de cartão geradas hoje com settlement_mode=on_due_date
+# já sejam captadas pelo auto-baixa na mesma janela. Decisão 2026-05-28.
+generate_recurring_billings_job:
+  cron: '30 2 * * *'
+  class: 'Financial::GenerateRecurringBillingsJob'
+  queue: scheduled_jobs
+
+# executed daily at 0300 UTC — F-32 backup automático.
+# Gera dump comprimido em FINANCIAL_BACKUP_PATH (default /app/storage/postgres-backups
+# em Docker, Rails.root/storage/postgres-backups em dev) e aplica retenção de 30 dias.
+financial_backup_job:
+  cron: '0 3 * * *'
+  class: 'Financial::BackupJob'
+  queue: scheduled_jobs
+
+# executed daily at 0330 UTC
+# baixa automatica das parcelas de cartao (settlement_mode=on_due_date) vencendo
+# hoje - adquirente garante o repasse, operador nao clica "Receber" parcela a
+# parcela. Decisao 2026-05-27. Falha (sem conta destino) -> deixa pendente e loga.
+auto_settle_card_installments_job:
+  cron: '30 3 * * *'
+  class: 'Financial::AutoSettleCardInstallmentsJob'
+  queue: scheduled_jobs
 

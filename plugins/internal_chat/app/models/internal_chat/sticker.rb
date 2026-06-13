@@ -30,10 +30,24 @@ module InternalChat
     scope :for_account, ->(account_id) { where(account_id: account_id) }
     scope :recent, -> { order(created_at: :desc) }
 
+    # BE-16: serve via SecureBlobsController. Defaults (account_id NULL) usam
+    # Current.account.id no token — qualquer conta logada pode visualizar
+    # defaults, mas o link continua scoped pra evitar leak para anon/account
+    # diferente. Stickers custom usam o próprio account_id.
     def image_url
       return nil unless image.attached?
 
-      url_for(image)
+      effective_account_id = account_id || ::Current.account&.id
+      return nil if effective_account_id.blank?
+
+      token = ::Patients::SecureBlobTokenService.encode(
+        blob_id: image.blob.id,
+        account_id: effective_account_id,
+        expires_in: 1.hour
+      )
+      Rails.application.routes.url_helpers.secure_blob_url(token: token)
+    rescue StandardError
+      nil
     end
 
     def favorited_by?(user)

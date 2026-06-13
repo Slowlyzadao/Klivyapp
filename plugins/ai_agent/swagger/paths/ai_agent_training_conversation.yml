@@ -1,0 +1,38 @@
+get:
+  tags:
+    - Bea — Treinamento
+  summary: Obter conversa de treinamento
+  description: |
+    Retorna o registro com as `parsed_messages` (mensagens parseadas, PII
+    mascarada) pra revisão. Autorização: admin OR Klivy `captain.view`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Registro com `parsed_messages`
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/TrainingConversation.yml'
+    '403':
+      description: Sem permissão (`captain.view`)
+    '404':
+      description: Não encontrado (ou pertence a outra conta — scoped)
+delete:
+  tags:
+    - Bea — Treinamento
+  summary: Excluir conversa de treinamento
+  description: |
+    Remove o registro e o `.zip` anexado. Autorização: admin OR Klivy
+    `captain.manage_faqs`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204':
+      description: Excluído
+    '403':
+      description: Sem permissão (`captain.manage_faqs`)
+    '404':
+      description: Não encontrado

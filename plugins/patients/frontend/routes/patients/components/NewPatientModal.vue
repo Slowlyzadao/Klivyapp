@@ -4,7 +4,18 @@ import { useAlert } from 'dashboard/composables';
 import PatientsAPI from '@plugins/patients/frontend/api/patients/index';
 import ContactsAPI from 'dashboard/api/contacts';
 import wootModalHeader from 'dashboard/components/ModalHeader.vue';
-import BaseSelect from '@plugins/patients/frontend/components/BaseSelect.vue';
+import FormSelect from '@plugins/beclinic_core/frontend/components/FormSelect.vue';
+import BeclinicButton from '@plugins/beclinic_core/frontend/components/Button.vue';
+import {
+  formatDateBR,
+  brToIsoDate,
+  maskDateBR,
+} from '@plugins/beclinic_core/frontend/helpers/dateHelpers';
+import { isValidCPF, onlyDigits } from '@plugins/beclinic_core/frontend/helpers/cpfHelpers';
+import {
+  isValidEmail,
+  isValidBrazilianPhone,
+} from '@plugins/beclinic_core/frontend/helpers/contactValidators';
 
 const emit = defineEmits(['close', 'success']);
 
@@ -27,6 +38,11 @@ const searchResults = ref([]);
 const isSearching = ref(false);
 const showDropdown = ref(false);
 let searchTimeout = null;
+// Contador monotônico — cada chamada de busca incrementa e captura seu id.
+// Quando a resposta volta, descartamos se não for a mais recente. Resolve
+// race condition: digitar rápido pode disparar 3 requests; só a última deve
+// popular o dropdown.
+let latestSearchId = 0;
 
 // ── Opções de Gênero ────────────────────────────────────────────────────────
 const genderOptions = [
@@ -98,13 +114,22 @@ watch(
     isSearching.value = true;
 
     searchTimeout = setTimeout(async () => {
+      latestSearchId += 1;
+      const requestId = latestSearchId;
       try {
         const response = await ContactsAPI.search(rawDigits);
+        // Descarta resposta obsoleta — usuário continuou digitando, outra
+        // request mais recente está em vôo (ou já chegou e populou os results).
+        if (requestId !== latestSearchId) return;
         searchResults.value = response.data?.payload || [];
-      } catch {
-        // ignore
+      } catch (error) {
+        if (requestId !== latestSearchId) return;
+        // Best-effort: busca de contato é autocomplete, não bloqueia o
+        // cadastro. Sem alert pra não quebrar o fluxo de digitação.
+        // eslint-disable-next-line no-console
+        console.error('[NewPatient] Falha ao buscar contatos', error);
       } finally {
-        isSearching.value = false;
+        if (requestId === latestSearchId) isSearching.value = false;
       }
     }, 400);
   }
@@ -135,6 +160,23 @@ watch(
 );
 
 // ── Contact selection ─────────────────────────────────────────────────────────
+// Contatos no Chatwoot têm `additional_attributes` (JSONB) e `custom_attributes`
+// onde campos como CPF, RG e data de nascimento ficam quando coletados via
+// formulário ou conversa. Tentamos pré-preencher pra evitar redigitação.
+const pickContactField = (contact, ...keys) => {
+  const sources = [
+    contact,
+    contact?.additional_attributes,
+    contact?.custom_attributes,
+  ].filter(Boolean);
+  for (const src of sources) {
+    for (const key of keys) {
+      if (src[key]) return src[key];
+    }
+  }
+  return null;
+};
+
 const selectContact = contact => {
   skipNextSearch.value = true;
   selectedContact.value = contact;
@@ -148,6 +190,33 @@ const selectContact = contact => {
 
   state.value.email = contact.email || state.value.email;
   state.value.phone = contact.phone_number || state.value.phone;
+
+  // Auto-fill de CPF (se contato tem; respeita CPF já digitado pelo usuário)
+  if (!state.value.cpf) {
+    const contactCpf = pickContactField(contact, 'cpf', 'CPF');
+    if (contactCpf) state.value.cpf = String(contactCpf);
+  }
+
+  // Auto-fill de data de nascimento (formato ISO ou DD/MM/YYYY ambos aceitos)
+  if (!state.value.birthdate) {
+    const contactBirth = pickContactField(
+      contact,
+      'birthdate',
+      'date_of_birth',
+      'data_nascimento'
+    );
+    if (contactBirth) {
+      // Aceita ISO ('1985-03-15') ou tenta normalizar BR ('15/03/1985')
+      const iso = String(contactBirth).match(/^\d{4}-\d{2}-\d{2}$/)
+        ? contactBirth
+        : brToIsoDate(contactBirth);
+      if (iso) {
+        state.value.birthdate = iso;
+        birthdateInputDisplay.value = formatDateBR(iso);
+      }
+    }
+  }
+
   showDropdown.value = false;
   searchResults.value = [];
 };
@@ -156,6 +225,34 @@ const clearContact = () => {
   selectedContact.value = null;
   state.value.contact_id = null;
   state.value.phone = '';
+};
+
+// ── Data de Nascimento — input mascarado DD/MM/AAAA ─────────────────────────
+// Backend armazena ISO (YYYY-MM-DD); convertemos no frontend. Mesmo padrão da
+// aba Cadastro (RegistrationTab) — UX melhor que calendário pra digitar
+// ano de nascimento.
+const birthdateInputDisplay = ref('');
+
+const handleBirthdateInput = event => {
+  const masked = maskDateBR(event.target.value);
+  birthdateInputDisplay.value = masked;
+  event.target.value = masked;
+  if (masked.length === 10) {
+    const iso = brToIsoDate(masked);
+    if (iso) {
+      state.value.birthdate = iso;
+    }
+  } else if (masked.length === 0) {
+    state.value.birthdate = '';
+  }
+};
+
+const handleBirthdateBlur = () => {
+  if (!state.value.birthdate) {
+    birthdateInputDisplay.value = '';
+  } else {
+    birthdateInputDisplay.value = formatDateBR(state.value.birthdate);
+  }
 };
 
 // ── Avatar helpers ────────────────────────────────────────────────────────────
@@ -200,12 +297,30 @@ const submitPatient = async () => {
     return;
   }
 
+  // CPF é opcional, mas se preenchido precisa ser válido (algoritmo de
+  // dígito verificador). Bloqueia 000.000.000-00 e CPFs com erro de digitação.
+  if (state.value.cpf && !isValidCPF(state.value.cpf)) {
+    useAlert('CPF inválido. Verifique os dígitos.');
+    return;
+  }
+
+  // E-mail e telefone são opcionais, mas se preenchidos precisam ter formato
+  // válido — evita dados que quebrariam envio futuro de e-mail/SMS.
+  if (state.value.email && !isValidEmail(state.value.email)) {
+    useAlert('E-mail inválido. Inclua um domínio completo, ex.: nome@dominio.com.');
+    return;
+  }
+  if (state.value.phone && !isValidBrazilianPhone(state.value.phone)) {
+    useAlert('Telefone inválido. Informe DDD + número (10 ou 11 dígitos).');
+    return;
+  }
+
   isLoading.value = true;
   try {
     const payload = {
       name: fullName,
       email: state.value.email,
-      cpf: state.value.cpf ? state.value.cpf.replace(/\D/g, '') : '',
+      cpf: state.value.cpf ? onlyDigits(state.value.cpf) : '',
       birthdate: state.value.birthdate,
       sex: state.value.sex,
       contact_id: state.value.contact_id,
@@ -379,36 +494,47 @@ const submitPatient = async () => {
         <div class="npm-field">
           <label class="npm-label">Data de Nascimento</label>
           <input
-            v-model="state.birthdate"
+            :value="birthdateInputDisplay"
+            type="text"
+            inputmode="numeric"
             class="npm-input"
-            type="date"
-            :max="new Date().toISOString().split('T')[0]"
-            min="1900-01-01"
+            placeholder="DD/MM/AAAA"
+            maxlength="10"
+            autocomplete="bday"
+            @input="handleBirthdateInput"
+            @blur="handleBirthdateBlur"
           />
         </div>
 
-        <BaseSelect
-          v-model="state.sex"
-          :options="genderOptions"
-          label="Sexo / Gênero"
-        />
+        <div class="npm-field">
+          <label class="npm-label">Sexo / Gênero</label>
+          <FormSelect
+            v-model="state.sex"
+            :options="genderOptions"
+            placeholder="Selecione"
+          />
+        </div>
       </div>
     </form>
 
     <!-- Footer -->
     <div class="npm-footer">
-      <button type="button" class="npm-btn-cancel" @click="onClose">
-        Cancelar
-      </button>
-      <button
+      <BeclinicButton
         type="button"
-        class="npm-btn-submit"
+        variant="ghost"
+        color="slate"
+        label="Cancelar"
+        @click="onClose"
+      />
+      <BeclinicButton
+        type="button"
+        variant="solid"
+        color="blue"
+        label="Criar Paciente"
+        :is-loading="isLoading"
         :disabled="isLoading"
         @click="submitPatient"
-      >
-        <span v-if="isLoading" class="npm-spinner" />
-        <span v-else>Criar Paciente</span>
-      </button>
+      />
     </div>
   </div>
 </template>

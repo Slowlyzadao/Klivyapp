@@ -1,0 +1,165 @@
+<%# Layout HTML do PDF gerado via Grover (Chromium headless).
+
+  Locais disponíveis:
+    body_html           - String HTML renderizada do content_json (já escapada).
+    template            - DocumentTemplate
+    clinic_reader       - Readers::ClinicReader
+    professional_reader - Readers::ProfessionalReader
+    patient             - Patient
+    now                 - Time da geração
+
+  CSS embarcado é o mínimo viável — A4, margens 20mm, tipografia limpa,
+  classes pra chip de variável (caso o renderer mantenha como span no HTML
+  futuro, hoje vira texto puro). Sem CSS externo: Chromium roda offline.
+%>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= ERB::Util.html_escape(template.name) %></title>
+  <style>
+    @page {
+      size: <%= template.paper_size || 'A4' %> <%= template.orientation || 'portrait' %>;
+      margin: 20mm 15mm;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Helvetica', 'Arial', sans-serif;
+      font-size: 11pt;
+      line-height: 1.5;
+      color: #1a1a1a;
+      margin: 0;
+      padding: 0;
+    }
+
+    .pdf-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 12px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid #d4d4d4;
+    }
+
+    .pdf-header__clinic {
+      font-size: 12pt;
+      font-weight: 600;
+    }
+
+    .pdf-header__details {
+      font-size: 9pt;
+      color: #555;
+      text-align: right;
+      line-height: 1.3;
+    }
+
+    .pdf-header__logo {
+      max-height: 50px;
+      max-width: 160px;
+      object-fit: contain;
+    }
+
+    .pdf-body { font-size: 11pt; }
+    .pdf-body p { margin: 0 0 10px; }
+
+    .pdf-body h1 { font-size: 18pt; margin: 18px 0 10px; font-weight: 700; }
+    .pdf-body h2 { font-size: 15pt; margin: 14px 0 8px;  font-weight: 700; }
+    .pdf-body h3 { font-size: 12pt; margin: 12px 0 6px;  font-weight: 600; }
+    .pdf-body h4 { font-size: 11pt; margin: 10px 0 5px;  font-weight: 600; }
+
+    .pdf-body mark { border-radius: 2px; padding: 0 1px; }
+
+    .pdf-body ul,
+    .pdf-body ol { margin: 0 0 12px 22px; padding: 0; }
+    .pdf-body li { margin-bottom: 4px; }
+
+    .pdf-body blockquote {
+      margin: 12px 0;
+      padding: 8px 14px;
+      border-left: 3px solid #888;
+      color: #444;
+    }
+
+    .pdf-body table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+    }
+    .pdf-body td,
+    .pdf-body th {
+      padding: 6px 10px;
+      border: 1px solid #999;
+      font-size: 10pt;
+      vertical-align: top;
+    }
+    .pdf-body th { background: #eee; font-weight: 600; }
+
+    .pdf-body a { color: #0066cc; text-decoration: underline; }
+
+    .pdf-body hr {
+      border: none;
+      border-top: 1px solid #ccc;
+      margin: 18px 0;
+    }
+
+    .pdf-body img { max-width: 100%; height: auto; }
+
+    .pdf-footer {
+      margin-top: 36px;
+      padding-top: 12px;
+      border-top: 1px solid #d4d4d4;
+      font-size: 9pt;
+      color: #666;
+      text-align: center;
+    }
+
+    .pdf-footer__meta {
+      font-style: italic;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header class="pdf-header">
+    <div>
+      <% logo = clinic_reader.read('clinic.logo_url') %>
+      <% if logo.present? %>
+        <img class="pdf-header__logo" src="<%= logo %>" alt="" />
+      <% else %>
+        <div class="pdf-header__clinic"><%= clinic_reader.read('clinic.name') || '' %></div>
+      <% end %>
+    </div>
+    <div class="pdf-header__details">
+      <% clinic_address = clinic_reader.read('clinic.address_full') %>
+      <% if clinic_address.present? %>
+        <div><%= clinic_address %></div>
+      <% end %>
+      <% clinic_phone = clinic_reader.read('clinic.phone') %>
+      <% if clinic_phone.present? %>
+        <div>Tel: <%= clinic_phone %></div>
+      <% end %>
+      <% cnpj = clinic_reader.read('clinic.cnpj') %>
+      <% if cnpj.present? %>
+        <div>CNPJ: <%= DocumentTemplates::Formatters.cnpj(cnpj) %></div>
+      <% end %>
+    </div>
+  </header>
+
+  <main class="pdf-body">
+    <%= body_html %>
+  </main>
+
+  <footer class="pdf-footer">
+    <div class="pdf-footer__meta">
+      Documento gerado eletronicamente em <%= I18n.l(now, format: :long, locale: :'pt_BR') rescue now.strftime('%d/%m/%Y %H:%M') %>
+    </div>
+    <% if professional_reader.read('professional.council_full').present? %>
+      <div><%= professional_reader.read('professional.name') %> · <%= professional_reader.read('professional.council_full') %></div>
+    <% elsif professional_reader.read('professional.name').present? %>
+      <div><%= professional_reader.read('professional.name') %></div>
+    <% end %>
+  </footer>
+</body>
+</html>

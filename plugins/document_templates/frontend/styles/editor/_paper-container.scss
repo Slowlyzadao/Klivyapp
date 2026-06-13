@@ -1,0 +1,52 @@
+// Canvas A4 do editor — fundo da área + papel branco com sombra.
+// O papel em si SEMPRE é branco (WYSIWYG do PDF), só o fundo usa
+// token (var(--kl-bg)) pra harmonizar com a página.
+
+@use '../variables' as *;
+
+.paper-container {
+  // flex:1 + min-height:0 → preenche o __canvas e ganha altura limitada,
+  // fazendo o overflow-y:auto realmente rolar o documento longo.
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  // `safe center`: centra quando cabe, mas alinha ao início quando o papel é
+  // mais largo que o container (senão o flex centralizado corta as bordas e o
+  // scroll horizontal não alcança o começo).
+  justify-content: safe center;
+  align-items: flex-start;
+  padding: 40px 24px;
+  background: var(--kl-bg);
+  // Rola nos DOIS eixos: o papel A4 mantém o tamanho real (WYSIWYG); em telas
+  // estreitas ganha rolagem horizontal em vez de ser cortado.
+  overflow: auto;
+
+  // Reduz o respiro lateral em telas menores pra sobrar espaço pro papel.
+  @media (max-width: 768px) { padding: 24px 12px; }
+  @media (max-width: 600px) { padding: 12px 8px; }
+
+  &__sheet {
+    // box-sizing fixo: a largura/altura abaixo são as dimensões REAIS da folha
+    // (210×297mm no A4) e o padding (margem de 20mm) fica DENTRO delas — senão
+    // a folha estoura pra 250mm e perde a proporção.
+    box-sizing: border-box;
+    width: 100%;
+    max-width: $editor-paper-width;     // A4 retrato: 210mm
+    min-height: $editor-paper-height;   // A4 retrato: 297mm (proporção real da folha)
+    padding: $editor-paper-margin;
+    background: var(--kl-paper);        // papel sempre branco (WYSIWYG do PDF)
+    box-shadow: $editor-paper-shadow;
+    border-radius: 4px;
+  }
+
+  // Cada tamanho/orientação define largura E altura reais da folha, pra a
+  // proporção bater com o PDF (folha vazia já aparece como página inteira;
+  // cresce além disso conforme o conteúdo, simulando múltiplas páginas).
+  &--a4-landscape &__sheet { max-width: $editor-paper-height; min-height: $editor-paper-width; }
+
+  &--a5-portrait &__sheet  { max-width: 148mm; min-height: 210mm; }
+  &--a5-landscape &__sheet { max-width: 210mm; min-height: 148mm; }
+
+  &--letter-portrait &__sheet  { max-width: 215.9mm; min-height: 279.4mm; }
+  &--letter-landscape &__sheet { max-width: 279.4mm; min-height: 215.9mm; }
+}

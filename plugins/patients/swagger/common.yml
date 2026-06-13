@@ -1,0 +1,20 @@
+components:
+  parameters:
+    accountId:
+      name: account_id
+      in: path
+      required: true
+      schema:
+        type: integer
+    id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    patientId:
+      name: patient_id
+      in: path
+      required: true
+      schema:
+        type: integer

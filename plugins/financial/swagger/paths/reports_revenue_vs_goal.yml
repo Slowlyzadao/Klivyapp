@@ -1,0 +1,32 @@
+get:
+  tags:
+    - Financeiro · Relatórios
+  summary: Receita vs Meta (série mensal)
+  description: |
+    Receita realizada (Entry `direction=in`, `affects_dre=true`, por
+    `cash_date`) mês a mês dos últimos N meses, comparada à meta TOTAL ativa
+    (RevenueGoal `kind=total`, `metric=currency`) que cobre cada mês. Usado no
+    Dashboard (chart "Receita vs Meta"). Sem gate de role.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: months
+      in: query
+      schema: { type: integer, default: 12, minimum: 3, maximum: 24 }
+  responses:
+    '200':
+      description: Série mensal de receita vs meta
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              months:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    month: { type: string, example: "2026-05" }
+                    label: { type: string, example: "mai/26" }
+                    revenue_cents: { type: integer }
+                    goal_cents: { type: integer, nullable: true }
+                    pct_attained: { type: number, nullable: true, description: "% atingido (revenue / goal × 100)" }

@@ -3,14 +3,14 @@
 /* eslint-disable */
 import draggable from 'vuedraggable';
 import AgendaCustomAttributesAPI from '@plugins/agenda/frontend/api/agendaCustomAttributes';
-import ModernSelect from '../../components/ModernSelect.vue';
+import FormSelect from '@plugins/beclinic_core/frontend/components/FormSelect.vue';
 import DeleteModal from 'dashboard/components/widgets/modal/DeleteModal.vue';
 
 export default {
   name: 'AgendaCustomAttributes',
   components: {
     draggable,
-    ModernSelect,
+    FormSelect,
     DeleteModal,
   },
   data() {
@@ -306,7 +306,7 @@ export default {
             <label class="modal-label"
 style="margin-top: 14px"
               >Tipo de campo *</label>
-            <ModernSelect
+            <FormSelect
               v-model="draft.type"
               :options="attributeTypes"
               class="modal-input"

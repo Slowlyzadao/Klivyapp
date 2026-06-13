@@ -1,0 +1,57 @@
+get:
+  tags:
+    - Financeiro · Despesas Recorrentes
+  summary: Detalhar despesa recorrente
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Despesa recorrente
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/RecurringExpense.yml'
+patch:
+  tags:
+    - Financeiro · Despesas Recorrentes
+  summary: Atualizar despesa recorrente
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [recurring_expense]
+          properties:
+            recurring_expense:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/RecurringExpense.yml'
+delete:
+  tags:
+    - Financeiro · Despesas Recorrentes
+  summary: Inativar (não deleta — preserva despesas já geradas)
+  description: |
+    Canon §4.4: destroy só seta `active=false`. As despesas (`Expense`)
+    já geradas pelos jobs anteriores **continuam vivas**. Para excluir de
+    fato, gerencie via banco direto (não recomendado).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Inativada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/RecurringExpense.yml'

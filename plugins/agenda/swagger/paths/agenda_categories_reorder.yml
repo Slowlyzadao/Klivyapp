@@ -1,0 +1,27 @@
+patch:
+  tags:
+    - Categorias da Agenda
+  summary: Reordenar categorias
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [ids]
+          properties:
+            ids:
+              type: array
+              description: |
+                Nova ordem completa das categorias. `position` recebe o índice
+                de cada ID (transação garantindo atomicidade).
+              items:
+                type: integer
+              example: [5, 2, 8, 1]
+  responses:
+    '200':
+      description: Reordenação aplicada
+    '422':
+      description: "`ids` não é array"

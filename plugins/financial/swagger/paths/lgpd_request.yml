@@ -1,0 +1,14 @@
+get:
+  tags:
+    - Financeiro · LGPD
+  summary: Detalhar solicitação LGPD
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Solicitação
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/LgpdRequest.yml'

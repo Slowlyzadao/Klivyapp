@@ -86,7 +86,7 @@ export default {
           agentsList: selectedAgents,
         });
         router.replace({
-          name: 'settings_teams_edit_permissions',
+          name: 'settings_teams_edit_finish',
           params: {
             page: 'edit',
             teamId,

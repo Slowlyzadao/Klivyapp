@@ -9,10 +9,21 @@ class Webhooks::WhatsappEventsJob < ApplicationJob
       return
     end
 
-    if message_echo_event?(params)
-      handle_message_echo(channel, params)
-    else
-      handle_message_events(channel, params)
+    # Job enfileirado por controller webhook sem Current.account (webhooks
+    # nao herdam de BaseController). Sem isso, blobs criados pelos services
+    # de incoming message (anexos, avatares) caem na raiz do R2. Ver
+    # config/initializers/active_storage_account_scoping.rb.
+    previous_account = Current.account
+    Current.account = channel.account
+
+    begin
+      if message_echo_event?(params)
+        handle_message_echo(channel, params)
+      else
+        handle_message_events(channel, params)
+      end
+    ensure
+      Current.account = previous_account
     end
   end
 

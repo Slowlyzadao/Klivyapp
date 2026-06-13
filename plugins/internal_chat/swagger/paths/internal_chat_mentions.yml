@@ -1,0 +1,114 @@
+get:
+  tags:
+    - Chat Interno — Menções
+  summary: Listar menções do requester
+  description: |
+    Lista as menções (`@usuário`) dirigidas ao usuário autenticado, ordenadas
+    por mais recente. Cada item é um objeto **achatado** (sem `Message`
+    aninhado): traz `room_id`, `room_name` (resolvido relativo ao requester),
+    `sender` da mensagem e um `content_preview` de até 200 chars.
+    Autorização: admin OR Klivy `internal_chat.view`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: status
+      in: query
+      description: |
+        `unread` (default) retorna só menções não lidas; `all` retorna todas.
+      schema:
+        type: string
+        enum: [unread, all]
+        default: unread
+    - name: limit
+      in: query
+      description: |
+        Limite de itens. Aceita 1..200; qualquer valor fora desse intervalo
+        (ou ausente) usa o default 50.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+  responses:
+    '200':
+      description: Menções (objeto achatado, sem `Message` aninhado)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: ID da menção (não da mensagem).
+                    message_id: { type: integer }
+                    room_id:
+                      type: integer
+                      nullable: true
+                    room_name:
+                      type: string
+                      nullable: true
+                      description: Nome da sala relativo ao requester.
+                    sender:
+                      type: object
+                      nullable: true
+                      description: Autor da mensagem. `null` se a mensagem não tem sender.
+                      properties:
+                        id: { type: integer }
+                        name: { type: string }
+                        avatar_url: { type: string, nullable: true }
+                    content_preview:
+                      type: string
+                      description: Primeiros 200 chars do conteúdo da mensagem.
+                    read_at:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    created_at:
+                      type: string
+                      format: date-time
+mark_read:
+  post:
+    tags:
+      - Chat Interno — Menções
+    summary: Marca menções do requester como lidas
+    description: |
+      Marca as menções não lidas do requester como lidas. Sem corpo, marca
+      **todas**. Com `message_ids`, restringe às menções dessas mensagens.
+      Responde `200 OK` com **corpo vazio**.
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message_ids:
+                type: array
+                items: { type: integer }
+                description: Restringe às menções dessas mensagens. Ausente = todas.
+    responses:
+      '200':
+        description: Marcadas (corpo vazio)
+unread_count:
+  get:
+    tags:
+      - Chat Interno — Menções
+    summary: Contador de menções não-lidas
+    description: Polled pelo header notification badge da sidebar.
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+    responses:
+      '200':
+        description: Count
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                count: { type: integer }

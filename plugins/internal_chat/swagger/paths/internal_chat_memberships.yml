@@ -1,0 +1,117 @@
+get:
+  tags:
+    - Chat Interno — Membros
+  summary: Listar membros da sala
+  description: |
+    Lista os membros ativos (`left_at IS NULL`) da sala, incluindo a Beatriz
+    (`is_ai=true`) quando ela faz parte. Ordenação por inclusão.
+
+    Autorização: admin OR (Klivy `internal_chat.view` AND member). Basta ser
+    membro da sala pra listar.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/roomId'
+  responses:
+    '200':
+      description: Lista de membros ativos
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/Membership.yml'
+    '403':
+      description: Sem permissão / não é membro
+    '404':
+      description: Sala não encontrada (ou pertence a outra conta)
+post:
+  tags:
+    - Chat Interno — Membros
+  summary: Adicionar membro (usuário ou Beatriz)
+  description: |
+    Adiciona um usuário OU a Beatriz (atalho) à sala. O caminho da Bea é
+    escolhido quando `ai_agent_id` está presente OU `add_bea=true`; caso
+    contrário adiciona o usuário de `user_id`.
+
+    Idempotente: re-adicionar um membro existente (ou um que tenha saído,
+    `left_at` setado) reaproveita o registro e zera `left_at`. Numa corrida
+    entre dois admins (índice único `(room_id, user_id)` dispara
+    `RecordNotUnique`), retorna o existente com status `200` em vez de `500`.
+
+    Emite system message `member_added` e re-broadcasta a sala pros membros.
+
+    Autorização: admin OR room_manager (membership.role ∈ {owner, admin}).
+    OBSERVAÇÃO: a permissão de catálogo `internal_chat.manage_memberships`
+    existe no Klivy mas NÃO é enforced hoje — o gate é puramente pelo papel
+    na sala (extension point pra release futuro de role granular).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/roomId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [membership]
+          properties:
+            membership:
+              type: object
+              description: |
+                Informe `user_id` (com `role` opcional) para adicionar um
+                usuário, OU `ai_agent_id`/`add_bea=true` para adicionar a
+                Beatriz.
+              properties:
+                user_id:
+                  type: integer
+                  description: ID do usuário da conta a ser adicionado.
+                ai_agent_id:
+                  type: string
+                  description: Presença força o atalho de adicionar a Beatriz.
+                add_bea:
+                  type: boolean
+                  description: '`true` força o atalho de adicionar a Beatriz.'
+                role:
+                  type: string
+                  enum: [owner, admin, member]
+                  default: member
+                  description: Aplicado apenas ao adicionar usuário (Bea sempre `member`).
+  responses:
+    '201':
+      description: Membro adicionado (usuário ou Beatriz)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                $ref: '../definitions/Membership.yml'
+    '200':
+      description: |
+        Idempotente — membro já existia (corrida `RecordNotUnique`); retorna o
+        registro existente sem duplicar a system message.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                $ref: '../definitions/Membership.yml'
+    '403':
+      description: Sem permissão (não é admin nem owner/admin da sala)
+    '422':
+      description: |
+        Sala é DM (`kind='direct'` — não aceita gestão de membros) OU a
+        Beatriz está indisponível pra esta conta.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: Sala (ou usuário) não encontrada

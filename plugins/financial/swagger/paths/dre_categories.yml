@@ -1,0 +1,59 @@
+get:
+  tags:
+    - Financeiro · Categorias DRE
+  summary: Listar categorias DRE
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: kind
+      in: query
+      schema: { type: string, description: "Ex.: receita, custo_variavel, despesa_fixa" }
+    - name: active
+      in: query
+      schema: { type: boolean }
+  responses:
+    '200':
+      description: Lista ordenada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/DreCategory.yml'
+post:
+  tags:
+    - Financeiro · Categorias DRE
+  summary: Criar categoria
+  description: Requer GERENTE/ADMIN. Idempotência opcional via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [category]
+          properties:
+            category:
+              type: object
+              required: [name, kind]
+              properties:
+                name: { type: string }
+                kind: { type: string }
+                parent_id: { type: integer, nullable: true }
+                color: { type: string }
+                icon: { type: string }
+                active: { type: boolean, default: true }
+                position: { type: integer }
+  responses:
+    '201':
+      description: Categoria criada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/DreCategory.yml'
+    '422': { description: "Erro de validação" }
+    '403': { description: "Sem permissão" }

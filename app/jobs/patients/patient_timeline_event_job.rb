@@ -39,6 +39,9 @@ module Patients
       treatment_plan_created
       treatment_plan_approved
       session_logged
+      session_signed
+      session_log_patient_signed
+      session_log_patient_signature_link_sent
       payment_received
       payment_overdue
       document_generated

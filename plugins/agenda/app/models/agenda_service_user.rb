@@ -1,24 +1,23 @@
-# Join table between User (specialist agent) and AgendaService (procedure
-# they offer). Bea uses these links to know which professionals to consider
-# when a patient requests a specific service. Without an explicit link, the
-# user is NOT considered for that service — clinics must opt in their team
-# to each procedure.
+# == Schema Information
+#
+# Table name: agenda_service_users
+#
+#  id                :bigint           not null, primary key
+#  agenda_service_id :bigint           not null
+#  user_id           :bigint           not null
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#
+# Indexes
+#
+#  index_agenda_service_users_unique  (agenda_service_id, user_id) UNIQUE
+#
+
+# 9.7 da auditoria 2026-05-14: tabela de junção que diz quais profissionais
+# oferecem cada serviço. Sem nenhuma linha para um service = compat pré-9.7
+# (todos profissionais da conta podem oferecer); com 1+ linhas = só os
+# profissionais listados aparecem no link público do respectivo profissional.
 class AgendaServiceUser < ApplicationRecord
-  belongs_to :account
   belongs_to :agenda_service
   belongs_to :user
-
-  validates :agenda_service_id, uniqueness: { scope: :user_id }
-
-  # Rails' HABTM-through shortcut (`user.agenda_service_ids = [...]`)
-  # auto-creates rows but does NOT populate account_id. Infer it from
-  # the linked service so the shortcut is usable from controllers and
-  # console without forcing every caller to remember the scope column.
-  before_validation :infer_account_id, on: :create
-
-  private
-
-  def infer_account_id
-    self.account_id ||= agenda_service&.account_id || user&.account_ids&.first
-  end
 end

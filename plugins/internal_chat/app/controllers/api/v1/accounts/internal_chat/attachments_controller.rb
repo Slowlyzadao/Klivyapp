@@ -1,27 +1,43 @@
 class Api::V1::Accounts::InternalChat::AttachmentsController < Api::V1::Accounts::BaseController
   before_action :fetch_room
-  before_action :authorize_room_access
+  before_action -> { authorize(@room, policy_class: InternalChat::AttachmentPolicy) }
 
-  # GET .../rooms/:room_id/attachments?type=media|documents
+  # GET .../rooms/:room_id/attachments?type=media|documents&page=N&per_page=M
   # Lista anexos da sala pra aba "Arquivos" das settings.
   # - media: imagens + vídeos (galeria com miniaturas)
   # - documents: arquivos genéricos (PDFs, planilhas, etc)
   # Stickers ficam de fora (não são attachments). Mensagens deletadas também.
+  #
+  # PERF-17 (auditoria 2026-05-18): paginação opt-in (default per_page=200
+  # mantém comportamento). Salas com >200 anexos antigos antes ficavam
+  # inacessíveis pela aba "Arquivos".
+  ATTACHMENTS_PER_PAGE_DEFAULT = 200
+  ATTACHMENTS_PER_PAGE_MAX = 200
+
   def index
     file_types = case params[:type].to_s
                  when 'documents' then %w[file]
                  else %w[image video] # default = media
                  end
+    page = (params[:page].presence || 1).to_i.clamp(1, 10_000)
+    per_page = (params[:per_page].presence || ATTACHMENTS_PER_PAGE_DEFAULT)
+               .to_i.clamp(1, ATTACHMENTS_PER_PAGE_MAX)
+    offset = (page - 1) * per_page
 
-    attachments = InternalChat::Attachment
-                  .joins(:message)
-                  .where(internal_chat_messages: { room_id: @room.id, deleted_at: nil })
-                  .where(file_type: file_types)
-                  .includes(message: :sender)
-                  .order('internal_chat_messages.created_at DESC')
-                  .limit(200)
+    base = InternalChat::Attachment
+           .joins(:message)
+           .where(internal_chat_messages: { room_id: @room.id, deleted_at: nil })
+           .where(file_type: file_types)
+    total = base.count
+    attachments = base.includes(message: :sender)
+                      .order('internal_chat_messages.created_at DESC')
+                      .offset(offset)
+                      .limit(per_page)
 
-    render json: { data: attachments.map { |a| attachment_payload(a) } }
+    render json: {
+      data: attachments.map { |a| attachment_payload(a) },
+      meta: { page: page, per_page: per_page, total: total }
+    }
   end
 
   # GET .../attachments/:id/download
@@ -113,11 +129,5 @@ class Api::V1::Accounts::InternalChat::AttachmentsController < Api::V1::Accounts
 
   def fetch_room
     @room = Current.account.internal_chat_rooms.find(params[:room_id])
-  end
-
-  def authorize_room_access
-    return if @room.member?(Current.user) || Current.account_user.administrator?
-
-    head :forbidden
   end
 end

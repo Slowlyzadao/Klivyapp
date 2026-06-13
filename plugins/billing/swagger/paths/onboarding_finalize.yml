@@ -1,0 +1,58 @@
+post:
+  tags:
+    - Billing · Onboarding
+  summary: Finalizar onboarding (email + senha definitivos)
+  description: |
+    Segunda etapa do onboarding — usuário define email/senha definitivos
+    e recebe confirmation instructions. **Autenticado** via headers
+    `access-token` + `client` + `uid` retornados em `POST /onboarding`.
+
+    **Segurança:** resolve o usuário pelo `uid` do header, NUNCA por
+    `params[:email]` (fix de regressão — lookup por params permitia hijack
+    de qualquer conta existente). Valida `access-token` x `client` x user.
+    Se `email` mudou, valida que o novo não está em uso por outra conta.
+  parameters:
+    - name: access-token
+      in: header
+      required: true
+      schema: { type: string }
+    - name: client
+      in: header
+      required: true
+      schema: { type: string }
+    - name: uid
+      in: header
+      required: true
+      schema: { type: string, description: "Email atual do user (devise-token-auth)." }
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            email: { type: string, format: email, description: "Novo email (opcional)." }
+            password: { type: string, description: "Nova senha (opcional)." }
+  responses:
+    '200':
+      description: Finalizado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success: { type: boolean }
+              message: { type: string }
+    '401':
+      description: Autenticação inválida (token + client + uid não batem)
+    '404':
+      description: User não encontrado pelo uid
+    '422':
+      description: Email já em uso ou validação falhou
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+              code: { type: string, nullable: true }

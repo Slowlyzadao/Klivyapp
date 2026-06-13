@@ -1,0 +1,29 @@
+type: object
+description: |
+  Configuração do gateway de pagamento por conta. **Não expõe `api_key`
+  ou `webhook_secret`** no payload — apenas flags booleanas indicando se
+  foram preenchidos. Update aceita esses dois campos no body.
+properties:
+  gateway:
+    type: string
+    enum: [manual, asaas]
+    default: manual
+  environment:
+    type: string
+    enum: [sandbox, production]
+    nullable: true
+  has_api_key:
+    type: boolean
+    description: Indica se `api_key` está configurada (não devolve o valor).
+  has_webhook_secret:
+    type: boolean
+  webhook_verified:
+    type: boolean
+    description: Última verificação de assinatura do webhook bateu.
+  webhook_last_received_at:
+    type: string
+    format: date-time
+    nullable: true
+  auto_sync_enabled:
+    type: boolean
+    description: Habilita pull periódico do status pelo job de sync.

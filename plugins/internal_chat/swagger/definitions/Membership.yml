@@ -1,0 +1,40 @@
+type: object
+description: |
+  Membro de uma `Room` do Chat Interno, conforme `serialize_membership` do
+  `MembershipsController`. Representa um usuário humano (`is_ai=false`, com
+  `user_id`) OU a Beatriz (`is_ai=true`, com `ai_agent_id`), nunca ambos.
+  `left_at` preenchido = membro que saiu (a listagem só retorna ativos).
+properties:
+  id: { type: integer }
+  user_id:
+    type: integer
+    nullable: true
+    description: '`null` quando o membro é a Beatriz (agente de IA).'
+  ai_agent_id:
+    type: string
+    nullable: true
+    description: ID do agente quando o membro é a Beatriz; `null` para usuários.
+  role:
+    type: string
+    enum: [owner, admin, member]
+  name:
+    type: string
+    nullable: true
+    description: |
+      Nome de exibição — `available_name` do usuário, ou o label da Beatriz
+      quando `is_ai=true`.
+  avatar_url:
+    type: string
+    nullable: true
+  is_ai:
+    type: boolean
+    description: '`true` quando o membro é a Beatriz (agente de IA).'
+  joined_at:
+    type: string
+    format: date-time
+    nullable: true
+  left_at:
+    type: string
+    format: date-time
+    nullable: true
+    description: Preenchido após saída suave (soft leave). `null` = membro ativo.

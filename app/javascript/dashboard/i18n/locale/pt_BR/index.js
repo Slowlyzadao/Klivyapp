@@ -36,6 +36,22 @@ import sla from './sla.json';
 import teamsSettings from './teamsSettings.json';
 import whatsappTemplates from './whatsappTemplates.json';
 import financial from './financial.json';
+import patientFinancial from './patientFinancial.json';
+import patientRegistration from './patientRegistration.json';
+import patientExams from './patientExams.json';
+import patientConsents from './patientConsents.json';
+import patientTreatmentPlan from './patientTreatmentPlan.json';
+import patientSchedule from './patientSchedule.json';
+import patientAnamnesis from './patientAnamnesis.json';
+import patientAudit from './patientAudit.json';
+import patientDocuments from './patientDocuments.json';
+import patientEvolution from './patientEvolution.json';
+import patientTimeline from './patientTimeline.json';
+// FE-16/17 (auditoria 2026-05-18): locales dos plugins ai_agent + internal_chat
+import internalChat from './internalChat.json';
+import aiAgent from './aiAgent.json';
+import documentTemplates from './documentTemplates.json';
+import signatures from './signatures.json';
 
 export default {
   ...advancedFilters,
@@ -76,4 +92,19 @@ export default {
   ...teamsSettings,
   ...whatsappTemplates,
   ...financial,
+  ...patientFinancial,
+  ...patientRegistration,
+  ...patientExams,
+  ...patientConsents,
+  ...patientTreatmentPlan,
+  ...patientSchedule,
+  ...patientAnamnesis,
+  ...patientAudit,
+  ...patientDocuments,
+  ...patientEvolution,
+  ...patientTimeline,
+  ...internalChat,
+  ...aiAgent,
+  ...documentTemplates,
+  ...signatures,
 };

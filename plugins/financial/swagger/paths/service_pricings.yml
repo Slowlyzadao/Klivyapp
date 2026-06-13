@@ -1,0 +1,56 @@
+get:
+  tags:
+    - Financeiro · Precificação
+  summary: Listar serviços com precificação
+  description: |
+    Retorna **todos** os `AgendaService` da conta (mesmo os sem precificação
+    configurada — a UI mostra "Falta configurar preço"). Cada entrada traz o
+    `agenda_service`, o `pricing` (pode ser `null`) e `stats` agregados em
+    batch (sem N+1). O `code` é o `internal_code` do pricing ou um sequencial
+    de fallback (`001`, `002`...).
+
+    Aberto a qualquer membro da conta (leitura). `index` pula
+    `ensure_setup_complete!` — funciona mesmo com setup financeiro incompleto.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: "Lista de serviços (ordem `position, name`)."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                      description: "`internal_code` do pricing ou sequencial de fallback (`001`...)."
+                    agenda_service:
+                      type: object
+                      description: Dados do serviço (vem do plugin agenda).
+                      properties:
+                        id: { type: integer }
+                        uuid: { type: string }
+                        name: { type: string }
+                        duration_minutes: { type: integer, nullable: true }
+                        color: { type: string, nullable: true }
+                        requires_room: { type: boolean }
+                    pricing:
+                      nullable: true
+                      allOf:
+                        - $ref: '../definitions/ServicePricing.yml'
+                    stats:
+                      type: object
+                      description: "Estatísticas históricas (Budgets aprovados/concluídos). Degrada para zeros se o vínculo não existir."
+                      properties:
+                        historical_qty: { type: integer }
+                        has_real_data:
+                          type: boolean
+                          description: "qty > 0 → badge \"REAL\" na UI."
+                        price_min_cents: { type: integer, nullable: true }
+                        price_max_cents: { type: integer, nullable: true }
+                        last_used_at: { type: string, format: date-time, nullable: true }

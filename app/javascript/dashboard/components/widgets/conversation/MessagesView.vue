@@ -88,6 +88,12 @@ export default {
       isProgrammaticScroll: false,
       messageSentSinceOpened: false,
       labelSuggestions: [],
+      // requestAnimationFrame handle do trabalho pesado de scroll (emit do
+      // bus + checagem de `fetchPreviousMessages`). Coalescemos múltiplos
+      // eventos de scroll do mesmo frame em uma única execução — browser
+      // dispara `scroll` em ~60Hz e antes cada um fazia 4 leituras DOM via
+      // `setScrollParams` + checagens. `null` quando nada está pendente.
+      scrollWorkRafId: null,
     };
   },
 
@@ -267,10 +273,14 @@ export default {
   created() {
     emitter.on(BUS_EVENTS.SCROLL_TO_MESSAGE, this.onScrollToMessage);
     // when a message is sent we set the flag to true this hides the label suggestions,
-    // until the chat is changed and the flag is reset in the watch for currentChat
-    emitter.on(BUS_EVENTS.MESSAGE_SENT, () => {
-      this.messageSentSinceOpened = true;
-    });
+    // until the chat is changed and the flag is reset in the watch for currentChat.
+    // Handler é salvo como method nomeado (em vez de arrow inline) para que
+    // `removeBusListeners` consiga desregistrá-lo. Sem isso, cada conversa
+    // aberta durante a sessão acumula um listener (created() roda a cada
+    // remount via `:key="conversationId"` em ConversationView), e a mesma
+    // mensagem enviada dispara N execuções do handler em N conversas
+    // visitadas. Memory growth progressivo + duplicação de side-effects.
+    emitter.on(BUS_EVENTS.MESSAGE_SENT, this.onMessageSent);
   },
 
   mounted() {
@@ -331,6 +341,10 @@ export default {
     },
     removeBusListeners() {
       emitter.off(BUS_EVENTS.SCROLL_TO_MESSAGE, this.onScrollToMessage);
+      emitter.off(BUS_EVENTS.MESSAGE_SENT, this.onMessageSent);
+    },
+    onMessageSent() {
+      this.messageSentSinceOpened = true;
     },
     onScrollToMessage({ messageId = '' } = {}) {
       this.$nextTick(() => {
@@ -353,6 +367,14 @@ export default {
       this.isLoadingPrevious = false;
     },
     removeScrollListener() {
+      // Cancela trabalho pendente antes de desligar o listener. Sem isto,
+      // se o componente desmonta com rAF agendado, a callback dispara em
+      // instância morta — não quebra (this está bound), mas mexe em state
+      // que ninguém mais lê e pode disparar warning em modo dev.
+      if (this.scrollWorkRafId !== null) {
+        cancelAnimationFrame(this.scrollWorkRafId);
+        this.scrollWorkRafId = null;
+      }
       this.conversationPanel.removeEventListener('scroll', this.handleScroll);
     },
     scrollToBottom() {
@@ -425,6 +447,9 @@ export default {
     },
 
     handleScroll(e) {
+      // Atualização SÍNCRONA da flag `isProgrammaticScroll`: o próximo
+      // evento de scroll precisa enxergar o valor correto IMEDIATAMENTE,
+      // mesmo se acontecer no próximo tick. Manter fora do throttle.
       if (this.isProgrammaticScroll) {
         // Reset the flag
         this.isProgrammaticScroll = false;
@@ -432,8 +457,24 @@ export default {
       } else {
         this.hasUserScrolled = true;
       }
-      emitter.emit(BUS_EVENTS.ON_MESSAGE_LIST_SCROLL);
-      this.fetchPreviousMessages(e.target.scrollTop);
+
+      // Trabalho pesado é coalescido em 1 execução por frame de pintura.
+      // `scroll` nativo dispara 60+ vezes/seg; cada execução fazia:
+      //   - `emitter.emit(ON_MESSAGE_LIST_SCROLL)` (sem listeners hoje,
+      //     mas pode ter no futuro — mantemos o emit para preservar a API)
+      //   - `fetchPreviousMessages(scrollTop)` que chama `setScrollParams`
+      //     (4 leituras DOM: `scrollHeight`, `scrollTop`) + checagens.
+      // requestAnimationFrame é mais granular que `setTimeout(.., 150)` —
+      // bate com o paint cycle, scroll fica fluido sem delay perceptível.
+      // O guard `if (this.scrollWorkRafId !== null) return` garante que
+      // múltiplos eventos no mesmo frame só agendam 1 callback.
+      if (this.scrollWorkRafId !== null) return;
+      const scrollTop = e.target.scrollTop;
+      this.scrollWorkRafId = requestAnimationFrame(() => {
+        this.scrollWorkRafId = null;
+        emitter.emit(BUS_EVENTS.ON_MESSAGE_LIST_SCROLL);
+        this.fetchPreviousMessages(scrollTop);
+      });
     },
 
     makeMessagesRead() {
@@ -549,30 +590,28 @@ export default {
 .modal-mask {
   @apply fixed;
 
-  &::v-deep {
-    .ProseMirror-woot-style {
-      @apply max-h-[25rem];
-    }
+  :deep(.ProseMirror-woot-style) {
+    @apply max-h-[25rem];
+  }
 
-    .reply-box {
-      @apply border border-n-weak max-w-[75rem] w-[70%];
+  :deep(.reply-box) {
+    @apply border border-n-weak max-w-[75rem] w-[70%];
 
-      &.is-private {
-        @apply dark:border-n-amber-3/30 border-n-amber-12/5;
-      }
+    &.is-private {
+      @apply dark:border-n-amber-3/30 border-n-amber-12/5;
     }
+  }
 
-    .reply-box .reply-box__top {
-      @apply relative min-h-[27.5rem];
-    }
+  :deep(.reply-box .reply-box__top) {
+    @apply relative min-h-[27.5rem];
+  }
 
-    .reply-box__top .input {
-      @apply min-h-[27.5rem];
-    }
+  :deep(.reply-box__top .input) {
+    @apply min-h-[27.5rem];
+  }
 
-    .emoji-dialog {
-      @apply absolute ltr:left-auto rtl:right-auto bottom-1;
-    }
+  :deep(.emoji-dialog) {
+    @apply absolute ltr:left-auto rtl:right-auto bottom-1;
   }
 }
 </style>

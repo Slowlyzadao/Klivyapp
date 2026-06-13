@@ -72,6 +72,12 @@ const findCustomRole = agent =>
 
 const getAgentRoleName = agent => {
   if (agent.beclinic_super_admin) return 'Super Admin';
+  // Administradores Chatwoot têm bypass total — mesmo que tenham
+  // `klivy_role_id` setado (legado), o que vale é o status de admin.
+  // Mostrar "Especialista" pra um admin é decorativo e confunde.
+  if (agent.role === 'administrator') {
+    return t('AGENT_MGMT.AGENT_TYPES.ADMINISTRATOR');
+  }
   if (agent.klivy_role?.name) return agent.klivy_role.name;
   if (!agent.custom_role_id) {
     return t(`AGENT_MGMT.AGENT_TYPES.${agent.role.toUpperCase()}`);
@@ -80,8 +86,10 @@ const getAgentRoleName = agent => {
   return customRole ? customRole.name : '';
 };
 
-const hasRoleBadge = agent =>
-  Boolean(agent.klivy_role?.name) || Boolean(agent.custom_role_id);
+const hasRoleBadge = agent => {
+  if (agent.role === 'administrator') return false;
+  return Boolean(agent.klivy_role?.name) || Boolean(agent.custom_role_id);
+};
 
 const getAgentRolePermissions = agent => {
   if (!agent.custom_role_id) {
@@ -115,7 +123,13 @@ const showDeleteAction = agent => {
 
 const showAssignRoleAction = agent => {
   if (!canEditUsers.value) return false;
-  return currentUserId.value !== agent.id;
+  if (currentUserId.value === agent.id) return false;
+  // Administradores Chatwoot têm bypass total — atribuir uma klivy_role
+  // a eles é decorativo e confunde o badge. Esconde o escudo pra forçar
+  // o fluxo correto: trocar pra Agente no editor, depois atribuir função.
+  if (agent.role === 'administrator') return false;
+  if (agent.beclinic_super_admin) return false;
+  return true;
 };
 
 const showAlertMessage = message => {
@@ -257,10 +271,7 @@ const confirmDeletion = () => {
                     </div>
                   </div>
                 </span>
-                <span
-                  v-else
-                  class="block w-fit text-body-main text-n-slate-11"
-                >
+                <span v-else class="block w-fit text-body-main text-n-slate-11">
                   {{ getAgentRoleName(agent) }}
                 </span>
                 <div class="w-px h-3 bg-n-strong rounded-lg" />
@@ -322,6 +333,9 @@ const confirmDeletion = () => {
         :email="currentAgent.email"
         :availability="currentAgent.availability_status"
         :custom-role-id="currentAgent.custom_role_id"
+        :is-agenda-provider="currentAgent.is_agenda_provider"
+        :is-agenda-provider-override="currentAgent.is_agenda_provider_override"
+        :klivy-role="currentAgent.klivy_role"
         @close="hideEditPopup"
       />
     </woot-modal>

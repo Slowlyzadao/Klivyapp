@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import agendaReportsAPI from '../../api/agendaReports';
-import './agenda-summary.css';
+import './agenda-summary.scss';
 
 const props = defineProps({
   viewMode: { type: String, required: true },
@@ -87,14 +87,22 @@ const periodLabel = computed(() => {
 });
 
 // ─── Métricas ───────────────────────────────────────────────────────────────
+// Auditoria 2026-05-15: alinhado com sidebar de status pra evitar confusão
+// de labels (resumo dizia "Agendados" pra total, e "Pendentes" pra status
+// scheduled — sidebar usa "Agendado" pra esse status). Mudanças:
+//   - `total`         → "Total" (card cinza, neutro — não é status)
+//   - `unconfirmed`   → "Agendados" (status scheduled — bate com sidebar)
+//   - `attended`      → trocado por `completed` para "Atendidos" usar
+//     exatamente o mesmo critério do filtro do sidebar (só status=completed
+//     em vez de combo completed+in_progress+arrived).
 const metrics = computed(() => {
   const cur = data.value?.current;
   if (!cur) return null;
   return {
-    agendados: cur.total ?? 0,
+    total: cur.total ?? 0,
     confirmados: cur.confirmed ?? 0,
-    pendentes: cur.unconfirmed ?? 0,
-    atendidos: cur.attended ?? 0,
+    agendados: cur.unconfirmed ?? 0,        // status='scheduled'
+    atendidos: cur.completed ?? 0,          // só status='completed'
     ocupacao: cur.occupancy_rate ?? 0,
     noShow: cur.no_show_rate ?? 0,
   };
@@ -149,44 +157,45 @@ defineExpose({ refresh: fetchData });
       </template>
 
       <template v-else-if="metrics">
-        <!-- Agendados -->
+        <!-- Total — todos os eventos do período (não é o status `scheduled`) -->
         <div class="agsum-card" @click="centerCard($event)">
           <div class="agsum-card-icon agsum-icon--slate">
             <span class="i-ph-calendar-blank" />
           </div>
           <div class="agsum-card-body">
-            <span class="agsum-card-value">{{ metrics.agendados }}</span>
-            <span class="agsum-card-label">Agendados</span>
+            <span class="agsum-card-value">{{ metrics.total }}</span>
+            <span class="agsum-card-label">Total</span>
           </div>
         </div>
 
-        <!-- Confirmados -->
+        <!-- Confirmados — alinhado com STATUS_CONFIGS.confirmed (amarelo) -->
         <div class="agsum-card" @click="centerCard($event)">
-          <div class="agsum-card-icon agsum-icon--blue">
+          <div class="agsum-card-icon agsum-icon--amber">
             <span class="i-ph-check-circle" />
           </div>
           <div class="agsum-card-body">
-            <span class="agsum-card-value agsum-val--blue">{{
+            <span class="agsum-card-value agsum-val--amber">{{
               metrics.confirmados
             }}</span>
             <span class="agsum-card-label">Confirmados</span>
           </div>
         </div>
 
-        <!-- Pendentes -->
+        <!-- Agendados — status='scheduled' (antes "Pendentes"); cinza alinhado
+             com STATUS_CONFIGS.scheduled -->
         <div class="agsum-card" @click="centerCard($event)">
-          <div class="agsum-card-icon agsum-icon--amber">
+          <div class="agsum-card-icon agsum-icon--slate">
             <span class="i-ph-clock" />
           </div>
           <div class="agsum-card-body">
-            <span class="agsum-card-value agsum-val--amber">{{
-              metrics.pendentes
+            <span class="agsum-card-value agsum-val--slate">{{
+              metrics.agendados
             }}</span>
-            <span class="agsum-card-label">Pendentes</span>
+            <span class="agsum-card-label">Agendados</span>
           </div>
         </div>
 
-        <!-- Atendidos -->
+        <!-- Atendidos — só status='completed' (alinhado com sidebar) -->
         <div class="agsum-card" @click="centerCard($event)">
           <div class="agsum-card-icon agsum-icon--green">
             <span class="i-ph-user-check" />
@@ -210,14 +219,14 @@ defineExpose({ refresh: fetchData });
           </div>
         </div>
 
-        <!-- No-show -->
+        <!-- Faltas -->
         <div class="agsum-card" @click="centerCard($event)">
           <div class="agsum-card-icon agsum-icon--red">
             <span class="i-ph-user-minus" />
           </div>
           <div class="agsum-card-body">
             <span class="agsum-card-value agsum-val--red">{{ metrics.noShow }}%</span>
-            <span class="agsum-card-label">No-show</span>
+            <span class="agsum-card-label">Faltas</span>
           </div>
         </div>
       </template>

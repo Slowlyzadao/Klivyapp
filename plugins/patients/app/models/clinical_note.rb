@@ -40,6 +40,7 @@ class ClinicalNote < ApplicationRecord
   belongs_to :appointment,  class_name: 'AgendaEvent', optional: true
   belongs_to :form_template, optional: true
   belongs_to :signed_by,    class_name: 'User', optional: true
+  belongs_to :erratum_by,   class_name: 'User', optional: true
 
   # ============================================================
   # Enums
@@ -61,6 +62,8 @@ class ClinicalNote < ApplicationRecord
   scope :deleted,     -> { where.not(deleted_at: nil) }
   scope :drafts,      -> { active.where(status: 'draft') }
   scope :signed,      -> { active.where(status: 'signed') }
+  scope :erratum,     -> { active.where.not(erratum_at: nil) }
+  scope :valid_notes, -> { active.where(erratum_at: nil) }
   scope :for_patient, ->(patient_id) { active.where(patient_id: patient_id) }
   scope :recent,      -> { active.order(note_date: :desc, created_at: :desc) }
   scope :editable,    -> { drafts.where('created_at > ?', DEFAULT_DRAFT_HOURS.hours.ago) }
@@ -102,6 +105,29 @@ class ClinicalNote < ApplicationRecord
     raise 'Evolução assinada não pode ser excluída.' if status_signed?
 
     update_column(:deleted_at, Time.current)
+  end
+
+  def erratum?
+    erratum_at.present?
+  end
+
+  # Marca uma evolução como errata (cadastrada incorretamente).
+  # Não altera o conteúdo clínico — apenas anexa metadados de erratum
+  # (quem marcou, quando, motivo). Bypassa o `prevent_edit_if_signed`
+  # via `update_columns` porque é a operação semântica permitida em notas
+  # assinadas, e os campos atualizados não são parte do conteúdo clínico.
+  def mark_as_erratum!(actor:, reason:)
+    raise 'Apenas evoluções assinadas podem ser marcadas como errata.' unless status_signed?
+    raise 'Esta evolução já está marcada como errata.' if erratum?
+    raise 'Justificativa da errata é obrigatória.' if reason.blank?
+
+    update_columns(
+      erratum_at: Time.current,
+      erratum_by_id: actor.id,
+      erratum_reason: reason.to_s.strip,
+      updated_at: Time.current
+    )
+    true
   end
 
   def within_draft_window?

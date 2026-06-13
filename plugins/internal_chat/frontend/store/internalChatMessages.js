@@ -7,8 +7,9 @@ const REPLACE_MESSAGE = 'internalChatMessages/REPLACE_MESSAGE';
 const SET_UI_FLAG = 'internalChatMessages/SET_UI_FLAG';
 const MARK_END_OF_HISTORY = 'internalChatMessages/MARK_END_OF_HISTORY';
 const SET_PENDING_PRIVATE_REPLY = 'internalChatMessages/SET_PENDING_PRIVATE_REPLY';
+const RESET = 'internalChatMessages/RESET';
 
-export const state = {
+const initialState = () => ({
   byRoom: {}, // { roomId: [messages...] }
   endOfHistory: {},
   uiFlags: {
@@ -19,7 +20,9 @@ export const state = {
   // aqui o snapshot da mensagem origem + o roomId do DM. Quando o RoomView
   // monta esse DM, consome o snapshot e seta como replyTarget no composer.
   pendingPrivateReply: null,
-};
+});
+
+export const state = initialState();
 
 export const getters = {
   getMessagesForRoom: _state => roomId => _state.byRoom[roomId] || [],
@@ -93,6 +96,12 @@ export const actions = {
   // Toggle favorito da mensagem. Atualiza otimisticamente; se a request
   // falhar, reverte. O backend é idempotente (find_or_create), então repetir
   // não polui a tabela.
+  //
+  // FE-15 (auditoria 2026-05-18): em revert lê o estado ATUAL do store
+  // (não o snapshot capturado antes do dispatch). Sem isso, toggles em
+  // sequência + uma falha → o spread `...current` joga fora updates
+  // paralelos (reactions, edits, content_attributes) que chegaram via
+  // ActionCable durante a request em flight.
   toggleFavorite: async ({ commit, state: s }, { roomId, messageId }) => {
     const list = s.byRoom[roomId] || [];
     const current = list.find(m => m.id === messageId);
@@ -109,17 +118,27 @@ export const actions = {
         await MessagesAPI.unfavorite(roomId, messageId);
       }
     } catch (e) {
-      // Reverte em caso de falha
-      commit(REPLACE_MESSAGE, {
-        roomId,
-        message: { ...current, is_favorited: !next },
-      });
+      // Reverte usando o estado ATUAL da mensagem (cable pode ter chegado).
+      const fresh = (s.byRoom[roomId] || []).find(m => m.id === messageId);
+      if (fresh) {
+        commit(REPLACE_MESSAGE, {
+          roomId,
+          message: { ...fresh, is_favorited: !next },
+        });
+      }
       throw e;
     }
   },
-  fetchFavorites: async (_, { roomId }) => {
-    const res = await MessagesAPI.listFavorites(roomId);
-    return res.data?.data || [];
+  // FE-21 (auditoria 2026-05-18): retorna `{ items, meta }` pra que o
+  // FavoritesPanel possa avisar quando há favoritos antigos invisíveis
+  // (total > per_page). Caller que quiser só items continua funcionando
+  // — só lê `result.items`.
+  fetchFavorites: async (_, { roomId, page, perPage } = {}) => {
+    const params = {};
+    if (page) params.page = page;
+    if (perPage) params.per_page = perPage;
+    const res = await MessagesAPI.listFavorites(roomId, params);
+    return { items: res.data?.data || [], meta: res.data?.meta || null };
   },
   // Prepara um "responder no particular": cria/encontra DM com o autor da
   // mensagem origem (o RoomCreator é idempotente) e armazena snapshot do quote
@@ -148,6 +167,11 @@ export const actions = {
   clearPendingPrivateReply: ({ commit }) => {
     commit(SET_PENDING_PRIVATE_REPLY, null);
   },
+  // MT-14/MT-19 — defesa em profundidade pra account-switch (ver
+  // internalChatRooms.js#reset). Zera mensagens cacheadas de todas as salas
+  // da conta anterior antes do reload completar / como safety se o reload
+  // for retirado no futuro.
+  reset: ({ commit }) => commit(RESET),
   // Toggle reação. WhatsApp-style: cada usuário tem no máx UMA reação por
   // mensagem; clicar no MESMO emoji que já reagi → remove; clicar em emoji
   // diferente → substitui. Otimista, com revert em falha.
@@ -257,6 +281,9 @@ export const mutations = {
   },
   [SET_PENDING_PRIVATE_REPLY](_state, value) {
     _state.pendingPrivateReply = value;
+  },
+  [RESET](_state) {
+    Object.assign(_state, initialState());
   },
 };
 

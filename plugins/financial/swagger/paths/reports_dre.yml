@@ -1,0 +1,24 @@
+get:
+  tags:
+    - Financeiro · Relatórios
+  summary: DRE (Demonstrativo de Resultado)
+  description: |
+    Agregação por categoria DRE no período. Requer GERENTE/ADMIN/AUDITOR.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+  responses:
+    '200':
+      description: Payload da DRE (estrutura definida pelo `DreReport` service)
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '403':
+      description: Sem permissão

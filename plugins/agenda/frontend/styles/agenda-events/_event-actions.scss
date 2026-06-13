@@ -1,0 +1,112 @@
+@use "../variables" as *;
+
+/* ── Action Buttons ──────────────────────────────── */
+.evt-normal-actions {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  z-index: 5;
+}
+
+.evt-info-btn-hover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  /* Vermelho sólido + ícone branco — visível em qualquer pastel de
+     categoria/agente, light ou dark, sem depender da cor de texto do
+     card. Aparece só no hover do card pra não poluir. */
+  background: $brand-danger-bright;
+  border-radius: 4px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.12s, transform 0.1s;
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.timeline-evt:hover .evt-info-btn-hover {
+  opacity: 1;
+}
+
+.evt-info-btn-hover:hover {
+  background: $brand-danger;
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+.evt-info-btn-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: $brand-danger-bright;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: background 0.12s, opacity 0.12s, transform 0.1s;
+  flex-shrink: 0;
+}
+
+.timeline-evt:hover .evt-info-btn-inline {
+  opacity: 1;
+}
+
+.evt-info-btn-inline:hover {
+  background: $brand-danger;
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+/* Container absoluto do botão de excluir na tier pill (cards 15min).
+   Mesma posição usada por `.evt-normal-actions` em medium/full pra
+   consistência visual entre os tiers. */
+.evt-pill-actions {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  z-index: 5;
+}
+
+/* Garantia explícita do ícone do trash dentro dos botões — em alguns
+   tiers o `i-lucide-trash-2` da utility (mask-image) ficava sem dimensão
+   visível por conflito de ordem de regras. Força width/height/cor aqui
+   pra renderizar consistente em pill, small, medium e full. */
+.evt-info-btn-hover .i-lucide-trash-2,
+.evt-info-btn-inline .i-lucide-trash-2 {
+  width: 12px;
+  height: 12px;
+  background-color: #ffffff;
+  display: inline-block;
+}
+/* ── Resize Handle ───────────────────────────────── */
+.evt-resize-handle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  border-radius: 0 0 8px 8px;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s;
+}
+
+.timeline-evt:hover .evt-resize-handle {
+  opacity: 1;
+  background: rgba(var(--blue-9), 0.3);
+}
+
+.evt-resize-handle:hover {
+  background: rgba(var(--blue-9), 0.5) !important;
+}

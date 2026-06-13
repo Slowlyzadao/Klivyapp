@@ -1,0 +1,141 @@
+@use "../variables" as *;
+
+/* ── Event Common Elements ────────────────────────── */
+.evt-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.evt-sbs-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.evt-sbs-title {
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* Reserve right side so text doesn't run under absolute action buttons */
+  padding-right: 22px;
+}
+
+/* Restore center alignment with explicit min-height so line-box never clips */
+.evt-title-wrap {
+  align-items: center;
+  min-height: 18px;
+}
+
+.evt-sbs-time-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.evt-sbs-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  @apply text-sm;
+  color: rgb(var(--slate-10));
+  font-weight: 500;
+  /* Em colunas estreitas (week view com 2-3 agentes por dia) o range
+     "15:00 - 15:45" quebrava em 3 linhas. Trunca em ellipsis igual ao
+     título — horário não é informação crítica que justifique 3 linhas. */
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.evt-sbs-treatment {
+  @apply text-sm;
+  font-weight: 600;
+  color: rgb(var(--slate-11));
+}
+
+/* Pushes treatment to the very bottom of the card via flex spacer */
+.evt-sbs-treatment--bottom {
+  margin-top: auto;
+  padding-top: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.evt-treatment-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  /* Mesma estratégia do `.evt-status-dot-sm`: border interna pra evitar
+     clipping em cards estreitos. Mesmo tamanho do status dot pra
+     consistência visual. */
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  box-sizing: border-box;
+}
+
+.dark .evt-treatment-dot {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.evt-treatment-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.evt-sbs-sep {
+  color: rgb(var(--slate-7));
+  @apply text-sm;
+}
+
+.time-icon {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+}
+/* ── Status Dot ──────────────────────────────────── */
+.evt-status-dot-sm {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  /* Borda DENTRO da box (box-sizing: border-box), não box-shadow externa.
+     Box-shadow extendia 1.5–2px pra fora e era clipado pelos parents
+     `.evt-title-wrap` / `.evt-pill-body` (overflow: hidden), deformando
+     o dot em cards estreitos. Com border interna o tamanho visível total
+     é firme, sem extensão externa. */
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  box-sizing: border-box;
+}
+
+.dark .evt-status-dot-sm {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Late Indicator ──────────────────────────────── */
+.evt-late-icon {
+  font-weight: 900;
+  @apply text-sm;
+  color: $brand-danger-bright;
+  text-shadow: 0 0 4px rgba($brand-danger-bright, 0.5);
+}
+/* ── Star Icon ───────────────────────────────────── */
+.evt-star-abs {
+  flex-shrink: 0;
+}

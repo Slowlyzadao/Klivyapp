@@ -1,0 +1,75 @@
+# Custom actions sob `:ai_agent_internal_notification_templates`:
+# - GET    /catalog         — devolve o EventCatalog + rooms/users elegíveis
+# - POST   /:id/reset       — restaura body + target do default seedado
+get:
+  tags:
+    - Bea — Notificações Internas
+  summary: Catálogo de eventos + targets elegíveis
+  description: |
+    Devolve metadata pra UI do editor de templates: lista do EventCatalog
+    (todos os eventos suportados + descrições + `available_vars` +
+    `detector_status` "active"/"planned"), rooms do internal_chat disponíveis
+    como target, e users do account para DM.
+
+    Autorização: admin OR Klivy `captain.view`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Catálogo
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              events:
+                type: array
+                description: Lista do EventCatalog.
+                items:
+                  type: object
+                  properties:
+                    event_key: { type: string }
+                    label: { type: string }
+                    description: { type: string }
+                    available_vars:
+                      type: array
+                      items: { type: string }
+                    detector_status:
+                      type: string
+                      enum: [active, planned]
+                    icon: { type: string }
+                    color: { type: string }
+                    default_body:
+                      type: string
+                      description: Body padrão pré-preenchido (já com `strip`).
+              rooms:
+                type: array
+                description: Salas do internal_chat disponíveis.
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    name: { type: string }
+                    system_role:
+                      type: string
+                      nullable: true
+                    kind: { type: string }
+              users:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    name: { type: string }
+                    avatar_url:
+                      type: string
+                      nullable: true
+                    role:
+                      type: string
+                      nullable: true
+                      description: |
+                        Label de função (Super Admin / Administrador /
+                        klivy_role / custom_role / Agente). `null` quando
+                        nenhum papel é resolvido.
+    '403':
+      description: Sem permissão

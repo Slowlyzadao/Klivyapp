@@ -1,0 +1,46 @@
+# i18n PT-BR pro plugin internal_chat (FE-16/17 + ARCH-23 do audit
+# 2026-05-18). Strings hardcoded migram pra cá incrementalmente —
+# pattern: começar pelas mensagens user-facing (erros 4xx, system
+# messages) que aparecem em UI ou WhatsApp pro paciente; deixar
+# comentários internos e logs em PT-BR ASCII.
+#
+# Convenções:
+#   - Namespace `internal_chat.*` (consistente com Chatwoot core)
+#   - Sub-namespace por área: `controllers.*`, `services.*`, `system_messages.*`
+#   - Strings interpoladas usam `%{var}` (Ruby Format String style — alinhado
+#     com TemplateRenderer de InternalNotifier)
+#   - Não inclui strings de log/telemetry (essas ficam em código pra debug)
+#
+# Uso em controller: `render json: { error: I18n.t('internal_chat.controllers.messages.edit_window_expired') }`
+# Uso em service:    `errors.add(:base, I18n.t('internal_chat.services.message_dispatcher.empty_content'))`
+pt_BR:
+  internal_chat:
+    controllers:
+      messages:
+        edit_window_expired: 'Janela de 5 minutos para edição expirou'
+        deleted_cannot_edit: 'Mensagem apagada não pode ser editada'
+        only_text_editable: 'Apenas mensagens de texto podem ser editadas'
+        emoji_required: 'Emoji obrigatório'
+        emoji_too_long: 'Emoji muito grande'
+      stickers:
+        image_missing: 'Imagem ausente'
+        default_cannot_delete: 'Figurinha padrão não pode ser excluída'
+        default_cannot_remove: 'Figurinha padrão não pode ser removida'
+      rooms:
+        bea_unavailable: 'Bea indisponível'
+    services:
+      message_dispatcher:
+        content_or_attachments_required: 'Mensagem precisa de conteúdo ou anexo'
+      room_creator:
+        kind_invalid: 'Tipo de sala inválido'
+        members_required: 'Pelo menos 1 outro membro é necessário'
+        users_not_in_account: 'Usuários fora da conta: %{ids}'
+        group_name_required: 'Grupo precisa de nome'
+    system_messages:
+      system_actor: 'Sistema'
+      member_added: '%{actor} adicionou %{target} ao grupo'
+      member_removed: '%{actor} removeu %{target} do grupo'
+      member_left: '%{actor} saiu do grupo'
+      role_changed: '%{actor} definiu %{target} como %{role}'
+      renamed: '%{actor} renomeou o grupo para “%{name}”'
+      description_changed: '%{actor} alterou a descrição do grupo'

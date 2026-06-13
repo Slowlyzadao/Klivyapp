@@ -1,0 +1,52 @@
+/* ============================================================
+   financial.scss — Entry point do Módulo Financeiro Central
+
+   CSS modular do plugin financial. Importado pelas pages:
+     plugins/financial/frontend/features/financial/pages/*.vue
+       └── import '@plugins/financial/frontend/styles/financial.scss';
+
+   Os partials estão em ./financial/ e são organizados por
+   domínio (dashboard, sub-pages, settings, charts, dre, reports,
+   cash-register, goals).
+
+   IMPORTANTE: a ordem dos @use abaixo respeita a cascata da
+   primeira ocorrência de cada domínio no CSS plano original.
+   Mover de lugar pode alterar override resolution para classes
+   que competem (ex.: regras genéricas .fin-btn-* devem vir antes
+   das variantes em _settings-* e _chart-*).
+
+   Regra R9: NUNCA usar CSS inline, scoped ou Tailwind ad-hoc.
+   ============================================================ */
+
+@use 'financial/layout';
+@use 'financial/period-selector';
+@use 'financial/dashboard-kpis';
+@use 'financial/dashboard-blocks';
+@use 'financial/dashboard-charts';
+@use 'financial/dashboard-states';
+@use 'financial/subpage-layout';
+@use 'financial/subpage-summary-card';
+@use 'financial/subpage-buttons';
+@use 'financial/subpage-helpers';
+@use 'financial/subpage-table';
+@use 'financial/subpage-filters';
+@use 'financial/subpage-misc';
+@use 'financial/settings-page';
+@use 'financial/chart-bar';
+@use 'financial/chart-cashflow-svg';
+@use 'financial/dre-filter';
+@use 'financial/dre-pickers';
+@use 'financial/cash-register';
+@use 'financial/reports';
+@use 'financial/chart-projection';
+@use 'financial/chart-collections';
+@use 'financial/settings-modal-form';
+@use 'financial/settings-transaction-modal';
+@use 'financial/chart-daily-monthly';
+@use 'financial/chart-skeleton-empty';
+@use 'financial/chart-cashflow-line';
+@use 'financial/chart-revenue-gauge';
+@use 'financial/chart-kpi-cards';
+@use 'financial/chart-onda3';
+@use 'financial/settings-autocomplete';
+@use 'financial/goals-page';

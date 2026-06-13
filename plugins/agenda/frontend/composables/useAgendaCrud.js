@@ -38,11 +38,27 @@ export function useAgendaCrud({ agenda, store, router, route, newEvent, wlSchedu
   const openEditEvent = (event) => {
     const startDate = parseEventDate(event.starts_at);
     const endDate = parseEventDate(event.ends_at);
+
+    // PR #6 da auditoria 2026-05-13 — fix do auto-select no edit:
+    // O JSONB `custom_attributes.treatment` guarda o NAME do serviço no
+    // momento da criação. Se o serviço foi renomeado depois, esse NAME não
+    // bate mais com nenhuma opção da dropdown (que lista nomes atuais).
+    // Preferência: resolver o NAME pelo FK (agenda_service_id) → nome atual;
+    // depois snapshot inline `event.agenda_service.name` (cobre soft-delete
+    // onde o serviço não está mais no store `kept`); por último JSONB legado.
+    let treatmentName = '';
+    if (event.agenda_service_id) {
+      const current = store.getters['agendaServices/getServiceById'](event.agenda_service_id);
+      treatmentName = current?.name || event.agenda_service?.name || event.custom_attributes?.treatment || '';
+    } else {
+      treatmentName = event.custom_attributes?.treatment || '';
+    }
+
     newEvent.value = {
       title: event.title,
       event_type: event.event_type || 'consultation',
       priority: event.custom_attributes?.priority || 'medium',
-      treatment: event.custom_attributes?.treatment || '',
+      treatment: treatmentName,
       category_id: event.category_id || null,
       date: `${startDate.getFullYear()}-${padZ(startDate.getMonth() + 1)}-${padZ(startDate.getDate())}`,
       time_start: `${padZ(startDate.getHours())}:${padZ(startDate.getMinutes())}`,
@@ -199,7 +215,11 @@ export function useAgendaCrud({ agenda, store, router, route, newEvent, wlSchedu
   const confirmDelete = async ({ reason, note }) => {
     agenda.state.isDeleting = true;
     try {
-      await store.dispatch('agendaEvents/delete', agenda.state.editingEventId);
+      await store.dispatch('agendaEvents/delete', {
+        id: agenda.state.editingEventId,
+        reason,
+        note,
+      });
       agenda.state.showConfirmDelete = false;
       closeEventModal();
     } catch {

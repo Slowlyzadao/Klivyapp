@@ -1,0 +1,482 @@
+@use "../variables" as *;
+
+/* ── MonthPicker ─────────────────────────────────────────────── */
+.dre-mp { position: relative; display: inline-flex; }
+
+.dre-mp__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid rgb(var(--s-200));
+  border-radius: 0.5rem;
+  background: #fff;
+  color: rgb(var(--s-800));
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.dre-mp__trigger:hover {
+  border-color: rgb(var(--s-300));
+  background: rgb(var(--s-50));
+}
+
+body.dark .dre-mp__trigger {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+  color: rgb(var(--s-100));
+}
+
+body.dark .dre-mp__trigger:hover {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.18);
+}
+
+.dre-mp__icon { color: rgb(var(--s-400)); flex-shrink: 0; }
+body.dark .dre-mp__icon { color: rgb(var(--s-500)); }
+
+.dre-mp__label { pointer-events: none; }
+
+.dre-mp__chevron {
+  color: rgb(var(--s-400));
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.dre-mp__chevron--open { transform: rotate(180deg); }
+body.dark .dre-mp__chevron { color: rgb(var(--s-500)); }
+
+/* Month Dropdown */
+.dre-mp__dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  min-width: 240px;
+  padding: 0.75rem;
+  background: #fff;
+  border: 1px solid rgb(var(--s-200));
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+}
+
+body.dark .dre-mp__dropdown {
+  background: rgb(var(--s-800));
+  border-color: rgba(255,255,255,0.1);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.dre-mp__year-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.dre-mp__year-label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: rgb(var(--s-800));
+}
+
+body.dark .dre-mp__year-label { color: rgb(var(--s-100)); }
+
+.dre-mp__year-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: rgb(var(--s-500));
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.dre-mp__year-btn:hover {
+  background: rgb(var(--s-100));
+  color: rgb(var(--s-800));
+}
+
+body.dark .dre-mp__year-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: rgb(var(--s-100));
+}
+
+.dre-mp__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.375rem;
+}
+
+.dre-mp__month {
+  padding: 0.5rem 0.25rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: rgb(var(--s-700));
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.dre-mp__month:hover {
+  background: rgb(var(--s-100));
+  color: rgb(var(--s-900));
+}
+
+body.dark .dre-mp__month {
+  color: rgb(var(--s-300));
+}
+
+body.dark .dre-mp__month:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+.dre-mp__month--active {
+  background: rgb(39 129 246 / 1) !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+
+/* Transition */
+.dre-mp-drop-enter-active,
+.dre-mp-drop-leave-active {
+  transition: opacity 0.15s, transform 0.15s;
+}
+.dre-mp-drop-enter-from,
+.dre-mp-drop-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* ── DatePicker ──────────────────────────────────────────────── */
+.dre-dp { position: relative; display: inline-flex; }
+
+.dre-dp__dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  width: 280px;
+  padding: 0.75rem;
+  background: #fff;
+  border: 1px solid rgb(var(--s-200));
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+}
+
+body.dark .dre-dp__dropdown {
+  background: rgb(var(--s-800));
+  border-color: rgba(255,255,255,0.1);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.dre-dp__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.625rem;
+}
+
+.dre-dp__nav-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(var(--s-800));
+}
+
+body.dark .dre-dp__nav-label { color: rgb(var(--s-100)); }
+
+.dre-dp__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 0.25rem;
+}
+
+.dre-dp__wd {
+  text-align: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: rgb(var(--s-400));
+  text-transform: uppercase;
+  padding: 0.25rem 0;
+}
+
+body.dark .dre-dp__wd { color: rgb(var(--s-500)); }
+
+.dre-dp__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.dre-dp__day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: rgb(var(--s-700));
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.dre-dp__day:hover:not(:disabled) {
+  background: rgb(var(--s-100));
+}
+
+body.dark .dre-dp__day { color: rgb(var(--s-300)); }
+
+body.dark .dre-dp__day:hover:not(:disabled) {
+  background: rgba(255,255,255,0.1);
+}
+
+.dre-dp__day--other {
+  color: rgb(var(--s-300));
+  pointer-events: none;
+}
+
+body.dark .dre-dp__day--other { color: rgb(var(--s-600)); }
+
+.dre-dp__day--today {
+  font-weight: 700;
+  color: var(--color-woot-500);
+}
+
+.dre-dp__day--selected {
+  background: rgb(39 129 246 / 1) !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+
+.dre-dp__footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgb(var(--s-100));
+}
+
+body.dark .dre-dp__footer {
+  border-color: rgba(255,255,255,0.08);
+}
+
+.dre-dp__footer-btn {
+  padding: 0.25rem 0.625rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--color-woot-500);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dre-dp__footer-btn:hover {
+  background: rgba($brand-info-bright, 0.08);
+}
+
+/* Period label */
+.dre-period-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: rgb(var(--s-500));
+  padding: 0.5rem 0.75rem;
+  background: rgb(var(--s-50));
+  border-radius: 0.5rem;
+  border: 1px solid rgb(var(--s-100));
+}
+
+body.dark .dre-period-label {
+  background: rgb(var(--s-800));
+  border-color: rgb(var(--s-700));
+}
+
+.dre-prior-label {
+  margin-left: 0.75rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid rgb(var(--s-200));
+  color: rgb(var(--s-400));
+  font-style: italic;
+}
+
+body.dark .dre-prior-label {
+  border-color: rgb(var(--s-600));
+}
+
+/* Table wrapper */
+.dre-table-wrap {
+  background: #ffffff;
+  border: 1px solid rgb(var(--s-100));
+  border-radius: 0.75rem;
+  overflow: hidden;
+  padding: 0;
+}
+
+body.dark .dre-table-wrap {
+  background: rgb(var(--s-800));
+  border-color: rgb(var(--s-700));
+}
+
+/* Table */
+.dre-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dre-table__header {
+  background: rgb(var(--s-50));
+  border-bottom: 1px solid rgb(var(--s-100));
+}
+
+body.dark .dre-table__header {
+  background: rgb(var(--s-750, var(--s-800)));
+  border-color: rgb(var(--s-700));
+}
+
+.dre-table__th {
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(var(--s-500));
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: left;
+}
+
+.dre-table__th--num { text-align: right; }
+
+.dre-table__td {
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  border-bottom: 1px solid rgb(var(--s-50));
+  vertical-align: middle;
+}
+
+body.dark .dre-table__td {
+  border-color: rgb(var(--s-700));
+}
+
+.dre-table__td--desc { width: 45%; }
+.dre-table__td--num { text-align: right; }
+
+/* Row types */
+.dre-row { transition: background 0.1s; }
+
+.dre-row:hover { background: rgb(var(--s-50)); }
+body.dark .dre-row:hover { background: rgb(var(--s-700)); }
+
+.dre-row--section {
+  font-weight: 600;
+  color: rgb(var(--s-800));
+}
+
+body.dark .dre-row--section { color: rgb(var(--s-100)); }
+
+.dre-row--result {
+  background: rgb(var(--s-50));
+  font-weight: 700;
+  font-size: 0.9125rem;
+  border-top: 2px solid rgb(var(--s-100));
+  border-bottom: 2px solid rgb(var(--s-100));
+}
+
+body.dark .dre-row--result {
+  background: rgb(var(--s-750, var(--s-800)));
+  border-color: rgb(var(--s-600));
+}
+
+.dre-row--net-profit {
+  background: linear-gradient(90deg, rgba($brand-success-bright,0.06), transparent);
+  font-size: 1rem;
+}
+
+body.dark .dre-row--net-profit {
+  background: linear-gradient(90deg, rgba($brand-success-bright,0.04), transparent);
+}
+
+.dre-row--child { font-weight: 400; }
+
+/* Row label */
+.dre-row__label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  cursor: default;
+}
+
+.dre-row--section .dre-row__label { cursor: pointer; }
+
+.dre-row__label--indent { padding-left: 1.5rem; }
+
+.dre-row__chevron {
+  font-size: 0.875rem;
+  color: rgb(var(--s-400));
+  flex-shrink: 0;
+}
+
+.dre-row__chevron--spacer { width: 0.875rem; display: inline-block; }
+
+/* Category dot */
+.dre-cat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Values */
+.dre-val--positive { color: $brand-success; font-weight: 600; }
+.dre-val--negative { color: $brand-danger; font-weight: 600; }
+.dre-val--muted    { color: rgb(var(--s-400)); }
+.dre-val-sign      { margin-right: 0.125rem; }
+
+/* Variation badge */
+.dre-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.dre-badge--sm { font-size: 0.6875rem; padding: 0.15rem 0.4rem; }
+
+.dre-badge--up {
+  background: rgba($brand-success-bright,0.12);
+  color: $brand-success-strong;
+}
+
+.dre-badge--down {
+  background: rgba($brand-danger,0.1);
+  color: $brand-danger-strong;
+}
+
+body.dark .dre-badge--up {
+  background: rgba($brand-success-bright,0.15);
+  color: $brand-success-light;
+}
+
+body.dark .dre-badge--down {
+  background: rgba($brand-danger,0.12);
+  color: $brand-danger-light;
+}
+

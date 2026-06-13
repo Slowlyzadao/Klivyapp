@@ -8,6 +8,8 @@ const emit = defineEmits(['close', 'openArticle', 'openChat']);
 
 const helpfulVote = ref(null);
 const expanded    = ref(false);
+const articleIframe = ref(null);
+let resizeObserver = null;
 
 watch(() => props.data, () => {
   helpfulVote.value = null;
@@ -18,7 +20,10 @@ function onBackdropKey(e) {
   if (e.key === 'Escape' && props.data) emit('close');
 }
 onMounted(() => window.addEventListener('keydown', onBackdropKey));
-onUnmounted(() => window.removeEventListener('keydown', onBackdropKey));
+onUnmounted(() => {
+  window.removeEventListener('keydown', onBackdropKey);
+  if (resizeObserver) { resizeObserver.disconnect(); resizeObserver = null; }
+});
 
 function openArticle(cat, art) {
   emit('openArticle', cat, art);
@@ -38,6 +43,78 @@ const nextStepsList = computed(() => {
   const raw = props.data?.art?.nextSteps ?? '';
   return raw.split('\n').map(s => s.trim()).filter(Boolean);
 });
+
+const FRAGMENT_BASE_CSS = `
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+    color: #1f2937;
+    line-height: 1.7;
+    font-size: 15px;
+    word-wrap: break-word;
+  }
+  p { margin: 0 0 14px; }
+  h1, h2, h3 { color: #0f172a; }
+  h2 { font-size: 1.15em; font-weight: 700; margin: 22px 0 10px; }
+  h3 { font-size: 1em; font-weight: 600; margin: 18px 0 8px; }
+  ul, ol { padding-left: 20px; margin: 8px 0 14px; }
+  li { margin-bottom: 4px; }
+  blockquote { border-left: 3px solid #2c5cc5; padding-left: 14px; color: #475569; margin: 14px 0; }
+  a { color: #2c5cc5; text-decoration: underline; }
+  img, video, iframe { max-width: 100%; height: auto; border-radius: 8px; }
+  pre, code { background: #f3f4f6; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  code { padding: 2px 6px; font-size: 0.9em; }
+  pre { padding: 12px 14px; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+`;
+
+const articleSrcdoc = computed(() => {
+  const html = typeof props.data?.art?.body === 'string' ? props.data.art.body : '';
+  if (!html) return '';
+  const isFullDoc = /^\s*<(!doctype|html\b)/i.test(html);
+  if (isFullDoc) return html;
+  return `<!DOCTYPE html><html lang="pt-BR"><head>` +
+    `<meta charset="UTF-8">` +
+    `<meta name="viewport" content="width=device-width, initial-scale=1.0">` +
+    `<base target="_parent">` +
+    `<style>${FRAGMENT_BASE_CSS}</style>` +
+    `</head><body>${html}</body></html>`;
+});
+
+function syncIframeHeight() {
+  const iframe = articleIframe.value;
+  const doc = iframe?.contentDocument;
+  if (!iframe || !doc?.body) return;
+  // Mede pelo body, não pelo documentElement, para não herdar `min-height: 100vh`
+  // que muitos resets de CSS dos artigos aplicam (e que faria o iframe crescer
+  // até a altura da viewport, deixando um vão grande embaixo do conteúdo).
+  iframe.style.height = `${doc.body.scrollHeight}px`;
+}
+
+function onIframeLoad() {
+  if (resizeObserver) { resizeObserver.disconnect(); resizeObserver = null; }
+  const iframe = articleIframe.value;
+  const doc = iframe?.contentDocument;
+  if (!iframe || !doc?.documentElement) return;
+
+  // Injeta um reset CSS no fim do <head> do artigo para neutralizar regras como
+  // `html, body { min-height: 100vh }` que vêm do CSS do autor e inflam o
+  // scrollHeight da página. A regra é `!important` para vencer o CSS do autor.
+  if (doc.head && !doc.getElementById('__klivy_iframe_fit__')) {
+    const reset = doc.createElement('style');
+    reset.id = '__klivy_iframe_fit__';
+    reset.textContent =
+      'html,body{height:auto!important;min-height:0!important;}' +
+      'body{margin:0!important;}';
+    doc.head.appendChild(reset);
+  }
+
+  syncIframeHeight();
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(syncIframeHeight);
+    resizeObserver.observe(doc.body);
+  }
+}
 </script>
 
 <template>
@@ -73,7 +150,7 @@ const nextStepsList = computed(() => {
           </div>
         </div>
 
-        <div class="hp-drawer-body">
+        <div :class="['hp-drawer-body', data.kind === 'article' && 'hp-drawer-body--article']">
           <!-- Article view -->
           <template v-if="data.kind === 'article'">
             <h1>{{ data.art.title }}</h1>
@@ -97,8 +174,16 @@ const nextStepsList = computed(() => {
 
             <template v-if="data.art.body">
               <template v-if="typeof data.art.body === 'string'">
-                <!-- eslint-disable-next-line vue/no-v-html -->
-                <div class="hp-art-body" v-html="data.art.body" />
+                <iframe
+                  ref="articleIframe"
+                  class="hp-art-iframe"
+                  :srcdoc="articleSrcdoc"
+                  sandbox="allow-same-origin allow-popups"
+                  referrerpolicy="no-referrer"
+                  loading="lazy"
+                  title="Conteúdo do artigo"
+                  @load="onIframeLoad"
+                />
               </template>
               <template v-else>
                 <p v-for="(paragraph, i) in data.art.body" :key="i">{{ paragraph }}</p>
@@ -144,7 +229,7 @@ const nextStepsList = computed(() => {
           <!-- Category view -->
           <template v-else-if="data.kind === 'category'">
             <h1>{{ data.cat.name }}</h1>
-            <p style="color: rgb(var(--slate-10));">{{ data.cat.description }}</p>
+            <p>{{ data.cat.description }}</p>
             <h2 style="margin-top: 24px;">Todos os artigos</h2>
 
             <div v-if="data.cat.articles && data.cat.articles.length > 0" class="hp-art-list">

@@ -1,0 +1,67 @@
+get:
+  tags:
+    - Financeiro · Categorias DRE
+  summary: Detalhar categoria
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Categoria
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/DreCategory.yml'
+patch:
+  tags:
+    - Financeiro · Categorias DRE
+  summary: Atualizar categoria
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [category]
+          properties:
+            category:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/DreCategory.yml'
+delete:
+  tags:
+    - Financeiro · Categorias DRE
+  summary: Excluir categoria (soft-delete)
+  description: |
+    Soft-delete (`soft_delete!`). Requer **ADMIN**. A cadeia de integridade
+    falha rápido na primeira restrição encontrada, com `{ error: "<mensagem>" }`
+    específica pra UI exibir. Bloqueia (422) se a categoria:
+    - for reservada do sistema (`default?`);
+    - tiver subcategorias (`has_children?`);
+    - tiver lançamentos vinculados — receitas, despesas ou parcelas (`has_entries?`);
+    - estiver vinculada a procedimentos com preço configurado (`has_pricings?`).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204': { description: "Removida (soft-delete)" }
+    '422':
+      description: |
+        Exclusão bloqueada por integridade — `default?`, `has_children?`,
+        `has_entries?` OU `has_pricings?`. Corpo: `{ error: "<mensagem específica>" }`.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+    '403': { description: "Sem permissão (requer ADMIN)" }

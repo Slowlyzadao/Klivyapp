@@ -1,0 +1,131 @@
+get:
+  tags:
+    - Financeiro · Formas de Pagamento
+  summary: Detalhar forma de pagamento
+  description: "Read-only, sem gate de RBAC — qualquer usuário autenticado."
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Forma de pagamento
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PaymentMethod.yml'
+    '404':
+      description: Não encontrada (ou soft-deletada)
+patch:
+  tags:
+    - Financeiro · Formas de Pagamento
+  summary: Atualizar forma de pagamento
+  description: |
+    Atualiza o método. Requer ADMIN ou GERENTE (`authorize_write!`). Idempotência
+    opcional via header `Idempotency-Key`. **`kind` é imutável** — é removido do
+    permit (`except(:kind)`), então enviá-lo é silenciosamente ignorado. Ativar um
+    método inativo (`status: inactive → active`) por aqui destrava o passo do
+    wizard. Mesmo comportamento via `PUT`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [payment_method]
+          properties:
+            payment_method:
+              type: object
+              properties:
+                name: { type: string }
+                provider: { type: string }
+                provider_alias: { type: string }
+                default_bank_account_id: { type: integer }
+                supports_installments: { type: boolean }
+                max_installments: { type: integer, minimum: 1, maximum: 24 }
+                status: { type: string, enum: [active, inactive] }
+                passes_fee_to_patient: { type: boolean }
+                settlement_mode: { type: string, enum: [manual, on_confirm, on_due_date] }
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PaymentMethod.yml'
+    '403':
+      description: Sem permissão (requer ADMIN/GERENTE)
+    '422':
+      description: Erro de validação
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'
+put:
+  tags:
+    - Financeiro · Formas de Pagamento
+  summary: Atualizar forma de pagamento (alias de PATCH)
+  description: "Idêntico ao `PATCH`. Requer ADMIN ou GERENTE. `kind` imutável."
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [payment_method]
+          properties:
+            payment_method:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PaymentMethod.yml'
+    '403':
+      description: Sem permissão (requer ADMIN/GERENTE)
+    '422':
+      description: Erro de validação
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'
+delete:
+  tags:
+    - Financeiro · Formas de Pagamento
+  summary: Soft-delete da forma de pagamento
+  description: |
+    Soft-delete (canon: nunca deleta de verdade). Requer ADMIN ou GERENTE
+    (`authorize_write!`). Idempotência opcional via header `Idempotency-Key`.
+    **Bloqueia (422) se o método já foi usado** em lançamentos (existe
+    `Installment` vinculada) — nesse caso, inative em vez de excluir. Se não foi
+    usado, os fees ativos são inativados junto. Retorna `{ ok: true }`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Removida (soft-delete)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              ok: { type: boolean, example: true }
+    '403':
+      description: Sem permissão (requer ADMIN/GERENTE)
+    '404':
+      description: Não encontrada
+    '422':
+      description: "Método já usado em lançamentos (`error: method_in_use`)"
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'

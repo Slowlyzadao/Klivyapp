@@ -1,0 +1,47 @@
+get:
+  tags:
+    - Agenda Pública
+  summary: Horários disponíveis num dia
+  description: |
+    Calcula slots livres respeitando: `slot_interval_minutes`, janelas de
+    `week_days[].start/end`, almoço (`block_lunch_break` + `lunchStart`/`lunchEnd`),
+    `holidays.status=closed`, `exceptions`, `min_lead_time_minutes` e
+    `future_limit_days`. Cobertura de overlap real (sem TOCTOU).
+
+    Duração do slot reservado = `agenda_service.duration_minutes` se enviado
+    `service_id`, senão `slot_interval_minutes`. Para reservar uma janela maior
+    que o passo da grade, o slot só é oferecido se toda a janela cabe no
+    expediente sem cruzar almoço/evento.
+  parameters:
+    - name: public_id
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: date
+      in: query
+      required: true
+      description: Data alvo (`YYYY-MM-DD`).
+      schema:
+        type: string
+        format: date
+        example: "2026-05-20"
+    - name: service_id
+      in: query
+      description: Opcional. Quando enviado, a duração do slot vem do serviço.
+      schema:
+        type: integer
+  responses:
+    '200':
+      description: Lista de horários disponíveis
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              slots:
+                type: array
+                items:
+                  $ref: '../definitions/Slot.yml'
+    '400':
+      description: Formato de data inválido

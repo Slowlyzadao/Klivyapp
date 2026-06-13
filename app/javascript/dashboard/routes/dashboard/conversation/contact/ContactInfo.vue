@@ -16,6 +16,7 @@ import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.
 import PatientRecordPopup from './PatientRecordPopup.vue';
 import PatientsAPI from '@plugins/patients/frontend/api/patients/index';
 import WaitingListModal from './WaitingListModal.vue';
+import { useAgendaEventLauncher } from '@plugins/agenda/frontend/composables/useAgendaEventLauncher';
 
 import {
   isAConversationRoute,
@@ -51,9 +52,11 @@ export default {
   setup() {
     const { isAdmin } = useAdmin();
     const { can: klivyCan } = usePermissions();
+    const agendaLauncher = useAgendaEventLauncher();
     return {
       isAdmin,
       klivyCan,
+      agendaLauncher,
     };
   },
   data() {
@@ -108,6 +111,9 @@ export default {
     canViewPatientRecord() {
       return this.klivyCan('chat', 'view_patient_record');
     },
+    canScheduleAppointment() {
+      return this.klivyCan('chat', 'create_appointment');
+    },
     canEditContact() {
       return this.klivyCan('chat', 'edit_contact');
     },
@@ -144,6 +150,26 @@ export default {
     togglePatientPopup() {
       if (!this.linkedPatientId) return;
       this.showPatientPopup = true;
+    },
+    async openAgendaForContact() {
+      // Refresca o link contato↔paciente ANTES de abrir o modal. O watch
+      // em `contact.id` carrega `linkedPatientId` no mount, mas se o
+      // próprio agente cadastrou o paciente via Quick Patient numa
+      // sessão anterior do modal, o valor fica stale (ContactInfo não
+      // sabe que houve criação). Sem o refresh, o launcher receberia
+      // `patient_id: null` → autoCreatePatient dispararia → Quick
+      // Patient abriria de novo → criaria paciente DUPLICADO. O fallback
+      // por telefone em PatientsController#by_contact (1.5.5.11) garante
+      // que mesmo se o link `patient.contact_id` estiver inconsistente,
+      // a busca encontra pelo número do contato.
+      await this.fetchLinkedPatient(this.contact.id);
+      this.agendaLauncher.open({
+        source: 'conversation',
+        contact_id: this.contact.id,
+        patient_id: this.linkedPatientId || null,
+        patient_name: this.contact.name || '',
+        patient_phone: this.contact.phone_number || '',
+      });
     },
     toggleEditModal() {
       this.showEditModal = !this.showEditModal;
@@ -344,6 +370,16 @@ export default {
           sm
           :disabled="!linkedPatientId"
           @click="togglePatientPopup"
+        />
+        <!-- Botão de Agendar Consulta -->
+        <NextButton
+          v-if="canScheduleAppointment"
+          v-tooltip.top-end="'Agendar consulta'"
+          icon="i-lucide-calendar-plus"
+          slate
+          faded
+          sm
+          @click="openAgendaForContact"
         />
         <NextButton
           v-if="canEditContact"

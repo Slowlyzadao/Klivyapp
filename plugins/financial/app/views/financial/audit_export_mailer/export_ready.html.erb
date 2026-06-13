@@ -1,0 +1,20 @@
+<p>Olá <%= @user.name %>,</p>
+
+<p>O export de auditoria que você solicitou está pronto.</p>
+
+<ul>
+  <li><strong>Período:</strong> <%= @from %> até <%= @to %></li>
+  <li><strong>Linhas:</strong> <%= number_with_delimiter(@row_count) %></li>
+  <li><strong>Expira em:</strong> <%= @expires_at.strftime('%d/%m/%Y %H:%M') %></li>
+</ul>
+
+<p>
+  <a href="<%= @download_url %>" style="display:inline-block;padding:10px 16px;background:#10b981;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">
+    Baixar CSV
+  </a>
+</p>
+
+<p style="color:#64748b;font-size:13px;margin-top:24px;">
+  Link assinado e válido por 24 horas. Após esse período, gere um novo export.
+  Dados pessoais foram redacted automaticamente (compliance LGPD).
+</p>

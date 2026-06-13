@@ -1,0 +1,139 @@
+// Card de status de SignatureRequest in-progress.
+
+.signature-status-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid rgb(var(--slate-3));
+  border-radius: 8px;
+  background: rgb(var(--slate-1));
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__badge {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+
+    &--neutral { background: rgba(var(--slate-3), 0.7);  color: rgb(var(--slate-11)); }
+    &--info    { background: rgba(var(--blue-3), 0.7);   color: rgb(var(--blue-11)); }
+    &--warning { background: rgba(var(--amber-3), 0.7);  color: rgb(var(--amber-11)); }
+    &--success { background: rgba(var(--green-3), 0.7);  color: rgb(var(--green-11)); }
+    &--danger  { background: rgba(var(--red-3), 0.7);    color: rgb(var(--red-11)); }
+  }
+
+  &__provider {
+    font-size: 0.75rem;
+    color: rgb(var(--slate-10));
+  }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    font-size: 0.875rem;
+
+    > div {
+      display: flex;
+      gap: 8px;
+    }
+    dt {
+      color: rgb(var(--slate-10));
+      flex-shrink: 0;
+      min-width: 100px;
+    }
+    dd {
+      margin: 0;
+      color: rgb(var(--slate-12));
+      word-break: break-all;
+    }
+    a { color: rgb(var(--blue-11)); }
+  }
+
+  &__timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: rgb(var(--slate-10));
+
+      div {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        font-size: 0.8125rem;
+      }
+
+      strong { font-weight: 500; }
+    }
+
+    &-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: rgb(var(--slate-5));
+      flex-shrink: 0;
+    }
+
+    &-item--done {
+      color: rgb(var(--slate-12));
+
+      .signature-status-card__timeline-dot {
+        background: rgb(var(--green-9));
+      }
+    }
+
+    &-at {
+      color: rgb(var(--slate-10));
+      font-size: 0.75rem;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid rgb(var(--slate-3));
+  }
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 10px;
+    border: 1px solid rgb(var(--slate-4));
+    border-radius: 6px;
+    background: rgb(var(--slate-1));
+    color: rgb(var(--slate-12));
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: background 120ms ease;
+
+    span { width: 13px; height: 13px; }
+
+    &:hover { background: rgb(var(--slate-2)); }
+
+    &--danger {
+      border-color: rgb(var(--red-7));
+      color: rgb(var(--red-11));
+
+      &:hover { background: rgba(var(--red-3), 0.5); }
+    }
+  }
+}

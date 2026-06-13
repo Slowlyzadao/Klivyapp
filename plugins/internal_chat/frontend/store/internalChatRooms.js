@@ -2,23 +2,31 @@ import RoomsAPI from '@plugins/internal_chat/frontend/api/rooms';
 import MembershipsAPI from '@plugins/internal_chat/frontend/api/memberships';
 
 const SET_ROOMS = 'internalChatRooms/SET_ROOMS';
+const SET_ARCHIVED = 'internalChatRooms/SET_ARCHIVED';
+const REMOVE_ARCHIVED = 'internalChatRooms/REMOVE_ARCHIVED';
 const UPSERT_ROOM = 'internalChatRooms/UPSERT_ROOM';
 const REMOVE_ROOM = 'internalChatRooms/REMOVE_ROOM';
 const SET_UI_FLAG = 'internalChatRooms/SET_UI_FLAG';
 const SET_UNREAD_SUMMARY = 'internalChatRooms/SET_UNREAD_SUMMARY';
 const UPDATE_MEMBER_READ = 'internalChatRooms/UPDATE_MEMBER_READ';
+const RESET = 'internalChatRooms/RESET';
 
-export const state = {
+const initialState = () => ({
   records: [],
+  // Conversas arquivadas (carregadas sob demanda na aba "Arquivadas").
+  archived: [],
   unreadSummary: { byRoom: {}, total: 0 },
   uiFlags: {
     isFetching: false,
     isCreating: false,
   },
-};
+});
+
+export const state = initialState();
 
 export const getters = {
   getAllRooms: _state => _state.records,
+  getArchivedRooms: _state => _state.archived,
   getRoomById: _state => id =>
     _state.records.find(r => Number(r.id) === Number(id)),
   getTotalUnread: _state => _state.unreadSummary.total || 0,
@@ -110,13 +118,19 @@ export const actions = {
     await MembershipsAPI.changeRole(roomId, membershipId, role);
     return dispatch('show', roomId);
   },
+  fetchArchived: async ({ commit }) => {
+    const res = await RoomsAPI.listArchived();
+    commit(SET_ARCHIVED, res.data?.data || []);
+  },
   archive: async ({ commit }, roomId) => {
     const res = await RoomsAPI.archive(roomId);
+    // Per-membership: some só da MINHA lista (o outro participante mantém).
     commit(REMOVE_ROOM, roomId);
     return res.data.data;
   },
   unarchive: async ({ commit }, roomId) => {
     const res = await RoomsAPI.unarchive(roomId);
+    commit(REMOVE_ARCHIVED, roomId);
     commit(UPSERT_ROOM, res.data.data);
     return res.data.data;
   },
@@ -158,26 +172,43 @@ export const actions = {
       total: Object.values(next).reduce((a, b) => a + b, 0),
     });
   },
+  // MT-14/MT-19 — zera state ao trocar de conta. Defesa em profundidade: hoje
+  // o SidebarAccountSwitcher faz full reload (zera tudo via browser), mas
+  // se um dia migrar pra SPA navigation, este reset é o que garante que
+  // dados de uma clínica não vazam pra outra.
+  reset: ({ commit }) => commit(RESET),
 };
 
 export const mutations = {
   [SET_ROOMS](_state, rooms) {
     _state.records = rooms;
   },
+  [SET_ARCHIVED](_state, rooms) {
+    _state.archived = rooms;
+  },
+  [REMOVE_ARCHIVED](_state, id) {
+    _state.archived = _state.archived.filter(r => Number(r.id) !== Number(id));
+  },
   [UPSERT_ROOM](_state, room) {
     if (!room) return;
     const idx = _state.records.findIndex(r => Number(r.id) === Number(room.id));
+    const next = _state.records.slice();
     if (idx >= 0) {
-      _state.records.splice(idx, 1, { ..._state.records[idx], ...room });
+      next[idx] = { ...next[idx], ...room };
     } else {
-      _state.records.unshift(room);
+      next.unshift(room);
     }
     // reordena por last_message_at desc
-    _state.records.sort((a, b) => {
+    next.sort((a, b) => {
       const ta = new Date(a.last_message_at || a.created_at).getTime();
       const tb = new Date(b.last_message_at || b.created_at).getTime();
       return tb - ta;
     });
+    // Reatribui nova referência: força o RecycleScroller (lista virtualizada)
+    // a re-renderizar os cards mesmo em mudança de dado SEM reordenação — ex.:
+    // troca de avatar do grupo, que não altera last_message_at. Com splice
+    // in-place o card só atualizava quando mudava de posição (nova mensagem).
+    _state.records = next;
   },
   [REMOVE_ROOM](_state, id) {
     _state.records = _state.records.filter(r => Number(r.id) !== Number(id));
@@ -201,6 +232,9 @@ export const mutations = {
       return { ...m, last_read_message_id };
     });
     _state.records.splice(idx, 1, { ...room, members });
+  },
+  [RESET](_state) {
+    Object.assign(_state, initialState());
   },
 };
 

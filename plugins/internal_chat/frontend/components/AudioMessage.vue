@@ -1,7 +1,11 @@
 <script setup>
+// FE-16/17 + ARCH-23 (auditoria 2026-05-19): tooltip "Pausar"/"Tocar" e
+// fallback de Avatar migrados pra `INTERNAL_CHAT.AUDIO_MESSAGE.*` via i18n.
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import WaveSurfer from 'wavesurfer.js';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
+// FE-6: Tooltip moderno em vez de title="..." nativo.
+import Tooltip from '@plugins/beclinic_core/frontend/components/Tooltip.vue';
 
 const props = defineProps({
   src: { type: String, required: true },
@@ -106,25 +110,32 @@ const displayTime = computed(() => {
          Tempo vai numa segunda linha indentada pra alinhar com o waveform. -->
     <div class="flex items-center gap-3">
       <Avatar
-        :name="sender.name || 'Áudio'"
+        :name="sender.name || $t('INTERNAL_CHAT.AUDIO_MESSAGE.SENDER_FALLBACK_NAME')"
         :src="sender.avatar_url || ''"
         :size="40"
         rounded-full
       />
 
-      <button
-        type="button"
-        class="inline-flex items-center justify-center w-9 h-9 rounded-full shrink-0 transition disabled:opacity-50"
-        :class="isOwn ? 'ic-audio-btn-own' : 'ic-audio-btn-other'"
-        :disabled="!isReady"
-        :title="isPlaying ? 'Pausar' : 'Tocar'"
-        @click="toggle"
+      <Tooltip
+        :label="
+          isPlaying
+            ? $t('INTERNAL_CHAT.AUDIO_MESSAGE.PAUSE_TOOLTIP')
+            : $t('INTERNAL_CHAT.AUDIO_MESSAGE.PLAY_TOOLTIP')
+        "
       >
-        <span
-          :class="isPlaying ? 'i-lucide-pause' : 'i-lucide-play'"
-          class="text-base"
-        />
-      </button>
+        <button
+          type="button"
+          class="inline-flex items-center justify-center w-9 h-9 rounded-full shrink-0 transition disabled:opacity-50"
+          :class="isOwn ? 'ic-audio-btn-own' : 'ic-audio-btn-other'"
+          :disabled="!isReady"
+          @click="toggle"
+        >
+          <span
+            :class="isPlaying ? 'i-lucide-pause' : 'i-lucide-play'"
+            class="text-base"
+          />
+        </button>
+      </Tooltip>
 
       <div ref="containerRef" class="flex-1 min-w-0" />
     </div>

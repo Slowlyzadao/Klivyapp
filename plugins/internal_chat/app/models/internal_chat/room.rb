@@ -41,8 +41,12 @@ module InternalChat
       kind == 'group'
     end
 
+    # RT-2 (auditoria 2026-05-18): scope `.active` (canon) em vez de
+    # hardcoded `left_at: nil`. Mudança cosmética hoje, mas blinda contra
+    # drift se a definição de "membro ativo" evoluir (ex: adicionar
+    # `banned_at: nil` no scope, callsites todos pegam de graça).
     def member?(user)
-      memberships.where(user_id: user.id, left_at: nil).exists?
+      memberships.active.where(user_id: user.id).exists?
     end
 
     def display_name_for(user)
@@ -57,9 +61,21 @@ module InternalChat
     end
 
     # Override para preferir o blob anexado (ActiveStorage) à coluna string.
+    # BE-16: blob é servido via SecureBlobsController com token + cross-tenant
+    # guard. Coluna string `avatar_url` (fallback histórico) é retornada
+    # crua — assume-se que era URL pública intencional quando setada.
     def avatar_url
-      return url_for(avatar) if avatar.attached?
+      if avatar.attached?
+        token = ::Patients::SecureBlobTokenService.encode(
+          blob_id: avatar.blob.id,
+          account_id: account_id,
+          expires_in: 1.hour
+        )
+        return Rails.application.routes.url_helpers.secure_blob_url(token: token)
+      end
 
+      read_attribute(:avatar_url)
+    rescue StandardError
       read_attribute(:avatar_url)
     end
 

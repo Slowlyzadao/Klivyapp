@@ -136,6 +136,9 @@ class Account < ApplicationRecord
   has_many :working_hours, dependent: :destroy_async
 
   has_one_attached :contacts_export
+  # Logo da clínica — usado nos documentos (variável clinic.logo_url) e na tela
+  # "Dados da clínica". Blob scoped por accounts/<id>/ (active_storage_account_scoping).
+  has_one_attached :logo
 
 
 

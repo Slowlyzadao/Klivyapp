@@ -10,6 +10,11 @@ class InternalChatRoomsAPI extends ApiClient {
     return axios.get(`${this.url}/unread_summary`);
   }
 
+  // Lista só as conversas arquivadas do usuário (aba "Arquivadas").
+  listArchived() {
+    return axios.get(this.url, { params: { archived: true } });
+  }
+
   archive(roomId) {
     return axios.patch(`${this.url}/${roomId}/archive`);
   }

@@ -1,5 +1,6 @@
 /* eslint arrow-body-style: 0 */
 import { frontendURL } from '../../../helper/URLHelper';
+import { getLastOpenedConversationId } from '../../../helper/routeHelpers';
 import ConversationView from './ConversationView.vue';
 
 const CONVERSATION_PERMISSIONS = [
@@ -21,6 +22,22 @@ export default {
       component: ConversationView,
       props: () => {
         return { inboxId: 0 };
+      },
+      beforeEnter: (to, _from, next) => {
+        const lastConversationId = getLastOpenedConversationId(
+          to.params.accountId
+        );
+        if (lastConversationId) {
+          next({
+            name: 'inbox_conversation',
+            params: {
+              accountId: to.params.accountId,
+              conversation_id: lastConversationId,
+            },
+          });
+          return;
+        }
+        next();
       },
     },
     {

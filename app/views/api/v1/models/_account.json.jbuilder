@@ -19,6 +19,12 @@ if resource.custom_attributes.present?
 end
 json.domain @account.domain
 json.features @account.enabled_features
+# Beta features ligadas via `Account#custom_attributes['beta_features']`.
+# Mecanismo paralelo ao `Featurable` por overflow do bitmap de features
+# (signed bigint estourou em ~63 features). Usado por `financial_timeline_v2`
+# e demais flags de rollout interno gradual. Frontend lê com
+# getter Vuex `isBetaFeatureEnabledOnAccount` (a ser introduzido no PR 2).
+json.beta_features Array(@account.custom_attributes && @account.custom_attributes['beta_features']).map(&:to_s)
 json.id @account.id
 json.locale @account.locale
 json.name @account.name

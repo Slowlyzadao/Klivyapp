@@ -5,8 +5,11 @@ class AgendaBookingController < ActionController::Base
     @public_id = params[:public_id]
 
     begin
-      @user = User.joins(:beclinic_profile).find_by!(beclinic_user_profiles: { agenda_public_id: @public_id })
-      @account = @user.accounts.first
+      # Conta vem do profile (NOT NULL desde migration 20260514100001 da
+      # auditoria 9.4). Espelha `Public::Api::V1::Agenda::PublicController#fetch_user`.
+      profile = BeclinicCore::UserProfile.find_by!(agenda_public_id: @public_id)
+      @user = profile.user
+      @account = profile.account
       @config = @account.agenda_online_config
       @agenda_setting = @account.agenda_setting
 

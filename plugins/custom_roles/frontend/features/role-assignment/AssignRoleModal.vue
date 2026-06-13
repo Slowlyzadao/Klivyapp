@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 
@@ -18,6 +18,17 @@ const roles = ref([]);
 const isLoading = ref(false);
 const isSaving = ref(false);
 const selectedRoleId = ref(props.user.klivy_role_id ?? null);
+
+// Ordena por nº de permissões ativas desc (papéis com mais poder no topo);
+// empate cai pra ordem alfabética. Mesma regra da lista de Funções.
+const sortedRoles = computed(() =>
+  [...roles.value].sort((a, b) => {
+    const diff =
+      countActivePermissions(b.permissions || {}) -
+      countActivePermissions(a.permissions || {});
+    return diff !== 0 ? diff : a.name.localeCompare(b.name, 'pt-BR');
+  })
+);
 
 const close = () => emit('close');
 
@@ -80,7 +91,7 @@ onMounted(load);
 
       <div v-else class="flex flex-col gap-2 max-h-[50vh] overflow-y-auto">
         <RoleOption
-          v-for="role in roles"
+          v-for="role in sortedRoles"
           :key="role.id"
           :role="role"
           :selected="selectedRoleId === role.id"

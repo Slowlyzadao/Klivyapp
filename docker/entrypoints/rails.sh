@@ -28,5 +28,15 @@ bundle install -j4
 echo "Gems installed. Running bundle check..."
 bundle check
 
+# ARCH-15 (audit 2026-05-19): semeia stickers default do plugin internal_chat
+# em todo boot. Idempotente — find_or_initialize_by + skip se file_size bate.
+# Custo: ~2s sem mudanças. Roda ANTES do command override (rails s / sidekiq /
+# foreman) pra garantir que stickers default estejam disponíveis em deploys
+# novos (local com docker-compose, prod com Easypanel, test).
+#
+# `|| true` proposital: falha de blob storage NÃO deve derrubar o boot do
+# app — sticker é nice-to-have, não bloqueante. Erro fica visível nos logs.
+bundle exec rails internal_chat:seed_default_stickers || true
+
 # Execute the main process of the container
 exec "$@"

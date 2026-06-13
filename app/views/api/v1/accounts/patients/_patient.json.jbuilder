@@ -35,6 +35,12 @@ json.deleted_at patient.deleted_at&.iso8601
 last_visit_at = @last_visits&.dig(patient.contact_id)
 json.last_visit last_visit_at&.iso8601
 
+# Agregados pré-calculados no controller (1 query cada, sem N+1).
+# Ausentes em endpoints que não populam os hashes (`show`, `summary`).
+json.procedures_count   @procedures_counts&.dig(patient.id) || 0
+json.balance_due_cents  @balances_due_cents&.dig(patient.id) || 0
+json.overdue_cents      @overdue_cents&.dig(patient.id) || 0
+
 # Alertas críticos ativos
 json.critical_alerts patient.critical_alerts.active.ordered_by_severity do |alert|
   json.partial! 'api/v1/accounts/patients/critical_alerts/critical_alert', alert: alert

@@ -1,0 +1,48 @@
+// Entry point dos estilos do plugin document_templates.
+//
+// Padrão SCSS modular (mesmo de plugins/patients/frontend/styles/):
+// - _variables.scss exporta tokens locais
+// - cada feature/tela tem partials próprios em index/, editor/, modals/
+// - cada componente Vue importa o partial específico via @use no <style scoped>
+//
+// Esse arquivo é o ponto de entrada caso a gente precise carregar todos os
+// estilos de uma vez (ex: build separado, storybook). No fluxo normal, cada
+// componente .vue importa só o partial que usa.
+
+// ── Tokens Klivy (design system) ──────────────────────────────────────────
+@use 'klivy-tokens';
+
+// ── Shared (componentes reaproveitáveis) ──────────────────────────────────
+@use 'shared/segmented-tabs';
+@use 'shared/view-toggle';
+
+// ── Index ─────────────────────────────────────────────────────────────────
+@use 'index/index';
+@use 'index/empty-placeholder';
+@use 'index/documents-header';
+@use 'index/folder-sidebar';
+@use 'index/folder-item';
+@use 'index/template-card';
+@use 'index/template-grid';
+@use 'index/template-list';
+@use 'index/klivy-library-section';
+@use 'index/template-context-menu';
+
+// ── Modals ────────────────────────────────────────────────────────────────
+@use 'modals/base-modal';
+@use 'modals/form-stack';
+@use 'modals/confirm-dialog';
+
+// ── Editor ────────────────────────────────────────────────────────────────
+@use 'editor/editor';
+@use 'editor/toolbar';
+@use 'editor/toolbar-select';
+@use 'editor/color-picker';
+@use 'editor/font-stepper';
+@use 'editor/table-menu';
+@use 'editor/special-char';
+@use 'editor/variable-node';
+@use 'editor/paper-container';
+@use 'editor/picker-menu';
+@use 'editor/sidebar';
+@use 'editor/editor-page';

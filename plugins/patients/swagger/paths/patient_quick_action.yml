@@ -1,0 +1,40 @@
+post:
+  tags:
+    - Pacientes
+  summary: Ações rápidas (mark_no_show / toggle_recall)
+  description: |
+    - `mark_no_show`: incrementa `no_show_count`; ao atingir 3, promove
+      `patient_status` para `faltoso`. Tudo em transação + audit log.
+    - `toggle_recall`: inverte `needs_recall` (idempotente em pares).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [action_type]
+          properties:
+            action_type:
+              type: string
+              enum: [mark_no_show, toggle_recall]
+  responses:
+    '200':
+      description: Estado pós-ação
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - type: object
+                description: Resposta de `mark_no_show`.
+                properties:
+                  no_show_count: { type: integer }
+                  patient_status: { type: string }
+              - type: object
+                description: Resposta de `toggle_recall`.
+                properties:
+                  needs_recall: { type: boolean }
+    '422':
+      description: "`action_type` desconhecido"

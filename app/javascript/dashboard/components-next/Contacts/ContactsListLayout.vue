@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router';
 
 import ContactListHeaderWrapper from 'dashboard/components-next/Contacts/ContactsHeader/ContactListHeaderWrapper.vue';
 import ContactsActiveFiltersPreview from 'dashboard/components-next/Contacts/ContactsHeader/components/ContactsActiveFiltersPreview.vue';
-import PaginationFooter from 'dashboard/components-next/pagination/PaginationFooter.vue';
+import Pagination from '@plugins/beclinic_core/frontend/components/Pagination.vue';
 import ContactsLoadMore from 'dashboard/components-next/Contacts/ContactsLoadMore.vue';
 
 const props = defineProps({
@@ -116,28 +116,26 @@ const showPagination = computed(() => {
           />
         </div>
       </main>
-      <footer v-if="showPagination" class="sticky bottom-0 z-0">
-        <div class="flex items-center justify-between max-w-[67rem] px-2">
-          <div class="flex items-center gap-2 text-sm text-n-slate-11">
-            <span>{{ $t('CONTACTS_LAYOUT.PAGINATION_FOOTER.SHOW') }}</span>
-            <select
-              id="contacts-per-page"
-              :value="itemsPerPage"
-              class="text-sm border border-n-slate-6 rounded px-2 py-1 bg-n-surface-2 text-n-slate-12 cursor-pointer"
-              @change="emit('update:pageSize', Number($event.target.value))"
-            >
-              <option v-for="size in pageSizeOptions" :key="size" :value="size">
-                {{ size }}
-              </option>
-            </select>
-            <span>{{ $t('CONTACTS_LAYOUT.PAGINATION_FOOTER.PER_PAGE') }}</span>
-          </div>
-          <PaginationFooter
-            current-page-info="CONTACTS_LAYOUT.PAGINATION_FOOTER.SHOWING"
+      <!-- Rodapé de paginação: componente padrão do Klivy (beclinic_core/
+           Pagination) — já integra "X por página" + "Exibindo A–B de N" +
+           navegação num único card. Antes era um footer artesanal com
+           `max-w-[67rem]` SEM `mx-auto` (encostava à esquerda) embrulhando o
+           PaginationFooter full-width como item de flex (layout quebrado).
+           Centralizado com `max-w-5xl mx-auto` + `px-6` pra casar com os
+           cards acima (`<main class="px-6"><div class="mx-auto max-w-5xl">`). -->
+      <footer
+        v-if="showPagination"
+        class="sticky bottom-0 z-10 px-6 py-3 bg-n-surface-1"
+      >
+        <div class="w-full mx-auto max-w-5xl">
+          <Pagination
             :current-page="currentPage"
-            :total-items="totalItems"
-            :items-per-page="itemsPerPage"
+            :per-page="itemsPerPage"
+            :total-count="totalItems"
+            :per-page-options="pageSizeOptions"
+            item-label="contatos"
             @update:current-page="updateCurrentPage"
+            @update:per-page="emit('update:pageSize', $event)"
           />
         </div>
       </footer>

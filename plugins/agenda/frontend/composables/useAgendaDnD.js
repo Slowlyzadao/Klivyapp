@@ -109,7 +109,9 @@ export function useAgendaDnD({ agenda, store, timelineAreaRef, currentWeekDays, 
     // Snap drag/resize to the configured slot interval so the saved time
     // always lands on a grid line (15/30/60 min). The previous 5-min hard
     // snap produced off-grid times like 09:10 with 15-min slots.
-    const snapMin = agenda.agendaSettings.value?.slot_interval_minutes || 60;
+    // TEMP: snap de 1 em 1 minuto para teste — reverter para a linha abaixo.
+    // const snapMin = agenda.agendaSettings.value?.slot_interval_minutes || 60;
+    const snapMin = 1;
 
     // ── Drag (armed or already active) ──
     if (state.dragArmed || state.isDragging) {

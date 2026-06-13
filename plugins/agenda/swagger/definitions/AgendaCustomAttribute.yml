@@ -1,0 +1,26 @@
+type: object
+description: |
+  Definição de campo customizado para `AgendaEvent.custom_attributes`.
+  Atenção: a resposta usa `type` (alias do model attr `field_type`).
+properties:
+  id:
+    type: integer
+  name:
+    type: string
+    example: "Convênio"
+  type:
+    type: string
+    description: Alias de `field_type` na resposta.
+    enum: [text, textarea, select, date, phone, cpf, rg]
+  required:
+    type: boolean
+  validate_cpf:
+    type: boolean
+    description: Aplica validação módulo-11 quando `type=cpf`.
+  options:
+    type: string
+    description: |
+      Opções (separadas por vírgula ou JSON serializado) — usado para
+      `type=select`. String vazia `""` quando não aplicável.
+  position:
+    type: integer

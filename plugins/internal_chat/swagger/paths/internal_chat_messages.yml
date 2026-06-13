@@ -1,0 +1,130 @@
+get:
+  tags:
+    - Chat Interno — Mensagens
+  summary: Listar mensagens de uma sala
+  description: |
+    Lista mensagens da sala paginadas por cursor `before_id`. Internamente
+    busca em ordem decrescente de `id` e devolve **em ordem ascendente**
+    (mais antigas primeiro) após a paginação.
+    Só mensagens visíveis (sem `deleted_at`) entram no scope.
+    Cada item já vem com `is_favorited` calculado para o usuário atual.
+    Autorização: admin OR (membership AND Klivy `internal_chat.view`).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/roomId'
+    - name: before_id
+      in: query
+      schema:
+        type: integer
+      description: Cursor — devolve mensagens com `id < before_id`.
+    - name: limit
+      in: query
+      description: |
+        Tamanho da página. Default `30` quando ausente/zero/inválido,
+        com teto (cap) de `100`.
+      schema:
+        type: integer
+        default: 30
+        minimum: 1
+        maximum: 100
+  responses:
+    '200':
+      description: Lista (ordem ascendente por `id`)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/Message.yml'
+    '403':
+      description: Não é membro
+    '404':
+      description: Sala não encontrada (ou pertence a outra conta)
+post:
+  tags:
+    - Chat Interno — Mensagens
+  summary: Enviar mensagem
+  description: |
+    Cria uma mensagem na sala via `MessageDispatcher`. O remetente é o
+    usuário autenticado e a mensagem já é marcada como lida por ele.
+
+    Observações de comportamento:
+    - `content_type` é **derivado server-side** (texto/imagem/áudio/vídeo/
+      arquivo/sticker conforme conteúdo e anexos). O enum abaixo descreve os
+      valores possíveis **na resposta** — não envie `content_type` no corpo.
+    - Anexos de imagem (PNG/JPG/HEIC) são convertidos para **WebP**
+      (~70% menor) antes de persistir; GIF e WebP passam direto. Falha de
+      conversão usa o upload original.
+    - Cap de **15 anexos** por mensagem.
+    - `content_attributes` é uma **allowlist** (SEC-21): chaves fora da lista
+      são descartadas. Aceita JSON puro (sem anexos) ou string JSON
+      serializada (quando enviado via `multipart/form-data`).
+
+    Autorização: admin OR (membership AND Klivy `internal_chat.view`).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/roomId'
+  requestBody:
+    required: true
+    content:
+      multipart/form-data:
+        schema:
+          type: object
+          properties:
+            content:
+              type: string
+              description: Texto da mensagem. Opcional quando há anexo ou sticker.
+            content_attributes:
+              type: object
+              description: |
+                Metadados da mensagem. Allowlist (SEC-21) — quaisquer outras
+                chaves são silenciosamente removidas antes de persistir.
+              additionalProperties: false
+              properties:
+                in_reply_to:
+                  type: integer
+                  description: ID da mensagem sendo respondida.
+                quoted_message:
+                  type: object
+                  description: Snapshot da mensagem citada (ex.\ "responder no particular").
+                mentioned_user_ids:
+                  type: array
+                  items: { type: integer }
+                mentioned_ai_agent_ids:
+                  type: array
+                  items: { type: integer }
+                mentioned_all:
+                  type: boolean
+                  description: Menção a todos os membros da sala (@todos).
+            sticker_id:
+              type: integer
+              nullable: true
+              description: |
+                ID de uma figurinha da conta atual ou default global. IDs
+                inválidos/de outra conta são ignorados (vira `nil`).
+            attachments:
+              type: array
+              description: Arquivos anexados (máx. 15; imagens viram WebP).
+              maxItems: 15
+              items:
+                type: string
+                format: binary
+  responses:
+    '201':
+      description: Enviada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                $ref: '../definitions/Message.yml'
+    '403':
+      description: Não é membro
+    '404':
+      description: Sala não encontrada
+    '422':
+      description: Erro de validação (ex.\ mensagem sem conteúdo nem anexo)

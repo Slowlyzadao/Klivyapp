@@ -1,11 +1,17 @@
 get:
   tags:
     - Pacientes
-  summary: Resumo consolidado do prontuário (Summary)
-  description: Retorna o payload completo do paciente, incluindo último agendamento, próximo agendamento e alertas críticos.
+  summary: Resumo consolidado do prontuário (endpoint estrela)
+  description: |
+    Payload consolidado usado pela aba do prontuário: dados básicos +
+    último/próximo agendamento + extrato clínico (alergias, medicamentos,
+    condições) da `Anamnesis` finalizada mais recente + flags de
+    consentimentos LGPD pendentes.
+
+    Audit log `view` registrado.
   parameters:
-    - $ref: '../../../agenda/swagger/common.yml#/components/parameters/accountId'
-    - $ref: '../../../agenda/swagger/common.yml#/components/parameters/id'
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
   responses:
     '200':
       description: Resumo do prontuário
@@ -14,9 +20,7 @@ get:
           schema:
             type: object
             properties:
-              patient:
-                $ref: '../definitions/Patient.yml'
-              last_appointment:
-                $ref: '../../../agenda/swagger/definitions/AgendaEvent.yml'
-              next_appointment:
-                $ref: '../../../agenda/swagger/definitions/AgendaEvent.yml'
+              payload:
+                $ref: '../definitions/PatientSummary.yml'
+    '404':
+      description: Paciente não encontrado

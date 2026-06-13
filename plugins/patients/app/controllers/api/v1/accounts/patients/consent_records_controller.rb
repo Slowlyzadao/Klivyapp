@@ -3,6 +3,8 @@ module Api
     module Accounts
       module Patients
         class ConsentRecordsController < Api::V1::Accounts::BaseController
+          include BeclinicErrorResponse
+
           before_action :set_patient
           before_action :set_consent_record, only: [:show, :sign, :send_remote, :revoke]
 
@@ -32,8 +34,16 @@ module Api
           end
 
           # POST /api/v1/accounts/:account_id/patients/:patient_id/consents
+          #
+          # Dois caminhos:
+          #   - `document_template_id` presente → gera via plugin
+          #     document_templates (Renderer + Grover → rendered_html).
+          #   - Sem template_id → caminho legado (body em texto puro).
           def create
             authorize ConsentRecord
+
+            return create_from_template if params[:document_template_id].present?
+
             @consent = ConsentRecord.new(consent_params)
             @consent.patient    = @patient
             @consent.account    = Current.account
@@ -49,6 +59,37 @@ module Api
             else
               render json: { errors: @consent.errors.full_messages }, status: :unprocessable_entity
             end
+          end
+
+          # Caminho novo via DocumentTemplate. Espera `document_template_id`
+          # com escopo da account corrente. O builder valida que o template
+          # é de consentimento e popula rendered_html + integrity_hash.
+          def create_from_template
+            template = ::DocumentTemplate.for_account(Current.account)
+                                         .find(params[:document_template_id])
+
+            result = ::DocumentTemplates::ConsentRecordBuilder.call(
+              template: template,
+              patient: @patient,
+              professional: current_user,
+              clinic: Current.account,
+              title: params[:title].presence || template.name,
+              observations: params[:observations],
+              expires_after_days: params[:expires_after_days]
+            )
+
+            if result.success?
+              @consent = result.consent
+              PatientAuditLog.log!(
+                account: Current.account, patient: @patient, action: 'create',
+                actor: current_user, resource: @consent, ip_address: request.remote_ip
+              )
+              render :show, status: :created
+            else
+              render_error(result.error, status: :unprocessable_entity)
+            end
+          rescue ActiveRecord::RecordNotFound
+            render_error('Template não encontrado ou sem acesso', status: :not_found)
           end
 
           # POST /api/v1/accounts/:account_id/patients/:patient_id/consents/:id/sign
@@ -72,7 +113,7 @@ module Api
               )
               render :show
             else
-              render json: { error: result.error }, status: :unprocessable_entity
+              render_error(result.error, status: :unprocessable_entity)
             end
           end
 
@@ -98,23 +139,37 @@ module Api
               account: Current.account, patient: @patient, action: 'delete',
               actor: current_user, resource: @consent, ip_address: request.remote_ip
             )
+            PatientTimelineEvent.record!(
+              patient: @patient,
+              account: Current.account,
+              event_type: 'consent_revoked',
+              label: "Consentimento revogado: #{@consent.title.presence || @consent.consent_type}",
+              actor: current_user,
+              reference: @consent
+            )
             render :show
           rescue StandardError => e
-            render json: { error: e.message }, status: :unprocessable_entity
+            render_error(e.message, status: :unprocessable_entity)
           end
 
           private
 
+          # Usa `policy_scope` (não `Current.account.patients.find` cru) para que
+          # o lookup do paciente respeite o `scope=own` do `PatientPolicy::Scope`.
+          # Sem isso (auditoria A-6), profissional com `patients` `scope=own` +
+          # `view_consents` conseguia listar consents de qualquer paciente da
+          # conta passando `patient_id` arbitrário na URL — vazamento de PHI
+          # (LGPD/HIPAA).
           def set_patient
-            @patient = Current.account.patients.find(params[:patient_id])
+            @patient = policy_scope(Current.account.patients).find(params[:patient_id])
           rescue ActiveRecord::RecordNotFound
-            render json: { error: 'Paciente não encontrado' }, status: :not_found
+            render_error('Paciente não encontrado', status: :not_found)
           end
 
           def set_consent_record
             @consent = @patient.consent_records.active.find(params[:id])
           rescue ActiveRecord::RecordNotFound
-            render json: { error: 'Consentimento não encontrado' }, status: :not_found
+            render_error('Consentimento não encontrado', status: :not_found)
           end
 
           def consent_params

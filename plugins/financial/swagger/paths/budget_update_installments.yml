@@ -1,0 +1,37 @@
+patch:
+  tags:
+    - Financeiro · Orçamentos
+  summary: Atualizar parcelas (BUG-02 — orçamento aprovado)
+  description: |
+    Permite mudar `amount_cents`/`due_date`/`payment_method` das parcelas
+    **pendentes** de um orçamento aprovado, mesmo com outras parcelas já
+    pagas. Requer GERENTE/ADMIN. Idempotência via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [installments]
+          properties:
+            installments:
+              type: array
+              items:
+                type: object
+                required: [id]
+                properties:
+                  id: { type: integer }
+                  amount_cents: { type: integer }
+                  due_date: { type: string, format: date }
+                  payment_method: { type: string }
+  responses:
+    '200':
+      description: Atualizadas
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Budget.yml'
+    '422': { description: "Erro" }

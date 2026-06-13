@@ -2,7 +2,11 @@ tags:
   - Canned Responses
 operationId: update-canned-response-in-account
 summary: Update Canned Response in Account
-description: Update a Canned Response in Account
+description: |
+  Update a Canned Response in Account.
+
+  **Authorization** (`CannedResponsePolicy#update?`, desde 1.6.1.17):
+  `administrator` OR Klivy `settings.canned_edit`.
 security:
   - userApiKey: []
 parameters:

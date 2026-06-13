@@ -1,0 +1,32 @@
+/* ── Text helpers ─────────────────────────────────────────── */
+.fin-text-secondary {
+  color: rgb(var(--s-500));
+}
+
+/* ── Section containers ───────────────────────────────────── */
+.financial-section {
+  background: #ffffff;
+  border: 1px solid rgb(var(--s-100));
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+}
+
+body.dark .financial-section {
+  background: rgb(var(--s-800));
+  border-color: rgb(var(--s-700));
+}
+
+.financial-section__title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: rgb(var(--s-800));
+  margin: 0 0 1rem;
+}
+
+body.dark .financial-section__title {
+  color: rgb(var(--s-100));
+}
+/* ── Utility ─────────────────────────────────────────────────── */
+.fin-flex-center { display: flex; align-items: center; }
+.fin-gap-sm { gap: 0.375rem; }
+

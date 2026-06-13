@@ -1,0 +1,27 @@
+get:
+  tags:
+    - Documentos
+  summary: URL assinada para download/preview (15min)
+  description: |
+    Devolve URL temporária do Active Storage com `disposition=inline` e
+    expiração de 15 min. O cliente baixa direto do storage (R2/S3/etc).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: URL assinada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              document_id: { type: integer }
+              title: { type: string }
+              file_name: { type: string }
+              url: { type: string }
+              expires_in_seconds: { type: integer, example: 900 }
+              content_type: { type: string, example: "application/pdf" }
+    '404':
+      description: Documento sem arquivo anexado

@@ -3,12 +3,6 @@ lib/whatsapp/auth_info/*
 lib/whatsapp/sessions/*
 !lib/whatsapp/sessions/.gitkeep
 lib/whatsapp/media_cache/*
-# PII: mapeamento LID -> telefone real de pacientes (LGPD)
-lib/whatsapp/lid_map.json
-# Buffers temporários do bridge (áudios/imagens em trânsito)
-lib/whatsapp/in_*.tmp
-lib/whatsapp/out_*.tmp
-lib/whatsapp/*.tmp
 node_modules
 /log/*
 /tmp/*
@@ -48,12 +42,6 @@ pnpm-debug.log*
 /CLAUDE.md
 /changelog_Qwen.md
 /.vscode/
-/.claude/settings.local.json
-/.claude/projects/
-
-# ----------------- ASSETS LOCAIS / LOGS ADICIONAIS ----------------- #
-/FIGURINHAS predefinidas/
-/logs/
 
 # Node/PNPM stores e caches
 .pnpm-store/
@@ -77,3 +65,16 @@ docs/R2_Cloudlare_*.md
 docs/R2_Cloudflare_*.md
 docs/**/credentials*.md
 docs/**/secrets*.md
+
+# ----------------- DADOS DE CLIENTES REAIS (LGPD) ----------------- #
+# Audit 2026-05-22: CSV/XLSX usados pra testar o módulo Migration contém
+# dados reais de pacientes (CPF, telefone, anamnese) das clínicas Streit,
+# Mamedes etc. NUNCA commitar — devem viver só localmente, em cada máquina
+# de dev, e em produção o super admin sobe pela UI (arquivo nem toca o
+# disco do container). Também excluído do Dockerfile via .dockerignore.
+plugins/xls/
+mapa-financeiro.json
+
+# Env local e logs do bridge WhatsApp (não versionar)
+lib/whatsapp/env.localhost
+lib/whatsapp/*.log

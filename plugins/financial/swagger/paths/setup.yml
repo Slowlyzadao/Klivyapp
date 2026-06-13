@@ -1,0 +1,16 @@
+get:
+  tags:
+    - Financeiro · Setup
+  summary: Estado do wizard de configuração
+  description: |
+    Cria a `SetupState` da conta se ainda não existe. Não exige
+    `ensure_setup_complete!` (bypass) — é o próprio wizard.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Estado atual
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/SetupState.yml'

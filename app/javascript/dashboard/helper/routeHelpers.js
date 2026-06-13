@@ -11,6 +11,7 @@ import {
   REPORTS_PERMISSIONS,
   PORTAL_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
+import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 
 // =====================================================
 // Klivy custom-role route rules
@@ -39,6 +40,14 @@ const KLIVY_EXACT_ROUTE_RULES = {
   sla_list: ['settings', 'sla_view'],
   conversation_workflow_index: ['settings', 'workflow_view'],
   agent_bots: ['settings', 'agent_bots_view'],
+  // KlivyRoles — granularidade por action (auditoria C-1):
+  // prefix `klivy_roles` em KLIVY_PREFIX_ROUTE_RULES casava `_list`/`_new`/`_edit`
+  // com a mesma perm `roles_view` (leitura), abrindo criação/edição para quem só
+  // deveria visualizar. Cada nome de rota agora exige a perm coerente com a
+  // action do controller (`roles_view` / `roles_create` / `roles_edit`).
+  klivy_roles_list: ['settings', 'roles_view'],
+  klivy_roles_new: ['settings', 'roles_create'],
+  klivy_roles_edit: ['settings', 'roles_edit'],
   // Agenda (Klivy plugin)
   agenda_dashboard_index: ['agenda', 'view'],
   agenda_settings_index: ['agenda', 'view_settings'],
@@ -65,18 +74,52 @@ const KLIVY_EXACT_ROUTE_RULES = {
   campaigns_whatsapp_index: ['campaigns', 'view'],
   campaigns_ongoing_index: ['campaigns', 'view'],
   campaigns_one_off_index: ['campaigns', 'view'],
+  // Inboxes — granularidade por action (auditoria A-4):
+  // prefix `settings_inbox`/`settings_inboxes` casava `_new`/`_finish`/`_page_channel`/
+  // `_add_agents` com `inboxes_view`, abrindo CRUD completo de inbox para quem só
+  // deveria visualizar. Cada rota agora exige a perm coerente.
+  settings_inbox_list: ['settings', 'inboxes_view'],
+  settings_inbox_show: ['settings', 'inboxes_view'],
+  settings_inbox_new: ['settings', 'inboxes_create'],
+  settings_inbox_finish: ['settings', 'inboxes_create'],
+  settings_inboxes_page_channel: ['settings', 'inboxes_create'],
+  settings_inboxes_add_agents: ['settings', 'inboxes_manage_agents'],
+  // Teams — granularidade por action (auditoria A-4):
+  // prefix `settings_teams` casava `_new`/`_finish`/`_add_agents`/`_edit`/`_edit_members`/
+  // `_edit_finish` com `teams_view`, abrindo CRUD completo de teams para quem só
+  // deveria visualizar.
+  settings_teams_list: ['settings', 'teams_view'],
+  settings_teams_new: ['settings', 'teams_create'],
+  settings_teams_finish: ['settings', 'teams_create'],
+  settings_teams_add_agents: ['settings', 'teams_create'],
+  settings_teams_edit: ['settings', 'teams_edit'],
+  settings_teams_edit_members: ['settings', 'teams_edit'],
+  settings_teams_edit_finish: ['settings', 'teams_edit'],
+  // Integrations — granularidade por action (auditoria A-4):
+  // prefix `settings_applications` casava `settings_applications_integration` (página
+  // de detalhe), expondo a configuração de uma integração específica para qualquer
+  // usuário com `integrations_view`. Actions de conectar/desconectar permanecem
+  // protegidas no backend.
+  settings_applications: ['settings', 'integrations_view'],
+  settings_applications_integration: ['settings', 'integrations_view'],
+  // Advanced assignment policies — granularidade por action (auditoria A-4):
+  // prefixes `assignment_policy`/`agent_assignment_policy`/`agent_capacity_policy`
+  // casavam `_create`/`_edit` com `users_view`. Leitura continua com `users_view`;
+  // criar e editar policies agora requer `users_edit` (mesma perm do editor de agente).
+  assignment_policy_index: ['settings', 'users_view'],
+  agent_assignment_policy_index: ['settings', 'users_view'],
+  agent_assignment_policy_create: ['settings', 'users_edit'],
+  agent_assignment_policy_edit: ['settings', 'users_edit'],
+  agent_capacity_policy_index: ['settings', 'users_view'],
+  agent_capacity_policy_create: ['settings', 'users_edit'],
+  agent_capacity_policy_edit: ['settings', 'users_edit'],
 };
 
-const KLIVY_PREFIX_ROUTE_RULES = {
-  settings_teams: ['settings', 'teams_view'],
-  settings_inbox: ['settings', 'inboxes_view'],
-  settings_applications: ['settings', 'integrations_view'],
-  settings_inboxes: ['settings', 'inboxes_view'],
-  klivy_roles: ['settings', 'roles_view'],
-  agent_assignment_policy: ['settings', 'users_view'],
-  agent_capacity_policy: ['settings', 'users_view'],
-  assignment_policy: ['settings', 'users_view'],
-};
+// Todos os prefixes foram migrados para EXACT rules em KLIVY_EXACT_ROUTE_RULES
+// (auditoria C-1 + A-4). Prefix matching é frágil: `settings_teams` cobria
+// `_new`/`_edit`/etc. com a mesma perm de leitura. Mantemos o objeto vazio para
+// preservar o contrato da API (`klivyPrefixRule` retorna undefined => fallback).
+const KLIVY_PREFIX_ROUTE_RULES = {};
 
 const KLIVY_REQUIRED_ROUTE_RULES = {
   // Conversation tabs that the native CONVERSATION_PERMISSIONS allows for any
@@ -100,6 +143,62 @@ const KLIVY_REQUIRED_ROUTE_RULES = {
   contacts_dashboard_active: ['contacts', 'view_active'],
   contacts_dashboard_segments_index: ['contacts', 'manage_segments'],
   contacts_dashboard_labels_index: ['contacts', 'manage_tags'],
+  // Patients pages (auditoria A-2) — meta.permissions é ['administrator','agent']
+  // (libera qualquer agent). Sem este deny, qualquer agent acessa o prontuário
+  // por URL mesmo sem perm `patients.*`. Sidebar usa `moduleEnabled('patients')`
+  // que é fail-open (mostra se módulo não está no hash) — backstop aqui.
+  patients_dashboard_index: ['patients', 'view'],
+  patients_dashboard_record: ['patients', 'view'],
+  // Ajuda (Central de Ajuda do plugin Klivy — auditoria A-2). Sem deny, qualquer
+  // agent acessa via URL. `help.view` é a única perm desse módulo.
+  ajuda_dashboard_index: ['help', 'view'],
+  ajuda_report_bug: ['help', 'view'],
+  ajuda_feature_request: ['help', 'view'],
+  // Agenda (auditoria A-3) — promove de KLIVY_EXACT (allow list noop pra rotas
+  // que Chatwoot já libera) para KLIVY_REQUIRED (deny list real). Cobre acesso
+  // por URL direta mesmo quando sidebar gating não aparece.
+  agenda_dashboard_index: ['agenda', 'view'],
+  agenda_categories_index: ['agenda', 'view'],
+  agenda_settings_index: ['agenda', 'view_settings'],
+  agenda_custom_attributes_index: ['agenda', 'manage_custom_attributes'],
+  // Captain / BEA (auditoria A-1) — meta.permissions é ['administrator','agent']
+  // E sub-rotas são protegidas por feature flag, mas sem deny por perm Klivy
+  // qualquer agent com o flag acessava todas as sub-páginas via URL.
+  captain_assistants_index: ['captain', 'view'],
+  captain_assistants_create_index: ['captain', 'view'],
+  captain_assistants_responses_index: ['captain', 'manage_faqs'],
+  captain_assistants_responses_pending: ['captain', 'manage_faqs'],
+  captain_assistants_documents_index: ['captain', 'manage_documents'],
+  captain_assistants_scenarios_index: ['captain', 'manage_scenarios'],
+  captain_assistants_playground_index: ['captain', 'use_playground'],
+  captain_assistants_inboxes_index: ['captain', 'manage_inboxes'],
+  captain_tools_index: ['captain', 'manage_tools'],
+  captain_assistants_settings_index: ['captain', 'manage_settings'],
+  captain_assistants_guardrails_index: ['captain', 'manage_settings'],
+  captain_assistants_guidelines_index: ['captain', 'manage_settings'],
+  // Companies (Chatwoot Enterprise feature) — propositadamente NÃO mapeada:
+  // não há módulo `companies` em shared/modules.js (Klivy não usa hoje).
+  // Mantém comportamento atual (qualquer agent acessa). Anotado em
+  // CUSTOM_ROLES_AUDITORIA_COMPLETA para abordagem futura.
+
+  // SEC-18 (auditoria 2026-05-18) — Internal Chat: meta.permissions hoje
+  // libera qualquer agent. Sem este deny, usuário sem `internal_chat.view`
+  // alcança a feature via URL direta. Backend já gateia via
+  // InternalChat::RoomPolicy (perm `internal_chat.view`), mas o frontend
+  // mostrava sidebar/rota antes do 403 — UX confusa.
+  internal_chat_home: ['internal_chat', 'view'],
+  internal_chat_room: ['internal_chat', 'view'],
+  internal_chat_mentions: ['internal_chat', 'view'],
+
+  // SEC-19 (auditoria 2026-05-18) — Bea (ai_agent): same pattern, perms
+  // granulares no módulo `captain` (extension point preservado quando
+  // ai_agent ganhar próprio módulo Klivy).
+  ai_agent_follow_ups_index: ['captain', 'manage_follow_ups'],
+  ai_agent_internal_notification_templates_index: [
+    'captain',
+    'manage_templates',
+  ],
+  ai_agent_training_index: ['captain', 'manage_faqs'],
 };
 
 const klivyHasPermission = (klivyPermissions, [moduleKey, action]) => {
@@ -121,6 +220,18 @@ const klivyPrefixRule = routeName => {
 
 const klivyRequiredRule = routeName =>
   routeName ? KLIVY_REQUIRED_ROUTE_RULES[routeName] : undefined;
+
+// Verdadeiro quando o store `beclinicPermissions` já teve a primeira resposta
+// do `GET /beclinic_permissions` aplicada (mesmo que tenha vindo `{}`). Antes
+// disso a navegação inicial (F5/URL direta) chega no `router.beforeEach` com
+// `klivyPermissions = {}` — e qualquer regra KLIVY_REQUIRED (deny list)
+// bloquearia toda rota, redirecionando pra dashboard. Pra evitar esse falso
+// positivo, o gate só é aplicado quando o hash tem ao menos uma chave de
+// módulo presente. Race window: até o fetch terminar, KLIVY_REQUIRED é
+// fail-open — sidebar gates e backend Pundit cobrem (ver auditoria Lote 8,
+// race condition encontrada durante validação).
+const isKlivyPermissionsLoaded = perms =>
+  perms && typeof perms === 'object' && Object.keys(perms).length > 0;
 
 const routeIsAccessibleByKlivy = (routeName, klivyPermissions) => {
   const rule = klivyExactRule(routeName) || klivyPrefixRule(routeName);
@@ -168,12 +279,15 @@ const validateActiveAccountRoutes = (to, user, klivyPermissions) => {
   // Klivy deny rule: even if Chatwoot would let the user pass, refuse if the
   // route is mapped and the user lacks the Klivy perm. Skip for native admins
   // so vanilla Chatwoot installs are unaffected.
-  if (!isNativeAdmin) {
+  //
+  // Guard `isKlivyPermissionsLoaded`: F5/URL direta dispara o `beforeEach` ANTES
+  // do `App.vue#mounted` ter completado `beclinicPermissions/fetch`. Sem este
+  // guard, `klivyHasPermission({}, rule)` sempre retorna false e bloqueia toda
+  // rota mapeada → user fica preso no dashboard. Quando o store carrega, o
+  // sidebar e o backend Pundit fazem o gating real.
+  if (!isNativeAdmin && isKlivyPermissionsLoaded(klivyPermissions)) {
     const requiredRule = klivyRequiredRule(to.name);
-    if (
-      requiredRule &&
-      !klivyHasPermission(klivyPermissions, requiredRule)
-    ) {
+    if (requiredRule && !klivyHasPermission(klivyPermissions, requiredRule)) {
       return defaultRedirectPage(to, userPermissions);
     }
   }
@@ -278,3 +392,37 @@ export const isAInboxViewRoute = (routeName, includeBase = false) => {
 
 export const isNotificationRoute = routeName =>
   routeName === 'notifications_index';
+
+const readLastOpenedConversationMap = () => {
+  try {
+    const raw = localStorage.getItem(
+      LOCAL_STORAGE_KEYS.LAST_OPENED_CONVERSATION
+    );
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+export const getLastOpenedConversationId = accountId => {
+  if (!accountId) return null;
+  const map = readLastOpenedConversationMap();
+  const value = map[String(accountId)];
+  return value ? Number(value) : null;
+};
+
+export const setLastOpenedConversationId = (accountId, conversationId) => {
+  if (!accountId || !conversationId) return;
+  try {
+    const map = readLastOpenedConversationMap();
+    map[String(accountId)] = Number(conversationId);
+    localStorage.setItem(
+      LOCAL_STORAGE_KEYS.LAST_OPENED_CONVERSATION,
+      JSON.stringify(map)
+    );
+  } catch {
+    // ignore quota / serialization errors
+  }
+};

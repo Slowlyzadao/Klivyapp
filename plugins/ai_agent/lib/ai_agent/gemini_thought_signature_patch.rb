@@ -1,24 +1,31 @@
 require 'securerandom'
 
+# Gemini 3 Preview models REQUIRE that every functionCall part returned by
+# the model be re-sent back with its `thoughtSignature` field intact in any
+# subsequent request that includes that part in the history. Omitting it
+# produces 400 BadRequest:
+#
+#   "Function call is missing a thought_signature in functionCall parts."
+#
+# The official Python/Node SDKs handle this transparently. RubyLLM 1.9.2
+# does not — `extract_tool_calls` drops the signature on the floor and
+# `format_tool_call` re-emits the part without it. This patch closes both
+# gaps:
+#
+#   1. `RubyLLM::ToolCall` gains a `thought_signature` accessor.
+#   2. Gemini's `extract_tool_calls` populates it from the response part.
+#   3. Gemini's `format_tool_call` re-attaches it on outgoing parts.
+#
+# Reload-safe: re-applying the patch is idempotent, so Rails dev `to_prepare`
+# can call this every reload without stacking aliases.
+#
+# NESTED MODULE INTENTIONAL: este arquivo é `require_relative`'d na
+# linha 2 de `engine.rb`, ANTES do Zeitwerk autoload definir `AiAgent`.
+# Usar `module AiAgent::GeminiThoughtSignaturePatch` (compact) explode
+# com `uninitialized constant AiAgent`. A forma nested define `AiAgent`
+# implicitamente — única forma que funciona aqui.
+# rubocop:disable Style/ClassAndModuleChildren
 module AiAgent
-  # Gemini 3 Preview models REQUIRE that every functionCall part returned by
-  # the model be re-sent back with its `thoughtSignature` field intact in any
-  # subsequent request that includes that part in the history. Omitting it
-  # produces 400 BadRequest:
-  #
-  #   "Function call is missing a thought_signature in functionCall parts."
-  #
-  # The official Python/Node SDKs handle this transparently. RubyLLM 1.9.2
-  # does not — `extract_tool_calls` drops the signature on the floor and
-  # `format_tool_call` re-emits the part without it. This patch closes both
-  # gaps:
-  #
-  #   1. `RubyLLM::ToolCall` gains a `thought_signature` accessor.
-  #   2. Gemini's `extract_tool_calls` populates it from the response part.
-  #   3. Gemini's `format_tool_call` re-attaches it on outgoing parts.
-  #
-  # Reload-safe: re-applying the patch is idempotent, so Rails dev `to_prepare`
-  # can call this every reload without stacking aliases.
   module GeminiThoughtSignaturePatch
     APPLIED_FLAG = :@__ai_agent_gemini_thought_signature_patched
 
@@ -104,3 +111,4 @@ module AiAgent
     end
   end
 end
+# rubocop:enable Style/ClassAndModuleChildren

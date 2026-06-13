@@ -33,17 +33,26 @@ const accountId = computed(() => route.params.accountId);
 const search = ref('');
 const pendingDeleteId = ref(null);
 
+const totalFor = role => countActivePermissions(role.permissions || {});
+
+// Ordena por nº de permissões ativas desc (papéis com mais poder no topo);
+// empate cai pra ordem alfabética. Filtro de busca aplica depois.
+const sorted = computed(() =>
+  [...roles.value].sort((a, b) => {
+    const diff = totalFor(b) - totalFor(a);
+    return diff !== 0 ? diff : a.name.localeCompare(b.name, 'pt-BR');
+  })
+);
+
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase();
-  if (!q) return roles.value;
-  return roles.value.filter(
+  if (!q) return sorted.value;
+  return sorted.value.filter(
     r =>
       r.name.toLowerCase().includes(q) ||
       (r.description || '').toLowerCase().includes(q)
   );
 });
-
-const totalFor = role => countActivePermissions(role.permissions || {});
 
 const presetLabel = role => {
   if (!role.preset_key) return null;

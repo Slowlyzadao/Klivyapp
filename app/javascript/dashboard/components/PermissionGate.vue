@@ -15,8 +15,8 @@
  *     </template>
  *   </PermissionGate>
  *
- * Para bypass total (ex: seções que o Dono sempre vê):
- *   <PermissionGate :always-allow="isDono">
+ * Para bypass total (ex: seções que admins sempre veem):
+ *   <PermissionGate :always-allow="isAdmin">
  *     ...
  *   </PermissionGate>
  */

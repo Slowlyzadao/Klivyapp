@@ -32,13 +32,13 @@ export function useSettingsNotifications(store) {
   ];
 
   const notifIconColors = [
-    { value: 'green', label: 'Verde' },
-    { value: 'blue', label: 'Azul' },
-    { value: 'red', label: 'Vermelho' },
-    { value: 'pink', label: 'Rosa' },
-    { value: 'purple', label: 'Roxo' },
-    { value: 'yellow', label: 'Amarelo' },
-    { value: 'orange', label: 'Laranja' },
+    { value: 'green', label: 'Verde', color: '#22c55e' },
+    { value: 'blue', label: 'Azul', color: '#3b82f6' },
+    { value: 'red', label: 'Vermelho', color: '#ef4444' },
+    { value: 'pink', label: 'Rosa', color: '#ec4899' },
+    { value: 'purple', label: 'Roxo', color: '#a855f7' },
+    { value: 'yellow', label: 'Amarelo', color: '#eab308' },
+    { value: 'orange', label: 'Laranja', color: '#f97316' },
   ];
 
   const notifEditModal = ref(false);
@@ -297,6 +297,10 @@ export function useSettingsNotifications(store) {
     } else {
       notifNewDraft.value.inboxes.push({ inbox_id: inbox.id, label: inbox.name, color: 'wa' });
     }
+    // Fecha o dropdown ao selecionar — a multi-seleção fica visível pelos chips
+    // acima; pra adicionar outra inbox basta reabrir o seletor.
+    openDropdownIndex.value = null;
+    dropdownPos.value = null;
   };
 
   const isNewInboxSelected = (inbox) => {
@@ -312,6 +316,9 @@ export function useSettingsNotifications(store) {
     } else {
       notifEditTarget.value.inboxes.push({ inbox_id: inbox.id, label: inbox.name, color: 'wa' });
     }
+    // Fecha o dropdown ao selecionar (ver toggleNewInbox).
+    openDropdownIndex.value = null;
+    dropdownPos.value = null;
   };
 
   const isEditInboxSelected = (inbox) => {

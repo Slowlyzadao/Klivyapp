@@ -1,0 +1,104 @@
+get:
+  tags:
+    - Bea — Follow-ups
+  summary: Listar regras de follow-up
+  description: 'Autorização: admin OR Klivy `captain.view`.'
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Lista
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/FollowUpRule.yml'
+    '401':
+      description: Sem permissão (`captain.view`) — Pundit renderiza 401
+post:
+  tags:
+    - Bea — Follow-ups
+  summary: Criar regra
+  description: |
+    Cria uma regra de follow-up. A atualização (`update`) aceita tanto
+    `PATCH` quanto `PUT` na rota `/:id` (resource padrão Rails) — ambos
+    fazem `update` parcial dos mesmos campos.
+
+    Autorização: admin OR Klivy `captain.manage_follow_ups`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [follow_up_rule]
+          properties:
+            follow_up_rule:
+              type: object
+              # context_brief NÃO é universalmente obrigatório: depende de
+              # action_type (generative exige context_brief; static exige
+              # static_body) e service_recall exige agenda_service_id +
+              # recall_interval_value/unit. Validação condicional no model.
+              required: [name, trigger_type]
+              properties:
+                name: { type: string, maxLength: 120 }
+                trigger_type:
+                  type: string
+                  enum: [pre_appointment, post_appointment, no_response, no_show, appointment_confirmed, custom, service_recall]
+                offset_hours: { type: integer }
+                offset_unit:
+                  type: string
+                  enum: [seconds, minutes, hours]
+                applies_to:
+                  type: string
+                  enum: [both, ai_agent, manual]
+                action_type:
+                  type: string
+                  enum: [generative, static]
+                context_brief: { type: string, maxLength: 4000 }
+                static_body: { type: string, maxLength: 4000 }
+                persona_override: { type: string }
+                agenda_service_id: { type: integer }
+                recall_interval_value: { type: integer }
+                recall_interval_unit: { type: string, enum: [minutes, hours, days, weeks, months, years], default: months }
+                stop_on_reply: { type: boolean }
+                stop_on_booking: { type: boolean }
+                cloud_template_name: { type: string }
+                cloud_template_lang: { type: string }
+                cloud_template_params:
+                  type: array
+                  items: { type: string }
+                max_per_target: { type: integer, minimum: 0 }
+                cooldown_minutes: { type: integer, minimum: 0, maximum: 10080, default: 10 }
+                status_filter: { type: object }
+                enabled: { type: boolean }
+                position: { type: integer }
+                steps:
+                  type: array
+                  description: |
+                    Passos adicionais da cadência (2..N). Lista completa
+                    (full-replace). Só vale pra triggers cron. Cada item:
+                    offset_hours + offset_unit + corpo (context_brief no
+                    modo generativo, static_body no estático).
+                  items:
+                    type: object
+                    required: [offset_hours, offset_unit]
+                    properties:
+                      offset_hours: { type: integer }
+                      offset_unit: { type: string, enum: [seconds, minutes, hours] }
+                      context_brief: { type: string, maxLength: 4000 }
+                      static_body: { type: string, maxLength: 4000 }
+  responses:
+    '201':
+      description: Criada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/FollowUpRule.yml'
+    '401':
+      description: Sem permissão (`captain.manage_follow_ups`) — Pundit renderiza 401
+    '422':
+      description: Validação falhou (limites de offset, trigger inválido, etc.)

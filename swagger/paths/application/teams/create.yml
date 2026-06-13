@@ -4,7 +4,12 @@ operationId: create-a-team
 summary: Create a team
 security:
   - userApiKey: []
-description: Create a team in the account
+description: |
+  Create a team in the account.
+
+  **Authorization** (`TeamPolicy#create?`, desde 1.6.1.21 — auditoria A-5):
+  `administrator` OR Klivy `settings.teams_create`. Mesmo padrão pra
+  `update` (`teams_edit`) e `delete` (`teams_delete`).
 parameters:
   - $ref: '#/components/parameters/account_id'
 requestBody:

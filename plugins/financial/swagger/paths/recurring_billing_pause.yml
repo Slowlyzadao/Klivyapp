@@ -1,0 +1,30 @@
+post:
+  tags:
+    - Financeiro · Mensalidades
+  summary: Pausar mensalidade fixa
+  description: |
+    Pausa a geração de cobranças (`status='paused'`, registra `paused_at`).
+    Mantém o `next_generation_at` — quando retomar, **não** dispara catch-up.
+    Só billings `active` podem ser pausados (caso contrário 422
+    `invalid_transition`).
+
+    Requer RECEPCAO/GERENTE/ADMIN. Idempotência opcional via header
+    `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Mensalidade pausada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/RecurringBilling.yml'
+    '403':
+      description: Sem permissão (requer RECEPCAO/GERENTE/ADMIN).
+    '404':
+      description: Não encontrada.
+    '412':
+      description: Setup financeiro incompleto (wizard pendente).
+    '422':
+      description: Transição inválida — só billings ativos podem ser pausados (`invalid_transition`).

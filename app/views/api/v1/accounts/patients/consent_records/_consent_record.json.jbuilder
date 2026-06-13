@@ -9,6 +9,7 @@ json.body consent_record.body
 json.observations consent_record.observations
 json.status consent_record.computed_status
 json.mode consent_record.mode
+json.signature_method consent_record.signature_method
 json.ip_address consent_record.ip_address
 json.signed_ip consent_record.ip_address
 json.device_info consent_record.device_info

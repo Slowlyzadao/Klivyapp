@@ -1,0 +1,24 @@
+post:
+  tags:
+    - Financeiro · Parcelas
+  summary: Preparar mensagem de cobrança (wa.me)
+  description: |
+    Monta a mensagem de cobrança e devolve `{phone, whatsapp_message}`
+    para o frontend abrir `wa.me`. **Não envia nada em background** — o
+    operador clica e o WhatsApp abre com mensagem pronta.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Mensagem montada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              phone: { type: string }
+              whatsapp_message: { type: string }
+              message: { type: string }
+    '422':
+      description: Paciente sem telefone

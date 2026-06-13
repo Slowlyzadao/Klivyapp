@@ -34,15 +34,20 @@ class ActionCableConnector extends BaseActionCableConnector {
       'conversation.updated': this.onConversationUpdated,
       'account.cache_invalidated': this.onCacheInvalidate,
       'copilot.message.created': this.onCopilotMessageCreated,
-      // InternalChat plugin (chat interno entre profissionais).
-      // Handlers dispatch direto pros stores Vuex do plugin.
-      'internal_chat.message.created': this.onInternalChatMessageCreated,
-      'internal_chat.message.updated': this.onInternalChatMessageUpdated,
+      // internal_chat plugin events (RT-1, auditoria 2026-05-18). Backend
+      // broadcasta esses eventos via BroadcastMessageJob, RoomsController,
+      // MessagesController e TypingController, mas sem esses handlers o
+      // ActionCableConnector descartava silenciosamente — UI só atualizava
+      // após F5. Cada handler dispatcha pra action correspondente do store
+      // namespaced do plugin (todos os 5 stores já têm receiveFromCable
+      // ou equivalente implementado).
+      'internal_chat.message.created': this.onInternalChatMessageEvent,
+      'internal_chat.message.updated': this.onInternalChatMessageEvent,
+      'internal_chat.mention.created': this.onInternalChatMentionCreated,
+      'internal_chat.typing': this.onInternalChatTyping,
       'internal_chat.room.updated': this.onInternalChatRoomUpdated,
       'internal_chat.room.deleted': this.onInternalChatRoomDeleted,
-      'internal_chat.mention.created': this.onInternalChatMentionCreated,
-      'internal_chat.read_receipt.updated': this.onInternalChatReadReceiptUpdated,
-      'internal_chat.typing': this.onInternalChatTyping,
+      'internal_chat.read_receipt.updated': this.onInternalChatReadReceipt,
     };
   }
 
@@ -203,50 +208,48 @@ class ActionCableConnector extends BaseActionCableConnector {
     this.app.$store.dispatch('copilotMessages/upsert', data);
   };
 
-  onInternalChatMessageCreated = data => {
-    this.app.$store.dispatch('internalChatMessages/receiveFromCable', data);
-    const currentUserId = this.app.$store.getters.getCurrentUserID;
-    if (data?.sender?.id !== currentUserId) {
-      this.app.$store.dispatch('internalChatRooms/bumpUnread', data.room_id);
-    }
-    // Defensive: se chegou mensagem pra uma sala que não conhecemos (DM nova,
-    // room.updated perdido em cable disconnect), busca do backend pra
-    // aparecer na lista — senão o usuário recebe a mensagem mas nunca vê.
-    const known = this.app.$store.getters['internalChatRooms/getRoomById'](data.room_id);
-    if (!known) {
-      this.app.$store.dispatch('internalChatRooms/show', data.room_id);
-    }
-  };
-
-  onInternalChatMessageUpdated = data => {
-    this.app.$store.dispatch('internalChatMessages/receiveFromCable', data);
-  };
-
-  onInternalChatRoomUpdated = data => {
-    this.app.$store.dispatch('internalChatRooms/upsertFromCable', data);
-  };
-
-  onInternalChatRoomDeleted = data => {
-    this.app.$store.dispatch('internalChatRooms/handleDeletedFromCable', data);
-  };
-
-  onInternalChatMentionCreated = data => {
-    this.app.$store.dispatch('internalChatMentions/receiveFromCable', data);
-  };
-
-  onInternalChatReadReceiptUpdated = data => {
-    this.app.$store.dispatch('internalChatRooms/applyReadReceipt', data);
-  };
-
-  onInternalChatTyping = data => {
-    this.app.$store.dispatch('internalChatTyping/receive', data);
-  };
-
   onCacheInvalidate = data => {
     const keys = data.cache_keys;
     this.app.$store.dispatch('labels/revalidate', { newKey: keys.label });
     this.app.$store.dispatch('inboxes/revalidate', { newKey: keys.inbox });
     this.app.$store.dispatch('teams/revalidate', { newKey: keys.team });
+  };
+
+  // internal_chat: message.created e message.updated compartilham handler.
+  // O store `receiveFromCable` faz dedup por message.id (APPEND ou REPLACE).
+  onInternalChatMessageEvent = data => {
+    this.app.$store.dispatch('internalChatMessages/receiveFromCable', data);
+  };
+
+  // internal_chat: nova menção. Incrementa unreadCount e prepende a lista
+  // visível em MentionsView.
+  onInternalChatMentionCreated = data => {
+    this.app.$store.dispatch('internalChatMentions/receiveFromCable', data);
+  };
+
+  // internal_chat: indicador de "digitando…". Backend faz fan-out pros
+  // outros membros da sala (sender é excluído lá). Store mantém timers de
+  // expiry — verifica internalChatTyping.js pra cleanup logic.
+  onInternalChatTyping = data => {
+    this.app.$store.dispatch('internalChatTyping/receive', data);
+  };
+
+  // internal_chat: sala teve metadata mudada (avatar, nome, membros, mute,
+  // archive). Upsert no store reordena pela atividade recente.
+  onInternalChatRoomUpdated = data => {
+    this.app.$store.dispatch('internalChatRooms/upsertFromCable', data);
+  };
+
+  // internal_chat: sala destruída. Remove do sidebar; se for a sala atual,
+  // o RoomView watcher redireciona pra home.
+  onInternalChatRoomDeleted = data => {
+    this.app.$store.dispatch('internalChatRooms/handleDeletedFromCable', data);
+  };
+
+  // internal_chat: outro membro marcou mensagens como lidas. Atualiza o
+  // last_read_message_id daquele membro pra render correto de ✓✓.
+  onInternalChatReadReceipt = data => {
+    this.app.$store.dispatch('internalChatRooms/applyReadReceipt', data);
   };
 }
 

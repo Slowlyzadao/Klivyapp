@@ -78,6 +78,14 @@ export function useAgendaInit({ store, agendaState, checkQueryParams }) {
   };
 
   const fetchEventsForView = () => {
+    // Year View consome endpoint agregado (year_stats), não o de eventos
+    // crus — fetchByRange estouraria INDEX_MAX_RESULTS pra ~1k+ eventos/ano
+    // e ainda assim faltaria o breakdown por status que o heatmap precisa.
+    if (agendaState.viewMode === 'year') {
+      return store.dispatch('agendaEvents/fetchYearStats', {
+        year: agendaState.currentDate.getFullYear(),
+      });
+    }
     const { startsAt, endsAt } = computeRange(
       agendaState.currentDate,
       agendaState.viewMode
@@ -90,6 +98,11 @@ export function useAgendaInit({ store, agendaState, checkQueryParams }) {
   // store já contém os eventos quando o watcher disparar a request.
   const prefetchAdjacent = () => {
     const mode = agendaState.viewMode;
+    // Year View: pre-fetch dos anos vizinhos seria 2 requests de payload
+    // agregado (~365 dias × ~8 colunas de status cada). Pequeno e barato,
+    // mas raramente compensa — usuário tipicamente fica num ano só.
+    // Skip por hora; revisitar se telemetria mostrar navegação frequente.
+    if (mode === 'year') return;
     if (mode === 'month') return; // grade de 6 semanas já cobre vizinhança ampla
 
     const stepDays = mode === 'day' ? 1 : 7;
@@ -136,9 +149,16 @@ export function useAgendaInit({ store, agendaState, checkQueryParams }) {
     fetchEventsForView();
     waitingListStore.fetchAll();
 
-    // contacts/get pode pesar em contas grandes; o modal de criação carrega
-    // contatos sob demanda, então deixamos fora do bloqueio inicial.
-    store.dispatch('contacts/get');
+    // NÃO dispatchar `contacts/get` aqui. A action commita `CLEAR_CONTACTS`
+    // antes de repopular apenas a primeira página (pageSize=15), zerando
+    // `records` no store global de contatos. Isso quebra reativamente
+    // qualquer componente que dependa do registro completo (avatars da
+    // sidebar de Conversas, painel direito do contato selecionado,
+    // ContactInfo.vue → watch `contact.id` → `fetchContactableInbox` →
+    // 404 se algum contato tem `contact_inbox` órfão). O modal da Agenda
+    // (`AgendaEventModal.vue`) usa `ContactAPI` diretamente no picker —
+    // não consome o getter `contacts/getContacts` —, então a pré-carga
+    // aqui é puro dead weight com efeito colateral destrutivo.
 
     // Settings e custom attributes em paralelo
     try {

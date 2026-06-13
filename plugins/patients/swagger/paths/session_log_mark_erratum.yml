@@ -1,0 +1,30 @@
+patch:
+  tags:
+    - Sessões Clínicas
+  summary: Marcar errata em sessão assinada
+  description: |
+    Registra que houve erro **sem editar o conteúdo original**. Só funciona
+    em sessões assinadas (a janela de edição em `draft` já cobre o caso).
+    `reason` é obrigatório.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [reason]
+          properties:
+            reason: { type: string, description: "Justificativa da errata" }
+  responses:
+    '200':
+      description: Errata marcada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/SessionLog.yml'
+    '422':
+      description: Sessão não está assinada ou já tem errata

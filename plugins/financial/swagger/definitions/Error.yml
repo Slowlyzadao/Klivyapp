@@ -1,0 +1,7 @@
+type: object
+description: "Resposta de erro padronizada (`{ errors: [...] }` ou `{ error: ... }`)."
+properties:
+  errors:
+    type: array
+    items: { type: string }
+  error: { type: string }

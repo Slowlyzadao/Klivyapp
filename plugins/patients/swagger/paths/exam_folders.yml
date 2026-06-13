@@ -1,0 +1,53 @@
+get:
+  tags:
+    - Pastas de Exames
+  summary: Listar pastas de exames
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  responses:
+    '200':
+      description: Lista ordenada
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/ExamFolder.yml'
+post:
+  tags:
+    - Pastas de Exames
+  summary: Criar pasta
+  description: |
+    Exige permissão RBAC `patients:manage_exams`. `position` default = max+1
+    dentro do mesmo `parent_id`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [exam_folder]
+          properties:
+            exam_folder:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                color: { type: string }
+                parent_id: { type: integer, nullable: true }
+                position: { type: integer }
+  responses:
+    '201':
+      description: Pasta criada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/ExamFolder.yml'
+    '422':
+      description: Erro de validação
+    '403':
+      description: Sem permissão `patients:manage_exams`

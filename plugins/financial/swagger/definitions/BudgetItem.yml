@@ -1,0 +1,14 @@
+type: object
+description: Item de um orçamento (procedimento planejado).
+properties:
+  id: { type: integer }
+  description: { type: string }
+  procedure_code: { type: string, nullable: true }
+  quantity:
+    type: integer
+    minimum: 1
+  unit_price_cents: { type: integer }
+  discount_cents: { type: integer }
+  total_cents: { type: integer }
+  professional_id: { type: integer, nullable: true }
+  position: { type: integer }

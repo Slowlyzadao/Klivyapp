@@ -1,0 +1,22 @@
+/* ============================================================
+   _variables.scss — Tokens de cores compartilhados (agenda)
+
+   Tokens semânticos compartilhados entre os partials de
+   agenda-events/. Usados via `@use '../variables' as *;` no topo
+   de cada partial que precise das cores. SCSS resolve em
+   compile-time, então o CSS final é byte-equivalente ao
+   hex/rgba inline.
+
+   IMPORTANTE: cores aqui são para overrides hardcoded de cor
+   semântica que escapam do tema base `rgb(var(--slate-N))`.
+   Para tokens de cinza/superfície sempre prefira os custom
+   properties (`rgb(var(--slate-N))`, `rgb(var(--blue-N))`) —
+   eles acompanham o dual-theme.
+
+   Os nomes dos tokens espelham `plugins/patients/frontend/
+   styles/_variables.scss` para coerência cross-plugin.
+   ============================================================ */
+
+// ── Brand semantic colors (hex base) ─────────────────────────
+$brand-danger:         #dc2626;  // vermelho principal (hover de botões)
+$brand-danger-bright:  #ef4444;  // vermelho-bright (rgba base 239,68,68)

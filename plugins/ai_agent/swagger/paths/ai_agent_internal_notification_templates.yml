@@ -1,0 +1,66 @@
+get:
+  tags:
+    - Bea — Notificações Internas
+  summary: Listar templates de notificação interna
+  description: |
+    Lista os templates de notificação que a Bea pode disparar no Chat Interno.
+    Autorização: admin OR Klivy `captain.view`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Lista
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/InternalNotificationTemplate.yml'
+    '403':
+      description: Sem permissão (`captain.view`)
+post:
+  tags:
+    - Bea — Notificações Internas
+  summary: Criar template (caso o `event_key` não tenha sido seedado)
+  description: |
+    Normalmente templates são seedados automaticamente via
+    `DefaultTemplatesSeeder` no `after_create_commit` da Account. POST manual
+    fica disponível pra eventos custom ou backfill explícito. UNIQUE
+    `(account_id, event_key)` — duplicata retorna 422.
+
+    Autorização: admin OR Klivy `captain.manage_templates`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [internal_notification_template]
+          properties:
+            internal_notification_template:
+              type: object
+              required: [event_key, name, body, target_type]
+              properties:
+                event_key: { type: string }
+                name: { type: string, maxLength: 120 }
+                body: { type: string, maxLength: 4000 }
+                target_type:
+                  type: string
+                  enum: [room, user, disabled]
+                target_id:
+                  type: integer
+                  nullable: true
+                enabled: { type: boolean }
+  responses:
+    '201':
+      description: Criado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/InternalNotificationTemplate.yml'
+    '403':
+      description: Sem permissão
+    '422':
+      description: event_key duplicado ou inválido

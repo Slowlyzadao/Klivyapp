@@ -1,0 +1,20 @@
+get:
+  tags:
+    - Financeiro · Relatórios · Charts
+  summary: Composição de receita (por origem/categoria)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: from
+      in: query
+      schema: { type: string, format: date, description: "Default = 6 meses atrás" }
+    - name: to
+      in: query
+      schema: { type: string, format: date, description: "Default = hoje" }
+  responses:
+    '200':
+      description: Composição
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

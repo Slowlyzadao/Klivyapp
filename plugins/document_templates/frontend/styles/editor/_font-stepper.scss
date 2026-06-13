@@ -1,0 +1,66 @@
+// Stepper de tamanho de fonte — UM input só com [−][campo][+] dentro.
+// A borda envolve o conjunto inteiro; os botões e o campo numérico são
+// transparentes/sem borda. Foco realça a caixa toda (focus-within).
+
+.font-stepper {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  border: 1px solid var(--kl-border-subtle);
+  border-radius: var(--kl-radius-md);
+  background: var(--kl-surface-white);
+  overflow: hidden;
+  transition: border-color var(--kl-transition), box-shadow var(--kl-transition);
+
+  &:hover {
+    border-color: var(--kl-border-strong);
+  }
+
+  &:focus-within {
+    border-color: var(--kl-primary);
+    box-shadow: 0 0 0 1px var(--kl-primary);
+  }
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--kl-secondary);
+    cursor: pointer;
+    transition: background var(--kl-transition), color var(--kl-transition);
+
+    span { width: 15px; height: 15px; }
+
+    &:hover {
+      background: var(--kl-surface-low);
+      color: var(--kl-on-surface);
+    }
+    &:focus-visible { outline: none; color: var(--kl-primary); }
+  }
+
+  &__input {
+    width: 2.5ch;
+    box-sizing: content-box;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--kl-on-surface);
+    font-family: var(--kl-font-family);
+    font-size: var(--kl-font-body-md);
+    text-align: center;
+    outline: none;
+
+    // Tira as setinhas nativas do number (caso o browser as mostre).
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      appearance: none;
+      margin: 0;
+    }
+  }
+}

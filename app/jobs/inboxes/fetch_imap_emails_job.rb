@@ -6,6 +6,13 @@ class Inboxes::FetchImapEmailsJob < MutexApplicationJob
   def perform(channel, interval = 1)
     return unless should_fetch_email?(channel)
 
+    # Cron enfileira esse job sem Current.account (Sidekiq scheduler não tem
+    # request). Setar explicitamente garante que blobs criados via
+    # MailPresenter#attachments fiquem prefixados com accounts/<id>/ (ver
+    # config/initializers/active_storage_account_scoping.rb).
+    previous_account = Current.account
+    Current.account = channel.account
+
     key = format(::Redis::Alfred::EMAIL_MESSAGE_MUTEX, inbox_id: channel.inbox.id)
 
     with_lock(key, 5.minutes) do
@@ -20,6 +27,8 @@ class Inboxes::FetchImapEmailsJob < MutexApplicationJob
     Rails.logger.error "Lock failed for #{channel.inbox.id}"
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: channel.account).capture_exception
+  ensure
+    Current.account = previous_account
   end
 
   private

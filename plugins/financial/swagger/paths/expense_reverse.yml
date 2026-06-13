@@ -1,0 +1,28 @@
+post:
+  tags:
+    - Financeiro · Despesas
+  summary: Estornar despesa paga
+  description: |
+    `Financial::ReverseExpense` gera Entry de entrada (estorno_despesa) +
+    volta status para `pendente`. Requer GERENTE/ADMIN. Idempotência via
+    header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            reason: { type: string }
+            reversed_at: { type: string, format: date }
+  responses:
+    '200':
+      description: Estornada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Expense.yml'
+    '422': { description: "Erro" }

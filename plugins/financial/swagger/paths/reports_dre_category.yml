@@ -1,0 +1,37 @@
+get:
+  tags:
+    - Financeiro · Relatórios
+  summary: Drill-down de uma categoria DRE (entries)
+  description: Lista os entries da categoria no período. Limit 500.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/categoryId'
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+  responses:
+    '200':
+      description: Entries da categoria
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    direction: { type: string }
+                    kind: { type: string }
+                    amount_cents: { type: integer }
+                    competence_date: { type: string, format: date }
+                    cash_date: { type: string, format: date }
+                    description: { type: string }
+                    category_id: { type: integer, nullable: true }
+                    patient_id: { type: integer, nullable: true }
+                    professional_id: { type: integer, nullable: true }

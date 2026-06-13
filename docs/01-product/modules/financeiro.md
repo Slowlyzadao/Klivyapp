@@ -1,10 +1,72 @@
-> [!IMPORTANT]
-> **Nota de Auditoria Arquitetural Atualizada:** 
-> O texto a seguir contém a Especificação Histórica das Regras de Negócio deste módulo.
-> Em nível sistêmico (código, frontend, backend e Banco de Dados), todas as estruturas listadas abaixo encontram-se 100% isoladas na Arquitetura Modular (Rails Engines), localizadas especificamente dentro do seu diretório `plugins/`. O modelo de banco de dados original do Chatwoot citado como destino de colunas no documento abaixo já foi refatorado utilizando Satélites DB Profiles (`beclinic_profiles`) visando prevenir colisões de migrações nativas do Chatwoot no longo prazo.
-> Leia `02-architecture/system-architecture.md` para visualizar as ligações sistêmicas exatas em código. Tudo detalhado abaixo responde ao Produto e Usuário.
+> [!CAUTION]
+> **STATUS ATUAL (2026-05-11): Este documento é HISTÓRICO — a arquitetura V1 descrita aqui foi superada pela V2.**
+>
+> Tudo abaixo da linha `# Plano de Ação — Módulo Financeiro Central (BeClinic)` descreve o **plano V1 original** (março/abril 2026, ondas 1-4, tabela `account_transactions`). Mantemos por contexto histórico, mas **não é mais a fonte de verdade** do módulo.
+>
+> **Para a verdade atual do produto, consulte:**
+>
+> | O que você quer | Documento |
+> |---|---|
+> | **Como o financeiro funciona hoje** (regras de negócio canon) | [`docs/01-product/modules/financeiro-funcionamento.md`](./financeiro-funcionamento.md) |
+> | **Plano de testes técnico** (QA Analyst) | [`docs/03-engineering/financial-v2-qa-test-plan.md`](../../03-engineering/financial-v2-qa-test-plan.md) |
+> | **Teste visual** (recepção/dono da clínica) | [`docs/01-product/financial-v2-teste-visual.md`](../financial-v2-teste-visual.md) |
+> | **Runbook de importação Clinicorp** (qualquer próxima migração) | [`docs/03-engineering/runbook-clinicorp-import.md`](../../03-engineering/runbook-clinicorp-import.md) |
+>
+> **Material histórico** (plano de implementação concluído, arquivado em maio/2026):
+>
+> | O que era | Onde foi parar |
+> |---|---|
+> | Cards de desenvolvimento (33 cards F-01 a F-33) | [`docs/03-engineering/archive/financial-v2-implementation/02-cards-desenvolvimento.md`](../../03-engineering/archive/financial-v2-implementation/02-cards-desenvolvimento.md) |
+> | Auditoria dos 12 bugs do v1 (todos corrigidos) | [`docs/03-engineering/archive/financial-v2-implementation/03-auditoria.md`](../../03-engineering/archive/financial-v2-implementation/03-auditoria.md) |
+> | Backlog técnico (~70 tickets — versão estendida dos cards) | [`docs/03-engineering/archive/financial-v2-implementation/04-backlog-tecnico.md`](../../03-engineering/archive/financial-v2-implementation/04-backlog-tecnico.md) |
+>
+> ---
+>
+> ## 📌 Sumário executivo (estado atual, maio/2026)
+>
+> **Namespace e arquitetura:**
+> - Módulo em **V2** sob o namespace Ruby `Financial::*` e tabelas `financial_*` (não mais `account_transactions`).
+> - Frontend em `plugins/financial/frontend/features/financial/v2/` (legacy `pages/` ainda no repo até Etapa 4 da deprecação).
+> - Backend em `plugins/financial/app/` (Rails Engine).
+>
+> **Entrega:** 32 dos 33 cards do canon entregues (97%). F-11 (Painel de Importação ADMIN) marcado **OUT-OF-SCOPE** (decisão Mamedes, 2026-05-11) — importação permanece exclusivamente em `/super_admin/migrations`.
+>
+> **Telas em produção (todas v2):**
+> 1. **Dashboard** — KPIs Hoje/Período + Vencimentos + Meta dinâmica (mensal/trimestral/anual) + 6 charts (Fluxo Diário, Composição, Aging, Receita por Profissional, Projeção 60d, Tendência Inadimplência) + sparklines SVG nos KPIs
+> 2. **Fluxo de Caixa** — listagem unificada de entries com filtros (conta, período, tipo)
+> 3. **A Receber** — parcelas pendentes/vencidas com KPIs
+> 4. **A Pagar** — despesas pendentes/vencidas
+> 5. **DRE** — em cascata Receita → Lucro Líquido com period selector (Semana/Mês/Trimestre/Ano/Todos)
+> 6. **Comissões** — apuração por profissional, marcar como paga (gera Expense atômico + idempotente)
+> 7. **Relatórios** — hub com 3 tabs (Despesas por Categoria, Convênio, Ticket Médio)
+> 8. **Auditoria** — log global de todas as ações financeiras, com diff e filtros por entidade/ação/usuário/período
+> 9. **Backups** — pg_dump diário (Sidekiq cron 3h AM) + mirror Cloudflare R2 + lista local/remoto
+> 10. **Contador** — exportação CSV (4 arquivos, UTF-8 BOM + `;`, decimal com vírgula)
+> 11. **LGPD** — workflow de anonimização irreversível (SHA256 truncado) preservando FK contábil
+> 12. **Caixa físico** — sessão diária (abertura, sangria, suprimento, fechamento com conciliação cega)
+> 13. **Reclassificar** — bulk update de categoria DRE em massa
+> 14. **Configurações** — 5 tabs (Categorias, Contas e Caixa, Comissões, Despesas Recorrentes, Metas)
+>
+> **Importação Clinicorp F-10** entregue: aceita 3 CSVs (Budgets + PaymentHeader + PaymentItem) via Super Admin Migrations. Idempotente via `external_id` único. Heurística "single mapped dentist" atribui `professional_id` automaticamente em clínicas unipessoais. Conta Mamedes #31 importada com **1.987 parcelas + 1.617 entries + 32 budgets + ~414 buckets Avulsos**, R$ 378k consolidados.
+>
+> **Deprecação V1 (Etapa 1 ativa desde 2026-05-11):**
+> - Sidebar removeu items "v2 ·" — labels unificados apontando pras rotas v2
+> - Redirects 301 de `/financial/*` → `/financial/v2/*` (bookmarks antigos funcionam)
+> - Sparklines migradas pro endpoint v2 (zero dependência v1 do v2)
+> - Código legacy mantido no repo até **Etapa 4** (+30 dias após go-live real, então DELETE final dos arquivos `.vue` v1 + services v1 + DROP `account_transactions` com backup)
+>
+> **Stack visual:**
+> - Charts: Chart.js + vue-chartjs (line, doughnut, h-bar) + SVG puro pros sparklines
+> - Tooltips: `Intl.NumberFormat('pt-BR')` com separador de milhar (`R$ 1.234,56`)
+> - Period selector reusable: Semana/Mês/Trimestre/Ano/Todos com brand blue `#1f93ff` no tab ativo
+> - Confirmação destrutiva: `ConfirmDangerModal` (nunca `window.confirm` nativo)
+> - PIX: ícone SVG oficial do Banco Central (não `i-lucide-qr-code`)
+>
+> ---
+>
+> **Nota arquitetural (mantida):** O texto histórico abaixo cita `account_transactions` (V1) como destino de migrations. Em V2, todas as estruturas estão 100% isoladas no plugin Rails Engine (`plugins/financial/`), com tabelas `financial_*` próprias. Leia [`02-architecture/system-architecture.md`](../../02-architecture/system-architecture.md) para ligações sistêmicas atuais.
 
-# Plano de Ação — Módulo Financeiro Central (BeClinic)
+# Plano de Ação — Módulo Financeiro Central (BeClinic) [HISTÓRICO V1]
 
 ---
 
@@ -1946,7 +2008,15 @@ Taxa Ocupacao          ↑ Verde                  ↓ Vermelho
 
 *Competência no DRE. Caixa no fluxo. 5 campos de data. Zero
 ambiguidade.*
-# Módulo Financeiro BeClinic — Manual Completo de Uso
+# Módulo Financeiro BeClinic — Manual Completo de Uso [HISTÓRICO V1]
+
+> ⚠️ **Este manual descreve a interface V1 (legacy, março-abril 2026).** A interface foi totalmente refeita em V2 (telas com prefixo `/financial/v2/*`, 6 charts no Dashboard, period selector Semana/Mês/Trimestre/Ano/Todos, etc).
+>
+> Para o **manual atualizado da V2** (com print das telas reais em produção), use:
+> - [`docs/01-product/modules/financeiro-funcionamento.md`](./financeiro-funcionamento.md) — regras de negócio canon
+> - [`docs/01-product/financial-v2-teste-visual.md`](../financial-v2-teste-visual.md) — roteiro de uso passo a passo (escrito pra recepção/dono da clínica)
+>
+> O conteúdo abaixo foi preservado por valor histórico (mostra a evolução do produto), mas **NÃO É REPRESENTATIVO** das telas atuais em produção.
 
 Este é o documento definitivo e detalhado sobre o funcionamento, regras de negócio e limites do Módulo Financeiro Centralizado da plataforma BeClinic. Ele foi desenhado para ser a masterclass de uso, cobrindo cada tela, cada botão, o que você pode fazer, e principalmente: **o que não se pode fazer e por quê**.
 
@@ -2104,7 +2174,30 @@ O coração e "motor" de cálculos da contabilidade do BeClinic. Diferente da te
 ---
 
 > _**Dica de Fluxo Maestro:**_ Cadastre suas "Contas de Banco" e suas "Regras de Comissão" no primeiro dia. Treine sua recepção a operar a página "Caixa" e gerar os tratamentos no escopo do "Paciente". Observe os relatórios DRE e Dashboard tomarem vida de forma mágica, centralizada e blindada sem precisar gastar horas fechando planilhas!
-# Especificação Técnica de Gráficos — Módulo Financeiro BeClinic
+# Especificação Técnica de Gráficos — Módulo Financeiro BeClinic [HISTÓRICO V1]
+
+> ⚠️ **Esta especificação de 18 gráficos é HISTÓRICA (V1).** A V2 entregue em produção tem **6 charts curados** (decisão "premium sem fricção" — Mamedes, 2026-05-11):
+>
+> | Chart V2 entregue | Localização | Endpoint |
+> |---|---|---|
+> | Fluxo de Caixa Diário (line, 3 séries) | Dashboard > Análises | `/v2/reports/cash_flow_chart` |
+> | Composição de Receita (donut top 5) | Dashboard > Análises | `/v2/reports/revenue_composition` |
+> | Aging Inadimplência (h-bar 4 faixas) | Dashboard > Análises | `/v2/reports/delinquency_aging` |
+> | Receita por Profissional (h-bar top 5) | Dashboard > Análises | `/v2/reports/revenue_by_professional` |
+> | Projeção Fluxo de Caixa (line forward 60d) | Dashboard > Previsões | `/v2/reports/cash_flow_projection` |
+> | Tendência de Inadimplência (line 12 meses) | Dashboard > Previsões | `/v2/reports/delinquency_trend` |
+>
+> Mais **sparklines SVG** mini-line inline em 4 KPIs (saldo, entradas, saídas).
+>
+> Charts **descartados intencionalmente** da spec original V1 de 18 (over-engineering pra clínica SMB):
+> - DRE Waterfall (duplica a página DRE)
+> - Heatmap agenda (pertence ao módulo Agenda)
+> - CAC/ROI por canal (overlap com marketing)
+> - Funnel completo, cohort retention, etc.
+>
+> **Para a verdade atual dos gráficos:** veja o código em [`plugins/financial/frontend/features/financial/v2/components/charts/`](../../../plugins/financial/frontend/features/financial/v2/components/charts/).
+>
+> O conteúdo abaixo foi preservado por valor histórico (mostra o brainstorm original de gráficos).
 
 > **18 gráficos · 4 ondas · Pronto para implementação**
 >

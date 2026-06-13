@@ -1,0 +1,50 @@
+patch:
+  tags:
+    - Planos de Tratamento
+  summary: Aprovar plano (cria orçamento em rascunho)
+  description: |
+    Fluxo de 2 etapas que substitui o pipeline v1 (removido em 2026-05-11):
+
+    1. **Aqui:** dentista aprova o plano clinicamente → backend gera o PDF
+       (Prawn) E cria `Financial::Budget` v2 em **rascunho**.
+    2. **Recepção:** valida números no Financial Tab e bate em
+       `Financial::ApproveBudget` para gerar as parcelas em "A Receber".
+
+    Aprovação parcial: passe `item_ids` para aprovar só um subset; itens
+    fora ficam `proposto` e o plano vai `partially_approved=true`.
+
+    Geração de orçamento roda fora da transaction do approve clínico — se
+    falhar (item sem preço, etc), o plano fica aprovado e o erro vai pra
+    log como warning sem reverter a aprovação.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            item_ids:
+              type: array
+              items: { type: integer }
+              description: IDs dos itens a aprovar. Nil = todos.
+            installments_count:
+              type: integer
+              minimum: 1
+              default: 1
+              description: Número de parcelas sugerido para o Budget.
+            payment_method:
+              type: string
+              description: Método de pagamento default das parcelas.
+  responses:
+    '200':
+      description: Aprovado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/TreatmentPlan.yml'
+    '422':
+      description: Plano não está em status `proposto`

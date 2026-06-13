@@ -1,0 +1,37 @@
+/* ============================================================
+   `.proc-*` shared — tabela compartilhada (Consents, Documents, Financial).
+   Originalmente nasceu da aba "Procedimentos" (substituída pela aba
+   unificada "Evolução" em [1.5.2.0]). Classes mantidas porque outros
+   plugins/tabs herdam o visual. Renomear pra `_shared-tables.scss` em PR
+   de housekeeping futuro.
+   ============================================================ */
+
+.proc-table-head {
+  background: rgb(var(--slate-3)) !important;
+  border-bottom: 1px solid rgb(var(--slate-4)) !important;
+}
+.proc-table-head th {
+  padding: 12px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: left;
+  color: rgb(var(--slate-9)) !important;
+}
+.proc-table-head th.text-right {
+  text-align: right;
+}
+.proc-table-row {
+  border-bottom: 1px solid rgb(var(--slate-3)) !important;
+}
+.proc-table-row:hover {
+  background: rgb(var(--slate-3)) !important;
+}
+.proc-cell-primary {
+  color: rgb(var(--slate-12)) !important;
+}
+.proc-cell-secondary {
+  color: rgb(var(--slate-9)) !important;
+}
+

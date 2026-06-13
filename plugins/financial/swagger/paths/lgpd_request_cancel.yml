@@ -1,0 +1,17 @@
+post:
+  tags:
+    - Financeiro · LGPD
+  summary: Cancelar solicitação (antes de executada)
+  description: Requer ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Cancelada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/LgpdRequest.yml'
+    '422':
+      description: Status atual não permite cancelamento

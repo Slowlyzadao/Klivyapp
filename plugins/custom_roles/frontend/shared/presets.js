@@ -37,6 +37,7 @@ const RECEPCIONISTA = {
   },
   captain: { view: true },
   agenda: {
+    is_provider: false,
     view: true,
     create_event: true,
     edit_event: true,
@@ -87,6 +88,7 @@ const ESPECIALISTA = {
   },
   captain: { view: true, use_playground: true },
   agenda: {
+    is_provider: true,
     view: true,
     create_event: true,
     edit_event: true,
@@ -157,6 +159,7 @@ const GERENTE = {
     manage_settings: true,
   },
   agenda: {
+    is_provider: false,
     view: true,
     create_event: true,
     edit_event: true,
@@ -329,6 +332,7 @@ const SDR = {
   },
   captain: { view: true, use_playground: true },
   agenda: {
+    is_provider: false,
     view: true,
     create_event: true,
     edit_event: true,
@@ -374,7 +378,8 @@ export const PRESETS = [
   {
     id: 'gerente',
     label: 'Gerente',
-    description: 'Acesso total: clínico, financeiro, relatórios e configurações.',
+    description:
+      'Acesso total: clínico, financeiro, relatórios e configurações. Sem agenda própria por padrão.',
     icon: 'i-lucide-shield-check',
     color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     permissions: normalizePermissions(GERENTE),

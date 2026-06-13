@@ -1,0 +1,59 @@
+get:
+  tags:
+    - Evoluções Clínicas
+  summary: Detalhar evolução
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Evolução
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/ClinicalNote.yml'
+    '404':
+      description: Não encontrada
+patch:
+  tags:
+    - Evoluções Clínicas
+  summary: Atualizar evolução (só dentro da janela)
+  description: Bloqueia (403) se assinada ou fora da janela de edição.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [clinical_note]
+          properties:
+            clinical_note:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/ClinicalNote.yml'
+    '403':
+      description: Assinada ou janela expirou
+delete:
+  tags:
+    - Evoluções Clínicas
+  summary: Excluir evolução (soft-delete)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204':
+      description: Excluída
+    '403':
+      description: "Não permitido (geralmente: assinada)"

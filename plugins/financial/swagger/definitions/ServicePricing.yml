@@ -1,0 +1,44 @@
+type: object
+description: |
+  Precificação financeira 1-to-1 com `AgendaService` (`Financial::ServicePricing`).
+  Separação de domínio (canon): nome/duração/cor/sala vivem no `AgendaService`
+  (plugin agenda); preço/categoria DRE/comissão padrão/TUSS vivem aqui.
+
+  Importante: nas rotas REST o `:id` da URL é o **`agenda_service_id`**, NÃO o
+  `pricing.id`. O campo `id` deste objeto é o id real da `ServicePricing`.
+properties:
+  id:
+    type: integer
+    description: ID real da `ServicePricing` (não confundir com o `:id` da URL, que é o `agenda_service_id`).
+  agenda_service_id: { type: integer }
+  financial_dre_category_id: { type: integer, nullable: true }
+  category_name:
+    type: string
+    nullable: true
+    description: "Nome da `DreCategory` resolvido (eager-load) para a UI exibir sem N+1."
+  particular_price_cents:
+    type: integer
+    description: Preço particular em centavos. Obrigatório no upsert (>= 0).
+  convenio_price_cents:
+    type: integer
+    nullable: true
+    description: Preço convênio em centavos (>= 0). Null = não aceita convênio.
+  accepts_convenio:
+    type: boolean
+    description: "Derivado: true quando `convenio_price_cents` está presente."
+  default_commission_rule_id: { type: integer, nullable: true }
+  tuss_code:
+    type: string
+    nullable: true
+    description: Código TUSS. Único por conta (entre os ativos).
+  internal_code:
+    type: string
+    nullable: true
+    description: Código interno. Único por conta (entre os ativos).
+  notes: { type: string, nullable: true }
+  status:
+    type: string
+    enum: [active, inactive]
+    description: "`inactive` após deactivate (soft-delete) — o `AgendaService` permanece intacto."
+  created_at: { type: string, format: date-time }
+  updated_at: { type: string, format: date-time }

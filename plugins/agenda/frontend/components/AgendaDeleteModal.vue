@@ -18,6 +18,15 @@ export default {
     deleteReasonOptions() {
       return DELETE_REASONS;
     },
+    // Quando o motivo é "outro", a nota é obrigatória — o backend recusa
+    // (422) sem ela, então também travamos no client pra UX consistente.
+    isConfirmDisabled() {
+      if (!this.deleteReason) return true;
+      if (this.deleteReason === 'outro' && !this.deleteReasonNote.trim()) {
+        return true;
+      }
+      return false;
+    },
   },
   watch: {
     show(newVal) {
@@ -109,6 +118,13 @@ export default {
                       placeholder="Descreva o motivo adicional..."
                       class="w-full rounded-xl border-2 border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/5 p-3 text-sm font-semibold text-slate-700 dark:text-slate-200 outline-none focus:border-red-500/50 focus:bg-white dark:focus:bg-white/10 transition-all resize-none"
                     />
+                    <p
+                      v-if="!deleteReasonNote.trim()"
+                      class="mt-2 text-xs font-semibold text-red-600 dark:text-red-400"
+                    >
+                      <i class="i-lucide-info inline-block w-3 h-3 mr-1 align-middle" />
+                      Justificativa é obrigatória ao escolher "Outro motivo".
+                    </p>
                   </div>
                 </div>
               </div>
@@ -117,7 +133,7 @@ export default {
               <div class="bg-slate-50 dark:bg-slate-900/40 px-6 py-4 sm:flex sm:flex-row-reverse sm:gap-3 sm:px-7">
                 <button
                   type="button"
-                  :disabled="isDeleting || !deleteReason"
+                  :disabled="isDeleting || isConfirmDisabled"
                   @click="confirm"
                   class="inline-flex w-full justify-center rounded-xl bg-red-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-red-900/20 hover:bg-red-500 active:scale-95 disabled:opacity-50 disabled:active:scale-100 transition-all sm:w-auto"
                 >

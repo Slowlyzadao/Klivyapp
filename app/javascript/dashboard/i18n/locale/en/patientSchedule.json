@@ -1,0 +1,116 @@
+{
+  "PATIENT_SCHEDULE": {
+    "HEADER": {
+      "TITLE": "Schedule and History",
+      "SUBTITLE": "Complete tracking of patient appointments, no-shows and recalls.",
+      "VIEW_AGENDA": "View in Agenda",
+      "NEW_APPOINTMENT": "New Appointment"
+    },
+    "KPI": {
+      "TOTAL": "Total",
+      "DONE": "Completed",
+      "UPCOMING": "Upcoming",
+      "NO_SHOWS": "No-shows"
+    },
+    "FILTERS": {
+      "ALL": "All",
+      "UPCOMING": "Upcoming",
+      "ISSUES": "No-shows/Cancelled"
+    },
+    "RECALL": {
+      "TITLE": "Pending Recall — Patient No-Show",
+      "DESCRIPTION_PREFIX": "The patient missed the",
+      "DESCRIPTION_DATE": "appointment scheduled for",
+      "DESCRIPTION_TIME": "at {time}",
+      "DESCRIPTION_SUFFIX": ". No reminder has been sent yet.",
+      "REMIND_WHATSAPP": "Remind via WhatsApp",
+      "RESCHEDULE_MANUAL": "Reschedule Manually",
+      "OPEN_AGENDA": "Open Calendar",
+      "DISMISS_FOREVER": "Don't show again",
+      "DISMISS_TITLE": "Close reminder"
+    },
+    "LOADING": "Loading appointments...",
+    "LOADING_MORE": "Loading more…",
+    "EMPTY": {
+      "TITLE": "No appointments found",
+      "HINT_ALL": "This patient has no appointments recorded yet.",
+      "HINT_FILTERED": "No records under this filter.",
+      "FIRST_APPOINTMENT": "Schedule First Appointment"
+    },
+    "TIMELINE": {
+      "END_LABEL": "Start of history"
+    },
+    "CARD": {
+      "NEXT_BADGE": "NEXT",
+      "PROFESSIONAL_LABEL": "Responsible Professional",
+      "PROFESSIONAL_FALLBACK": "Not informed",
+      "TREATMENT_LABEL": "Treatment",
+      "DURATION_SUFFIX": "min",
+      "RESCHEDULE_REASON": "Reschedule Reason:",
+      "CANCELLATION_REASON": "Cancellation Reason:",
+      "DELETED_DEFAULT": "Deleted",
+      "DELETED_BY": "by",
+      "DELETED_AT": "on",
+      "DELETION_NOTE": "Justification:",
+      "NOTIFY_WHATSAPP": "Notify WhatsApp",
+      "RESCHEDULE_NOW": "Reschedule Now",
+      "MARK_NO_SHOW": "Mark No-show"
+    },
+    "RESCHEDULE_MODAL": {
+      "TITLE": "Reschedule Appointment",
+      "SUBTITLE": "Select the new date and time",
+      "NEW_DATETIME_LABEL": "New Date and Time *",
+      "BRT_HINT": "(Brasília time)",
+      "DURATION_LABEL": "Duration (minutes)",
+      "REASON_LABEL": "Reschedule Reason",
+      "REASON_PLACEHOLDER": "e.g. Patient request...",
+      "CANCEL": "Cancel",
+      "CONFIRM": "Confirm Reschedule"
+    },
+    "NO_SHOW_MODAL": {
+      "TITLE": "Register No-show",
+      "SUBTITLE": "This action cannot be undone",
+      "MESSAGE_PREFIX": "Status will be changed to",
+      "STATUS_BADGE": "No-show",
+      "MESSAGE_SUFFIX": "and patient's no-show counter will be incremented.",
+      "CANCEL": "Cancel",
+      "CONFIRM": "Confirm No-show"
+    },
+    "STATUS": {
+      "SCHEDULED": "Scheduled",
+      "CONFIRMED": "Confirmed",
+      "ARRIVED": "Arrived",
+      "IN_PROGRESS": "In Progress",
+      "DONE": "Completed",
+      "NO_SHOW": "No-show",
+      "CANCELED": "Cancelled",
+      "RESCHEDULED": "Rescheduled",
+      "DELETED_USER": "Cancelled by User",
+      "DELETED_PATIENT": "Cancelled by Patient",
+      "DELETED_RESCHEDULE": "Rescheduled",
+      "DELETED_OTHER": "Deleted"
+    },
+    "TYPES": {
+      "AVALIACAO": "Evaluation",
+      "RETORNO": "Recall",
+      "PROCEDIMENTO": "Procedure",
+      "REVISAO": "Revision",
+      "EMERGENCIA": "Emergency",
+      "CONSULTATION": "Consultation",
+      "AGENDA_BLOCK": "Block",
+      "APPOINTMENT": "Appointment"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Error loading patient schedule.",
+      "RESCHEDULE_MISSING_DATE": "Select a date and time for the reschedule.",
+      "RESCHEDULE_INVALID": "Invalid date/time.",
+      "RESCHEDULE_SUCCESS": "Appointment rescheduled successfully!",
+      "RESCHEDULE_ERROR": "Error rescheduling appointment.",
+      "NO_SHOW_SUCCESS": "No-show recorded successfully.",
+      "NO_SHOW_ERROR": "Error recording no-show.",
+      "RECALL_SUCCESS": "Recall reminder sent via WhatsApp!",
+      "RECALL_FALLBACK_MESSAGE": "Hello{name}! We noticed you missed your last appointment. We'd like to reschedule for a time convenient for you. 😊",
+      "RECALL_FALLBACK_NO_PHONE": "Reminder sent!"
+    }
+  }
+}

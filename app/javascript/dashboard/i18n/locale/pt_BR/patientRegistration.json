@@ -1,0 +1,140 @@
+{
+  "PATIENT_REGISTRATION": {
+    "HEADER": {
+      "TITLE": "Ficha Cadastral",
+      "SUBTITLE": "Preenchimento progressivo — salve quando quiser.",
+      "LAST_UPDATED": "Última alteração: {date}",
+      "SAVE": "Salvar"
+    },
+    "SECTIONS": {
+      "PERSONAL": {
+        "TITLE": "Dados Pessoais",
+        "SUBTITLE": "Nome, nascimento, documento"
+      },
+      "CONTACT": {
+        "TITLE": "Contato e Comunicação",
+        "SUBTITLE": "Telefone, e-mail, preferências"
+      },
+      "ADDRESS": {
+        "TITLE": "Endereço",
+        "SUBTITLE": "CEP, rua, cidade, estado"
+      },
+      "ADMIN": {
+        "TITLE": "Administrativo e Convênio",
+        "SUBTITLE": "Plano de saúde, emergência, LGPD"
+      }
+    },
+    "AVATAR": {
+      "TITLE": "Foto de Perfil",
+      "HINT": "JPG ou PNG · máx. 15MB",
+      "CAMERA": "Câmera",
+      "UPLOAD": "Upload",
+      "ALT": "Avatar do paciente"
+    },
+    "CAMERA_MODAL": {
+      "TITLE": "Tirar Foto",
+      "SUBTITLE": "Posicione seu rosto no centro",
+      "ERROR": "Permissão negada ou câmera não encontrada.",
+      "CANCEL": "Cancelar",
+      "RETAKE": "Repetir",
+      "USE_PHOTO": "Usar foto"
+    },
+    "PERSONAL": {
+      "FIRST_NAME": "Primeiro Nome",
+      "FIRST_NAME_PLACEHOLDER": "Gabriel",
+      "LAST_NAME": "Sobrenome",
+      "LAST_NAME_PLACEHOLDER": "Fernandes",
+      "SOCIAL_NAME": "Nome Social",
+      "SOCIAL_NAME_PLACEHOLDER": "Opcional",
+      "BIRTHDATE": "Data de Nascimento",
+      "BIRTHDATE_PLACEHOLDER": "DD/MM/AAAA",
+      "SEX": "Sexo",
+      "MARITAL": "Estado Civil",
+      "SELECT_PLACEHOLDER": "Selecione",
+      "CPF": "CPF",
+      "CPF_PLACEHOLDER": "000.000.000-00",
+      "RG": "RG",
+      "RG_PLACEHOLDER": "Ex: 1234567",
+      "NOTES": "Observações",
+      "NOTES_PLACEHOLDER": "Anotações livres sobre o paciente (opcional)",
+      "GUARDIAN_TOGGLE_TITLE": "Possui responsável?",
+      "GUARDIAN_TOGGLE_HINT": "Ative para pacientes que dependem de um responsável legal (menores, tutelados, etc.)",
+      "GUARDIAN_BLOCK_TITLE": "Dados do Responsável",
+      "GUARDIAN_NAME": "Nome do Responsável",
+      "GUARDIAN_NAME_PLACEHOLDER": "Nome completo",
+      "GUARDIAN_RELATIONSHIP": "Grau de Relacionamento",
+      "GUARDIAN_RELATIONSHIP_PLACEHOLDER": "Selecione…",
+      "GUARDIAN_CPF": "CPF do Responsável",
+      "GUARDIAN_PHONE": "Contato (telefone)",
+      "GUARDIAN_PHONE_PLACEHOLDER": "(00) 00000-0000"
+    },
+    "CONTACT": {
+      "PHONE_LABEL": "Telefone Principal",
+      "WHATSAPP_BADGE": "WhatsApp",
+      "PHONE_PLACEHOLDER": "(00) 00000-0000",
+      "ALT_PHONE": "Telefone Alternativo",
+      "ALT_PHONE_PLACEHOLDER": "(11) 00000-0000",
+      "EMAIL": "E-mail",
+      "EMAIL_PLACEHOLDER": "paciente{'@'}email.com",
+      "PREFERENCES_TITLE": "Preferências de contato",
+      "WHATSAPP_TITLE": "WhatsApp",
+      "WHATSAPP_HINT": "Lembretes e confirmações",
+      "EMAIL_TITLE": "E-mail",
+      "EMAIL_HINT": "Comprovantes e comunicados",
+      "DROPDOWN": {
+        "SEARCHING": "Buscando...",
+        "PATIENTS_HEADER": "Pacientes existentes",
+        "CHAT_CONTACTS_HEADER": "Contatos do chat",
+        "NO_NAME": "Sem nome",
+        "NO_PHONE": "Sem telefone"
+      }
+    },
+    "ADDRESS": {
+      "ZIP": "CEP",
+      "ZIP_PLACEHOLDER": "00000-000",
+      "STREET": "Rua / Avenida",
+      "NUMBER": "Número",
+      "COMPLEMENT": "Complemento",
+      "COMPLEMENT_PLACEHOLDER": "Apto, bloco...",
+      "NEIGHBORHOOD": "Bairro",
+      "CITY": "Cidade",
+      "STATE": "Estado (UF)",
+      "STATE_PLACEHOLDER": "UF"
+    },
+    "ADMIN": {
+      "INSURANCE_TITLE": "Plano de Saúde / Convênio",
+      "INSURANCE_NAME": "Convênio",
+      "INSURANCE_NAME_PLACEHOLDER": "Selecione",
+      "INSURANCE_NUMBER": "Nº da Carteirinha",
+      "INSURANCE_NUMBER_PLACEHOLDER": "000.000.000",
+      "INSURANCE_PLAN": "Plano",
+      "INSURANCE_PLAN_PLACEHOLDER": "Ex: Executivo Plus",
+      "INSURANCE_VALIDITY": "Validade da Carteirinha",
+      "INSURANCE_VALIDITY_PLACEHOLDER": "DD/MM/AAAA",
+      "EMERGENCY_TITLE": "Contato de Emergência",
+      "EMERGENCY_NAME": "Nome",
+      "EMERGENCY_PHONE": "Telefone",
+      "EMERGENCY_RELATIONSHIP": "Grau de Parentesco",
+      "EMERGENCY_RELATIONSHIP_PLACEHOLDER": "Ex: Cônjuge",
+      "LGPD_TITLE": "LGPD e Consentimentos",
+      "LGPD_TERM": "Termo LGPD",
+      "LGPD_TERM_HINT": "Armazenamento de dados médicos",
+      "LGPD_IMAGE": "Uso de Imagem",
+      "LGPD_IMAGE_HINT": "Marketing e redes sociais"
+    },
+    "MESSAGES": {
+      "AVATAR_SUCCESS": "Foto atualizada com sucesso!",
+      "AVATAR_ERROR": "Erro ao atualizar foto.",
+      "PHOTO_SAVED": "Foto de perfil atualizada!",
+      "PHOTO_SAVE_ERROR": "Erro ao salvar foto.",
+      "INVALID_CPF": "CPF do paciente inválido. Verifique os dígitos.",
+      "INVALID_GUARDIAN_CPF": "CPF do responsável inválido. Verifique os dígitos.",
+      "INVALID_EMAIL": "E-mail inválido. Inclua um domínio completo, ex.: nome@dominio.com.",
+      "INVALID_PHONE": "Telefone inválido. Informe DDD + número (10 ou 11 dígitos).",
+      "INVALID_ALT_PHONE": "Telefone alternativo inválido. Informe DDD + número (10 ou 11 dígitos).",
+      "SAVE_SUCCESS": "Cadastro atualizado com sucesso!",
+      "SAVE_ERROR": "Erro ao atualizar cadastro.",
+      "SAVE_ERROR_PREFIX": "Erro ao atualizar cadastro: {errors}"
+    }
+  }
+}

@@ -1,6 +1,31 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
+# Block new plain .css files inside plugins/ (use .scss instead).
+# See AGENTS.md "Plugin Styles" section. Existing legacy .css are
+# whitelisted here — remove from the list when migrated to SCSS.
+LEGACY_CSS_WHITELIST="
+plugins/migration/frontend/features/migration/migration.css
+plugins/ajuda/frontend/features/help/help.css
+"
+NEW_CSS=$(git diff --cached --name-only --diff-filter=A | grep -E '^plugins/.*\.css$' || true)
+if [ -n "$NEW_CSS" ]; then
+  BLOCKED=""
+  for f in $NEW_CSS; do
+    if ! printf '%s\n' "$LEGACY_CSS_WHITELIST" | grep -qx "$f"; then
+      BLOCKED="$BLOCKED  $f\n"
+    fi
+  done
+  if [ -n "$BLOCKED" ]; then
+    printf "\033[31mERRO:\033[0m novo arquivo .css em plugins/ — use .scss conforme AGENTS.md \"Plugin Styles\".\n"
+    printf "Arquivo(s) bloqueado(s):\n"
+    printf "$BLOCKED"
+    printf "\nReferência: plugins/patients/frontend/styles/ (estrutura SCSS modular).\n"
+    printf "Se a exceção for legítima, adicione o caminho ao LEGACY_CSS_WHITELIST em .husky/pre-commit e justifique no PR.\n"
+    exit 1
+  fi
+fi
+
 # lint js and vue files
 npx --no-install lint-staged
 

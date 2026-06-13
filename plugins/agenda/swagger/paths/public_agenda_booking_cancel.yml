@@ -1,0 +1,48 @@
+post:
+  tags:
+    - Agenda Pública
+  summary: Cancelar reserva via token (paciente)
+  description: |
+    Cancela o agendamento se a janela permitir. Regras:
+
+    - Status `cancelled` → idempotente (retorna 200, no-op)
+    - Status `completed`/`no_show`/`in_progress`/`arrived` → bloqueado (422)
+    - `starts_at` já passou → bloqueado (422)
+    - Dentro de `min_lead_time_minutes` → bloqueado (422)
+    - Evento soft-deletado pela clínica → bloqueado (422)
+
+    Registra `cancelled_via_public_link_at` e `cancellation_reason` em
+    `custom_attributes` para auditoria. Usa `update_columns` (pula callbacks
+    de timeline para não duplicar, mas bumpa `updated_at`).
+  parameters:
+    - name: token
+      in: path
+      required: true
+      schema:
+        type: string
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            reason:
+              type: string
+              description: Motivo livre. Persistido em `custom_attributes`.
+  responses:
+    '200':
+      description: Cancelado (ou já estava cancelado — idempotente)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success: { type: boolean }
+              message: { type: string }
+              event:
+                $ref: '../definitions/PublicBooking.yml'
+    '422':
+      description: Cancelamento bloqueado pelas regras descritas acima
+    '404':
+      description: Token inválido

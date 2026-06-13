@@ -1,0 +1,116 @@
+type: object
+description: |
+  Registro de sessão clínica (procedimento realizado). Status `draft`/`signed`.
+  Após assinatura, conteúdo clínico é imutável — só campos auxiliares
+  (assinatura do paciente, errata) podem mudar (`EDITABLE_AFTER_SIGN`).
+  Janela de edição padrão: 48h após `created_at` (configurável via
+  `account.settings['session_log_draft_hours']`).
+properties:
+  id: { type: integer }
+  patient_id: { type: integer }
+  account_id: { type: integer }
+  treatment_plan_id: { type: integer, nullable: true }
+  treatment_item_id: { type: integer, nullable: true }
+  appointment_id:
+    type: integer
+    nullable: true
+    description: FK para `AgendaEvent`.
+  form_template_id: { type: integer, nullable: true }
+  procedure_name:
+    type: string
+    nullable: true
+    description: Nome do procedimento; fallback para `treatment_item.procedure_name`.
+  performed_at: { type: string, format: date-time }
+  duration_minutes: { type: integer, nullable: true, minimum: 1 }
+  areas_treated:
+    type: array
+    description: Regiões/dentes tratados (estrutura clínica).
+    items:
+      type: object
+      properties:
+        region: { type: string }
+        tooth_number: { type: string }
+        description: { type: string }
+        side: { type: string }
+  products_used:
+    type: array
+    description: Materiais consumidos.
+    items:
+      type: object
+      properties:
+        product_id: { type: integer }
+        name: { type: string }
+        quantity: { type: number }
+        unit: { type: string }
+        batch: { type: string }
+        expires_at: { type: string, format: date }
+  complaint_of_day: { type: string, nullable: true }
+  assessment: { type: string, nullable: true }
+  complications: { type: string, nullable: true }
+  result_observed: { type: string, nullable: true }
+  post_procedure_guidance: { type: string, nullable: true }
+  return_needed: { type: boolean, nullable: true }
+  return_in_days:
+    type: integer
+    nullable: true
+    minimum: 1
+    description: Quando preenchido, requer `return_needed=true`.
+  next_consultation_details: { type: string, nullable: true }
+  observation: { type: string, nullable: true }
+  status:
+    type: string
+    enum: [draft, signed]
+  signed_at: { type: string, format: date-time, nullable: true }
+  signed_by_id: { type: integer, nullable: true }
+  signed_by:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+  erratum:
+    type: boolean
+    description: True quando `erratum_at` está preenchido.
+  erratum_at: { type: string, format: date-time, nullable: true }
+  erratum_by_id: { type: integer, nullable: true }
+  erratum_reason: { type: string, nullable: true }
+  erratum_by:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+  lock_version:
+    type: integer
+    description: Optimistic locking — passar o valor atual ao atualizar.
+  migrated_from_clinical_note_id:
+    type: integer
+    nullable: true
+    description: |
+      ID da `ClinicalNote` original quando esta sessão foi migrada do
+      modelo antigo (período de transição).
+  professional_id: { type: integer, nullable: true }
+  professional_name: { type: string, nullable: true }
+  professional_avatar_url: { type: string, nullable: true }
+  treatment_plan_title: { type: string, nullable: true }
+  within_draft_window:
+    type: boolean
+    description: True enquanto a sessão ainda pode ser editada (janela de 48h).
+  editable:
+    type: boolean
+    description: True para o `current_user` (combina dono/admin + janela).
+  patient_signed:
+    type: boolean
+    description: True quando o paciente também assinou.
+  patient_signed_at: { type: string, format: date-time, nullable: true }
+  patient_signature_mode: { type: string, nullable: true, enum: [local_tablet, remote_link] }
+  patient_signature_method: { type: string, nullable: true, enum: [local, remote] }
+  patient_signature_integrity_hash: { type: string, nullable: true }
+  patient_signature_image_url:
+    type: string
+    nullable: true
+    description: URL assinada (15min) do blob da assinatura do paciente.
+  patient_signature_remote_link_sent_at: { type: string, format: date-time, nullable: true }
+  patient_signature_remote_link_expires_at: { type: string, format: date-time, nullable: true }
+  created_at: { type: string, format: date-time }
+  updated_at: { type: string, format: date-time }

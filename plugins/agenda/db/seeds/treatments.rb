@@ -4,13 +4,13 @@
 account = Account.find(1)
 
 treatments = [
-  { name: 'Avaliação',           duration_minutes: 30,  color: '#3b82f6', price: 0 },
-  { name: 'Profilaxia',          duration_minutes: 60,  color: '#22c55e', price: 0 },
-  { name: 'Periodontia',         duration_minutes: 60,  color: '#eab308', price: 0 },
-  { name: 'Endodontia',          duration_minutes: 90,  color: '#ef4444', price: 0 },
-  { name: 'Reavaliação',         duration_minutes: 30,  color: '#f97316', price: 0 },
-  { name: 'Implante Individual', duration_minutes: 120, color: '#8b5cf6', price: 0 },
-  { name: 'Protocolo Sup/Inf',   duration_minutes: 180, color: '#6366f1', price: 0 },
+  { name: 'Avaliação',           duration_minutes: 30,  color: '#3b82f6' },
+  { name: 'Profilaxia',          duration_minutes: 60,  color: '#22c55e' },
+  { name: 'Periodontia',         duration_minutes: 60,  color: '#eab308' },
+  { name: 'Endodontia',          duration_minutes: 90,  color: '#ef4444' },
+  { name: 'Reavaliação',         duration_minutes: 30,  color: '#f97316' },
+  { name: 'Implante Individual', duration_minutes: 120, color: '#8b5cf6' },
+  { name: 'Protocolo Sup/Inf',   duration_minutes: 180, color: '#6366f1' },
 ]
 
 treatments.each do |t|

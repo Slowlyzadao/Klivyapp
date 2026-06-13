@@ -1,0 +1,117 @@
+patch:
+  tags:
+    - Chat Interno — Membros
+  summary: Atualizar papel do membro
+  description: |
+    Promove/rebaixa o membro (`role` ∈ {owner, admin, member}). Emite system
+    message `role_changed` e re-broadcasta a sala pros membros.
+
+    Autorização: admin OR room_manager (membership.role ∈ {owner, admin}).
+    OBSERVAÇÃO: a permissão de catálogo `internal_chat.manage_memberships`
+    existe no Klivy mas NÃO é enforced hoje — o gate é puramente pelo papel
+    na sala.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/roomId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [membership]
+          properties:
+            membership:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [owner, admin, member]
+  responses:
+    '200':
+      description: Papel atualizado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                $ref: '../definitions/Membership.yml'
+    '403':
+      description: Sem permissão (não é admin nem owner/admin da sala)
+    '404':
+      description: Sala ou membership não encontrada
+    '422':
+      description: '`role` inválido'
+put:
+  tags:
+    - Chat Interno — Membros
+  summary: Atualizar papel do membro (alias de PATCH)
+  description: |
+    Idêntico ao `PATCH`. Promove/rebaixa o membro, emite system message
+    `role_changed` e re-broadcasta a sala.
+
+    Autorização: admin OR room_manager (membership.role ∈ {owner, admin}).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/roomId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [membership]
+          properties:
+            membership:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [owner, admin, member]
+  responses:
+    '200':
+      description: Papel atualizado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                $ref: '../definitions/Membership.yml'
+    '403':
+      description: Sem permissão
+    '404':
+      description: Sala ou membership não encontrada
+    '422':
+      description: '`role` inválido'
+delete:
+  tags:
+    - Chat Interno — Membros
+  summary: Remover membro (saída suave)
+  description: |
+    Soft leave — seta `left_at = now` (não deleta o registro). Pode ser
+    auto-saída (o próprio membro deixando a sala) ou remoção por um
+    owner/admin. Emite system message `member_left` (auto-saída) ou
+    `member_removed`, e re-broadcasta a sala. Retorna `head :ok` (200).
+
+    Autorização: a auto-saída é SEMPRE permitida (qualquer membro pode sair).
+    Remover OUTRO membro exige admin OR room_manager (membership.role ∈
+    {owner, admin}).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/roomId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Membro removido / saiu (soft leave)
+    '403':
+      description: Sem permissão pra remover outro membro
+    '404':
+      description: Sala ou membership não encontrada
+    '422':
+      description: Sala é DM (`kind='direct'` — não aceita gestão de membros)

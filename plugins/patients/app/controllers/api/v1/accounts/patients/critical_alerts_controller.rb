@@ -1,11 +1,13 @@
 class Api::V1::Accounts::Patients::CriticalAlertsController < Api::V1::Accounts::BaseController
+  include BeclinicErrorResponse
+
   before_action :fetch_patient
   before_action :fetch_alert, only: [:update, :destroy, :deactivate]
   before_action :check_authorization
 
   # GET /api/v1/accounts/:account_id/patients/:patient_id/critical_alerts
   def index
-    @critical_alerts = CriticalAlert.where(patient: @patient, account: current_account)
+    @critical_alerts = CriticalAlert.where(patient: @patient, account: Current.account)
                                     .active
                                     .ordered_by_severity
                                     .includes(:created_by)
@@ -16,13 +18,13 @@ class Api::V1::Accounts::Patients::CriticalAlertsController < Api::V1::Accounts:
   # POST /api/v1/accounts/:account_id/patients/:patient_id/critical_alerts
   def create
     @critical_alert = CriticalAlert.new(
-      alert_params.merge(patient: @patient, account: current_account, created_by: current_user)
+      alert_params.merge(patient: @patient, account: Current.account, created_by: current_user)
     )
     authorize @critical_alert
 
     if @critical_alert.save
       PatientAuditLog.log!(
-        account: current_account,
+        account: Current.account,
         patient: @patient,
         action: 'create',
         actor: current_user,
@@ -65,17 +67,17 @@ class Api::V1::Accounts::Patients::CriticalAlertsController < Api::V1::Accounts:
   private
 
   def fetch_patient
-    @patient = current_account.patients.find(params[:patient_id])
+    @patient = Current.account.patients.find(params[:patient_id])
   rescue ActiveRecord::RecordNotFound
-    render json: { error: 'Paciente não encontrado' }, status: :not_found
+    render_error('Paciente não encontrado', status: :not_found)
   end
 
   def fetch_alert
-    @critical_alert = CriticalAlert.where(patient: @patient, account: current_account)
+    @critical_alert = CriticalAlert.where(patient: @patient, account: Current.account)
                                    .active
                                    .find(params[:id])
   rescue ActiveRecord::RecordNotFound
-    render json: { error: 'Alerta não encontrado' }, status: :not_found
+    render_error('Alerta não encontrado', status: :not_found)
   end
 
   def alert_params

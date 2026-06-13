@@ -1,0 +1,63 @@
+type: object
+description: |
+  Meio de pagamento configurado pela clínica (`Financial::PaymentMethod`,
+  canon `mapa-financeiro.json` §3). É o "rótulo" do método (ex.: "Cielo Crédito",
+  "Pix Itaú"); a taxa percentual/fixa versionada vive em `PaymentMethodFee`.
+
+  Imutabilidade: `kind` é congelado após criação (`frozen_attributes`) — mudar
+  alteraria histórico de lançamentos vinculados. Para "trocar", inative e crie
+  novo. Soft-delete (nunca deleta de verdade); bloqueado se o método já foi
+  usado em lançamentos.
+properties:
+  id: { type: integer }
+  kind:
+    type: string
+    description: "Tipo canon do método. Imutável após criação."
+    enum: [dinheiro, pix, debito, credito, boleto, transferencia, convenio, parcelamento_proprio]
+  name: { type: string, example: "Cielo Crédito", description: "Único por conta (case-insensitive, entre os vivos). Máx 120 chars." }
+  provider:
+    type: string
+    nullable: true
+    description: "Provedor cru (ex.: 'Cielo', 'Stone'). Usado para agrupar métodos. Imutável via rename_provider (que só mexe no alias)."
+  provider_alias:
+    type: string
+    nullable: true
+    description: "Apelido de display do provedor. Quando setado, a UI exibe este no lugar do `provider` cru. Máx 120 chars."
+  display_provider:
+    type: string
+    nullable: true
+    description: "Computado: `provider_alias` se presente, senão `provider`. A UI agrupa por este campo."
+  default_bank_account_id:
+    type: integer
+    nullable: true
+    description: "Conta bancária padrão de liquidação (`Financial::BankAccount`)."
+  supports_installments: { type: boolean, description: "Crédito é obrigado a suportar parcelas (validação no model)." }
+  max_installments:
+    type: integer
+    description: "Entre 1 e 24."
+    minimum: 1
+    maximum: 24
+  status:
+    type: string
+    enum: [active, inactive]
+  passes_fee_to_patient:
+    type: boolean
+    description: |
+      F2.5 — modelo de repasse de MDR. Quando `true`, `ApproveBudget` infla o
+      `amount_cents` das parcelas para que a clínica receba o valor base cheio
+      (paciente paga a taxa). Quando `false`, a clínica absorve o MDR.
+  settlement_mode:
+    type: string
+    enum: [manual, on_confirm, on_due_date]
+    description: |
+      Política de baixa (decisão 2026-05-27).
+      `manual` → operador clica "Receber".
+      `on_confirm` → baixa na confirmação do wizard (à vista: dinheiro/PIX/débito).
+      `on_due_date` → baixa automática na data — SÓ permitido para cartão
+      (crédito/débito); boleto/convênio/parcelamento_proprio são bloqueados
+      pelo guardrail do model (clínica assume o risco).
+  active_fees_count:
+    type: integer
+    description: "Quantidade de taxas (`PaymentMethodFee`) vivas com `status='active'`."
+  created_at: { type: string, format: date-time }
+  updated_at: { type: string, format: date-time }

@@ -1,0 +1,40 @@
+get:
+  tags:
+    - Financeiro · Relatórios
+  summary: Top procedimentos do período
+  description: |
+    Agrega `BudgetItem` por descrição dentro de orçamentos
+    aprovados/concluídos, somando quantidade e total e calculando ticket
+    médio. Ordenado por quantidade desc, limitado a `limit`. Usado no
+    Dashboard (tabela "Top 10 Procedimentos"). Sem gate de role.
+    Período default: mês corrente.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: from
+      in: query
+      schema: { type: string, format: date, description: "Default = início do mês" }
+    - name: to
+      in: query
+      schema: { type: string, format: date, description: "Default = fim do mês" }
+    - name: limit
+      in: query
+      schema: { type: integer, default: 10, minimum: 1, maximum: 50 }
+  responses:
+    '200':
+      description: Top procedimentos
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              from: { type: string, format: date }
+              to: { type: string, format: date }
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name: { type: string }
+                    qty: { type: integer }
+                    total_cents: { type: integer }
+                    ticket_avg_cents: { type: integer, nullable: true }

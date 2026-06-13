@@ -50,10 +50,9 @@
               <i class="i-lucide-user-round size-[13px]" />
               Visualizando link do profissional:
             </label>
-            <ModernSelect
+            <UserPickerSelect
               v-model="selectedAgentId"
-              :options="agentOptions"
-              class="agent-selector-select"
+              :users="professionalUsers"
             />
           </div>
 
@@ -164,14 +163,13 @@
                 >
               </div>
               <div class="rule-input-wrap">
-                <ModernSelect
+                <FormSelect
                   v-model.number="agendaSettingsData.slot_interval_minutes"
                   :options="[
                     { value: 15, label: $t('AGENDA.SLOT_INTERVAL.OPTIONS.15') },
                     { value: 30, label: $t('AGENDA.SLOT_INTERVAL.OPTIONS.30') },
                     { value: 60, label: $t('AGENDA.SLOT_INTERVAL.OPTIONS.60') }
                   ]"
-                  class="rule-num-input"
                   style="min-width: 140px;"
                 />
               </div>
@@ -244,7 +242,8 @@
 <script setup>
 import { computed, onMounted } from 'vue';
 import { useSettingsOnlineBooking } from '../composables/useSettingsOnlineBooking';
-import ModernSelect from '../../../components/ModernSelect.vue';
+import FormSelect from '@plugins/beclinic_core/frontend/components/FormSelect.vue';
+import UserPickerSelect from '@plugins/beclinic_core/frontend/components/UserPickerSelect.vue';
 
 const props = defineProps({
   accountId: {
@@ -283,16 +282,28 @@ const {
   copyPublicUrl
 } = useSettingsOnlineBooking(props, emit);
 
-const agentOptions = computed(() => {
-  const opts = [{ value: null, label: `${props.currentUser?.name} (você)` }];
-  if (props.agents && props.agents.length) {
-    props.agents.forEach(a => {
-      if (a.id !== props.currentUser?.id) {
-        opts.push({ value: a.id, label: a.name });
-      }
-    });
-  }
-  return opts;
+// Lista de profissionais p/ o UserPickerSelect (avatar + badge), no mesmo
+// padrão visual de /patients. O "você" usa id null (= ver o próprio link);
+// avatar vem de `thumbnail` (agentes) ou `avatar_url` (current user).
+const professionalUsers = computed(() => {
+  const list = [
+    {
+      id: null,
+      name: props.currentUser?.name,
+      avatar_url: props.currentUser?.avatar_url || props.currentUser?.thumbnail || null,
+      badge: '(você)',
+    },
+  ];
+  (props.agents || []).forEach(a => {
+    if (a.id !== props.currentUser?.id) {
+      list.push({
+        id: a.id,
+        name: a.name,
+        avatar_url: a.thumbnail || a.avatar_url || null,
+      });
+    }
+  });
+  return list;
 });
 
 onMounted(() => {

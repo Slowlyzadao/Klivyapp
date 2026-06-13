@@ -1,0 +1,183 @@
+get:
+  tags:
+    - Financeiro · Precificação
+  summary: Detalhar precificação de um serviço
+  description: |
+    **O `:id` da URL é o `agenda_service_id`** (não o `pricing.id`). Retorna o
+    `agenda_service` e o `pricing` (que pode ser `null` quando o serviço ainda
+    não foi precificado).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: id
+      in: path
+      required: true
+      description: "**`agenda_service_id`** do serviço (não o `pricing.id`)."
+      schema: { type: integer }
+  responses:
+    '200':
+      description: Serviço + precificação (pode estar `null`).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              agenda_service:
+                type: object
+                properties:
+                  id: { type: integer }
+                  uuid: { type: string }
+                  name: { type: string }
+                  duration_minutes: { type: integer, nullable: true }
+                  color: { type: string, nullable: true }
+                  requires_room: { type: boolean }
+              pricing:
+                nullable: true
+                allOf:
+                  - $ref: '../definitions/ServicePricing.yml'
+    '404':
+      description: "`agenda_service_not_found` — não existe `AgendaService` com esse id na conta."
+put:
+  tags:
+    - Financeiro · Precificação
+  summary: Criar ou atualizar precificação (upsert)
+  description: |
+    Upsert 1-to-1: cria a precificação se ainda não existir (**`201`**) ou
+    atualiza a existente (**`200`**). **O `:id` da URL é o `agenda_service_id`**.
+
+    RBAC: exige role **ADMIN** ou **GERENTE**. Idempotência via header
+    `Idempotency-Key`. `PATCH` tem comportamento idêntico ao `PUT`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: id
+      in: path
+      required: true
+      description: "**`agenda_service_id`** do serviço a precificar."
+      schema: { type: integer }
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [service_pricing]
+          properties:
+            service_pricing:
+              type: object
+              description: "Atributos permitidos (strong params)."
+              properties:
+                financial_dre_category_id: { type: integer, nullable: true }
+                particular_price_cents:
+                  type: integer
+                  description: Preço particular em centavos (>= 0). Obrigatório para salvar.
+                convenio_price_cents: { type: integer, nullable: true }
+                default_commission_rule_id: { type: integer, nullable: true }
+                tuss_code: { type: string, nullable: true }
+                internal_code: { type: string, nullable: true }
+                notes: { type: string, nullable: true }
+                status: { type: string, enum: [active, inactive] }
+  responses:
+    '201':
+      description: Precificação criada.
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/ServicePricing.yml'
+    '200':
+      description: Precificação atualizada.
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/ServicePricing.yml'
+    '403':
+      description: Sem permissão (não é ADMIN nem GERENTE).
+    '404':
+      description: "`agenda_service_not_found`."
+    '422':
+      description: "Erro de validação — corpo `{ errors: [...] }`."
+patch:
+  tags:
+    - Financeiro · Precificação
+  summary: Criar ou atualizar precificação (upsert)
+  description: |
+    Idêntico ao `PUT` deste recurso (mesmo `upsert`). **O `:id` da URL é o
+    `agenda_service_id`**. RBAC **ADMIN/GERENTE**.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: id
+      in: path
+      required: true
+      description: "**`agenda_service_id`** do serviço a precificar."
+      schema: { type: integer }
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [service_pricing]
+          properties:
+            service_pricing:
+              type: object
+              properties:
+                financial_dre_category_id: { type: integer, nullable: true }
+                particular_price_cents: { type: integer }
+                convenio_price_cents: { type: integer, nullable: true }
+                default_commission_rule_id: { type: integer, nullable: true }
+                tuss_code: { type: string, nullable: true }
+                internal_code: { type: string, nullable: true }
+                notes: { type: string, nullable: true }
+                status: { type: string, enum: [active, inactive] }
+  responses:
+    '201':
+      description: Precificação criada.
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/ServicePricing.yml'
+    '200':
+      description: Precificação atualizada.
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/ServicePricing.yml'
+    '403':
+      description: Sem permissão (não é ADMIN nem GERENTE).
+    '404':
+      description: "`agenda_service_not_found`."
+    '422':
+      description: "Erro de validação — corpo `{ errors: [...] }`."
+delete:
+  tags:
+    - Financeiro · Precificação
+  summary: Inativar precificação (deactivate)
+  description: |
+    Soft-delete da precificação — **o `AgendaService` permanece intacto**, só
+    perde a configuração financeira (sem pricing, o serviço deixa de aparecer
+    em selects de Budget até reconfigurar). **O `:id` da URL é o
+    `agenda_service_id`**.
+
+    Idempotente: se não houver pricing configurado, responde
+    `{ ok: true, already_unconfigured: true }`. RBAC **ADMIN/GERENTE**.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: id
+      in: path
+      required: true
+      description: "**`agenda_service_id`** do serviço."
+      schema: { type: integer }
+  responses:
+    '200':
+      description: Inativado (ou já não configurado).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              ok: { type: boolean }
+              already_unconfigured:
+                type: boolean
+                description: "Presente (`true`) quando não havia pricing para inativar."
+    '403':
+      description: Sem permissão (não é ADMIN nem GERENTE).
+    '404':
+      description: "`agenda_service_not_found`."

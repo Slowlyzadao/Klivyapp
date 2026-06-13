@@ -1,0 +1,91 @@
+@use "../variables" as *;
+
+/* ============================================================
+   ARCHIVED PATIENT BANNER
+   ============================================================ */
+
+.archived-banner {
+  background: rgba($brand-amber, 0.07) !important;
+  border: 1px solid rgba($brand-amber, 0.20) !important;
+}
+.archived-banner-left   { color: $brand-amber !important; }
+.archived-banner-title  { color: $brand-amber !important; }
+.archived-banner-sub    { color: #b45309 !important; }
+.archived-banner-btn {
+  background: rgba($brand-amber, 0.10) !important;
+  border: 1px solid rgba($brand-amber, 0.22) !important;
+  color: $brand-amber !important;
+}
+.archived-banner-btn:hover {
+  background: rgba($brand-amber, 0.18) !important;
+  border-color: rgba($brand-amber, 0.35) !important;
+}
+
+/* Archived read-only mode */
+.is-archived .record-layout input,
+.is-archived .record-layout textarea,
+.is-archived .record-layout select {
+  background: rgb(var(--slate-3)) !important;
+  border-color: rgb(var(--slate-4)) !important;
+  color: rgb(var(--slate-8)) !important;
+}
+.is-archived .record-layout label,
+.is-archived .record-layout .form-label {
+  color: rgb(var(--slate-9)) !important;
+}
+
+/* ── Archived Banner ─────────────────────────────────────── */
+.archived-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: rgba($brand-amber-bright, 0.08);
+  border: 1px solid rgba($brand-amber-bright, 0.28);
+  border-radius: 12px;
+  padding: 14px 20px;
+  margin-bottom: 16px;
+}
+.archived-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.archived-banner-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.3;
+}
+.archived-banner-sub {
+  font-size: 12px;
+  margin: 2px 0 0;
+  line-height: 1.3;
+}
+.archived-banner-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba($brand-amber-bright, 0.12);
+  border: 1px solid rgba($brand-amber-bright, 0.3);
+  border-radius: 7px;
+  color: $brand-amber-strong;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.archived-banner-btn:hover {
+  background: rgba($brand-amber-bright, 0.2);
+  border-color: rgba($brand-amber-bright, 0.45);
+}
+
+/* ── Archived read-only mode (global porque .profile-banner vive em filho) ── */
+.is-archived .record-layout,
+.is-archived .profile-banner {
+  opacity: 0.75;
+}
+

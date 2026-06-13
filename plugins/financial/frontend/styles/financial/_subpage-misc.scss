@@ -1,0 +1,119 @@
+@use "../variables" as *;
+
+/* ── Badges (status pills) ────────────────────────────────── */
+.financial-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.financial-badge--success {
+  background: rgba($brand-success, 0.12);
+  color: $brand-success;
+}
+
+.financial-badge--warning {
+  background: rgba($brand-amber, 0.12);
+  color: $brand-amber;
+}
+
+.financial-badge--danger {
+  background: rgba($brand-danger, 0.10);
+  color: $brand-danger;
+}
+
+.financial-badge--neutral {
+  background: rgba(100, 116, 139, 0.12);
+  color: rgb(var(--s-600));
+}
+
+.financial-badge--sm {
+  font-size: 0.625rem;
+  padding: 0.1rem 0.4rem;
+}
+/* ── Pagination ───────────────────────────────────────────── */
+.financial-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+}
+
+.financial-pagination__info {
+  font-size: 0.8125rem;
+  color: rgb(var(--s-500));
+  font-variant-numeric: tabular-nums;
+}
+
+.financial-pagination__btn {
+  padding: 0.375rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: 1px solid rgb(var(--s-200));
+  border-radius: 0.5rem;
+  background: #ffffff;
+  color: rgb(var(--s-700));
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.financial-pagination__btn:hover {
+  background: rgb(var(--s-50));
+  border-color: rgb(var(--s-300));
+}
+
+.financial-pagination__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+body.dark .financial-pagination__btn {
+  background: rgb(var(--s-800));
+  border-color: rgb(var(--s-600));
+  color: rgb(var(--s-200));
+}
+/* ── Skeleton variants for sub-pages ──────────────────────── */
+.financial-skeleton--card {
+  height: 5rem;
+  border-radius: 0.75rem;
+}
+
+/* ── Empty states (sub-pages) ─────────────────────────────── */
+.financial-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  text-align: center;
+  gap: 0.75rem;
+}
+
+.financial-empty-state__icon {
+  font-size: 2.5rem;
+  color: rgb(var(--s-300));
+}
+
+.financial-empty-state__text {
+  font-size: 0.875rem;
+  color: rgb(var(--s-500));
+}
+/* ── Skeleton variants for chart/table ────────────────────── */
+.financial-skeleton--chart {
+  height: 200px;
+  border-radius: 0.75rem;
+}
+
+.financial-skeleton--table {
+  height: 160px;
+  border-radius: 0.75rem;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   DRE — Demonstrativo de Resultado do Exercício
+   ───────────────────────────────────────────────────────────── */

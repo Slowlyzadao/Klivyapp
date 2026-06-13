@@ -1,0 +1,162 @@
+# Endpoints públicos da Bea — fora do `scope :accounts`. Sem `api_access_token`
+# / Cookie de Devise. Pensados pra uptime checker (health) e widget de
+# feedback (feedback, com HMAC token assinado por Trace).
+
+health:
+  get:
+    tags:
+      - Bea — Público
+    summary: Health da Bea
+    description: |
+      Snapshot agregado da saúde da Bea. Retorna `200` para
+      `ok`/`degraded`/`idle` e `503` quando algum alerta `critical` estourou.
+      `degraded` continua respondendo paciente (alguma métrica fora do ideal);
+      `down` quer dizer Bea quebrada efetivamente.
+
+      Sem auth — pra uptime checker externo. NÃO retorna dado por-tenant.
+
+      SEC-27 (auditoria 2026-05-18): a resposta é filtrada por
+      `PUBLIC_FIELDS = [status, checked_at]`. Tanto o `200` quanto o `503`
+      retornam **somente** `status` + `checked_at`. Métricas agregadas,
+      error rates por provider, nomes de modelo e a lista de alertas
+      (detalhes operacionais) foram movidos pro endpoint autenticado
+      super admin (`dashboard/health`), pois antes vazavam o estado
+      operacional da plataforma sem auth.
+    responses:
+      '200':
+        description: ok | degraded | idle
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, checked_at]
+              properties:
+                status:
+                  type: string
+                  enum: [ok, degraded, idle]
+                checked_at:
+                  type: string
+                  format: date-time
+                  description: ISO8601. Fallback pra `Time.current` se ausente no snapshot.
+      '503':
+        description: down (algum alerta critical)
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, checked_at]
+              properties:
+                status:
+                  type: string
+                  enum: [down]
+                checked_at:
+                  type: string
+                  format: date-time
+                  description: ISO8601. Fallback pra `Time.current` se ausente no snapshot.
+feedback:
+  post:
+    tags:
+      - Bea — Público
+    summary: Feedback do paciente sobre uma resposta da Bea (👍/👎)
+    description: |
+      Endpoint público que recebe rating do paciente sobre uma resposta
+      específica. Auth via HMAC token gerado por
+      `AiAgent::FeedbackTokenSigner` — cada `Trace` ganha um token único
+      anexado à mensagem que o widget envia.
+
+      SEC-11: o token carrega o `account_id` assinado + TTL. O cliente
+      precisa enviar `account_id` explicitamente; a assinatura é validada
+      contra a tripla `{trace_id, account_id, issued_at}`. O lookup do
+      `Trace` é scoped por esse `account_id` (multi-tenant).
+
+      Idempotente por `trace_id` — re-POST com novo rating atualiza o
+      feedback existente.
+
+      SEC-28: rate limit de 60 req/min por IP (Redis, janela rolante por
+      minuto). Excedido → `429 { error: rate_limited }`.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [trace_id, account_id, token, rating]
+            properties:
+              trace_id:
+                type: integer
+              account_id:
+                type: integer
+                description: |
+                  Conta dona do `Trace`. Obrigatório — é parte da tripla
+                  assinada pelo HMAC (SEC-11) e usado pra scoping do lookup.
+              token:
+                type: string
+                description: HMAC token devolvido pelo widget.
+              rating:
+                type: integer
+                enum: [1, -1]
+                description: '`1` = 👍 (thumbs up), `-1` = 👎 (thumbs down).'
+              comment:
+                type: string
+                nullable: true
+                maxLength: 500
+                description: Truncado em 500 chars pelo backend; vazio vira `null`.
+    responses:
+      '200':
+        description: Feedback registrado
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ok:
+                  type: boolean
+                  enum: [true]
+                id:
+                  type: integer
+                rating:
+                  type: integer
+                  enum: [1, -1]
+      '401':
+        description: Token inválido (assinatura não bate)
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  enum: [invalid_token]
+      '404':
+        description: Trace não encontrado (na conta informada)
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  enum: [trace_not_found]
+      '422':
+        description: Payload inválido (rating fora de `[1, -1]` ou erro de validação)
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                details:
+                  type: array
+                  items:
+                    type: string
+      '429':
+        description: Rate limit excedido (SEC-28, 60 req/min/IP)
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  enum: [rate_limited]

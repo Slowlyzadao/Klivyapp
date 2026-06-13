@@ -14,6 +14,22 @@ const MAX_WIDTH = 320;
 const activePopover = ref(null);
 let globalCloseTimeout = null;
 
+// Override transiente (module-level, compartilhado) para colapsar a sidebar
+// temporariamente — usado por telas de edição em tela cheia (ex: editor de
+// documentos). NÃO persiste no backend, então a largura/preferência salva
+// do usuário fica intacta: ao liberar, a sidebar volta exatamente ao que era.
+const forcedCollapsed = ref(false);
+
+export function useSidebarForceCollapse() {
+  const forceCollapse = () => {
+    forcedCollapsed.value = true;
+  };
+  const releaseCollapse = () => {
+    forcedCollapsed.value = false;
+  };
+  return { forcedCollapsed, forceCollapse, releaseCollapse };
+}
+
 export function useSidebarResize() {
   const { uiSettings, updateUISettings } = useUISettings();
 

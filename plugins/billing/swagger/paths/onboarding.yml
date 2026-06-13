@@ -1,0 +1,77 @@
+post:
+  tags:
+    - Billing · Onboarding
+  summary: Criar nova conta + customer Asaas + subscription
+  description: |
+    Endpoint **público** (sem autenticação). Cria a estrutura completa em
+    transação:
+
+    1. `Account` + `User` admin (via `AccountBuilder`)
+    2. Auth headers (auto-login no frontend)
+    3. Account criada em `suspended` — `Subscription` controla o estado
+    4. Se plano = `enterprise` → cria `Subscription(status=lead)` e sai (sem Asaas)
+    5. Cria `Asaas::Customer` + `Billing::Customer` local com `asaas_customer_id`
+    6. Resolve cupom (`CouponRegistry.plan_for`):
+       - `free_forever` → cria subscription `active`, sem cobrança no Asaas
+       - `percent` (desconto) → trial via `nextDueDate` + avulsas adicionais
+    7. `Asaas::CreateSubscription` no valor cheio
+    8. Cobranças avulsas (quando cupom = percent) via `Asaas::CreatePayment`
+    9. `Billing::Subscription` local (`active` ou `pending`)
+
+    Protegido por **Cloudflare Turnstile** quando `TURNSTILE_SECRET_KEY` setado
+    (header `turnstile_token` obrigatório). Cupom é validado antes do fluxo.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [name, email, selected_plan]
+          properties:
+            name: { type: string, description: "Nome do admin da conta." }
+            clinic_name: { type: string, description: "Nome da Account. Default = `name`." }
+            email: { type: string, format: email }
+            cpf_cnpj: { type: string }
+            phone: { type: string }
+            address: { type: string }
+            address_number: { type: string }
+            complement: { type: string }
+            province: { type: string }
+            postal_code: { type: string }
+            selected_plan:
+              type: string
+              description: "Chave em `Asaas::CreateSubscription::PLAN_PRICING` (ex.: `basic`, `pro`, `enterprise`)."
+            coupon: { type: string, description: "Código do cupom (opcional, vira UPPERCASE)." }
+            turnstile_token: { type: string, description: "Obrigatório quando `TURNSTILE_SECRET_KEY` está configurado." }
+            creditCard:
+              type: object
+              description: "Dados do cartão (validação Asaas)."
+              additionalProperties: true
+            creditCardHolderInfo:
+              type: object
+              additionalProperties: true
+  responses:
+    '201':
+      description: Conta criada (status varia)
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/OnboardingResponse.yml'
+    '422':
+      description: |
+        Email já registrado, cupom inválido, erro de validação do Asaas,
+        ou Turnstile falhou
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+              code:
+                type: string
+                description: "Código semântico (ex.: `email_already_registered`)."
+                nullable: true
+    '503':
+      description: Erro temporário na verificação Turnstile
+    '500':
+      description: Erro interno

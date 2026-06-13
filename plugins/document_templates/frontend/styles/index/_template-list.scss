@@ -1,0 +1,194 @@
+// TemplateList + TemplateListRow — visualização tabular dos modelos.
+// Ícones soltos (sem padding/background/caixa).
+
+.tpl-list {
+  &__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 0;
+    color: var(--kl-secondary);
+  }
+
+  &__loading-icon {
+    width: 32px;
+    height: 32px;
+    animation: spin 1s linear infinite;
+  }
+
+  &__card {
+    border: 1px solid var(--kl-border-subtle);
+    border-radius: var(--kl-radius-xl);
+    background: var(--kl-surface-white);
+    overflow: hidden;
+    box-shadow: var(--kl-shadow-card);
+  }
+
+  &__header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 140px 160px 24px;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--kl-border-subtle);
+    background: var(--kl-surface-low);
+    font-family: inherit;
+    font-size: var(--kl-font-label-md);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--kl-secondary);
+  }
+
+  &__col {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__rows {
+    display: flex;
+    flex-direction: column;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+}
+
+// ── TemplateListRow ────────────────────────────────────────────────────
+.tpl-row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 140px 160px 24px;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border: none;
+  border-bottom: 1px solid var(--kl-border-subtle);
+  background: var(--kl-surface-white);
+  cursor: pointer;
+  transition: background var(--kl-transition);
+  text-align: left;
+
+  &:last-child { border-bottom: none; }
+
+  &:hover { background: var(--kl-surface-low); }
+
+  &:focus-visible {
+    outline: none;
+    background: var(--kl-surface-low);
+    box-shadow: inset 3px 0 0 var(--kl-primary);
+  }
+
+  &[draggable='true'] { cursor: grab; }
+  &[draggable='true']:active { cursor: grabbing; }
+
+  // Ícone solto: zero padding, zero background.
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--kl-secondary);
+
+    span { width: 18px; height: 18px; }
+  }
+
+  &__heading { min-width: 0; }
+
+  &__title {
+    margin: 0 0 2px;
+    font-family: inherit;
+    font-size: var(--kl-font-body-md);
+    font-weight: 600;
+    color: var(--kl-on-surface);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__type {
+    margin: 0;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--kl-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__badge-col { min-width: 0; }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: var(--kl-radius-pill);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    white-space: nowrap;
+
+    // Klivy e Personalizado = chip azul sutil da marca (visível, com borda).
+    &--klivy,
+    &--cloned {
+      background: var(--kl-primary-fixed);
+      color: var(--kl-on-primary-fixed-variant);
+      border: 1px solid var(--kl-primary-fixed-dim);
+      font-weight: 600;
+    }
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--kl-secondary);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  &__version {
+    font-weight: 700;
+    color: var(--kl-on-surface);
+  }
+
+  &__dot { color: var(--kl-secondary); }
+
+  // Menu ⋮: zero padding, zero background.
+  &__menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--kl-secondary);
+    cursor: pointer;
+    transition: color var(--kl-transition);
+
+    span { width: 18px; height: 18px; }
+
+    &:hover { color: var(--kl-primary); }
+
+    &:focus-visible {
+      outline: none;
+      color: var(--kl-primary);
+    }
+  }
+}
+
+@media (max-width: 720px) {
+  .tpl-list__header,
+  .tpl-row {
+    grid-template-columns: 20px minmax(0, 1fr) 24px;
+
+    .tpl-list__col--badge,
+    .tpl-list__col--meta,
+    .tpl-row__badge-col,
+    .tpl-row__meta {
+      display: none;
+    }
+  }
+}

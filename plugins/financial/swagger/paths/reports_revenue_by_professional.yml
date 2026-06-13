@@ -1,0 +1,20 @@
+get:
+  tags:
+    - Financeiro · Relatórios · Charts
+  summary: Receita por profissional
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: from
+      in: query
+      schema: { type: string, format: date, description: "Default = início do mês" }
+    - name: to
+      in: query
+      schema: { type: string, format: date, description: "Default = fim do mês" }
+  responses:
+    '200':
+      description: Receita por profissional
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

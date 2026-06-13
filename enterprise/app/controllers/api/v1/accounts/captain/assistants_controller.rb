@@ -73,12 +73,7 @@ class Api::V1::Accounts::Captain::AssistantsController < Api::V1::Accounts::Base
                                                   config: [
                                                     :product_name, :feature_faq, :feature_memory, :feature_citation,
                                                     :welcome_message, :handoff_message, :resolution_message,
-                                                    :instructions, :temperature,
-                                                    # Klivy / Bea-specific config fields. Without listing them here,
-                                                    # Strong Parameters silently drops them and the user's toggle
-                                                    # never reaches the DB.
-                                                    :bea_enabled,
-                                                    { clinic_profile: [:name, :address] }
+                                                    :instructions, :temperature
                                                   ])
 
     # Handle array parameters separately to allow partial updates

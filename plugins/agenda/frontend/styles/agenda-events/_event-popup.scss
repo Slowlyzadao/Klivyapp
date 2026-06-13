@@ -1,0 +1,221 @@
+@use "../variables" as *;
+
+/* ── Event Info Popup ─────────────────────────────── */
+.evt-info-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(2px);
+}
+
+.evt-info-popup {
+  position: fixed;
+  width: 320px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--border-strong));
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+  padding: 0;
+}
+
+.evt-info-popup-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: rgb(var(--slate-1));
+  color: rgb(var(--slate-9));
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.12s, color 0.12s;
+}
+
+.evt-info-popup-close:hover {
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-12));
+}
+
+.evt-info-popup-header {
+  padding: 16px 16px 8px;
+  border-bottom: 1px solid rgb(var(--border-strong));
+}
+
+.evt-info-popup-patient {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.evt-info-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.evt-info-avatar-placeholder {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  @apply text-sm;
+  font-weight: 700;
+  background: rgba(var(--blue-9), 0.15);
+  color: rgb(var(--blue-9));
+  flex-shrink: 0;
+}
+
+.evt-info-popup-title {
+  @apply text-sm;
+  font-weight: 700;
+  color: rgb(var(--slate-12));
+}
+
+.evt-info-popup-rows {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.evt-info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  @apply text-sm;
+}
+
+.evt-info-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: rgb(var(--slate-9));
+}
+
+.evt-info-label {
+  font-weight: 500;
+  color: rgb(var(--slate-10));
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.evt-info-value {
+  color: rgb(var(--slate-12));
+  font-weight: 500;
+}
+
+.evt-info-value--obs {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Status Section ──────────────────────────────── */
+.evt-info-status-section {
+  padding: 12px 16px;
+  border-top: 1px solid rgb(var(--border-strong));
+}
+
+.evt-info-status-label {
+  @apply text-sm;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: rgb(var(--slate-10));
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.evt-info-status-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.evt-status-option {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid rgb(var(--border-strong));
+  border-radius: 8px;
+  background: rgb(var(--slate-1));
+  color: rgb(var(--slate-11));
+  @apply text-sm;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.evt-status-option:hover {
+  background: rgb(var(--slate-3));
+}
+
+.evt-status-option.active {
+  background: rgba(var(--blue-9), 0.08);
+  border-color: rgba(var(--blue-9), 0.3);
+  color: rgb(var(--blue-9));
+  font-weight: 600;
+}
+
+.evt-status-circle-sm {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-scheduled { background: #9ca3af; }
+.status-confirmed { background: #22c55e; }
+.status-arrived { background: #eab308; }
+.status-in_progress { background: #3b82f6; }
+.status-completed { background: #22c55e; }
+.status-no_show { background: $brand-danger-bright; }
+.status-cancelled { background: #6b7280; }
+
+.evt-status-option-label {
+  white-space: nowrap;
+}
+
+/* ── Actions Footer ──────────────────────────────── */
+.evt-info-actions {
+  display: flex;
+  border-top: 1px solid rgb(var(--border-strong));
+}
+
+.evt-info-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  border: none;
+  background: rgb(var(--slate-1));
+  color: rgb(var(--slate-11));
+  @apply text-sm;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.evt-info-action-btn:hover {
+  background: rgb(var(--slate-3));
+  color: rgb(var(--blue-9));
+}
+
+.evt-info-action-btn + .evt-info-action-btn {
+  border-left: 1px solid rgb(var(--border-strong));
+}

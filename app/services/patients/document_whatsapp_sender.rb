@@ -2,8 +2,15 @@
 
 # app/services/patients/document_whatsapp_sender.rb
 #
-# Serviço para envio de documentos PDF pelo gateway WhatsApp existente.
-# Reutiliza a infraestrutura de WhatsappQrService já construída no projeto.
+# Monta um link `wa.me` para que o profissional envie o PDF do documento ao
+# paciente via WhatsApp Web/app dele. NÃO envia nada — apenas prepara a URL e
+# devolve pro frontend abrir.
+#
+# Comportamento honesto: o documento NÃO é marcado como `enviado` aqui. Como
+# `wa.me` só abre a janela do WhatsApp e o envio depende do clique humano em
+# "Enviar", marcar antes seria mentir. O status fica em `gerado` até alguma
+# atualização explícita (botão "marcar como enviado" futuro, ou webhook do
+# bridge Baileys quando integrado).
 #
 # Uso:
 #   result = Patients::DocumentWhatsappSender.call(
@@ -11,10 +18,14 @@
 #     patient: @patient,
 #     actor: current_user
 #   )
+#
+# Retorna `whatsapp_payload[:wa_url]` que o frontend abre em nova aba.
 
 module Patients
   class DocumentWhatsappSender
     Result = Struct.new(:success?, :error, :whatsapp_payload, keyword_init: true)
+
+    SHARE_LINK_EXPIRY = 7.days
 
     def self.call(**args)
       new(**args).call
@@ -32,25 +43,25 @@ module Patients
       phone = resolve_phone
       raise StandardError, 'Paciente sem telefone cadastrado' if phone.blank?
 
-      file_url = @document.signed_url(expires_in: 2.hours, disposition: :attachment)
+      file_url = @document.signed_url(expires_in: SHARE_LINK_EXPIRY, disposition: :attachment)
       raise StandardError, 'Não foi possível gerar URL do arquivo' if file_url.blank?
 
-      payload = build_whatsapp_payload(phone, file_url)
+      caption = build_caption(file_url)
+      wa_url = "https://wa.me/#{phone}?text=#{ERB::Util.url_encode(caption)}"
 
-      @document.mark_as_sent!
-
-      Patients::PatientTimelineEventJob.perform_later(
-        patient_id: @patient.id,
-        event_type: 'document_sent',
-        label: "Documento enviado via WhatsApp: #{@document.title}",
-        actor_id: @actor&.id,
-        actor: @actor&.name || 'Sistema',
-        reference_id: @document.id,
-        reference_type: 'Document',
-        metadata: { phone: phone, document_type: @document.document_type }
+      Result.new(
+        success?: true,
+        whatsapp_payload: {
+          wa_url: wa_url,
+          phone: phone,
+          file_url: file_url,
+          file_name: @document.file_name || "#{@document.document_type}.pdf",
+          patient_name: @patient.name,
+          document_type: @document.document_type,
+          expires_in_seconds: SHARE_LINK_EXPIRY.to_i
+        },
+        error: nil
       )
-
-      Result.new(success?: true, whatsapp_payload: payload, error: nil)
     rescue StandardError => e
       Rails.logger.error("[DocumentWhatsappSender] Erro: #{e.message}")
       Result.new(success?: false, error: e.message, whatsapp_payload: nil)
@@ -64,21 +75,14 @@ module Patients
       phone&.gsub(/\D/, '')
     end
 
-    def build_whatsapp_payload(phone, file_url)
-      {
-        phone: phone,
-        file_url: file_url,
-        file_name: @document.file_name || "#{@document.document_type}.pdf",
-        mime_type: 'application/pdf',
-        caption: "📄 #{@document.title}\n\nDocumento gerado pela #{begin
-          @patient.account.name
-        rescue StandardError
-          'BeClinic'
-        end}",
-        patient_name: @patient.name,
-        document_type: @document.document_type,
-        note: 'Use o gateway WhatsApp para enviar este documento'
-      }
+    def build_caption(file_url)
+      "#{@document.title}\n\nDocumento gerado pela #{account_display_name}.\n\n#{file_url}"
+    end
+
+    def account_display_name
+      @patient.account&.name.presence || 'Klivy'
+    rescue StandardError
+      'Klivy'
     end
   end
 end

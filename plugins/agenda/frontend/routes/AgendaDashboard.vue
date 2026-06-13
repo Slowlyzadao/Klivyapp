@@ -5,25 +5,28 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 
 // Styles
-import '../styles/agenda-events.css';
+import '@plugins/agenda/frontend/styles/agenda-events.scss';
 
 // Store & Composables
 import { waitingListStore } from '@plugins/agenda/frontend/features/waiting-list/store';
-import { createAgendaState } from '../composables/useAgenda.js';
-import { useAgendaInit } from '../composables/useAgendaInit.js';
-import { useAgendaCrud } from '../composables/useAgendaCrud.js';
+import { useAgendaEventLauncher } from '../composables/useAgendaEventLauncher.js';
 import { useAgendaDnD } from '../composables/useAgendaDnD.js';
 import { useAgendaPopups } from '../composables/useAgendaPopups.js';
-import { createDefaultNewEvent, parseEventDate } from '../utils/agenda-date.js';
+import { parseEventDate } from '../utils/agenda-date.js';
+import { STATUS_OPTIONS } from '../utils/agenda-constants.js';
+import { usePermissions } from 'dashboard/composables/usePermissions';
 
-// Components
+const STATUS_OPTIONS_KEYS = STATUS_OPTIONS.map(o => o.key);
+
+// Components — AgendaEventModal e AgendaDeleteModal são montados pelo
+// AgendaEventLauncherOutlet em Dashboard.vue (overlay global compartilhado
+// com o botão "Agendar consulta" em ContactInfo.vue).
 import AgendaSummaryBar from '@plugins/agenda/frontend/features/agenda-summary/AgendaSummaryBar.vue';
 import AgendaHeader from '../components/AgendaHeader.vue';
 import AgendaSidebar from '../components/AgendaSidebar.vue';
 import AgendaMonthView from '../components/AgendaMonthView.vue';
 import AgendaTimelineView from '../components/AgendaTimelineView.vue';
-import AgendaEventModal from '../components/AgendaEventModal.vue';
-import AgendaDeleteModal from '../components/AgendaDeleteModal.vue';
+import AgendaYearView from '../components/AgendaYearView.vue';
 import AgendaEventInfoPopup from '../components/AgendaEventInfoPopup.vue';
 import AgendaWlSchedulePopup from '../components/AgendaWlSchedulePopup.vue';
 
@@ -33,37 +36,29 @@ const router = useRouter();
 const { proxy } = getCurrentInstance();
 const t = proxy.$t.bind(proxy);
 
-// Agenda State Setup
-const agenda = createAgendaState();
-agenda.init();
-
-// Local UI Refs
-const newEvent = ref(createDefaultNewEvent());
-const wlScheduleEntry = ref(null);
-const _returnPatientId = ref(null);
+// Agenda State — singleton compartilhado com o outlet em Dashboard.vue e o
+// botão "Agendar consulta" em ContactInfo.vue. O launcher cuida da carga
+// inicial (agentes, settings, custom attrs, eventos) na primeira chamada
+// a `ensureLoaded()` ou `open()` — idempotente em chamadas seguintes.
+const launcher = useAgendaEventLauncher();
+const agenda = launcher.agenda;
+const newEvent = launcher.newEvent;
+const wlScheduleEntry = launcher.wlScheduleEntry;
 
 // Component Refs
 const timelineArea = ref(null);
 const summaryBarRef = ref(null);
 
-// Modules
-const { fetchInitialData } = useAgendaInit({ 
-  store, 
-  agendaState: agenda.state, 
-  checkQueryParams: () => checkQueryParams() 
-});
-
-const {
-  openEventModal,
-  closeEventModal,
-  openEditEvent,
-  saveEvent,
-  deleteEvent,
-  cancelDelete,
-  confirmDelete,
-  quickDeleteEvent,
-  checkQueryParams
-} = useAgendaCrud({ agenda, store, router, route, newEvent, wlScheduleEntry, _returnPatientId });
+// Handlers vindos do launcher — `openEventModal` aqui aponta para
+// `launcher.open`, que aceita o mesmo payload do antigo `openEventModal`
+// (dayObj/hourStr/agent) e ainda suporta pré-preenchimento de paciente
+// quando chamado a partir de Conversas. Os handlers do modal em si
+// (close/save/delete/cancelDelete/confirmDelete) são consumidos pelo
+// AgendaEventLauncherOutlet em Dashboard.vue, não aqui.
+const openEventModal = launcher.open;
+const openEditEvent = launcher.openEditEvent;
+const quickDeleteEvent = launcher.quickDeleteEvent;
+const checkQueryParams = launcher.checkQueryParams;
 
 const {
   toggleEventInfo,
@@ -82,7 +77,6 @@ const {
 const agents = computed(() => store.getters['agents/getAgents']);
 const agendaEvents = computed(() => store.getters['agendaEvents/getAgendaEvents']);
 const currentUser = computed(() => store.getters['getCurrentUser']);
-const contacts = computed(() => store.getters['contacts/getContacts']);
 const eventsUiFlags = computed(() => store.getters['agendaEvents/getUIFlags'] || {});
 const isFetchingEvents = computed(() => !!eventsUiFlags.value.isFetching);
 
@@ -101,16 +95,30 @@ const dragGhostStyle = computed(() => agenda.dragGhostStyle.value);
 const isMobile = computed(() => agenda.isMobile.value);
 
 const currentUserID = computed(() => currentUser.value?.id);
+const { can: klivyCan, scope: klivyScope } = usePermissions();
+
 const isAdmin = computed(() => {
   const role = currentUser.value?.role;
   return role === 'administrator' || role === 'supervisor';
 });
 
+// Quem pode ver TODAS as colunas da agenda (não apenas a própria):
+//   - Administrador Chatwoot (bypass)
+//   - Usuário com KlivyRole tendo `agenda.view` + scope='all'
+// Especialista comum (provider) com scope='own' continua vendo apenas
+// sua própria coluna. Gerente/Recepcionista (não-providers, com view) veem
+// o calendário inteiro pra coordenar.
+const canViewAllAgenda = computed(() => {
+  if (isAdmin.value) return true;
+  return klivyCan('agenda', 'view') && klivyScope('agenda') === 'all';
+});
+
 const agentList = computed(() => agenda.buildAgentList(agents.value));
-const activeAgents = computed(() => agenda.getActiveAgents(agentList.value, isAdmin.value, currentUserID.value));
-const visibleAgentList = computed(() => agenda.getVisibleAgentList(agentList.value, isAdmin.value, currentUserID.value));
+const activeAgents = computed(() => agenda.getActiveAgents(agentList.value, canViewAllAgenda.value, currentUserID.value));
+const visibleAgentList = computed(() => agenda.getVisibleAgentList(agentList.value, canViewAllAgenda.value, currentUserID.value));
 
 const monthLabel = computed(() => agenda.getMonthLabel(t));
+const currentDateLabel = computed(() => agenda.getCurrentDateLabel(t));
 const dayHeaders = computed(() => agenda.getDayHeaders(t));
 const miniDayHeaders = computed(() => agenda.getMiniDayHeaders(t));
 const currentWeekDays = computed(() => agenda.getCurrentWeekDays(t));
@@ -136,18 +144,24 @@ const {
 });
 
 // Lifecycles
+// `ensureLoaded()` é idempotente — primeira chamada faz o carregamento
+// pesado (settings, custom attrs, agentes, services, categories, eventos);
+// chamadas seguintes (onActivated com KeepAlive ou abertura via Conversas)
+// só refazem fetch da janela visível. NÃO chamamos `agenda.destroy()` ao
+// desmontar: o agenda state é singleton e precisa sobreviver entre rotas
+// para que o modal possa ser aberto a partir de Conversas.
 onMounted(() => {
-  fetchInitialData();
+  launcher.ensureLoaded();
+  checkQueryParams();
   document.addEventListener('mousemove', onGlobalMouseMove);
   document.addEventListener('mouseup', onGlobalMouseUp);
 });
 
 onActivated(() => {
-  fetchInitialData();
+  launcher.ensureLoaded();
 });
 
 onBeforeUnmount(() => {
-  agenda.destroy();
   document.removeEventListener('mousemove', onGlobalMouseMove);
   document.removeEventListener('mouseup', onGlobalMouseUp);
 });
@@ -162,6 +176,27 @@ const categoryOptions = computed(() => {
   return store.getters['agendaCategories/activeCategories'] || [];
 });
 
+const eventTypeCounts = computed(() => {
+  const counts = {};
+  for (const e of agendaEvents.value || []) {
+    const key = e.event_type || 'consultation';
+    counts[key] = (counts[key] || 0) + 1;
+  }
+  return counts;
+});
+
+// Auditoria 2026-05-15: badge de contagem por status no sidebar.
+// Espelha eventTypeCounts. Agrupa pelos 7 status do enum AgendaEvent.
+// `cancelled` deixou de ser invisível depois da reconciliação Clinicorp.
+const statusCounts = computed(() => {
+  const counts = {};
+  for (const e of agendaEvents.value || []) {
+    const key = e.status || 'scheduled';
+    counts[key] = (counts[key] || 0) + 1;
+  }
+  return counts;
+});
+
 // Filtra + agrupa todos os eventos por chave-do-dia em um único pass O(n).
 // Antes: getEventsForDay percorria os 8k eventos uma vez por dia da grade
 // (8k × 7 dias = 56k iterações por render). Agora: 8k × 1 = 8k, e a consulta
@@ -169,22 +204,44 @@ const categoryOptions = computed(() => {
 // filtros (agentes/prioridades/tipos/tratamentos ocultos) mudam.
 const eventsByDayKey = computed(() => {
   const events = agendaEvents.value || [];
-  const isAdminVal = isAdmin.value;
+  const canViewAll = canViewAllAgenda.value;
   const uid = currentUserID.value;
-  const { hiddenAgents, hiddenPriorities, hiddenEventTypes, hiddenTreatments } = agenda.state;
+  const { hiddenAgents, hiddenPriorities, hiddenEventTypes, hiddenServiceIds, hiddenStatuses } = agenda.state;
   const map = new Map();
+
+  // Lookup auxiliar para o fallback de NAME nos eventos legados (agenda_service_id NULL).
+  const treatmentByName = new Map();
+  for (const t of treatmentOptions.value || []) {
+    if (t?.name) treatmentByName.set(t.name, t.id);
+  }
 
   const { hiddenCategories } = agenda.state;
   for (const e of events) {
-    if (!isAdminVal && e.user_id !== uid) continue;
+    if (!canViewAll && e.user_id !== uid) continue;
     if (hiddenAgents.includes(e.user_id)) continue;
     const prio = e.custom_attributes?.priority || 'medium';
     if (hiddenPriorities.includes(prio)) continue;
     const evType = e.event_type || 'consultation';
     if (hiddenEventTypes.includes(evType)) continue;
-    const treatment = e.custom_attributes?.treatment;
-    if (treatment && hiddenTreatments.includes(treatment)) continue;
+    // PR #6 da auditoria 2026-05-13: filtro por ID (estável a rename). Fallback
+    // por NAME só para eventos com agenda_service_id NULL (legados pré-PR #5).
+    if (e.agenda_service_id != null) {
+      if (hiddenServiceIds.includes(e.agenda_service_id)) continue;
+    } else {
+      const treatment = e.custom_attributes?.treatment;
+      if (treatment) {
+        const sid = treatmentByName.get(treatment);
+        if (sid != null && hiddenServiceIds.includes(sid)) continue;
+      }
+    }
     if (e.category_id && hiddenCategories.includes(e.category_id)) continue;
+    // Filtro de status só vale pra Consulta (único tipo com fluxo de
+    // atendimento). Compromisso/Bloqueio passam direto.
+    if (
+      evType === 'consultation' &&
+      hiddenStatuses.includes(e.status || 'scheduled')
+    )
+      continue;
 
     const d = parseEventDate(e.starts_at || e.start_time);
     const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -260,6 +317,13 @@ const handleViewDay = (dayObj) => {
   agenda.setViewMode('day');
 };
 
+// Clique no nome do mês na Year View → abre Month View daquele mês.
+// dayObj traz { year, month } (month 0-indexado, como o resto do calendário).
+const handleViewMonth = ({ year, month }) => {
+  agenda.handleMiniCalendarClick({ year, month, day: 1 });
+  agenda.setViewMode('month');
+};
+
 // Expose internal navigation to template
 const prevPeriod = () => agenda.prevPeriod();
 const nextPeriod = () => agenda.nextPeriod();
@@ -281,6 +345,9 @@ const toggleTreatment = (val) => agenda.toggleTreatment(val);
 const toggleCategory = (id) => agenda.toggleCategory(id);
 const soloCategory = (id) => agenda.soloCategory(id, categoryOptions.value.map(c => c.id));
 const showAllCategories = () => agenda.showAllCategories();
+const toggleStatus = (val) => agenda.toggleStatus(val);
+const soloStatus = (val) => agenda.soloStatus(val, STATUS_OPTIONS_KEYS);
+const showAllStatuses = () => agenda.showAllStatuses();
 </script>
 
 <template>
@@ -328,9 +395,21 @@ const showAllCategories = () => agenda.showAllCategories();
         class="absolute top-0 left-0 right-0 h-0.5 z-50 bg-blue-500 animate-loader-pulse pointer-events-none"
         aria-hidden="true"
       />
+      <!-- YEAR VIEW -->
+      <AgendaYearView
+        v-if="agenda.state.viewMode === 'year'"
+        :current-date="agenda.state.currentDate"
+        :hidden-statuses="agenda.state.hiddenStatuses"
+        :is-dark-theme="agenda.state.isDarkTheme"
+        :is-day-blocked="isDayBlockedBound"
+        :get-day-block-info="getDayBlockInfoBound"
+        @view-day="handleViewDay"
+        @view-month="handleViewMonth"
+      />
+
       <!-- MONTH VIEW -->
       <AgendaMonthView
-        v-if="agenda.state.viewMode === 'month'"
+        v-else-if="agenda.state.viewMode === 'month'"
         :calendar-weeks="calendarWeeks"
         :day-headers="dayHeaders"
         :events-map="monthEventsMap"
@@ -359,7 +438,7 @@ const showAllCategories = () => agenda.showAllCategories();
         :agenda-events="agendaEvents"
         :agent-list="agentList"
         :current-user-i-d="currentUserID"
-        :is-admin="isAdmin"
+        :is-admin="canViewAllAgenda"
         :current-time-line-style="currentTimeLineStyle"
         :is-dragging="agenda.state.isDragging"
         :dragging-event="agenda.state.draggingEvent"
@@ -397,16 +476,20 @@ const showAllCategories = () => agenda.showAllCategories();
       <AgendaSidebar
         :calendar-days="calendarDays"
         :mini-day-headers="miniDayHeaders"
-        :is-admin="isAdmin"
+        :current-date-label="currentDateLabel"
+        :is-admin="canViewAllAgenda"
         :visible-agent-list="visibleAgentList"
         :hidden-agents="agenda.state.hiddenAgents"
         :hidden-priorities="agenda.state.hiddenPriorities"
         :hidden-event-types="agenda.state.hiddenEventTypes"
-        :hidden-treatments="agenda.state.hiddenTreatments"
+        :hidden-service-ids="agenda.state.hiddenServiceIds"
         :hidden-categories="agenda.state.hiddenCategories"
+        :hidden-statuses="agenda.state.hiddenStatuses"
         :expanded-filters="agenda.state.expandedFilters"
         :treatment-options="treatmentOptions"
         :category-options="categoryOptions"
+        :event-type-counts="eventTypeCounts"
+        :status-counts="statusCounts"
         :waiting-list-entries="waitingListStore.entries"
         :wl-info-popup="agenda.state.wlInfoPopup"
         :show-mobile-sidebar="agenda.state.showMobileSidebar"
@@ -421,6 +504,9 @@ const showAllCategories = () => agenda.showAllCategories();
         @toggle-category="toggleCategory"
         @solo-category="soloCategory"
         @show-all-categories="showAllCategories"
+        @toggle-status="toggleStatus"
+        @solo-status="soloStatus"
+        @show-all-statuses="showAllStatuses"
         @show-wl-info="showWlInfo"
         @close-wl-info="closeWlInfo"
         @remove-wl="id => waitingListStore.remove(id)"
@@ -436,33 +522,12 @@ const showAllCategories = () => agenda.showAllCategories();
       @select="confirmWlSchedule"
     />
 
-    <!-- EVENT MODAL -->
-    <AgendaEventModal
-      :show="agenda.state.showNewEventModal"
-      :is-editing="agenda.state.isEditing"
-      :editing-event-id="agenda.state.editingEventId"
-      :new-event="newEvent"
-      :custom-attributes-config="agenda.state.customAttributesConfig"
-      :agents="visibleAgentList"
-      :treatment-options="treatmentOptions"
-      :category-options="categoryOptions"
-      :agenda-settings="agenda.state.agendaSettingsData"
-      :is-slot-blocked="agenda.isHourBlocked"
-      :is-saving="agenda.state.isSaving"
-      :is-deleting="agenda.state.isDeleting"
-      @close="closeEventModal"
-      @save="saveEvent"
-      @delete="deleteEvent"
-      @update:new-event="v => (newEvent = v)"
-    />
-
-    <!-- DELETE MODAL -->
-    <AgendaDeleteModal
-      :show="agenda.state.showConfirmDelete"
-      :is-deleting="agenda.state.isDeleting"
-      @cancel="cancelDelete"
-      @confirm="confirmDelete"
-    />
+    <!--
+      AgendaEventModal e AgendaDeleteModal são montados pelo
+      AgendaEventLauncherOutlet em Dashboard.vue (overlay global).
+      Manter uma única instância evita duplicar o Teleport no body
+      quando o modal é aberto a partir de Conversas.
+    -->
 
     <!-- EVENT INFO POPUP -->
     <AgendaEventInfoPopup

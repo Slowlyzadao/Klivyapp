@@ -1,0 +1,61 @@
+type: object
+description: |
+  Resultado da busca híbrida (estilo WhatsApp Web). Conversas com contato
+  cujo nome/telefone bate com a query + contatos SEM conversa (para iniciar
+  uma). Contatos que já aparecem em `conversations` NUNCA aparecem em
+  `contacts` (deduplicação rígida).
+properties:
+  conversations:
+    type: array
+    description: "Até 10 conversas, ordem `last_activity_at DESC`."
+    items:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: "`display_id` (sequencial por conta, não primary key)."
+        account_id: { type: integer }
+        inbox_id: { type: integer }
+        last_activity_at:
+          type: integer
+          description: "Unix timestamp (segundos)."
+          nullable: true
+        created_at: { type: integer, description: "Unix timestamp." }
+        contact:
+          type: object
+          nullable: true
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            phone_number: { type: string, nullable: true }
+            email: { type: string, nullable: true }
+            thumbnail: { type: string, nullable: true }
+        inbox:
+          type: object
+          nullable: true
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            channel_type: { type: string }
+        last_message:
+          type: object
+          nullable: true
+          properties:
+            id: { type: integer }
+            content: { type: string, nullable: true }
+            created_at: { type: integer }
+  contacts:
+    type: array
+    description: |
+      Até 10 contatos que **bateram** na query mas **não têm** nenhuma
+      conversa nas inboxes acessíveis pelo usuário.
+    items:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        phone_number: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        identifier: { type: string, nullable: true }
+        thumbnail: { type: string, nullable: true }
+        last_activity_at: { type: integer, nullable: true }

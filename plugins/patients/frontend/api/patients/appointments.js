@@ -18,21 +18,10 @@ class PatientAppointmentsAPI extends ApiClient {
     return axios.post(this.buildUrl(patientId), { appointment: payload });
   }
 
-  reschedule(patientId, id, payload) {
-    return axios.patch(`${this.buildUrl(patientId)}/${id}/reschedule`, {
-      appointment: payload,
-    });
-  }
-
-  cancel(patientId, id, reason = '') {
-    return axios.patch(`${this.buildUrl(patientId)}/${id}/cancel`, {
-      cancellation_reason: reason,
-    });
-  }
-
-  markNoShow(patientId, id) {
-    return axios.patch(`${this.buildUrl(patientId)}/${id}/no_show`);
-  }
+  // Auditoria UX 2026-05-15: métodos `reschedule`, `cancel` e `markNoShow`
+  // removidos junto com os botões da aba de prontuário. Operação de agenda
+  // fica exclusiva do calendário principal. Endpoints backend também foram
+  // removidos do PatientAppointmentsController.
 
   sendRecall(patientId) {
     return axios.post(`${this.url}/${patientId}/recall`);

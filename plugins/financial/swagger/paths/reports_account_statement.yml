@@ -1,0 +1,87 @@
+get:
+  tags:
+    - Financeiro · Relatórios
+  summary: Extrato por conta bancária (Hub Relatórios)
+  description: |
+    Lista todas as Entries de uma conta bancária no período, em ordem
+    cronológica de `cash_date`, com saldo corrente após cada movimento
+    (extrato bancário tradicional). Saldo inicial é reconstruído a partir do
+    saldo atual da conta. `bank_account_id` é obrigatório (400 se ausente).
+    Exige role GERENTE/ADMIN/AUDITOR.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: bank_account_id
+      in: query
+      required: true
+      schema: { type: integer }
+      description: "Conta bancária do extrato (obrigatório)"
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+  responses:
+    '200':
+      description: |
+        Extrato da conta. `bank_account` é `null` quando o id não pertence à
+        conta/tenant (demais campos zerados e `entries` vazio).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              period:
+                type: object
+                properties:
+                  from: { type: string, format: date }
+                  to: { type: string, format: date }
+              bank_account:
+                type: object
+                nullable: true
+                properties:
+                  id: { type: integer }
+                  name: { type: string }
+                  kind: { type: string }
+                  current_balance_cents: { type: integer }
+              summary:
+                type: object
+                properties:
+                  initial_balance_cents: { type: integer }
+                  income_cents: { type: integer }
+                  outflow_cents: { type: integer }
+                  final_balance_cents: { type: integer }
+                  transactions_count: { type: integer }
+              entries:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    date: { type: string, format: date }
+                    kind: { type: string }
+                    kind_label: { type: string }
+                    direction: { type: string, enum: [in, out] }
+                    description: { type: string, nullable: true }
+                    amount_cents: { type: integer }
+                    signed_amount_cents: { type: integer }
+                    balance_cents: { type: integer }
+    '400':
+      description: "`bank_account_id` ausente"
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string, example: "bank_account_id obrigatório" }
+    '403':
+      description: Sem permissão (exige GERENTE/ADMIN/AUDITOR)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string, example: forbidden }
+              required_roles:
+                type: array
+                items: { type: string }

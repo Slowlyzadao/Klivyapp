@@ -303,7 +303,10 @@ const createChannel = async () => {
         </div>
 
         <!-- QR CODE AVAILABLE -->
-        <div v-else-if="qrCodeBase64" class="relative group p-4 bg-white rounded-2xl shadow-inner border border-n-weak">
+        <div
+          v-else-if="qrCodeBase64"
+          class="relative group p-4 bg-white rounded-2xl shadow-inner border border-n-weak"
+        >
           <img
             :src="qrCodeBase64"
             alt="WhatsApp QR Code"
@@ -314,10 +317,16 @@ const createChannel = async () => {
         <!-- LOADING / DISCONNECTING -->
         <div v-else class="flex flex-col items-center gap-6 py-8">
           <div class="relative w-16 h-16">
-            <div class="absolute inset-0 border-4 border-n-brand/10 rounded-full"></div>
-            <div class="absolute inset-0 border-4 border-n-brand border-t-transparent rounded-full animate-spin"></div>
+            <div
+              class="absolute inset-0 border-4 border-n-brand/10 rounded-full"
+            />
+            <div
+              class="absolute inset-0 border-4 border-n-brand border-t-transparent rounded-full animate-spin"
+            />
           </div>
-          <p class="text-sm font-medium text-n-slate-11 animate-pulse tracking-wide">
+          <p
+            class="text-sm font-medium text-n-slate-11 animate-pulse tracking-wide"
+          >
             {{
               isDisconnecting ? qrI18n('CLEANING_SESSION') : qrI18n('STARTING')
             }}

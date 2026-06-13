@@ -1,0 +1,69 @@
+get:
+  tags:
+    - Regras de Notificação
+  summary: Listar regras
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Lista ordenada por `position`
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/AgendaNotificationRule.yml'
+post:
+  tags:
+    - Regras de Notificação
+  summary: Criar regra
+  description: |
+    `rule_type=reminder` exige `trigger_offset_hours`. Aceita aliases
+    camelCase do frontend (`iconColor`, `message`) que são normalizados
+    para os campos canônicos no backend.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [agenda_notification_rule]
+          properties:
+            agenda_notification_rule:
+              type: object
+              required: [title, rule_type, message_template]
+              properties:
+                title: { type: string }
+                rule_type:
+                  type: string
+                  enum: [reminder, confirmation, followup, birthday, custom]
+                icon: { type: string, example: "i-lucide-bell" }
+                icon_color: { type: string }
+                iconColor: { type: string, description: "Alias camelCase de icon_color" }
+                trigger_offset_hours:
+                  type: number
+                  format: float
+                  description: Obrigatório quando `rule_type=reminder`.
+                message_template: { type: string }
+                message: { type: string, description: "Alias de message_template" }
+                enabled: { type: boolean, default: true }
+                position: { type: integer }
+                inboxes:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      label: { type: string }
+                      inbox_id: { type: integer }
+                      color: { type: string }
+  responses:
+    '201':
+      description: Regra criada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaNotificationRule.yml'
+    '422':
+      description: Erro de validação

@@ -1,0 +1,1157 @@
+/* ========================================================================
+   _EvolutionTab.scss — Aba "Evolução" unificada (procedimentos + evolução).
+   Prefixo único: .evo-*
+   ======================================================================== */
+
+/* ── ROOT / HEADER ─────────────────────────────────────────────────────── */
+.evo-tab-root {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.evo-tab-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.evo-tab-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: rgb(var(--slate-12));
+  margin: 0;
+}
+
+.evo-tab-subtitle {
+  font-size: 13px;
+  color: rgb(var(--slate-9));
+  margin: 0;
+}
+
+/* ── SUB-TABS NAV ──────────────────────────────────────────────────────── */
+.evo-subtabs {
+  display: flex;
+  gap: 6px;
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 12px;
+  padding: 4px;
+  flex-wrap: wrap;
+}
+
+.evo-subtab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--slate-9));
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.evo-subtab-btn:hover {
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-11));
+}
+
+.evo-subtab-btn.is-active {
+  background: rgb(var(--slate-1));
+  color: rgb(var(--slate-12));
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.evo-subtab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgb(var(--blue-11));
+  background: rgb(var(--blue-3));
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+.evo-subtab-btn.is-active .evo-subtab-badge {
+  background: rgb(var(--blue-4));
+  color: rgb(var(--blue-12));
+}
+
+/* ── SUB-TAB PANE ──────────────────────────────────────────────────────── */
+.evo-subtab-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.evo-subtab-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.evo-subtab-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgb(var(--slate-12));
+  margin: 0;
+}
+
+.evo-subtab-subtitle {
+  font-size: 13px;
+  color: rgb(var(--slate-9));
+  margin: 4px 0 0;
+}
+
+.evo-subtab-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── EMPTY STATE / LOADING ─────────────────────────────────────────────── */
+.evo-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 48px 16px;
+  background: rgb(var(--slate-1));
+  border: 1px dashed rgb(var(--slate-5));
+  border-radius: 12px;
+  color: rgb(var(--slate-8));
+}
+
+.evo-empty-state h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: rgb(var(--slate-11));
+  margin: 0 0 6px;
+}
+
+.evo-empty-state p {
+  font-size: 13px;
+  margin: 0;
+  max-width: 380px;
+  line-height: 1.5;
+}
+
+.evo-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  color: rgb(var(--slate-8));
+}
+
+/* ── IN-PROGRESS LIST (cards) ──────────────────────────────────────────── */
+.evo-card-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.evo-progress-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 8px;
+  padding: 10px 14px;
+  gap: 16px;
+}
+
+.evo-progress-card-body {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.evo-progress-plan-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgb(var(--slate-8));
+}
+
+.evo-progress-procedure-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(var(--slate-12));
+  margin: 0;
+}
+
+.evo-progress-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.evo-progress-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.evo-progress-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+/* ── CLINICAL RECORD TIMELINE (cards verticais) ────────────────────────── */
+.evo-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.evo-timeline-card {
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--slate-4));
+  border-left: 3px solid rgb(var(--slate-6));
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.evo-timeline-card:hover {
+  border-color: rgb(var(--slate-5));
+}
+
+.evo-timeline-card.is-expanded {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.evo-timeline-card.is-signed {
+  border-left-color: #3b82f6;
+}
+
+.evo-timeline-card.is-draft {
+  border-left-color: #f59e0b;
+}
+
+.evo-timeline-card.is-erratum {
+  border-left-color: #dc2626;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 10px,
+    rgba(220, 38, 38, 0.03) 10px,
+    rgba(220, 38, 38, 0.03) 20px
+  );
+}
+
+.evo-timeline-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 18px;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+.evo-timeline-card-header:hover {
+  background: rgb(var(--slate-2));
+}
+
+.evo-timeline-card.is-expanded .evo-timeline-card-header {
+  border-bottom: 1px solid rgb(var(--slate-3));
+}
+
+.evo-timeline-chevron {
+  flex-shrink: 0;
+  color: rgb(var(--slate-9));
+  transition: transform 0.2s;
+}
+
+.evo-timeline-summary {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.evo-timeline-summary-top {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.evo-timeline-date,
+.evo-timeline-pro {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: rgb(var(--slate-10));
+}
+
+.evo-timeline-procedure {
+  font-size: 15px;
+  font-weight: 600;
+  color: rgb(var(--slate-12));
+  margin: 0;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* flex inline pra que o ícone de copiar fique alinhado com a baseline
+     do título sem quebrar linha. */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Botão "copiar" inline ao lado do nome do procedimento (Ficha Clínica).
+   Span clicável (não <button>) porque está aninhado dentro do
+   <button> de toggle do accordion — button-em-button é HTML inválido. */
+.evo-procedure-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: rgb(var(--slate-10));
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    opacity: 1;
+    background: rgba(20, 184, 166, 0.12);
+    color: rgb(var(--teal-11));
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgb(var(--teal-9));
+    outline-offset: 1px;
+    opacity: 1;
+  }
+
+  &:active {
+    transform: scale(0.92);
+  }
+}
+
+.evo-timeline-card.is-expanded .evo-timeline-procedure {
+  white-space: normal;
+}
+
+.evo-timeline-card-body {
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.evo-timeline-fields {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 16px;
+  row-gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.evo-timeline-fields dt {
+  font-weight: 600;
+  color: rgb(var(--slate-9));
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding-top: 2px;
+}
+
+.evo-timeline-fields dd {
+  color: rgb(var(--slate-11));
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.evo-timeline-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  border-top: 1px solid rgb(var(--slate-3));
+  padding: 10px 18px;
+  background: rgb(var(--slate-2));
+}
+
+/* Status badge (compartilhado com tabela) */
+.evo-status-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 99px;
+}
+
+.evo-badge--draft {
+  background: rgba(234, 179, 8, 0.1);
+  color: #b45309;
+  border: 1px solid rgba(234, 179, 8, 0.2);
+}
+
+.evo-badge--signed {
+  background: rgba(22, 163, 74, 0.1);
+  color: #16a34a;
+  border: 1px solid rgba(22, 163, 74, 0.2);
+}
+
+.evo-badge--erratum {
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+/* Banner errata (timeline) */
+.evo-erratum-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: rgb(var(--slate-11));
+}
+
+.evo-erratum-banner i {
+  color: #b91c1c;
+  flex-shrink: 0;
+}
+
+/* ── HISTORY TABLE ─────────────────────────────────────────────────────── */
+.evo-table-wrap {
+  overflow-x: auto;
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 12px;
+}
+
+.evo-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.evo-history-table thead {
+  background: rgb(var(--slate-2));
+}
+
+.evo-history-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgb(var(--slate-9));
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid rgb(var(--slate-4));
+}
+
+.evo-history-table td {
+  padding: 10px 12px;
+  color: rgb(var(--slate-11));
+  border-bottom: 1px solid rgb(var(--slate-3));
+  vertical-align: top;
+}
+
+.evo-history-table tr.is-erratum td {
+  opacity: 0.6;
+  text-decoration: line-through;
+  text-decoration-color: rgba(220, 38, 38, 0.4);
+}
+
+.evo-history-table tr.evo-row {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.evo-history-table tr.evo-row:hover {
+  background: rgb(var(--slate-2));
+}
+
+.evo-history-table tr.evo-row.is-expanded {
+  background: rgb(var(--slate-2));
+}
+
+.evo-col-toggle {
+  width: 32px;
+  padding: 8px 4px !important;
+}
+
+.evo-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  border-radius: 6px;
+  color: rgb(var(--slate-9));
+}
+
+.evo-toggle-btn:hover {
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-12));
+}
+
+.evo-row-detail {
+  background: rgb(var(--slate-1));
+}
+
+.evo-row-detail td {
+  border-bottom: 1px solid rgb(var(--slate-4)) !important;
+  padding: 16px 18px !important;
+  text-decoration: none !important;
+  opacity: 1 !important;
+}
+
+.evo-row-detail.is-erratum td {
+  background: rgba(220, 38, 38, 0.04);
+}
+
+.evo-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px 24px;
+}
+
+.evo-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.evo-detail-field dt {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgb(var(--slate-9));
+  margin: 0;
+}
+
+.evo-detail-field dd {
+  font-size: 13px;
+  color: rgb(var(--slate-11));
+  margin: 0;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.evo-detail-erratum dt {
+  color: #b91c1c;
+}
+
+.evo-detail-erratum dd {
+  color: #b91c1c;
+  background: rgba(220, 38, 38, 0.06);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border-left: 2px solid rgba(220, 38, 38, 0.4);
+}
+
+.evo-cell-truncate {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evo-row-actions {
+  display: inline-flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.evo-signature-thumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 0;
+  color: #16a34a;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.evo-signature-thumb:hover {
+  background: rgba(22, 163, 74, 0.08);
+}
+
+.evo-signature-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: rgb(var(--slate-8));
+}
+
+/* ── MODALS (form, sign request, errata, remote link) ──────────────────── */
+.evo-form-modal,
+.evo-sign-request-modal,
+.evo-erratum-modal,
+.evo-remote-link-modal {
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--slate-5));
+  border-radius: 16px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.evo-form-modal {
+  max-width: 880px;
+}
+
+.evo-sign-request-modal,
+.evo-remote-link-modal {
+  max-width: 520px;
+}
+
+.evo-erratum-modal {
+  max-width: 560px;
+}
+
+.evo-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgb(var(--slate-4));
+  background: rgb(var(--slate-2));
+}
+
+.evo-modal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+}
+
+.evo-modal-body {
+  padding: 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1;
+}
+
+.evo-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgb(var(--slate-3));
+}
+
+.evo-modal-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.evo-modal-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgb(var(--slate-9));
+  margin: 0;
+}
+
+.evo-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid rgb(var(--slate-4));
+  background: rgb(var(--slate-2));
+}
+
+.evo-form-hint {
+  font-size: 12px;
+  color: rgb(var(--slate-8));
+  margin: 4px 0 0;
+}
+
+/* Radio groups (Sign request modal) */
+.evo-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 10px;
+  background: rgb(var(--slate-2));
+  margin: 0;
+}
+
+.evo-radio-legend {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgb(var(--slate-9));
+  padding: 0 6px;
+}
+
+.evo-radio-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: rgb(var(--slate-11));
+  cursor: pointer;
+}
+
+.evo-radio-option input[type='radio'] {
+  accent-color: #2563eb;
+}
+
+.evo-cost-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(234, 179, 8, 0.08);
+  border: 1px solid rgba(234, 179, 8, 0.25);
+  border-radius: 8px;
+  font-size: 12px;
+  color: #b45309;
+}
+
+.evo-mp-notice {
+  font-size: 12px;
+  color: rgb(var(--slate-9));
+  text-align: center;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.evo-mp-link {
+  color: #2563eb;
+  text-decoration: none;
+  display: block;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.evo-mp-link:hover {
+  text-decoration: underline;
+}
+
+/* Radio com sub-help (modo Link / Tela) */
+.evo-radio-help {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgb(var(--slate-9));
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+/* Bloco "Em breve" pra envio automático WhatsApp/SMS — visível mas cinza */
+.evo-coming-soon-block {
+  background: rgb(var(--slate-3));
+  border: 1px dashed rgb(var(--slate-7));
+  border-radius: 8px;
+  padding: 12px 14px;
+  position: relative;
+}
+
+.evo-coming-soon-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.evo-coming-soon-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: rgb(var(--blue-9));
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.evo-coming-soon-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--slate-12));
+}
+
+.evo-coming-soon-help {
+  font-size: 12px;
+  color: rgb(var(--slate-10));
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+
+.evo-coming-soon-block .form-group.is-disabled,
+.evo-coming-soon-block .evo-radio-group.is-disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Errata warning */
+.evo-erratum-warning {
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: rgb(var(--slate-11));
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+/* QR code do link de assinatura — paciente presente lê com a câmera */
+.evo-remote-link-qr-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0;
+  padding: 12px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid rgb(var(--slate-5));
+}
+
+.evo-remote-link-qr {
+  display: block;
+  width: 180px;
+  height: 180px;
+  image-rendering: pixelated;
+}
+
+.evo-remote-link-qr-hint {
+  font-size: 11px;
+  color: rgb(var(--slate-9));
+  text-align: center;
+}
+
+/* Botão "Enviar pelo WhatsApp" — usa cor do WhatsApp (#25D366) e abre via
+   wa.me deeplink (sem API oficial). É um <a> normal pra preservar o
+   comportamento "abrir em nova aba" e o user-agent decidir entre app/web. */
+.evo-whatsapp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #25D366;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .15s, transform .05s;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+
+.evo-whatsapp-btn:hover {
+  background: #1ebd5a;
+  color: white;
+}
+
+.evo-whatsapp-btn:active {
+  transform: translateY(1px);
+}
+
+/* Signature viewer modal — mostra a imagem da assinatura do paciente em
+   vez de abrir em nova aba (UX antiga). */
+.evo-signature-viewer-modal {
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--slate-5));
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.evo-signature-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+  margin-bottom: 14px;
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  dt {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgb(var(--slate-9));
+  }
+
+  dd {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgb(var(--slate-12));
+    margin: 0;
+  }
+}
+
+.evo-signature-image-wrap {
+  background: white;
+  border: 1px solid rgb(var(--slate-5));
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+}
+
+.evo-signature-image {
+  max-width: 100%;
+  max-height: 320px;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.evo-signature-empty {
+  color: rgb(var(--slate-9));
+  font-size: 13px;
+  padding: 40px;
+  text-align: center;
+}
+
+.evo-signature-disclaimer {
+  font-size: 11px;
+  color: rgb(var(--slate-9));
+  margin: 12px 0 0;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ProfessionalChip — avatar redondo + nome */
+.evo-prof-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: rgb(var(--slate-12));
+  white-space: nowrap;
+}
+
+.evo-prof-chip__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgb(var(--blue-3));
+  color: rgb(var(--blue-11));
+  font-weight: 700;
+  overflow: hidden;
+}
+
+.evo-prof-chip__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.evo-prof-chip__initials {
+  font-size: 0.72em;
+  letter-spacing: 0.02em;
+}
+
+.evo-prof-chip__name {
+  font-weight: 500;
+}
+
+.evo-prof-chip--xs {
+  font-size: 11px;
+  .evo-prof-chip__avatar {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.evo-prof-chip--sm {
+  font-size: 13px;
+  .evo-prof-chip__avatar {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+.evo-prof-chip--md {
+  font-size: 14px;
+  .evo-prof-chip__avatar {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* Separator vertical entre grupos de ações no footer dos cards do Timeline */
+.evo-timeline-card-actions__separator {
+  width: 1px;
+  height: 18px;
+  background: rgb(var(--slate-6));
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Remote link modal — row inline com link + ícone de copiar */
+.evo-remote-link-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.evo-remote-link-row .evo-remote-link-box {
+  flex: 1;
+  margin: 0;
+}
+
+.evo-remote-link-copy-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  flex-shrink: 0;
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-5));
+  border-radius: 8px;
+  color: rgb(var(--slate-11));
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+
+.evo-remote-link-copy-icon i {
+  width: 16px;
+  height: 16px;
+}
+
+.evo-remote-link-copy-icon:hover {
+  background: rgb(var(--slate-3));
+  color: rgb(var(--blue-9));
+  border-color: rgb(var(--blue-7));
+}
+
+.evo-remote-link-copy-icon.is-copied {
+  background: rgb(var(--emerald-3));
+  border-color: rgb(var(--emerald-7));
+  color: rgb(var(--emerald-11));
+}
+
+/* Remote link modal */
+.evo-remote-link-box {
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-5));
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: monospace;
+  font-size: 12px;
+  color: rgb(var(--slate-12));
+  word-break: break-all;
+  user-select: all;
+}
+
+.evo-remote-link-expires {
+  font-size: 12px;
+  color: rgb(var(--slate-9));
+  margin: 8px 0 0;
+}
+
+/* ── PRINT STYLES (Ficha Clínica) ──────────────────────────────────────── */
+@media print {
+  .evo-subtabs,
+  .evo-subtab-actions,
+  .evo-tab-header,
+  .evo-timeline-card-actions,
+  .evo-timeline-chevron {
+    display: none !important;
+  }
+
+  /* Garante que TODOS os cards apareçam expandidos na impressão, mesmo se
+     o usuário não tiver clicado em "expandir todos" antes. */
+  .evo-timeline-card-body {
+    display: flex !important;
+  }
+
+  .evo-timeline-card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border: 1px solid #ccc !important;
+    background: white !important;
+    box-shadow: none !important;
+  }
+
+  .evo-timeline-card-header {
+    cursor: default !important;
+    padding-bottom: 8px !important;
+  }
+}

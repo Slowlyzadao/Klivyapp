@@ -1,0 +1,146 @@
+get:
+  tags:
+    - Financeiro · Metas de Receita
+  summary: Detalhar meta
+  description: Retorna uma meta de receita. Requer papel GERENTE ou ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Meta encontrada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/RevenueGoal.yml'
+    '403':
+      description: Acesso negado (apenas GERENTE/ADMIN)
+    '404':
+      description: Meta não encontrada
+patch:
+  tags:
+    - Financeiro · Metas de Receita
+  summary: Atualizar meta
+  description: |
+    Atualiza os campos da meta. Os tiers são lidos em centavos (`*_cents`)
+    quando `metric=currency` ou em quantidade (`*_qty`) quando `metric=count`.
+    Requer papel GERENTE ou ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [revenue_goal]
+          properties:
+            revenue_goal:
+              type: object
+              properties:
+                name: { type: string, maxLength: 120 }
+                kind: { type: string, enum: [total, por_categoria, por_agente] }
+                metric: { type: string, enum: [currency, count] }
+                financial_dre_category_id:
+                  type: integer
+                  description: Obrigatório quando `kind=por_categoria`.
+                professional_id:
+                  type: integer
+                  description: Obrigatório quando `kind=por_agente`.
+                start_date: { type: string, format: date }
+                end_date: { type: string, format: date }
+                min_target_cents: { type: integer, description: 'Tier Mínima (metric=currency)' }
+                target_cents: { type: integer, description: 'Tier Principal (metric=currency)' }
+                stretch_target_cents: { type: integer, description: 'Tier Desafio (metric=currency)' }
+                min_target_qty: { type: integer, description: 'Tier Mínima (metric=count)' }
+                target_qty: { type: integer, description: 'Tier Principal (metric=count)' }
+                stretch_target_qty: { type: integer, description: 'Tier Desafio (metric=count)' }
+                active: { type: boolean }
+  responses:
+    '200':
+      description: Meta atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/RevenueGoal.yml'
+    '403':
+      description: Acesso negado (apenas GERENTE/ADMIN)
+    '404':
+      description: Meta não encontrada
+    '422':
+      description: Erro de validação
+put:
+  tags:
+    - Financeiro · Metas de Receita
+  summary: Atualizar meta
+  description: |
+    Alias de `PATCH` (mesmo `update`). Atualiza os campos da meta. Requer papel
+    GERENTE ou ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [revenue_goal]
+          properties:
+            revenue_goal:
+              type: object
+              properties:
+                name: { type: string, maxLength: 120 }
+                kind: { type: string, enum: [total, por_categoria, por_agente] }
+                metric: { type: string, enum: [currency, count] }
+                financial_dre_category_id:
+                  type: integer
+                  description: Obrigatório quando `kind=por_categoria`.
+                professional_id:
+                  type: integer
+                  description: Obrigatório quando `kind=por_agente`.
+                start_date: { type: string, format: date }
+                end_date: { type: string, format: date }
+                min_target_cents: { type: integer, description: 'Tier Mínima (metric=currency)' }
+                target_cents: { type: integer, description: 'Tier Principal (metric=currency)' }
+                stretch_target_cents: { type: integer, description: 'Tier Desafio (metric=currency)' }
+                min_target_qty: { type: integer, description: 'Tier Mínima (metric=count)' }
+                target_qty: { type: integer, description: 'Tier Principal (metric=count)' }
+                stretch_target_qty: { type: integer, description: 'Tier Desafio (metric=count)' }
+                active: { type: boolean }
+  responses:
+    '200':
+      description: Meta atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/RevenueGoal.yml'
+    '403':
+      description: Acesso negado (apenas GERENTE/ADMIN)
+    '404':
+      description: Meta não encontrada
+    '422':
+      description: Erro de validação
+delete:
+  tags:
+    - Financeiro · Metas de Receita
+  summary: Encerrar meta (active=false, mantém histórico)
+  description: |
+    Não exclui o registro: faz soft-encerramento (`active=false`) para preservar
+    histórico e auditoria. Responde 200 com a meta encerrada. Requer papel
+    GERENTE ou ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Meta encerrada (`active=false`)
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/RevenueGoal.yml'
+    '403':
+      description: Acesso negado (apenas GERENTE/ADMIN)
+    '404':
+      description: Meta não encontrada

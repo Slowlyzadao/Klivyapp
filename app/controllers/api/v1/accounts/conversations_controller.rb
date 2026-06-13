@@ -41,7 +41,15 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
     ActiveRecord::Base.transaction do
       @conversation = ConversationBuilder.new(params: params, contact_inbox: @contact_inbox).perform
-      Messages::MessageBuilder.new(Current.user, @conversation, params[:message]).perform if params[:message].present?
+      if params[:message].present?
+        # Garante que enviar a mensagem inicial respeita a mesma policy
+        # (`chat.reply`) de qualquer outra mensagem da conversa. Sem isso,
+        # uma role com `send_broadcast=true` mas `reply=false` conseguiria
+        # postar mensagem na conversa que acabou de criar (bypass parcial
+        # do ConversationPolicy#reply?).
+        authorize @conversation, :reply?
+        Messages::MessageBuilder.new(Current.user, @conversation, params[:message]).perform
+      end
     end
   end
 
@@ -134,7 +142,13 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   end
 
   def custom_attributes
-    @conversation.custom_attributes = params.permit(custom_attributes: {})[:custom_attributes]
+    # Sanitiza antes de persistir (auditoria M-1): limita número de keys e
+    # tamanho de cada valor pra evitar JSONB stuffing (DoS via payload gigante,
+    # query lenta). Sem isso, o `permit(custom_attributes: {})` aceita hash
+    # de qualquer tamanho.
+    @conversation.custom_attributes = sanitize_custom_attributes(
+      params.permit(custom_attributes: {})[:custom_attributes]
+    )
     @conversation.save!
   end
 
@@ -164,6 +178,25 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
   def attachment_params
     params.permit(:page)
+  end
+
+  # Limita o hash de `custom_attributes` antes de salvar no JSONB. Mantém:
+  # - máximo de 50 keys totais (cliente típico usa < 10);
+  # - cada valor scalar: string truncada em 10_000 caracteres;
+  # - nested hash/array preservados como vieram (Rails já fez `permit(custom_attributes: {})`
+  #   que só aceita scalars no nível raiz; arrays/hashes encadeados são raros aqui).
+  # Auditoria M-1 — defesa contra JSONB stuffing (DoS/perf).
+  CUSTOM_ATTRIBUTES_MAX_KEYS = 50
+  CUSTOM_ATTRIBUTES_MAX_VALUE_LENGTH = 10_000
+
+  def sanitize_custom_attributes(input)
+    return {} unless input.respond_to?(:to_unsafe_h) || input.is_a?(Hash)
+
+    hash = input.respond_to?(:to_unsafe_h) ? input.to_unsafe_h : input.to_h
+    sliced = hash.first(CUSTOM_ATTRIBUTES_MAX_KEYS).to_h
+    sliced.transform_values do |value|
+      value.is_a?(String) ? value.first(CUSTOM_ATTRIBUTES_MAX_VALUE_LENGTH) : value
+    end
   end
 
   def update_last_seen_on_conversation(last_seen_at, update_assignee)

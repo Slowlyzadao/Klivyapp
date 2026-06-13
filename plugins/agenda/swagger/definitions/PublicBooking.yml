@@ -1,0 +1,39 @@
+type: object
+description: |
+  Representação reduzida de um agendamento exposta pelos endpoints públicos
+  de booking. NÃO inclui `contact_id`/`user_id` — só o que o paciente já
+  conhece via link.
+properties:
+  id:
+    type: integer
+  starts_at:
+    type: string
+    format: date-time
+  ends_at:
+    type: string
+    format: date-time
+  status:
+    type: string
+    enum: [scheduled, confirmed, arrived, in_progress, completed, cancelled, no_show]
+  status_label:
+    type: string
+    description: Label em PT-BR pronta para a UI ("Agendado", "Confirmado", ...).
+    example: "Agendado"
+  professional_name:
+    type: string
+    nullable: true
+  service_name:
+    type: string
+    nullable: true
+  deleted:
+    type: boolean
+    description: "`true` se o evento foi soft-deletado pela clínica."
+  cancellable:
+    type: boolean
+    description: |
+      `true` quando o paciente ainda pode cancelar (não passou da janela de
+      `min_lead_time_minutes`, status não terminal, não soft-deletado).
+  cancellation_block_reason:
+    type: string
+    nullable: true
+    description: Mensagem amigável quando `cancellable=false`.

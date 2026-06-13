@@ -4,6 +4,8 @@ class HelpArticle < ApplicationRecord
   validates :title, presence: true
   validates :status, inclusion: { in: STATUSES }
   validates :category, presence: true
+  validates :body, length: { maximum: 10_000_000 }
+  validates :next_steps, length: { maximum: 10_000_000 }
   validate :category_must_be_valid
 
   scope :visible,    -> { where(deleted_at: nil) }

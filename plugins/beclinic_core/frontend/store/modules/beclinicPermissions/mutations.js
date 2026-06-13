@@ -6,19 +6,15 @@ import {
 } from './types';
 
 export const mutations = {
-  [SET_PERMISSIONS](state, { beclinicRole, permissions, team }) {
-    state.beclinicRole = beclinicRole;
+  [SET_PERMISSIONS](state, { permissions }) {
     state.permissions = permissions;
-    state.team = team;
     state.loaded = true;
   },
   [SET_PERMISSIONS_LOADING](state, isLoading) {
     state.isLoading = isLoading;
   },
   [CLEAR_PERMISSIONS](state) {
-    state.beclinicRole = null;
     state.permissions = {};
-    state.team = null;
     state.loaded = false;
   },
 };

@@ -1,0 +1,63 @@
+get:
+  tags:
+    - Financeiro · Contas Bancárias
+  summary: Listar contas bancárias
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: active
+      in: query
+      schema: { type: boolean }
+    - name: kind
+      in: query
+      schema: { type: string }
+  responses:
+    '200':
+      description: Lista
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/BankAccount.yml'
+post:
+  tags:
+    - Financeiro · Contas Bancárias
+  summary: Criar conta bancária
+  description: |
+    Saldo inicial só editável aqui (canon §4.2). Requer GERENTE/ADMIN.
+    Idempotência opcional via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [bank_account]
+          properties:
+            bank_account:
+              type: object
+              required: [name, kind]
+              properties:
+                name: { type: string }
+                kind: { type: string }
+                bank_name: { type: string }
+                bank_code: { type: string }
+                agency: { type: string }
+                account_number: { type: string }
+                initial_balance_cents: { type: integer }
+                active: { type: boolean, default: true }
+                card_settlement_days: { type: integer }
+  responses:
+    '201':
+      description: Criada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/BankAccount.yml'
+    '422': { description: "Erro de validação" }
+    '403': { description: "Sem permissão" }

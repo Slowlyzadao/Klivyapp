@@ -1,0 +1,55 @@
+// Menu contextual de tabela — dropdown ancorado no gatilho.
+// Itens com ícone solto + label; variante danger pra exclusões.
+
+.table-menu {
+  position: relative;
+  display: inline-flex;
+
+  &__pop {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 220px;
+    padding: 6px;
+    border: 1px solid var(--kl-border-subtle);
+    border-radius: var(--kl-radius-lg);
+    background: var(--kl-surface-white);
+    box-shadow: var(--kl-shadow-popover);
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: var(--kl-radius-md);
+    background: transparent;
+    color: var(--kl-on-surface);
+    font-family: var(--kl-font-family);
+    font-size: var(--kl-font-body-md);
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--kl-transition);
+
+    &:hover { background: var(--kl-surface-low); }
+
+    &--danger {
+      color: var(--kl-error);
+      .table-menu__icon { color: var(--kl-error); }
+      &:hover { background: var(--kl-error-container); }
+    }
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    color: var(--kl-secondary);
+  }
+}

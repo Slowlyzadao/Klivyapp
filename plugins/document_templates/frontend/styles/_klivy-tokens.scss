@@ -1,0 +1,145 @@
+// Tokens do plugin document_templates.
+//
+// ANTES eram uma paleta "M3 Klivy" própria (azul #003cc1, bg quente #fcf9f8,
+// fonte Plus Jakarta) que destoava do design system real do projeto. AGORA os
+// `--kl-*` são apenas APELIDOS pros tokens Radix do dashboard
+// (`rgb(var(--slate-N))` / `rgb(var(--blue-N))`), pra a página seguir a marca
+// (mesmo azul, mesmo cinza, mesma fonte) sem reescrever cada componente.
+//
+// Mantemos os nomes `--kl-*` pra não tocar nas dezenas de usos nos SCSS/SFCs
+// do plugin — só o VALOR mudou. Surfaces brancas (cards, papel do editor)
+// continuam `#fff` de propósito (WYSIWYG do PDF).
+//
+// IMPORTANTE: carregar em <style> NÃO-scoped nas rotas raiz (DocumentsIndex,
+// TemplateEditor) pra `:root` resolver pro <html> e os Teleports (modais,
+// popovers) herdarem os tokens via cascade do DOM.
+// IMPORTANTE: a classe `.dark` do app fica no <body> (themeHelper.js), e os
+// tokens Radix escuros (--slate-*) são definidos sob `.dark` (descendentes do
+// body). Os `--kl-*` resolvem `var(--slate-N)` no momento em que são DECLARADOS;
+// se declarados só no `:root` (<html>, PAI do body), pegam o slate CLARO e
+// ignoram o dark. Por isso declaramos também no **`body`** — que é onde o
+// `.dark` vive — garantindo que TUDO abaixo dele (página, editor e popovers
+// teleportados pro body) herde os tokens já resolvidos pro tema correto.
+// As classes de root continuam por clareza/precedência (redundantes com body).
+:root,
+body,
+.documents-index,
+.template-editor,
+.document-templates-scope {
+  // ── Surfaces (escala neutra Radix slate) ────────────────────────────────
+  --kl-bg: rgb(var(--slate-1));            // page main bg (neutro, = resto do app)
+  --kl-surface: rgb(var(--slate-1));
+  // Superfície "elevada" do CHROME (card, modal, toolbar, sidebar do editor,
+  // popovers/menus, lista). Antes era #fff hardcoded → ficava BRANCA no dark.
+  // Agora é theme-aware (claro no light, escuro no dark). O nome "white" é
+  // histórico; o papel do documento (sempre branco) usa --kl-paper.
+  --kl-surface-white: rgb(var(--slate-1));
+  // Papel do documento — A4 do editor + thumbnail do card. SEMPRE branco nos
+  // dois temas: é o WYSIWYG do PDF (igual Google Docs/Word no dark mantêm a
+  // folha branca). Conteúdo do doc (texto, chip de variável) idem.
+  --kl-paper: #ffffff;
+  // "Tinta" sobre o papel — FIXA nos dois temas (o papel é sempre branco).
+  // Mesma lógica do conteúdo do editor (_editor.scss): texto preto no PDF.
+  // NÃO usar tokens theme-aware aqui, senão o texto some no dark sobre o papel.
+  --kl-paper-ink: #1c1b1b;          // texto/títulos do documento
+  --kl-paper-ink-soft: #555d7b;     // texto secundário (itálico, citação)
+  --kl-paper-line: #d4d6e0;         // linhas/divisores do wireframe de preview
+  --kl-surface-low: rgb(var(--slate-2));   // hover, item ativo da sidebar, toggle bg
+  --kl-surface-container: rgb(var(--slate-3));
+  --kl-surface-high: rgb(var(--slate-3));  // badge de count inativo
+  --kl-surface-dim: rgb(var(--slate-5));   // linhas do preview, divisores fortes
+  --kl-surface-variant: rgb(var(--slate-3));
+  --kl-inverse-surface: rgb(var(--slate-12)); // chip de count dentro da tab ativa
+
+  // ── On-surface (texto / ícone sobre surface) ────────────────────────────
+  --kl-on-surface: rgb(var(--slate-12));     // headings, body text
+  --kl-on-surface-variant: rgb(var(--slate-11));
+  --kl-on-background: rgb(var(--slate-12));
+
+  // ── Secondary / muted ──────────────────────────────────────────────────
+  --kl-secondary: rgb(var(--slate-11));      // sub-text padrão
+  --kl-text-muted: rgb(var(--slate-10));
+  --kl-outline: rgb(var(--slate-8));
+  --kl-outline-variant: rgb(var(--slate-6));
+
+  // ── Primary (AZUL DA MARCA — Radix blue) ────────────────────────────────
+  --kl-primary: rgb(var(--blue-9));          // CTAs, tab ativa, toggle ativo
+  --kl-primary-container: rgb(var(--blue-10)); // hover / active alterna
+  --kl-on-primary: #ffffff;
+  --kl-on-primary-container: #ffffff;
+  --kl-primary-fixed: rgba(var(--blue-9), 0.12);      // badge "Personalizado" bg
+  --kl-on-primary-fixed-variant: rgb(var(--blue-11)); // badge "Personalizado" texto
+  --kl-primary-fixed-dim: rgba(var(--blue-9), 0.24);
+
+  // ── Borders ────────────────────────────────────────────────────────────
+  --kl-border-subtle: rgb(var(--slate-4));
+  --kl-border-strong: rgb(var(--slate-6));
+
+  // ── Semantic ───────────────────────────────────────────────────────────
+  --kl-error: rgb(var(--ruby-9));
+  --kl-error-container: rgba(var(--ruby-9), 0.12);
+  --kl-on-error: #ffffff;
+  // Sucesso (check do autosave "salvo"). teal-9 é o verde do design system
+  // (não existe grass/green); theme-aware nos dois temas via _next-colors.
+  --kl-success: rgb(var(--teal-9));
+
+  // ── Radii ──────────────────────────────────────────────────────────────
+  --kl-radius-sm: 0.25rem;   // 4px
+  --kl-radius-md: 0.5rem;    // 8px
+  --kl-radius-lg: 0.5rem;    // 8px
+  --kl-radius-xl: 0.75rem;   // 12px
+  --kl-radius-pill: 9999px;
+
+  // ── Spacing ────────────────────────────────────────────────────────────
+  --kl-stack-sm: 8px;
+  --kl-stack-md: 16px;
+  --kl-stack-lg: 24px;
+  --kl-gutter: 24px;
+  --kl-container-padding: 32px;
+  --kl-sidebar-width: 256px;
+
+  // ── Typography (sizes) ─────────────────────────────────────────────────
+  --kl-font-headline-lg: 24px;       // título de página (alinhado ao app: text-2xl)
+  --kl-font-headline-md: 20px;
+  --kl-font-headline-sm: 18px;
+  --kl-font-body-lg: 16px;
+  --kl-font-body-md: 14px;
+  --kl-font-label-md: 12px;
+
+  // ── Font family ────────────────────────────────────────────────────────
+  // `inherit` → usa a fonte do dashboard (não força mais Plus Jakarta). Os
+  // componentes que fazem `font-family: var(--kl-font-family)` passam a
+  // herdar a fonte do app.
+  --kl-font-family: inherit;
+
+  // ── Sombras ────────────────────────────────────────────────────────────
+  // Navy translúcido no light. No dark são redefinidas (bloco abaixo) pra
+  // preto + hairline clara, senão somem sobre a superfície escura.
+  --kl-shadow-card: 0 4px 20px rgba(7, 16, 42, 0.05);
+  --kl-shadow-sm: 0 1px 2px rgba(7, 16, 42, 0.06);
+  --kl-shadow-md: 0 4px 12px rgba(7, 16, 42, 0.06);
+  // Sombra forte de popover/menu flutuante (color picker, char, tabela, vars).
+  --kl-shadow-popover: 0 12px 28px rgba(7, 16, 42, 0.16), 0 0 0 1px rgba(7, 16, 42, 0.04);
+  --kl-ring: 0 0 0 3px rgba(var(--blue-9), 0.18);
+
+  // ── Transitions ────────────────────────────────────────────────────────
+  --kl-transition: 160ms ease;
+
+  // Smoothing (sem forçar font-family — o app já define a fonte no <html>).
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// Dark: as sombras acima são valores LITERAIS (não `var(--slate)`), então não
+// mudam sozinhas no tema escuro. Redeclaramos nos MESMOS escopos — `body` (pros
+// popovers teleportados) e `.template-editor`/`.documents-index` (in-place) —
+// com preto + hairline clara, pra a elevação continuar visível sobre o dark.
+body.dark,
+body.dark .documents-index,
+body.dark .template-editor,
+body.dark .document-templates-scope {
+  --kl-shadow-card: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --kl-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --kl-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --kl-shadow-popover: 0 12px 28px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}

@@ -1,0 +1,26 @@
+patch:
+  tags:
+    - Planos de Tratamento
+  summary: Cancelar plano
+  description: Bloqueia se status atual é `concluido`. Aceita `cancellation_reason` opcional.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            cancellation_reason: { type: string }
+  responses:
+    '200':
+      description: Cancelado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/TreatmentPlan.yml'
+    '422':
+      description: Plano concluído não pode ser cancelado

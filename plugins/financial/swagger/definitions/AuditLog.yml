@@ -1,0 +1,43 @@
+type: object
+description: |
+  Log de auditoria financeira (`Financial::AuditLog`). Registra
+  `create`/`update`/`destroy`/`restore`/`denied` em todas as entidades
+  `Financial::*`. `changed_keys` é computado server-side comparando
+  `before`/`after` — UI usa pra destacar campos modificados.
+properties:
+  id: { type: integer }
+  created_at: { type: string, format: date-time }
+  user_id: { type: integer, nullable: true }
+  user:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      avatar_url: { type: string, nullable: true }
+  action:
+    type: string
+    enum: [create, update, destroy, restore, denied]
+  action_label: { type: string, description: "Label PT-BR pronta para UI" }
+  entity_type:
+    type: string
+    description: "Classe Ruby da entidade afetada (ex.: Financial::Budget)"
+  entity_label: { type: string, description: "Label PT-BR (ex.: Orçamento)" }
+  entity_id: { type: integer }
+  ip: { type: string, nullable: true }
+  user_agent: { type: string, nullable: true }
+  before:
+    type: object
+    nullable: true
+    additionalProperties: true
+  after:
+    type: object
+    nullable: true
+    additionalProperties: true
+  changed_keys:
+    type: array
+    items: { type: string }
+  metadata:
+    type: object
+    nullable: true
+    additionalProperties: true

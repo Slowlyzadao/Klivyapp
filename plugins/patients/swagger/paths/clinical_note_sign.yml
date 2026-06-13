@@ -1,0 +1,21 @@
+patch:
+  tags:
+    - Evoluções Clínicas
+  summary: Assinar evolução
+  description: Finaliza via `Patients::ClinicalNoteSignerService`. Após, fica imutável (errata via `mark_erratum`).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Assinada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success: { type: boolean }
+              signed_at: { type: string, format: date-time }
+    '403':
+      description: Já assinada ou janela expirou

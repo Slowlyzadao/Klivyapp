@@ -3,6 +3,8 @@ module Api
     module Accounts
       module Patients
         class DocumentsController < Api::V1::Accounts::BaseController
+          include BeclinicErrorResponse
+
           before_action :set_patient
           before_action :set_document, only: [:show, :destroy, :download, :send_whatsapp, :status]
 
@@ -36,7 +38,12 @@ module Api
               variables: (params[:variables]&.to_unsafe_h || {}).symbolize_keys,
               generated_by: current_user,
               title: params[:title],
-              form_template_id: params[:form_template_id]
+              form_template_id: params[:form_template_id],
+              # Fase document-editor: com template_id, PdfGenerator delega
+              # pro DocumentTemplates::PdfGenerator (Grover). Sem ele, Prawn legado.
+              document_template_id: params[:document_template_id],
+              # Campos de preenchimento (input.*) digitados no modal de geração.
+              inputs: (params[:inputs]&.to_unsafe_h || {})
             )
 
             if result.success?
@@ -60,7 +67,7 @@ module Api
 
               render :show, status: :created
             else
-              render json: { error: result.error }, status: :unprocessable_entity
+              render_error(result.error, status: :unprocessable_entity)
             end
           end
 
@@ -78,7 +85,7 @@ module Api
               status: 'gerado'
             )
 
-            return render json: { error: 'Arquivo é obrigatório' }, status: :unprocessable_entity unless params[:file].present?
+            return render_error('Arquivo é obrigatório', status: :unprocessable_entity) unless params[:file].present?
 
             @document.file.attach(params[:file])
 
@@ -97,7 +104,7 @@ module Api
           # Retorna URL assinada para download/preview (15min de validade)
           def download
             authorize @document, :show?
-            return render json: { error: 'Documento sem arquivo anexado' }, status: :not_found unless @document.file.attached?
+            return render_error('Documento sem arquivo anexado', status: :not_found) unless @document.file.attached?
 
             signed_url = @document.signed_url(expires_in: 15.minutes, disposition: :inline)
 
@@ -126,7 +133,7 @@ module Api
                 whatsapp_payload: result.whatsapp_payload
               }
             else
-              render json: { error: result.error }, status: :unprocessable_entity
+              render_error(result.error, status: :unprocessable_entity)
             end
           end
 
@@ -163,6 +170,14 @@ module Api
               account: Current.account, patient: @patient, action: 'delete',
               actor: current_user, resource: @document, ip_address: request.remote_ip
             )
+            PatientTimelineEvent.record!(
+              patient: @patient,
+              account: Current.account,
+              event_type: 'document_deleted',
+              label: "Documento removido: #{@document.title.presence || @document.document_type}",
+              actor: current_user,
+              reference: @document
+            )
             render json: { message: 'Documento removido com sucesso' }
           end
 
@@ -171,13 +186,13 @@ module Api
           def set_patient
             @patient = Current.account.patients.find(params[:patient_id])
           rescue ActiveRecord::RecordNotFound
-            render json: { error: 'Paciente não encontrado' }, status: :not_found
+            render_error('Paciente não encontrado', status: :not_found)
           end
 
           def set_document
             @document = @patient.documents.active.find(params[:id])
           rescue ActiveRecord::RecordNotFound
-            render json: { error: 'Documento não encontrado' }, status: :not_found
+            render_error('Documento não encontrado', status: :not_found)
           end
         end
       end

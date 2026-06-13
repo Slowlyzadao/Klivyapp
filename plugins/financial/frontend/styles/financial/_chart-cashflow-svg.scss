@@ -1,0 +1,439 @@
+@use "../variables" as *;
+
+/* ── CashFlow SVG Line Chart (cf-*) ──────────────────────── */
+.cf-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.875rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cf-chart-header .financial-section__title {
+  margin-bottom: 0;
+}
+
+.cf-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  letter-spacing: 0.01em;
+}
+
+.cf-status-pill--pos {
+  background: rgba($brand-success, 0.10);
+  color: $brand-success;
+}
+
+.cf-status-pill--neg {
+  background: rgba($brand-danger, 0.10);
+  color: $brand-danger;
+}
+
+.dark .cf-status-pill--pos { background: rgba($brand-success, 0.18); }
+.dark .cf-status-pill--neg { background: rgba($brand-danger, 0.18); }
+
+.cf-status-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.cf-line-chart-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.cf-svg {
+  width: 100%;
+  display: block;
+  overflow: hidden;
+  border-bottom-left-radius: 0.75rem;
+  border-bottom-right-radius: 0.75rem;
+}
+
+.cf-grid-line {
+  stroke: #f1f5f9;
+  stroke-width: 1;
+}
+
+.dark .cf-grid-line {
+  stroke: #1e293b;
+}
+
+.cf-tick-label {
+  font-size: 11px;
+  fill: $brand-slate-light;
+  font-family: inherit;
+}
+
+.dark .cf-tick-label {
+  fill: $brand-slate;
+}
+
+.cf-crosshair {
+  stroke: rgba(100, 116, 139, 0.3);
+  stroke-width: 1;
+}
+
+.dark .cf-crosshair {
+  stroke: rgba(148, 163, 184, 0.3);
+}
+
+/* Tooltip */
+.cf-tooltip {
+  position: absolute;
+  top: 10px;
+  min-width: 160px;
+  background: #ffffff;
+  border: 1px solid rgb(var(--s-100));
+  border-radius: 10px;
+  padding: 0.625rem 0.75rem;
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.dark .cf-tooltip {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.cf-tooltip__date {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: rgb(var(--s-500));
+  margin-bottom: 0.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cf-tooltip__row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: rgb(var(--s-700));
+}
+
+.dark .cf-tooltip__row {
+  color: rgb(var(--s-300));
+}
+
+.cf-tooltip__dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cf-tooltip__dot--income { background: $brand-success; }
+.cf-tooltip__dot--expense { background: $brand-danger; }
+
+.cf-tooltip__divider {
+  height: 1px;
+  background: rgb(var(--s-100));
+  margin: 0.2rem 0;
+}
+
+.dark .cf-tooltip__divider { background: #334155; }
+
+.cf-tooltip__balance {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.cf-tooltip__balance--pos { color: $brand-success; }
+.cf-tooltip__balance--neg { color: $brand-danger; }
+
+/* Legenda */
+.cf-legend {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.5rem 1.25rem 0.75rem;
+  border-top: 1px solid rgb(var(--s-100));
+  margin-top: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.dark .cf-legend { border-color: rgb(var(--s-700)); }
+
+.cf-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgb(var(--s-500));
+}
+
+.cf-legend__dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cf-legend__dot--income { background: $brand-success; }
+.cf-legend__dot--expense { background: $brand-danger; }
+
+.cf-legend__line {
+  display: inline-block;
+  width: 16px;
+  height: 2.5px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+
+.cf-legend__line--income { background: $brand-success; }
+.cf-legend__line--expense { background: $brand-danger; }
+
+.cf-legend__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  color: rgb(var(--s-400));
+  margin-left: auto;
+}
+
+.dark .cf-legend__hint { color: rgb(var(--s-500)); }
+
+.cf-hint-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+/* ── Saldo em Caixa card (CashFlow.vue) ─────────────────────────────────── */
+.cf-balance-card {
+  position: relative;
+  /* border-left removed */
+}
+
+.cf-balance-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cf-balance-icon {
+  font-size: 14px;
+  color: $brand-success;
+  flex-shrink: 0;
+}
+
+.cf-balance-hint {
+  font-size: 11px;
+  color: rgb(var(--slate-9));
+  margin-top: 4px;
+  display: block;
+  line-height: 1.3;
+}
+
+/* select estilizado dentro do ReceivePaymentModal */
+.rp-date-input[id='rp-bank-account'] {
+  cursor: pointer;
+}
+
+/* ── cf-balance-card header row ─────────────────────────────────────────── */
+.cf-balance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+/* ── "Ver contas" toggle button (GREEN) ─────────────────────────────────── */
+.cf-accounts-toggle-green {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: none;
+  background: transparent;
+  color: $brand-success;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.cf-accounts-toggle-green:hover {
+  background: rgba($brand-success, 0.1);
+  color: $brand-success-strong;
+}
+
+.cf-accounts-toggle-green__chevron {
+  font-size: 14px;
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.cf-accounts-toggle-green__chevron--open {
+  transform: rotate(180deg);
+}
+
+/* ── Expandable accounts panel (Cards mode) ─────────────────────────────── */
+.cf-accounts-cards-panel {
+  margin-top: 12px;
+  margin-bottom: 16px;
+  animation: cf-cards-slide-down 0.25s ease-out;
+}
+
+@keyframes cf-cards-slide-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cf-accounts-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+/* ── Bank Card Base ─────────────────────────────────────────────────────── */
+.cf-bank-card {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid rgb(var(--slate-3));
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.cf-bank-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.cf-bank-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.cf-bank-card__icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgb(var(--slate-1));
+  color: rgb(var(--slate-9));
+  font-size: 18px;
+}
+
+.cf-bank-card__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.cf-bank-card__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(var(--slate-12));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cf-bank-card__bank {
+  font-size: 12px;
+  color: rgb(var(--slate-8));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cf-bank-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-top: 1px dashed rgb(var(--slate-3));
+  padding-top: 12px;
+  margin-top: auto;
+}
+
+.cf-bank-card__label {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgb(var(--slate-9));
+}
+
+.cf-bank-card__balance {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgb(var(--slate-12));
+  font-variant-numeric: tabular-nums;
+}
+
+.cf-bank-card__balance--neg {
+  color: $brand-danger;
+}
+
+/* ── Bank Variants ──────────────────────────────────────────────────────── */
+
+/* Bradesco */
+.cf-bank-card--bradesco .cf-bank-card__icon-wrap { background: rgba(204, 9, 47, 0.1); color: #cc092f; }
+
+/* Itaú */
+.cf-bank-card--itau .cf-bank-card__icon-wrap { background: rgba(236, 112, 0, 0.1); color: #ec7000; }
+
+/* Nubank */
+.cf-bank-card--nubank .cf-bank-card__icon-wrap { background: rgba(130, 10, 209, 0.1); color: #820ad1; }
+
+/* Inter */
+.cf-bank-card--inter .cf-bank-card__icon-wrap { background: rgba(255, 122, 0, 0.1); color: #ff7a00; }
+
+/* Santander */
+.cf-bank-card--santander .cf-bank-card__icon-wrap { background: rgba(236, 0, 0, 0.1); color: #ec0000; }
+
+/* Banco do Brasil */
+.cf-bank-card--bb .cf-bank-card__icon-wrap { background: rgba(250, 234, 0, 0.15); color: #c9b900; }
+
+/* Caixa */
+.cf-bank-card--caixa .cf-bank-card__icon-wrap { background: rgba(0, 92, 169, 0.1); color: #005ca9; }
+
+/* Default */
+.cf-bank-card--default .cf-bank-card__icon-wrap { background: rgba($brand-info-bright, 0.1); color: $brand-info-bright; }
+
+/* ── Dark Mode ──────────────────────────────────────────────────────────── */
+body.dark .cf-bank-card {
+  background: rgb(var(--slate-2));
+  border-color: rgb(var(--slate-4));
+}
+body.dark .cf-bank-card__footer {
+  border-top-color: rgb(var(--slate-4));
+}
+body.dark .cf-bank-card__icon-wrap {
+  /* No escuro, ícones default recebem ajuste */
+  background: rgb(var(--slate-3));
+}
+body.dark .cf-bank-card--default .cf-bank-card__icon-wrap { background: rgba($brand-info-bright, 0.15); }
+body.dark .cf-bank-card--bradesco .cf-bank-card__icon-wrap { background: rgba(204, 9, 47, 0.15); }
+body.dark .cf-bank-card--itau .cf-bank-card__icon-wrap { background: rgba(236, 112, 0, 0.15); }
+body.dark .cf-bank-card--nubank .cf-bank-card__icon-wrap { background: rgba(130, 10, 209, 0.15); }
+body.dark .cf-bank-card--inter .cf-bank-card__icon-wrap { background: rgba(255, 122, 0, 0.15); }
+body.dark .cf-bank-card--santander .cf-bank-card__icon-wrap { background: rgba(236, 0, 0, 0.15); }
+body.dark .cf-bank-card--bb .cf-bank-card__icon-wrap { background: rgba(250, 234, 0, 0.15); }
+body.dark .cf-bank-card--caixa .cf-bank-card__icon-wrap { background: rgba(0, 92, 169, 0.15); }

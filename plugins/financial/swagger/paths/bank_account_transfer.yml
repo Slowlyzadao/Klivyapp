@@ -1,0 +1,53 @@
+post:
+  tags:
+    - Financeiro · Contas Bancárias
+  summary: Transferir saldo entre contas
+  description: |
+    Gera 2 `Entry`s (saída na conta origem, entrada na conta destino) via
+    `Financial::TransferBetweenAccounts`. Atômico. Idempotência via header
+    `Idempotency-Key` (obrigatório). Requer GERENTE/ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [to_bank_account_id, amount_cents]
+          properties:
+            to_bank_account_id: { type: integer }
+            amount_cents: { type: integer, minimum: 1 }
+            occurred_at: { type: string, format: date-time }
+            notes: { type: string }
+  responses:
+    '201':
+      description: Transferência registrada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              entry_in:
+                type: object
+                properties:
+                  id: { type: integer }
+                  direction: { type: string }
+                  kind: { type: string }
+                  amount_cents: { type: integer }
+                  cash_date: { type: string, format: date }
+                  competence_date: { type: string, format: date }
+                  description: { type: string }
+              entry_out:
+                type: object
+                properties:
+                  id: { type: integer }
+                  direction: { type: string }
+                  kind: { type: string }
+                  amount_cents: { type: integer }
+                  cash_date: { type: string, format: date }
+                  competence_date: { type: string, format: date }
+                  description: { type: string }
+    '422':
+      description: Erro (saldo insuficiente, contas iguais, etc)

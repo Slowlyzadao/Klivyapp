@@ -69,7 +69,19 @@ post:
     - Conversations
   operationId: newConversation
   summary: Create New Conversation
-  description: "Creating a conversation in chatwoot requires a source id. \n\n Learn more about source_id: https://www.chatwoot.com/hc/user-guide/articles/1677839703-how-to-create-an-api-channel-inbox#send-messages-to-the-api-channel"
+  description: |
+    Creating a conversation in chatwoot requires a source id.
+
+    Learn more about source_id: https://www.chatwoot.com/hc/user-guide/articles/1677839703-how-to-create-an-api-channel-inbox#send-messages-to-the-api-channel
+
+    **Authorization** (`ConversationsController#create`):
+    - Requester precisa de `administrator` OR `agent_bot` OR
+      Klivy `chat.send_broadcast` OR Klivy `chat.reply` (qualquer um passa).
+    - **Se o payload incluir `message`**, o `Messages::MessageBuilder` é chamado
+      dentro da mesma transaction. Desde 1.6.1.13 (auditoria C-4), o `authorize
+      @conversation, :reply?` é executado ANTES do `MessageBuilder.perform`:
+      requester precisa especificamente de `chat.reply` (não basta `send_broadcast`).
+      Se falhar, retorna 401 + rollback (conversa NÃO persistida).
   security:
     - userApiKey: []
     - agentBotApiKey: []
@@ -96,6 +108,13 @@ post:
               inbox_id:
                 type: number
                 description: ID of the inbox
+    '401':
+      description: |
+        Unauthorized. Pode ocorrer em dois cenários:
+        1. Requester sem nenhuma das perms `chat.send_broadcast` / `chat.reply`
+           (e não é admin/bot) → bloqueio em `allowed_to_create_conversation?`.
+        2. Requester com `send_broadcast` mas sem `reply` enviou `message` no
+           payload (auditoria C-4) → bloqueio em `authorize :reply?` + rollback.
     '403':
       description: Access denied
       content:

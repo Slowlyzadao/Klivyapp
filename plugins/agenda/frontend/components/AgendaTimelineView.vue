@@ -272,25 +272,44 @@ export default {
         leftPct = idx * widthPct;
       }
 
-      // Regra de cor do card (independente de view):
-      //   - tem categoria → pastel OPACO da categoria + accent saturado
-      //   - não tem        → fundo neutro (branco light / slate-800 dark)
-      // Opaco (não rgba) é crucial: o card senta em cima das linhas do grid
-      // do calendário; alpha deixa as linhas vazarem e prejudica leitura.
-      // A identidade do agente é comunicada pelo wash da lane/coluna, nunca
-      // pelo body do card.
+      // Regra de cor do card depende do `event_type`:
+      //
+      // - 'agenda_block' / 'appointment' → cinza neutro discreto (não compete
+      //   com consultas ativas). Visual de "indisponível", próximo ao fundo
+      //   da agenda. Categoria, se tiver, é ignorada — bloqueio/compromisso
+      //   são definidos pelo TIPO, não pela categoria.
+      // - 'consultation' (default) → pastel da categoria se tiver, branco/
+      //   slate-800 se não tiver. Categoria é a fonte primária de cor.
+      //
+      // Opaco (não rgba) em todas as variantes: o card senta em cima das
+      // linhas do grid do calendário; alpha deixa as linhas vazarem e
+      // prejudica leitura. A identidade do agente é comunicada pelo wash
+      // da lane/coluna, nunca pelo body do card.
       const isDark = this.isDarkTheme;
-      const categoryColor = this.getCategoryColor(event);
-      const hasCategory = !!categoryColor;
-      const bg = hasCategory
-        ? opaquePastelFromColor(categoryColor, isDark)
-        : (isDark ? 'rgb(30, 41, 59)' : '#ffffff');
-      const accent = hasCategory
-        ? categoryColor
-        : (isDark ? '#475569' : '#cbd5e1');
-      const textColor = hasCategory
-        ? darkenedTextColor(categoryColor, isDark)
-        : (isDark ? '#e2e8f0' : '#1f2937');
+      const isNonConsultation =
+        event.event_type === 'agenda_block' ||
+        event.event_type === 'appointment';
+
+      let bg;
+      let accent;
+      let textColor;
+      if (isNonConsultation) {
+        bg = isDark ? 'rgb(30, 41, 59)' : 'rgb(241, 245, 249)';
+        accent = isDark ? '#475569' : '#cbd5e1';
+        textColor = isDark ? '#94a3b8' : '#64748b';
+      } else {
+        const categoryColor = this.getCategoryColor(event);
+        const hasCategory = !!categoryColor;
+        bg = hasCategory
+          ? opaquePastelFromColor(categoryColor, isDark)
+          : (isDark ? 'rgb(30, 41, 59)' : '#ffffff');
+        accent = hasCategory
+          ? categoryColor
+          : (isDark ? '#475569' : '#cbd5e1');
+        textColor = hasCategory
+          ? darkenedTextColor(categoryColor, isDark)
+          : (isDark ? '#e2e8f0' : '#1f2937');
+      }
 
       return {
         position: 'absolute',
@@ -449,6 +468,7 @@ export default {
                 v-for="(dayObj, idx) in currentWeekDays"
                 :key="idx"
                 :data-col-idx="idx"
+                :data-hour="hour"
                 class="timeline-cell"
                 :class="{
                   'cell-blocked': isHourBlocked(dayObj, hour),
@@ -495,6 +515,7 @@ export default {
                 v-for="(agent, aIdx) in activeAgents"
                 :key="agent.id"
                 :data-col-idx="aIdx"
+                :data-hour="hour"
                 class="timeline-cell day-cell"
                 :class="{
                   'cell-blocked': isHourBlocked(currentDayObj, hour),
@@ -740,50 +761,78 @@ export default {
 }
 
 .header-block-banner {
-  @apply text-sm;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border-radius: 10px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 3px 6px;
-  border-radius: 4px;
-  color: #fff;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-align: center;
+  box-sizing: border-box;
 }
 
+/* Light theme — pastéis claros com texto saturado escuro */
 .block-type-holiday {
-  background: #10b981;
+  background: #d1fae5;
+  color: #065f46;
 }
-
 .block-type-holiday.is-past {
-  background: rgba(16, 185, 129, 0.35);
-  color: rgba(6, 95, 70, 0.9);
+  background: rgba(16, 185, 129, 0.15);
+  color: rgba(6, 95, 70, 0.7);
 }
 
 .block-type-exception {
-  background: #f59e0b;
+  background: #fef3c7;
+  color: #92400e;
 }
-
 .block-type-exception.is-past {
-  background: rgba(245, 158, 11, 0.35);
-  color: rgba(146, 64, 14, 0.9);
+  background: rgba(245, 158, 11, 0.15);
+  color: rgba(146, 64, 14, 0.7);
 }
 
 .block-type-closed {
-  background: #9ca3af;
+  background: #e5e7eb;
+  color: #374151;
 }
-
 .block-type-closed.is-past {
-  background: rgba(156, 163, 175, 0.35);
-  color: rgba(55, 65, 81, 0.9);
+  background: rgba(156, 163, 175, 0.15);
+  color: rgba(55, 65, 81, 0.7);
 }
 
-.dark .block-type-holiday { background: rgba(16, 185, 129, 0.85); color: #fff; }
-.dark .block-type-holiday.is-past { background: rgba(16, 185, 129, 0.25); color: rgba(16, 185, 129, 0.9); }
-.dark .block-type-exception { background: rgba(245, 158, 11, 0.85); color: #fff; }
-.dark .block-type-exception.is-past { background: rgba(245, 158, 11, 0.25); color: rgba(251, 191, 36, 0.9); }
-.dark .block-type-closed { background: rgba(100, 116, 139, 0.5); color: rgba(241, 245, 249, 0.9); }
-.dark .block-type-closed.is-past { background: rgba(100, 116, 139, 0.25); color: rgba(148, 163, 184, 0.8); }
+/* Dark theme — fundo translúcido na cor saturada + texto claro do mesmo
+   matiz; gera contraste visivelmente distinto do light sem brigar com
+   a paleta escura do calendário. */
+.dark .block-type-holiday {
+  background: rgba(16, 185, 129, 0.22);
+  color: #6ee7b7;
+}
+.dark .block-type-holiday.is-past {
+  background: rgba(16, 185, 129, 0.10);
+  color: rgba(110, 231, 183, 0.6);
+}
+
+.dark .block-type-exception {
+  background: rgba(245, 158, 11, 0.22);
+  color: #fcd34d;
+}
+.dark .block-type-exception.is-past {
+  background: rgba(245, 158, 11, 0.10);
+  color: rgba(252, 211, 77, 0.6);
+}
+
+.dark .block-type-closed {
+  background: rgba(148, 163, 184, 0.18);
+  color: #cbd5e1;
+}
+.dark .block-type-closed.is-past {
+  background: rgba(148, 163, 184, 0.10);
+  color: rgba(203, 213, 225, 0.6);
+}
 
 .agent-header {
   display: flex;
@@ -853,6 +902,47 @@ export default {
 
 .timeline-cell:hover {
   background: rgba(59, 130, 246, 0.10);
+}
+
+/* Tooltip discreto no hover de slots livres — mesmo estilo visual do
+   `.blocked-slot-tooltip` (dark pill, branco, sombra). Mostra apenas o
+   horário do slot. Usa `::before` (não `::after`) pra não conflitar com
+   `.cell-wl-match::after` que já desenha a borda tracejada verde de
+   slots de lista de espera. Pseudo-element com `content: attr(data-hour)`
+   evita criar uma span por célula — economia importante numa grade com
+   milhares de slots. */
+.timeline-cell:not(.cell-blocked)::before {
+  content: attr(data-hour);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 4px 8px;
+  background: rgb(31, 41, 55);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease-in-out;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.timeline-cell:not(.cell-blocked):hover::before {
+  opacity: 1;
+}
+
+/* Quando qualquer slot livre da row está em hover, destaca o time-label
+   à esquerda com a mesma cor do hover do slot — feedback de "estou
+   na linha das XX:XX". Usa :has() (suportado em browsers modernos). */
+.timeline-row:has(.timeline-cell:not(.cell-blocked):hover) .time-label {
+  background: rgba(59, 130, 246, 0.10);
+  color: rgb(var(--blue-11));
 }
 
 /* Agent column wash (day view) — usa CSS variable setada via inline style

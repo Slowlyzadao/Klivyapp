@@ -1,0 +1,139 @@
+@use "../variables" as *;
+
+/* ── Daily Cash Flow Chart (dcf-*) ──────────────────────── */
+.dcf-chart {
+  padding: 0.5rem 0;
+}
+
+.dcf-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem;
+  height: 170px;
+  padding: 0 0.25rem;
+}
+
+.dcf-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.dcf-bar-pair {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  flex: 1;
+  width: 100%;
+  justify-content: center;
+}
+
+.dcf-bar {
+  width: 40%;
+  max-width: 28px;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.4s ease;
+}
+
+.dcf-bar--income {
+  background: $brand-success;
+}
+
+.dcf-bar--expense {
+  background: $brand-danger;
+}
+
+.dcf-label {
+  font-size: 0.6875rem;
+  color: rgb(var(--s-500));
+  white-space: nowrap;
+}
+
+.dcf-legend {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid rgb(var(--s-100));
+  margin-top: 0.5rem;
+}
+
+body.dark .dcf-legend {
+  border-color: rgb(var(--s-700));
+}
+
+.dcf-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: rgb(var(--s-500));
+}
+
+.dcf-legend__item::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.dcf-legend__item--income::before {
+  background: $brand-success;
+}
+
+.dcf-legend__item--expense::before {
+  background: $brand-danger;
+}
+
+/* ── Monthly Sales Chart (msc-*) ────────────────────────── */
+.msc-chart {
+  padding: 0.5rem 0;
+}
+
+.msc-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  height: 190px;
+  padding: 0 0.25rem;
+}
+
+.msc-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.msc-value {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: rgb(var(--s-700));
+  white-space: nowrap;
+}
+
+body.dark .msc-value {
+  color: rgb(var(--s-300));
+}
+
+.msc-bar {
+  width: 80%;
+  max-width: 48px;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: rgb(var(--blue-9));
+  transition: height 0.4s ease;
+}
+
+.msc-label {
+  font-size: 0.6875rem;
+  color: rgb(var(--s-500));
+  white-space: nowrap;
+  text-transform: capitalize;
+}

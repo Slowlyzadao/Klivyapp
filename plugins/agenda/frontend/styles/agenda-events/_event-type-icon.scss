@@ -1,0 +1,79 @@
+/* ── Event Type Icon (bloqueio / compromisso) ───────────────────────
+   Substitui o status dot quando o evento NÃO é consulta. SVG inline
+   (Lucide paths) ao invés de classes do UnoCSS — render determinístico
+   sem depender de geração de utility-class no build. Stroke usa
+   currentColor; cor herda do wrap via `--evt-text-color`. */
+.evt-type-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--evt-text-color, currentColor);
+}
+
+.evt-type-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  /* SVG default é display: inline (não inline-block) — deixa default
+     pra evitar comportamentos inesperados de baseline em flex parent. */
+}
+
+/* Tooltip moderno no estilo do `.blocked-slot-tooltip` — pill escuro com
+   seta apontando pra baixo, aparece em hover do card. Posicionado acima
+   do ícone. O card tem `overflow: hidden` que clipa o tooltip; resolvido
+   bumping `overflow: visible` + `z-index: 50` no `:hover` do card pra
+   liberar a renderização e elevar acima dos vizinhos. Lanes/cards atrás
+   ficam intocados visualmente porque cell-blocked já bloqueia eventos. */
+.evt-type-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 9px;
+  background: rgb(31, 41, 55);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease-in-out;
+  z-index: 100;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.evt-type-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgb(31, 41, 55);
+}
+
+/* Em hover do card, libera overflow + eleva z-index em CASCADE — o tooltip
+   está aninhado em vários containers (.evt-pill-body, .evt-sbs-body,
+   .evt-title-wrap) que têm `overflow: hidden` próprio pra truncar título
+   com ellipsis. Sem liberar todos eles, o tooltip continua clipado mesmo
+   com o card aberto. Truncação do título não quebra porque cada elemento
+   de texto tem o seu próprio `overflow: hidden + text-overflow: ellipsis`
+   (independente do container). */
+.timeline-evt:hover {
+  overflow: visible;
+  z-index: 50 !important;
+}
+
+.timeline-evt:hover .evt-pill-body,
+.timeline-evt:hover .evt-small-body,
+.timeline-evt:hover .evt-sbs-body,
+.timeline-evt:hover .evt-title-wrap {
+  overflow: visible;
+}
+
+.timeline-evt:hover .evt-type-tooltip {
+  opacity: 1;
+}

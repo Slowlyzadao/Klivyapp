@@ -22,8 +22,21 @@ Rails.application.configure do
   # Apache or NGINX already handles this.
   config.public_file_server.enabled = ActiveModel::Type::Boolean.new.cast(ENV.fetch('RAILS_SERVE_STATIC_FILES', true))
   config.public_file_server.headers = {
-    'Cache-Control' => "public, max-age=#{1.year.to_i}"
+    # `immutable` evita revalidação em reload — seguro porque os assets do Vite
+    # têm fingerprint no nome (mudou o conteúdo → mudou a URL).
+    'Cache-Control' => "public, max-age=#{1.year.to_i}, immutable"
   }
+
+  # Comprime TODAS as respostas on-the-fly — HTML/JSON e os bundles JS/CSS
+  # estáticos servidos pelo ActionDispatch::Static. O Vite entrega ~10 MB de
+  # assets não comprimidos; gzip corta o payload na rede em ~3-4x. O Deflater
+  # precisa ficar ACIMA do ActionDispatch::Static para que a resposta do arquivo
+  # estático passe de volta por ele na saída.
+  if config.public_file_server.enabled
+    config.middleware.insert_before ActionDispatch::Static, Rack::Deflater
+  else
+    config.middleware.use Rack::Deflater
+  end
   # Compress JavaScripts and CSS.
   # config.assets.js_compressor = :uglifier
   # config.assets.css_compressor = :sass

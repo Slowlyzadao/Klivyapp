@@ -1,0 +1,15 @@
+/* ============================================================
+   RECORD.CSS — Prontuário do Paciente
+   Dual-theme: funciona em dark E light mode.
+
+   REGRA: Nunca usar cores hardcoded. Sempre rgb(var(--slate-N)).
+   Importar no <script setup> do Record.vue:
+     import './record.css';
+   ============================================================ */
+
+/* ── Página principal ───────────────────────────────── */
+.record-container {
+  background: rgb(var(--slate-1)) !important;
+  color: rgb(var(--slate-12)) !important;
+}
+

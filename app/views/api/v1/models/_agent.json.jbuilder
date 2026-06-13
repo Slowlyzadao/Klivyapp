@@ -12,15 +12,39 @@ json.name resource.name
 json.agenda_public_id resource.agenda_public_id
 json.role resource.role
 json.thumbnail resource.avatar_url
-json.custom_role_id resource.current_account_user&.custom_role_id if ChatwootApp.enterprise?
-json.klivy_role_id resource.current_account_user&.klivy_role_id
+# Detalhes internos de role (IDs, preset_key, super_admin flag) são expostos
+# apenas para admins ou usuários com `settings.users_view`. Telas que precisam
+# apenas do nome legível do papel (badge do profissional responsável no
+# prontuário, AuditLog, etc.) continuam recebendo `klivy_role.name`.
+viewer_can_see_role_internals = Current.account_user&.administrator? ||
+                                (Current.user.respond_to?(:beclinic_can?) &&
+                                 Current.user.beclinic_can?(Current.account, :settings, :users_view))
+
+if viewer_can_see_role_internals
+  json.custom_role_id resource.current_account_user&.custom_role_id if ChatwootApp.enterprise?
+  json.klivy_role_id resource.current_account_user&.klivy_role_id
+  json.beclinic_super_admin resource.beclinic_super_admin?
+end
+
 if resource.current_account_user&.klivy_role
   json.klivy_role do
-    json.id resource.current_account_user.klivy_role.id
     json.name resource.current_account_user.klivy_role.name
-    json.preset_key resource.current_account_user.klivy_role.preset_key
+    if viewer_can_see_role_internals
+      json.id resource.current_account_user.klivy_role.id
+      json.preset_key resource.current_account_user.klivy_role.preset_key
+    end
   end
 end
-json.beclinic_super_admin resource.beclinic_super_admin?
-json.agenda_service_ids resource.respond_to?(:agenda_service_ids) ? resource.agenda_service_ids : []
+
+au = resource.current_account_user
+# Quando a coluna `is_agenda_provider` ainda não existe no banco
+# (migration não rodou), default = true para preservar o comportamento
+# atual — todos os agentes seguem aparecendo na agenda. Após a migration,
+# `agenda_provider?` resolve override → role default → false.
+if au&.has_attribute?(:is_agenda_provider)
+  json.is_agenda_provider au.agenda_provider?
+  json.is_agenda_provider_override au.is_agenda_provider
+else
+  json.is_agenda_provider true
+end
 

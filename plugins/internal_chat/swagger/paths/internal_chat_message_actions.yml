@@ -1,0 +1,213 @@
+# Actions sob `:messages`:
+#   POST   /:id/favorite       — marca como favorita (preferência pessoal)
+#   DELETE /:id/favorite       — unfavorite
+#   POST   /:id/react          — add reaction
+#   DELETE /:id/react          — remove reaction
+#   POST   /mark_read          — avança o cursor de leitura até message_id
+#   GET    /favorites          — lista mensagens favoritadas do requester
+favorite:
+  post:
+    tags:
+      - Chat Interno — Mensagens
+    summary: Favoritar mensagem
+    description: |
+      Marca a mensagem como favorita do usuário atual. **Idempotente**
+      (unique index por user/message). Retorna `200`.
+      `403` se a mensagem estiver deletada.
+      Autorização: admin OR (member AND Klivy `internal_chat.view`).
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+      - $ref: '../common.yml#/components/parameters/roomId'
+      - $ref: '../common.yml#/components/parameters/id'
+    responses:
+      '200':
+        description: Favoritada
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    is_favorited: { type: boolean, enum: [true] }
+      '403':
+        description: Mensagem deletada
+      '404':
+        description: Mensagem não encontrada
+  delete:
+    tags:
+      - Chat Interno — Mensagens
+    summary: Desfavoritar
+    description: |
+      Remove a mensagem dos favoritos do usuário atual. Idempotente.
+      Retorna `200`.
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+      - $ref: '../common.yml#/components/parameters/roomId'
+      - $ref: '../common.yml#/components/parameters/id'
+    responses:
+      '200':
+        description: Removida dos favoritos
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    is_favorited: { type: boolean, enum: [false] }
+      '404':
+        description: Mensagem não encontrada
+react:
+  post:
+    tags:
+      - Chat Interno — Mensagens
+    summary: Reagir à mensagem
+    description: |
+      Adiciona/atualiza a reação do usuário. **Uma reação por usuário por
+      mensagem** (estilo WhatsApp): reagir de novo com outro emoji faz
+      UPDATE da mesma linha. Faz broadcast da mudança e retorna `200` com a
+      mensagem reserializada.
+
+      Validações:
+      - `403` se a mensagem estiver deletada;
+      - `422 emoji_required` se `emoji` vazio/ausente;
+      - `422 emoji_too_long` se `emoji` tiver mais de 16 caracteres.
+
+      Autorização: admin OR (member AND Klivy `internal_chat.view`).
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+      - $ref: '../common.yml#/components/parameters/roomId'
+      - $ref: '../common.yml#/components/parameters/id'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [emoji]
+            properties:
+              emoji:
+                type: string
+                maxLength: 16
+                description: Emoji unicode ou alias ":+1:". É feito `strip`.
+    responses:
+      '200':
+        description: Reação registrada — devolve a mensagem atualizada
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: '../definitions/Message.yml'
+      '403':
+        description: Mensagem deletada
+      '404':
+        description: Mensagem não encontrada
+      '422':
+        description: '`error`: `emoji_required` ou `emoji_too_long`.'
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error: { type: string }
+  delete:
+    tags:
+      - Chat Interno — Mensagens
+    summary: Remover reação
+    description: |
+      Remove a reação do usuário atual (1 reação/usuário). Faz broadcast e
+      retorna `200` com a mensagem reserializada. **Ignora qualquer `emoji`
+      no corpo** — sempre apaga a única reação do usuário.
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+      - $ref: '../common.yml#/components/parameters/roomId'
+      - $ref: '../common.yml#/components/parameters/id'
+    responses:
+      '200':
+        description: Reação removida — devolve a mensagem atualizada
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: '../definitions/Message.yml'
+      '404':
+        description: Mensagem não encontrada
+mark_read:
+  post:
+    tags:
+      - Chat Interno — Mensagens
+    summary: Avançar cursor de leitura
+    description: |
+      Avança `membership.last_read_message_id` da sala até o `message_id`
+      informado (cursor — **não** marca "todas" indiscriminadamente). Só
+      avança se o `message_id` for maior que o cursor atual; senão é no-op.
+      Dispara read receipt (debounced) para os outros membros.
+
+      Exige `message_id` no corpo — `422` (corpo vazio) se ausente/blank.
+      Em sucesso retorna `head :ok` (`200` com **corpo vazio**).
+      Autorização: admin OR (member AND Klivy `internal_chat.view`).
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+      - $ref: '../common.yml#/components/parameters/roomId'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [message_id]
+            properties:
+              message_id:
+                type: integer
+                description: ID da última mensagem lida (novo valor do cursor).
+    responses:
+      '200':
+        description: Cursor atualizado (ou no-op) — corpo vazio
+      '422':
+        description: '`message_id` ausente/vazio — corpo vazio'
+favorites:
+  get:
+    tags:
+      - Chat Interno — Mensagens
+    summary: Lista favoritos do requester naquela sala
+    description: |
+      Mensagens favoritadas pelo usuário na sala, mais recentes primeiro.
+      Paginação opt-in via `?page=N&per_page=M` (default `per_page` 200,
+      cap 200; `page` clamp 1..10000).
+      Autorização: admin OR (member AND Klivy `internal_chat.view`).
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+      - $ref: '../common.yml#/components/parameters/roomId'
+      - name: page
+        in: query
+        schema: { type: integer, default: 1, minimum: 1, maximum: 10000 }
+      - name: per_page
+        in: query
+        schema: { type: integer, default: 200, minimum: 1, maximum: 200 }
+    responses:
+      '200':
+        description: Lista paginada de favoritos
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '../definitions/Message.yml'
+                meta:
+                  type: object
+                  properties:
+                    page: { type: integer }
+                    per_page: { type: integer }
+                    total: { type: integer }

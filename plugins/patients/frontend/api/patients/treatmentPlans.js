@@ -28,8 +28,14 @@ class TreatmentPlansAPI extends ApiClient {
     });
   }
 
-  destroy(patientId, id) {
-    return axios.delete(`${this.buildUrl(patientId)}/${id}`);
+  // confirmCascade=true envia header X-Confirm-Cascade — usado quando o
+  // backend respondeu 409 com `cascade_required: true` (PT tem Budget v2
+  // aprovado SEM pagamento; canon Regra 3, cenário 2).
+  destroy(patientId, id, { confirmCascade = false } = {}) {
+    const config = confirmCascade
+      ? { headers: { 'X-Confirm-Cascade': 'true' } }
+      : {};
+    return axios.delete(`${this.buildUrl(patientId)}/${id}`, config);
   }
 
   approve(patientId, id) {
@@ -38,6 +44,16 @@ class TreatmentPlansAPI extends ApiClient {
 
   cancel(patientId, id) {
     return axios.patch(`${this.buildUrl(patientId)}/${id}/cancel`);
+  }
+
+  // Endpoint stable que sempre serve o blob ATUAL do PDF (resolve o problema
+  // de cache da signed URL R2 após regeneração). Resposta como blob para
+  // manter auth via header `api_access_token` — `window.open(rawUrl)` não
+  // envia o header e retorna 401.
+  downloadPdf(patientId, planId) {
+    return axios.get(`${this.buildUrl(patientId)}/${planId}/pdf`, {
+      responseType: 'blob',
+    });
   }
 
   // Treatment Items nested resources

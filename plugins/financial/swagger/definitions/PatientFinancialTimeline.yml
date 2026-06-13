@@ -1,0 +1,34 @@
+type: object
+description: |
+  Timeline financeira do paciente — substitui o legacy
+  `Patients::TransactionsController#financial_timeline`. Cada entry é um
+  Budget (linha-pai) com suas Installments agrupadas. Mantém shape compat
+  para o composable `useFinancialTimeline.js` da aba do paciente.
+properties:
+  meta:
+    type: object
+    properties:
+      request_id: { type: string }
+      generated_at: { type: string, format: date-time }
+      schema_version: { type: integer, example: 2 }
+  entries:
+    type: array
+    items:
+      $ref: './PatientFinancialTimelineEntry.yml'
+  summary:
+    type: object
+    properties:
+      total_approved: { type: number, format: float }
+      total_paid: { type: number, format: float }
+      total_open: { type: number, format: float }
+      total_overdue: { type: number, format: float }
+      credit_balance: { type: number, format: float }
+      overall_status: { type: string, enum: [em_dia, em_aberto, inadimplente] }
+      next_due_date: { type: string, format: date, nullable: true }
+      next_due_amount: { type: number, format: float, nullable: true }
+  credit:
+    type: object
+    properties:
+      balance: { type: number, format: float, description: "BRL" }
+      balance_cents: { type: integer }
+      source: { type: string, example: "financial_patient_credits" }

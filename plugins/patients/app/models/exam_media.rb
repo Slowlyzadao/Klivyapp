@@ -74,16 +74,19 @@ class ExamMedia < ApplicationRecord
     deleted_at.present?
   end
 
-  # Retorna URL assinada com expiração de 1 hora (NUNCA URL pública)
-  # Host vem de config.active_storage.default_url_options — não usar fallback localhost.
+  # Roadmap #17.1 ✅ — proxy via SecureBlobsController com cross-tenant guard.
+  # Token signed (1h, mantida por UX da galeria de fotos) → controller valida
+  # current_user pertence à account → redirect com janela curta (30s).
+  # `disposition` é ignorado — o controller decide ao redirecionar.
   def signed_url(expires_in: 1.hour, disposition: :inline)
     return nil unless file.attached?
 
-    Rails.application.routes.url_helpers.rails_blob_url(
-      file,
-      expires_in: expires_in,
-      disposition: disposition
+    token = Patients::SecureBlobTokenService.encode(
+      blob_id: file.blob.id,
+      account_id: account_id,
+      expires_in: expires_in
     )
+    Rails.application.routes.url_helpers.secure_blob_url(token: token)
   rescue StandardError
     nil
   end
@@ -94,17 +97,21 @@ class ExamMedia < ApplicationRecord
   # NOTE: ActiveStorage só aceita métodos da whitelist `supported_image_processing_methods`;
   # `saver: { quality: ... }` não está nela — para baixar peso da imagem o caminho seria via
   # processor custom ou um `format: :webp` (também whitelisted). 400px já dá compressão suficiente.
+  # Roadmap #17.1 ✅ — variant do thumbnail também passa pelo guard.
+  # Controller decodifica `transformations` do token e regenera o variant
+  # antes de redirecionar.
   def thumbnail_url(expires_in: 1.hour)
     return nil unless file.attached?
     return nil unless file_kind == :image
     return nil unless file.variable?
 
-    variant = file.variant(resize_to_limit: [400, 400])
-    Rails.application.routes.url_helpers.rails_representation_url(
-      variant,
+    token = Patients::SecureBlobTokenService.encode(
+      blob_id: file.blob.id,
+      account_id: account_id,
       expires_in: expires_in,
-      disposition: :inline
+      transformations: { resize_to_limit: [400, 400] }
     )
+    Rails.application.routes.url_helpers.secure_blob_url(token: token)
   rescue StandardError
     nil
   end
@@ -143,24 +150,34 @@ class ExamMedia < ApplicationRecord
     self.file_size ||= file.byte_size
   end
 
-  # Sanitiza nome de arquivo preservando extensão e legibilidade em PT-BR.
-  # Ex: "Exame da Maria (2024) .pdf" → "exame-da-maria-2024.pdf"
+  # Sanitiza nome de arquivo PRESERVANDO acentos e caracteres legíveis em
+  # PT-BR. Remove apenas o que é perigoso pra path traversal ou injeção em
+  # shell/URL: `/`, `\`, `..`, controle (`\x00-\x1f`), e símbolos que quebram
+  # filesystems (`<>:"|?*`).
+  #
+  # Ex: "José_foto (2024).pdf" → "José_foto (2024).pdf" (preservado)
+  # Ex: "../../../etc/passwd" → "etc-passwd" (sanitizado)
+  # Ex: "Exame:resultado<x>.pdf" → "Exame-resultado-x-.pdf"
   def sanitize_filename(raw)
     return 'arquivo' if raw.blank?
 
     ext = File.extname(raw).downcase
     base = File.basename(raw, ext)
-    slug = I18n.transliterate(base)
-               .downcase
-               .gsub(/[^\w\s-]/, '')
-               .strip
-               .gsub(/\s+/, '-')
-               .gsub(/-+/, '-')
-               .delete_prefix('-')
-               .delete_suffix('-')
-    slug = 'arquivo' if slug.blank?
-    slug = slug[0, 100] # limite defensivo contra nomes muito longos
-    "#{slug}#{ext}"
+
+    # 1. Remove path traversal e separadores de diretório
+    base = base.gsub(%r{[/\\]}, '-')
+    base = base.gsub(/\.{2,}/, '-') # dois ou mais pontos seguidos viram '-'
+
+    # 2. Remove caracteres de controle e símbolos perigosos pra filesystem
+    base = base.gsub(/[\x00-\x1f\x7f<>:"|?*]/, '-')
+
+    # 3. Colapsa hífens duplicados e trim
+    base = base.gsub(/-+/, '-').strip.delete_prefix('-').delete_suffix('-')
+
+    # 4. Limite de tamanho defensivo
+    base = base[0, 100]
+    base = 'arquivo' if base.blank?
+    "#{base}#{ext}"
   end
 
   def file_attached?

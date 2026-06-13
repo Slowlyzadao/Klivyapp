@@ -1,0 +1,52 @@
+get:
+  tags:
+    - Financeiro · Despesas
+  summary: Detalhar despesa
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Despesa
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Expense.yml'
+patch:
+  tags:
+    - Financeiro · Despesas
+  summary: Atualizar despesa
+  description: Bloqueia se `status=pago`. Requer GERENTE/ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [expense]
+          properties:
+            expense:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Expense.yml'
+    '422': { description: "Despesa paga ou erro de validação" }
+delete:
+  tags:
+    - Financeiro · Despesas
+  summary: Soft-delete da despesa
+  description: Bloqueia se `status=pago` — use `POST /:id/reverse`. Requer GERENTE/ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204': { description: "Removida" }
+    '422': { description: "Despesa paga não pode ser excluída — use reverse" }

@@ -1,0 +1,57 @@
+@use "../variables" as *;
+
+/* ── Critical Alert Popup ────────────────────────────────── */
+.critical-alert-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.btn-critical-alert {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba($brand-danger-bright, 0.15);
+  border: 1px solid rgba($brand-danger-bright, 0.3);
+  color: #ef4444;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-critical-alert:hover {
+  background: rgba($brand-danger-bright, 0.25);
+  transform: scale(1.05);
+}
+
+.popup-header i {
+  font-size: 16px;
+}
+.btn-close-popup {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: $brand-slate-light;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.btn-close-popup:hover {
+  color: #f1f5f9;
+}
+.popup-body {
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+.critical-popup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+

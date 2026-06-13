@@ -1,0 +1,51 @@
+type: object
+description: |
+  Solicitação LGPD de anonimização de paciente (canon F-33 §parte 2).
+  Workflow: `pending` → `approved`/`rejected` → `executed` (irreversível).
+  Pode ser `cancelled` antes de `executed`.
+properties:
+  id: { type: integer }
+  status:
+    type: string
+    enum: [pending, approved, rejected, executed, cancelled]
+  reason: { type: string, nullable: true }
+  notes: { type: string, nullable: true }
+  requested_at: { type: string, format: date-time }
+  approved_at: { type: string, format: date-time, nullable: true }
+  approved_by:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+  executed_at: { type: string, format: date-time, nullable: true }
+  executed_by:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+  rejected_at: { type: string, format: date-time, nullable: true }
+  rejected_by:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+  rejection_reason: { type: string, nullable: true }
+  anonymized_fields:
+    type: array
+    nullable: true
+    description: "Campos efetivamente anonimizados quando `executed`."
+    items: { type: string }
+  patient:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name:
+        type: string
+        description: "Após `executed`, vira 'Paciente Anonimizado #ID'."
+      anonymized_at: { type: string, format: date-time, nullable: true }
+      avatar_url: { type: string, nullable: true }
+  created_at: { type: string, format: date-time }

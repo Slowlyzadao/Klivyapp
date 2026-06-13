@@ -1,0 +1,72 @@
+// Toolbar do TipTap. Ícones 20×20 soltos, zero padding/background.
+// Grupos separados por linha vertical sutil. Active state por cor primary.
+
+@use '../variables' as *;
+
+.editor-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--kl-border-subtle);
+  background: var(--kl-surface-white);
+
+  // Em telas menores a toolbar já quebra em linhas (flex-wrap); reduz o
+  // respiro lateral pra caber mais ações por linha.
+  @media (max-width: 1024px) { padding: 8px 12px; }
+  @media (max-width: 768px) { padding: 6px 10px; gap: 2px; }
+  @media (max-width: 600px) { padding: 4px 8px; }
+
+  &__group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    & + & {
+      margin-left: 6px;
+      padding-left: 10px;
+      border-left: 1px solid var(--kl-border-subtle);
+    }
+  }
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--kl-secondary);
+    cursor: pointer;
+    transition: color var(--kl-transition);
+
+    span {
+      width: 20px;
+      height: 20px;
+    }
+
+    &:hover:not(:disabled) {
+      color: var(--kl-on-surface);
+    }
+
+    &--active {
+      color: var(--kl-primary);
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    &:focus-visible {
+      outline: none;
+      color: var(--kl-primary);
+    }
+  }
+}

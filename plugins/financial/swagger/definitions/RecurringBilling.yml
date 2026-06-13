@@ -1,0 +1,68 @@
+type: object
+description: |
+  Contrato de mensalidade fixa do paciente (`Financial::RecurringBilling`).
+  Motor recorrente real (decisão 2026-05-28): gera `Budget` + `Installment` a
+  cada `frequency` via `Financial::GenerateRecurringBillingsJob`. Substitui o
+  antigo "tipo Mensalidade" do modal Novo Lançamento (que era só uma label e
+  gerava N parcelas upfront, sem recorrer de fato). Suporta pausar, retomar,
+  cancelar e `end_date` opcional, com histórico auditável.
+
+  Transições de estado (`status`):
+  - `active` → pausável (`POST /pause`) ou cancelável (`POST /cancel`)
+  - `paused` → retomável (`POST /resume`) ou cancelável
+  - `completed`/`canceled` → imutável (update/cancel bloqueados)
+
+  `destroy` (soft delete) só é permitido enquanto `last_generated_at` for nulo
+  (nunca gerou cobrança); depois disso, use `POST /cancel` para preservar o
+  histórico contábil.
+properties:
+  id: { type: integer }
+  patient_id: { type: integer }
+  professional_id: { type: integer, nullable: true }
+  financial_dre_category_id: { type: integer, nullable: true }
+  financial_bank_account_id: { type: integer, nullable: true }
+  payment_method_id: { type: integer }
+  payment_method:
+    type: object
+    description: Forma de pagamento embutida (resolvida de `Financial::PaymentMethod`).
+    nullable: true
+    properties:
+      id: { type: integer, nullable: true }
+      kind: { type: string, nullable: true }
+      name: { type: string, nullable: true }
+      provider: { type: string, nullable: true }
+      provider_alias: { type: string, nullable: true }
+      settlement_mode:
+        type: string
+        nullable: true
+        description: "manual / on_confirm / on_due_date (política de baixa)."
+  description: { type: string, description: "Obrigatório, máx. 200 chars." }
+  amount_cents: { type: integer, description: "Valor da mensalidade em centavos (> 0)." }
+  frequency:
+    type: string
+    enum: [monthly, bimonthly, quarterly, semiannual, annual]
+    description: "Período de recorrência (define quantos meses somar no `next_generation_at`)."
+  start_date: { type: string, format: date }
+  end_date:
+    type: string
+    format: date
+    nullable: true
+    description: "Opcional; quando presente, deve ser ≥ `start_date`."
+  next_generation_at:
+    type: string
+    format: date
+    description: "Data da próxima geração de Budget+Installment. Default = `start_date` na criação. Deve ser ≥ `start_date`."
+  last_generated_at:
+    type: string
+    format: date-time
+    nullable: true
+    description: "Última vez que o job gerou cobrança. Trava o `destroy` quando preenchido."
+  status:
+    type: string
+    enum: [active, paused, completed, canceled]
+  notes: { type: string, nullable: true }
+  paused_at: { type: string, format: date-time, nullable: true }
+  canceled_at: { type: string, format: date-time, nullable: true }
+  cancel_reason: { type: string, nullable: true }
+  created_at: { type: string, format: date-time }
+  updated_at: { type: string, format: date-time }

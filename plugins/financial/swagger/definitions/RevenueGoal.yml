@@ -1,0 +1,94 @@
+type: object
+description: |
+  Meta de receita — canon Setup #8. Cada meta tem 3 tiers
+  (Mínima / Principal / Desafio) e pode ser de tipo `total` (clínica toda),
+  `por_categoria` (restrita a categoria DRE) ou `por_agente` (restrita a um
+  profissional). A métrica define se os tiers são lidos em centavos (`currency`,
+  campos `*_cents`) ou em quantidade absoluta (`count`, campos `*_qty`).
+  `actual_value` e `progress_percent` são calculados on-the-fly somando/contando
+  entries vivas no período (canon §4.5).
+properties:
+  id: { type: integer }
+  name:
+    type: string
+    maxLength: 120
+    example: Meta de Faturamento 2026
+  kind:
+    type: string
+    enum: [total, por_categoria, por_agente]
+    description: Tipo da meta.
+  metric:
+    type: string
+    enum: [currency, count]
+    description: |
+      `currency` usa os tiers `*_cents` (R$ em centavos);
+      `count` usa os tiers `*_qty` (quantidade absoluta).
+  category_id:
+    type: integer
+    nullable: true
+    description: ID da categoria DRE (obrigatório quando `kind=por_categoria`).
+  category:
+    type: object
+    nullable: true
+    description: Categoria DRE associada (presente quando `kind=por_categoria`).
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      kind: { type: string }
+  professional_id:
+    type: integer
+    nullable: true
+    description: ID do profissional (obrigatório quando `kind=por_agente`).
+  professional:
+    type: object
+    nullable: true
+    description: Profissional associado (presente quando `kind=por_agente`).
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      avatar_url: { type: string, nullable: true }
+  start_date:
+    type: string
+    format: date
+  end_date:
+    type: string
+    format: date
+  min_target_cents:
+    type: integer
+    nullable: true
+    description: Tier Mínima em centavos (BIGINT). Usado quando `metric=currency`.
+  target_cents:
+    type: integer
+    nullable: true
+    description: Tier Principal em centavos (BIGINT). Usado quando `metric=currency`.
+  stretch_target_cents:
+    type: integer
+    nullable: true
+    description: Tier Desafio em centavos (BIGINT). Usado quando `metric=currency`.
+  min_target_qty:
+    type: integer
+    nullable: true
+    description: Tier Mínima em quantidade. Usado quando `metric=count`.
+  target_qty:
+    type: integer
+    nullable: true
+    description: Tier Principal em quantidade. Usado quando `metric=count`.
+  stretch_target_qty:
+    type: integer
+    nullable: true
+    description: Tier Desafio em quantidade. Usado quando `metric=count`.
+  actual_value:
+    type: integer
+    description: |
+      Valor ATUAL calculado on-the-fly (soma de `amount_cents` quando
+      `metric=currency`, ou contagem de entries quando `metric=count`).
+  progress_percent:
+    type: number
+    format: float
+    nullable: true
+    description: |
+      Progresso (%) em relação ao tier Principal. `null` quando o tier
+      Principal não está definido.
+  active:
+    type: boolean
+    description: Metas encerradas têm `active=false` (mantidas para histórico).

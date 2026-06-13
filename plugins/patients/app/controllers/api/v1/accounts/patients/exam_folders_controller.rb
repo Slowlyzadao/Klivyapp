@@ -3,6 +3,8 @@ module Api
     module Accounts
       module Patients
         class ExamFoldersController < Api::V1::Accounts::BaseController
+          include BeclinicErrorResponse
+
           before_action :set_patient
           before_action :set_folder, only: [:update, :destroy]
           before_action :ensure_view_exams!, only: [:index]
@@ -82,26 +84,26 @@ module Api
             return if Current.account_user&.administrator?
             return if Current.user.beclinic_can?(Current.account, :patients, :view_exams)
 
-            render json: { error: 'Sem permissão para visualizar exames.' }, status: :forbidden
+            render_error('Sem permissão para visualizar exames.', status: :forbidden)
           end
 
           def ensure_manage_exams!
             return if Current.account_user&.administrator?
             return if Current.user.beclinic_can?(Current.account, :patients, :manage_exams)
 
-            render json: { error: 'Sem permissão para gerenciar exames.' }, status: :forbidden
+            render_error('Sem permissão para gerenciar exames.', status: :forbidden)
           end
 
           def set_patient
             @patient = Current.account.patients.find(params[:patient_id])
           rescue ActiveRecord::RecordNotFound
-            render json: { error: 'Paciente não encontrado' }, status: :not_found
+            render_error('Paciente não encontrado', status: :not_found)
           end
 
           def set_folder
             @folder = @patient.exam_folders.find(params[:id])
           rescue ActiveRecord::RecordNotFound
-            render json: { error: 'Pasta não encontrada' }, status: :not_found
+            render_error('Pasta não encontrada', status: :not_found)
           end
 
           def folder_params

@@ -1,0 +1,20 @@
+post:
+  tags:
+    - Financeiro · LGPD
+  summary: Executar anonimização (irreversível)
+  description: |
+    `Financial::AnonymizePatient` — anonimiza os campos PII do paciente.
+    Solicitação precisa estar `approved`. **Irreversível.** Requer ADMIN.
+    Idempotência via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Executada (com `anonymized_fields` preenchido)
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/LgpdRequest.yml'
+    '422':
+      description: Status incorreto ou falha na anonimização

@@ -247,5 +247,40 @@
   "COMMON": {
     "OR": "Ou",
     "CLICK_HERE": "clique aqui"
+  },
+  "CLINIC_SETTINGS": {
+    "TITLE": "Dados da clínica",
+    "DESCRIPTION": "Informações da clínica usadas nos documentos (CNPJ, endereço, logo, etc.). Complete aqui o que não veio do cadastro.",
+    "IDENTITY_SECTION": {
+      "TITLE": "Identificação",
+      "NOTE": "Nome fantasia, CNPJ, contato e logo da clínica."
+    },
+    "ADDRESS_SECTION": {
+      "TITLE": "Endereço",
+      "NOTE": "Endereço da clínica que aparece nos documentos."
+    },
+    "FORM": {
+      "LOGO": { "LABEL": "Logo", "UPLOAD": "Enviar logo" },
+      "FANTASY_NAME": { "LABEL": "Nome fantasia", "PLACEHOLDER": "Nome fantasia da clínica" },
+      "PF": "Pessoa Física",
+      "PJ": "Pessoa Jurídica",
+      "CNPJ": { "LABEL": "CNPJ", "PLACEHOLDER": "00.000.000/0001-00" },
+      "CPF": { "LABEL": "CPF", "PLACEHOLDER": "000.000.000-00" },
+      "PHONE": { "LABEL": "Telefone", "PLACEHOLDER": "(00) 00000-0000" },
+      "WEBSITE": { "LABEL": "Website", "PLACEHOLDER": "https://..." },
+      "ADDRESS_ZIP": { "LABEL": "CEP", "PLACEHOLDER": "00000-000" },
+      "ADDRESS_STREET": { "LABEL": "Logradouro", "PLACEHOLDER": "Rua / Avenida" },
+      "ADDRESS_NUMBER": { "LABEL": "Número", "PLACEHOLDER": "Nº" },
+      "ADDRESS_COMPLEMENT": { "LABEL": "Complemento", "PLACEHOLDER": "Sala, andar..." },
+      "ADDRESS_NEIGHBORHOOD": { "LABEL": "Bairro", "PLACEHOLDER": "Bairro" },
+      "ADDRESS_CITY": { "LABEL": "Cidade", "PLACEHOLDER": "Cidade" },
+      "ADDRESS_STATE": { "LABEL": "UF", "PLACEHOLDER": "UF" }
+    },
+    "SUBMIT": "Salvar",
+    "SAVE_SUCCESS": "Dados da clínica salvos.",
+    "SAVE_ERROR": "Não foi possível salvar os dados da clínica.",
+    "LOAD_ERROR": "Não foi possível carregar os dados da clínica.",
+    "LOGO_ERROR": "Falha ao enviar o logo.",
+    "LOGO_TYPE_ERROR": "Selecione uma imagem (PNG, JPG, WEBP ou SVG)."
   }
 }

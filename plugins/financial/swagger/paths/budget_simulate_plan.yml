@@ -1,0 +1,95 @@
+post:
+  tags:
+    - Financeiro · Orçamentos
+  summary: Simular plano de parcelas (read-only)
+  description: |
+    Simula o efeito financeiro de um `installments_plan` **ANTES** de aprovar
+    o orçamento, via `Financial::SimulatePaymentPlan`. Read-only: NÃO persiste
+    nada, não dispara AuditLog e não toca em `Installment`/`Entry`/`CommissionEntry`.
+
+    Para cada parcela projeta taxa (MDR), valor líquido, data esperada de
+    liquidação e comissão estimada, mais os totais agregados. Sem gate de RBAC
+    (qualquer usuário autenticado da conta com setup financeiro concluído).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [installments_plan]
+          properties:
+            installments_plan:
+              type: array
+              description: |
+                Plano hipotético a simular. `amount_cents` é a BASE (valor que a
+                clínica quer receber líquido). Keys extras são ignoradas pelo backend.
+              items:
+                type: object
+                required: [amount_cents]
+                properties:
+                  amount_cents: { type: integer, description: "Valor base da parcela em centavos." }
+                  due_date: { type: string, format: date, description: "Default `Date.current` quando omitido." }
+                  payment_method: { type: string, description: "Kind da forma de pagamento (fallback de `payment_method_id`)." }
+                  payment_method_id: { type: integer, description: "Id da `Financial::PaymentMethod` (preferencial)." }
+                  professional_id: { type: integer, description: "Default = `budget.professional_id`." }
+  responses:
+    '200':
+      description: Projeção por parcela + totais agregados. Não persiste.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: object
+                properties:
+                  plan:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        row_index: { type: integer }
+                        amount_cents: { type: integer, description: "Valor que o paciente paga (inflado no modelo passthrough)." }
+                        base_amount_cents: { type: integer, description: "Valor líquido que a clínica recebe." }
+                        amount_for_patient_cents: { type: integer, description: "Alias explícito de `amount_cents`." }
+                        passes_fee_to_patient: { type: boolean }
+                        payment_method: { type: string, nullable: true }
+                        payment_method_id: { type: integer, nullable: true }
+                        payment_method_name: { type: string, nullable: true }
+                        fee_percent_basis_points: { type: integer }
+                        fee_fixed_cents: { type: integer }
+                        fee_amount_cents: { type: integer }
+                        net_amount_cents: { type: integer }
+                        liquidation_days: { type: integer }
+                        expected_liquidation_date: { type: string, format: date }
+                        due_date: { type: string, format: date }
+                        professional_id: { type: integer, nullable: true }
+                        expected_commission_cents: { type: integer }
+                        fee_resolved: { type: boolean, description: "false quando não há `PaymentMethodFee` vigente." }
+                  totals:
+                    type: object
+                    properties:
+                      gross_cents: { type: integer, description: "Total pago pelo paciente." }
+                      total_fee_cents: { type: integer }
+                      total_net_cents: { type: integer, description: "Total líquido na conta da clínica." }
+                      total_base_cents: { type: integer, description: "Alias semântico de `total_net_cents`." }
+                      total_amount_for_patient_cents: { type: integer }
+                      expected_commission_cents: { type: integer }
+                      installments_count: { type: integer }
+                      all_fees_resolved: { type: boolean }
+                      has_passthrough_rows: { type: boolean }
+    '422':
+      description: "`installments_plan` vazio ou inválido."
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'
+    '412':
+      description: Setup financeiro incompleto (wizard obrigatório).
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'

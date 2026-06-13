@@ -1,0 +1,143 @@
+@use "../variables" as *;
+
+/* ============================================================
+   ABA: EXAMES E IMAGENS — exams-* system
+   ============================================================ */
+
+/* Sidebar de pastas */
+.exams-sidebar-item--idle {
+  color: rgb(var(--slate-9)) !important;
+}
+.exams-sidebar-item--idle:hover {
+  background: rgb(var(--slate-3)) !important;
+  color: rgb(var(--slate-12)) !important;
+}
+.exams-sidebar-item--active {
+  background: rgba($brand-info-bright, 0.10) !important;
+  color: $brand-info !important;
+  border-color: rgba($brand-info-bright, 0.20) !important;
+}
+.exams-sidebar-section-label {
+  color: rgb(var(--slate-8)) !important;
+}
+
+/* Filtros */
+.exams-filter-btn--off {
+  background: rgb(var(--slate-2)) !important;
+  border-color: rgb(var(--slate-4)) !important;
+  color: rgb(var(--slate-9)) !important;
+}
+.exams-filter-btn--off:hover {
+  background: rgb(var(--slate-3)) !important;
+  color: rgb(var(--slate-11)) !important;
+}
+.exams-filter-btn--on {
+  background: rgba($brand-info-bright, 0.10) !important;
+  border-color: rgba($brand-info-bright, 0.22) !important;
+  color: $brand-info !important;
+}
+
+/* Empty state */
+.exams-empty-icon {
+  background: rgb(var(--slate-3)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+  color: rgb(var(--slate-8)) !important;
+}
+.exams-empty-text { color: rgb(var(--slate-9)) !important; }
+.exams-empty-hint { color: rgb(var(--slate-8)) !important; }
+
+/* Galeria — cards */
+.exams-card {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+.exams-card:hover {
+  border-color: rgb(var(--slate-5)) !important;
+}
+.exams-card--locked {
+  border-color: rgba($brand-amber, 0.35) !important;
+  box-shadow: none !important;
+}
+
+/* Thumbnail — NÃO fica preto no light mode */
+.exams-thumb {
+  background: rgb(var(--slate-3)) !important;
+}
+.exams-thumb img {
+  object-fit: contain;
+}
+
+/* PDF thumb — mantém visual semântico mas sem preto */
+.exams-thumb-pdf {
+  background: linear-gradient(160deg, rgba($brand-danger,0.06) 0%, rgba($brand-danger,0.02) 100%) !important;
+}
+.exams-thumb-pdf-icon {
+  background: rgba($brand-danger, 0.10) !important;
+  border: 1px solid rgba($brand-danger, 0.15) !important;
+}
+.exams-thumb-pdf-label {
+  color: rgba(185, 28, 28, 0.7) !important;
+}
+
+/* Badge de tipo de mídia (vídeo) — canto sup. direito */
+.exams-thumb-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #f8fafc;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+/* Overlay de hover (eye icon) */
+.exams-thumb-overlay {
+  background: rgba(0, 0, 0, 0.35) !important;
+}
+.exams-thumb-eye {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 0 !important;
+  color: #1e293b !important;
+}
+.exams-card:hover .exams-thumb-eye {
+  background: rgba(37, 99, 235, 0.95) !important;
+  color: #fff !important;
+}
+
+/* Footer do card */
+.exams-card-footer {
+  background: rgb(var(--slate-2)) !important;
+  border-top: 1px solid rgb(var(--slate-4)) !important;
+}
+.exams-card-name {
+  color: rgb(var(--slate-12)) !important;
+}
+.exams-card-date {
+  color: rgb(var(--slate-9)) !important;
+}
+.exams-card-btn {
+  color: rgb(var(--slate-8)) !important;
+}
+.exams-card-btn:hover {
+  background: rgb(var(--slate-3)) !important;
+  color: rgb(var(--slate-11)) !important;
+}
+.exams-card-btn--danger:hover {
+  background: rgba($brand-danger, 0.08) !important;
+  color: $brand-danger !important;
+}
+
+/* Drag hint */
+.exams-drag-hint {
+  color: $brand-info !important;
+}
+

@@ -1,0 +1,22 @@
+type: object
+description: |
+  Lançamento de comissão devida (`Financial::CommissionEntry`). `pay` gera
+  uma `Expense` automática vinculada (`expense.financial_commission_entry_id`).
+  Listing fica no relatório `/reports/commissions` — aqui só ações de mutação.
+properties:
+  id: { type: integer }
+  status:
+    type: string
+    enum: [pendente, pago, cancelado]
+  paid_at: { type: string, format: date-time, nullable: true }
+  paid_by_id: { type: integer, nullable: true }
+  expense:
+    type: object
+    nullable: true
+    description: "Despesa gerada pelo `pay` (quando aplicável)."
+    properties:
+      id: { type: integer }
+      description: { type: string }
+      amount_cents: { type: integer }
+      status: { type: string }
+      due_date: { type: string, format: date }

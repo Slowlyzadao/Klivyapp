@@ -1,0 +1,20 @@
+patch:
+  tags:
+    - Pacientes
+  summary: Restaurar paciente arquivado
+  description: Zera `deleted_at`. Audit log `update` com diff.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Restaurado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              payload:
+                $ref: '../definitions/Patient.yml'
+    '404':
+      description: Paciente arquivado não encontrado

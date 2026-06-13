@@ -1,4 +1,9 @@
 type: object
+description: |
+  Evento de agenda (consulta/agendamento). Após PR #4 da auditoria 2026-05-13,
+  carrega FK opcional `agenda_service_id` + snapshot inline do serviço para
+  a UI renderizar nome/cor sem lookup. Soft-delete preserva o registro
+  (visível no prontuário do paciente via Histórico, oculto da agenda).
 properties:
   id:
     type: integer
@@ -8,39 +13,113 @@ properties:
     example: 1
   user_id:
     type: integer
-    description: ID do usuário (profissional) responsável
-    example: 1
+    nullable: true
+    description: ID do usuário (profissional) responsável.
+    example: 12
   contact_id:
     type: integer
-    description: ID do contato (paciente)
-    example: 1
+    nullable: true
+    description: ID do contato (paciente).
+    example: 304
+  category_id:
+    type: integer
+    nullable: true
+    description: ID da categoria (`Agenda::Category`). Opcional.
+    example: 3
+  agenda_service_id:
+    type: integer
+    nullable: true
+    description: |
+      FK para `agenda_services`. Pode ser nullificado pelo backend se o ID
+      enviado não pertence à conta ou aponta para serviço soft-deletado.
+    example: 7
   title:
     type: string
     example: "Consulta de Avaliação"
   description:
     type: string
+    nullable: true
     example: "Paciente com dor no dente siso."
   starts_at:
     type: string
     format: date-time
-    example: "2024-05-01T10:00:00Z"
+    example: "2026-05-20T10:00:00-03:00"
   ends_at:
     type: string
     format: date-time
-    example: "2024-05-01T11:00:00Z"
+    example: "2026-05-20T11:00:00-03:00"
   status:
     type: string
     enum: [scheduled, confirmed, arrived, in_progress, completed, cancelled, no_show]
-    example: "scheduled"
+    example: scheduled
   event_type:
     type: string
-    example: "appointment"
+    description: Tipo livre (`appointment`, `consultation`, `block`, etc).
+    example: appointment
   custom_attributes:
     type: object
-    example: {}
+    description: |
+      JSONB livre. Chaves comuns: `treatment` (NAME legado), `observations`,
+      `source` (`public_booking` p/ reservas online), `cancelled_via_public_link_at`,
+      `cancellation_reason`.
+    additionalProperties: true
+    example:
+      treatment: "Limpeza"
+      source: public_booking
+  deleted_at:
+    type: string
+    format: date-time
+    nullable: true
+    description: Preenchido em soft-delete. Quando presente, o evento não aparece no `index` da agenda.
+  deletion_reason:
+    type: string
+    nullable: true
+    enum: [cancelamento_usuario, cancelamento_paciente, reagendamento, outro]
+  deletion_note:
+    type: string
+    nullable: true
+    description: Obrigatória quando `deletion_reason = "outro"`.
+  deleted_by_id:
+    type: integer
+    nullable: true
   created_at:
     type: string
     format: date-time
   updated_at:
     type: string
     format: date-time
+  category:
+    type: object
+    nullable: true
+    description: Snapshot inline da categoria quando presente.
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      color: { type: string }
+  agenda_service:
+    type: object
+    nullable: true
+    description: Snapshot inline do serviço. `deleted_at` ≠ null indica serviço arquivado.
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      color: { type: string }
+      duration_minutes: { type: integer }
+      deleted_at: { type: string, format: date-time, nullable: true }
+  contact:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      phone_number: { type: string, nullable: true }
+      email: { type: string, nullable: true }
+      avatar_url: { type: string, nullable: true }
+  user:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      email: { type: string }
+      thumbnail: { type: string, nullable: true }

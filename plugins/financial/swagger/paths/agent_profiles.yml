@@ -1,0 +1,65 @@
+get:
+  tags:
+    - Financeiro · Comissionados
+  summary: Listar usuários com perfil financeiro
+  description: |
+    Retorna **todos** os usuários da conta (account_users) com o respectivo
+    `profile` financeiro quando existe (`null` caso contrário — a UI destaca
+    "Sem configuração financeira"). Com `include_stats=true`, agrega
+    produção/orçamentos/pacientes por profissional em batch (sem N+1).
+
+    Aberto a qualquer membro da conta (leitura). `index` pula
+    `ensure_setup_complete!`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: include_stats
+      in: query
+      required: false
+      description: "Quando `true`, inclui `stats` por usuário (produção realizada, nº de orçamentos e pacientes)."
+      schema: { type: boolean }
+  responses:
+    '200':
+      description: "Lista de usuários (ordem `name`) + perfil financeiro."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    user:
+                      type: object
+                      description: "Dados do `User` core (identidade, role, badge)."
+                      properties:
+                        id: { type: integer }
+                        name: { type: string }
+                        email: { type: string }
+                        avatar_url: { type: string, nullable: true }
+                        role: { type: string, nullable: true }
+                        beclinic_super_admin: { type: boolean }
+                        custom_role_id: { type: integer, nullable: true }
+                        klivy_role:
+                          type: object
+                          nullable: true
+                          properties:
+                            name: { type: string }
+                    profile:
+                      nullable: true
+                      allOf:
+                        - $ref: '../definitions/AgentProfile.yml'
+                    stats:
+                      type: object
+                      description: "Presente apenas com `include_stats=true`."
+                      properties:
+                        producao_real_cents:
+                          type: integer
+                          description: "Soma de `Budget.total_cents` com status aprovado/concluido."
+                        orcamentos_count:
+                          type: integer
+                          description: "Budgets não-cancelados (pipeline + realizado)."
+                        pacientes_count:
+                          type: integer
+                          description: "Pacientes distintos em budgets não-cancelados."

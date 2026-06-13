@@ -1,0 +1,20 @@
+get:
+  tags:
+    - Financeiro · Relatórios
+  summary: Ticket médio (F-30 §sub-aba 3)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+  responses:
+    '200':
+      description: Ticket médio
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

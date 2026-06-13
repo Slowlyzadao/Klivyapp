@@ -12,7 +12,9 @@ class AccountPolicy < ApplicationPolicy
   end
 
   def update?
-    @account_user.administrator?
+    # Auditoria M-3: roles Klivy com `settings.account_manage=true` agora
+    # também podem editar settings da conta. Admin nativo continua passando.
+    @account_user.administrator? || beclinic_can?(:settings, :account_manage)
   end
 
   def update_active_at?

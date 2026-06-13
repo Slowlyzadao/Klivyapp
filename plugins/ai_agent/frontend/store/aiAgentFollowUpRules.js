@@ -1,7 +1,7 @@
 import AiAgentFollowUpRules from '@plugins/ai_agent/frontend/api/followUpRules';
 import { throwErrorMessage } from 'dashboard/store/utils/api';
 
-const state = {
+const initialState = () => ({
   records: [],
   uiFlags: {
     isFetching: false,
@@ -9,7 +9,9 @@ const state = {
     isUpdating: false,
     isDeleting: false,
   },
-};
+});
+
+const state = initialState();
 
 const getters = {
   getRecords: $state => $state.records,
@@ -68,6 +70,12 @@ const actions = {
       commit('SET_UI_FLAG', { isDeleting: false });
     }
   },
+
+  // MT-19 — defesa em profundidade pra account-switch. Hoje o
+  // SidebarAccountSwitcher faz full reload (zera tudo via browser); se
+  // mudar pra SPA navigation no futuro, esse reset garante que regras
+  // de uma clínica não vazem visualmente pra outra.
+  reset: ({ commit }) => commit('RESET'),
 };
 
 const mutations = {
@@ -86,6 +94,9 @@ const mutations = {
   },
   REMOVE_RECORD($state, id) {
     $state.records = $state.records.filter(r => r.id !== id);
+  },
+  RESET($state) {
+    Object.assign($state, initialState());
   },
 };
 

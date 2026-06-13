@@ -1,0 +1,49 @@
+post:
+  tags:
+    - Financeiro · Formas de Pagamento
+  summary: Excluir provedor inteiro (soft-delete em massa)
+  description: |
+    Soft-delete de TODOS os métodos vivos do mesmo `(account_id, provider)`,
+    junto com os fees ativos. Útil para corrigir cadastro errado (operador digitou
+    "Stnoe" em vez de "Stone"). Requer ADMIN ou GERENTE (`authorize_write!`).
+    Idempotência opcional via header `Idempotency-Key`.
+
+    **Bloqueia (422)** se QUALQUER método do grupo já foi usado em lançamentos
+    (existe `Installment` vinculada) — nesse caso, inative individualmente ou
+    migre os lançamentos antes.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [provider]
+          properties:
+            provider: { type: string, example: "Stnoe", description: "Provedor cru a excluir (match exato após strip)." }
+  responses:
+    '200':
+      description: Provedor removido (soft-delete em massa)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              ok: { type: boolean, example: true }
+              deleted_count: { type: integer, description: "Quantos métodos foram soft-deletados." }
+              provider: { type: string }
+    '403':
+      description: Sem permissão (requer ADMIN/GERENTE)
+    '404':
+      description: "Provedor não encontrado (`error: provider_not_found`)"
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'
+    '422':
+      description: "`provider` ausente (`error: provider_required`) ou algum método já usado em lançamentos (`error: provider_in_use`)"
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'

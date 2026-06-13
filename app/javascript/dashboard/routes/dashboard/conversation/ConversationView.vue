@@ -10,6 +10,7 @@ import CmdBarConversationSnooze from 'dashboard/routes/dashboard/commands/CmdBar
 import { emitter } from 'shared/helpers/mitt';
 import SidepanelSwitch from 'dashboard/components-next/Conversation/SidepanelSwitch.vue';
 import ConversationSidebar from 'dashboard/components/widgets/conversation/ConversationSidebar.vue';
+import { setLastOpenedConversationId } from 'dashboard/helper/routeHelpers';
 
 export default {
   components: {
@@ -98,7 +99,10 @@ export default {
     },
   },
   watch: {
-    conversationId() {
+    conversationId(newId) {
+      if (newId) {
+        setLastOpenedConversationId(this.accountId, newId);
+      }
       this.fetchConversationIfUnavailable();
     },
   },
@@ -110,6 +114,8 @@ export default {
     // with conversation view and other screens
     if (!this.conversationId) {
       this.$store.dispatch('clearSelectedState');
+    } else {
+      setLastOpenedConversationId(this.accountId, this.conversationId);
     }
   },
 

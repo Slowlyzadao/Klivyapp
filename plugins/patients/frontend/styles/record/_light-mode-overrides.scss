@@ -1,0 +1,112 @@
+/* ============================================================
+   LIGHT MODE: Override classes Tailwind dark hardcoded
+   Aplica SOMENTE quando body NÃO tem a classe .dark
+   (o Chatwoot adiciona `.dark` ao body no dark mode)
+   ============================================================ */
+
+/* Modais que usam bg-slate-900 como fundo */
+body:not(.dark) .bg-slate-900 {
+  background-color: rgb(var(--slate-1)) !important;
+}
+
+/* Dropdowns e áreas que usam bg-slate-800 */
+body:not(.dark) .bg-slate-800,
+body:not(.dark) [class*="bg-slate-800\/"] {
+  background-color: rgb(var(--slate-2)) !important;
+}
+
+/* Bordas dark no contexto light */
+body:not(.dark) .border-slate-700,
+body:not(.dark) .border-slate-600,
+body:not(.dark) [class*="border-slate-700\/"],
+body:not(.dark) [class*="border-slate-600\/"] {
+  border-color: rgb(var(--slate-4)) !important;
+}
+
+/* Cores de texto dark */
+body:not(.dark) .text-slate-100 {
+  color: rgb(var(--slate-12)) !important;
+}
+body:not(.dark) .text-slate-200 {
+  color: rgb(var(--slate-11)) !important;
+}
+body:not(.dark) .text-slate-300 {
+  color: rgb(var(--slate-11)) !important;
+}
+body:not(.dark) .text-slate-400 {
+  color: rgb(var(--slate-9)) !important;
+}
+body:not(.dark) .text-slate-500 {
+  color: rgb(var(--slate-8)) !important;
+}
+
+/* Hover states dark */
+body:not(.dark) .hover\:bg-slate-800:hover {
+  background-color: rgb(var(--slate-3)) !important;
+}
+
+/* Inputs inline com bg-slate-800 (modal de lock/unlock, etc.) */
+body:not(.dark) input.bg-slate-800,
+body:not(.dark) textarea.bg-slate-800 {
+  background-color: rgb(var(--slate-2)) !important;
+  border-color: rgb(var(--slate-5)) !important;
+  color: rgb(var(--slate-12)) !important;
+}
+body:not(.dark) input.border-slate-600,
+body:not(.dark) textarea.border-slate-600 {
+  border-color: rgb(var(--slate-5)) !important;
+}
+
+/* Placeholder dark */
+body:not(.dark) .placeholder-slate-500::placeholder {
+  color: rgb(var(--slate-8)) !important;
+}
+
+/* Ações (hover:bg-slate-800) no header de modais */
+body:not(.dark) .hover\:bg-slate-800:hover,
+body:not(.dark) .hover\:text-slate-100:hover {
+  background-color: rgb(var(--slate-3)) !important;
+  color: rgb(var(--slate-12)) !important;
+}
+
+/* Preview print modal — o container principal da área de preview */
+body:not(.dark) .flex-1.bg-slate-800.overflow-hidden {
+  background-color: rgb(var(--slate-3)) !important;
+}
+
+/* Border-bottom dark (divisória interna de modais) */
+body:not(.dark) .border-b.border-slate-700\/50,
+body:not(.dark) .border-t.border-slate-700\/50,
+body:not(.dark) [class*="border-b border-slate-700"] {
+  border-color: rgb(var(--slate-4)) !important;
+}
+
+/* Área de upload com dashed border */
+body:not(.dark) .border-slate-600.border-dashed,
+body:not(.dark) [class*="border-dashed border-slate-"] {
+  border-color: rgb(var(--slate-5)) !important;
+}
+
+/* Inline actions bar nos folders (bg-slate-800/90 backdrop) */
+body:not(.dark) [class*="bg-slate-800\/90"] {
+  background-color: rgba(var(--slate-2), 0.95) !important;
+}
+
+/* Botões das action bars nos items de pasta */
+body:not(.dark) .hover\:text-slate-100:hover {
+  color: rgb(var(--slate-12)) !important;
+}
+
+/* Linha separatória da timeline (sched-timeline-line) */
+body:not(.dark) [class*="bg-slate-800\/50"] {
+  background-color: rgb(var(--slate-3)) !important;
+}
+
+/* Select/input com borders slate */
+body:not(.dark) input.border-slate-700,
+body:not(.dark) select.border-slate-700 {
+  border-color: rgb(var(--slate-5)) !important;
+  background-color: rgb(var(--slate-2)) !important;
+  color: rgb(var(--slate-12)) !important;
+}
+

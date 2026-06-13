@@ -1,0 +1,32 @@
+post:
+  tags:
+    - Documentos
+  summary: Anexar PDF externo (multipart)
+  description: |
+    Upload de arquivo externo (`multipart/form-data`). `is_generated=false`,
+    `status=gerado`. Aceita qualquer mime type — Active Storage detecta.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  requestBody:
+    required: true
+    content:
+      multipart/form-data:
+        schema:
+          type: object
+          required: [file]
+          properties:
+            file:
+              type: string
+              format: binary
+            document_type: { type: string, default: outro }
+            title: { type: string, default: "Documento Anexado" }
+  responses:
+    '201':
+      description: Anexado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Document.yml'
+    '422':
+      description: Arquivo ausente ou inválido

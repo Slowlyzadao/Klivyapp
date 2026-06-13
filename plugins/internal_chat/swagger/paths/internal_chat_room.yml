@@ -1,0 +1,84 @@
+get:
+  tags:
+    - Chat Interno — Salas
+  summary: Obter sala
+  description: 'Autorização: admin OR (Klivy `internal_chat.view` AND member).'
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Sala
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                $ref: '../definitions/Room.yml'
+    '403':
+      description: Sem permissão / não é membro
+    '404':
+      description: Não encontrada (ou pertence a outra conta)
+put:
+  tags:
+    - Chat Interno — Salas
+  summary: Atualizar sala
+  description: |
+    Atualiza `name`/`description`/`archived_at` (params aninhados em `room`).
+    Em grupos, mudança de nome/descrição gera mensagem de sistema.
+    Autorização: admin OR (Klivy `internal_chat.view` AND membership.role ∈
+    {owner, admin}).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [room]
+          properties:
+            room:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+                archived_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                $ref: '../definitions/Room.yml'
+    '403':
+      description: Sem permissão ou role insuficiente
+    '404':
+      description: Não encontrada
+delete:
+  tags:
+    - Chat Interno — Salas
+  summary: Deletar sala
+  description: |
+    Emite broadcast `internal_chat.room.deleted` (fan-out aos membros) ANTES
+    do destroy. Cascade nos memberships, messages, attachments. Retorna
+    `200 OK` (sem corpo).
+    Autorização: admin OR (criador da sala AND Klivy `internal_chat.view`).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Deletada (head :ok, sem corpo)
+    '403':
+      description: Sem permissão (não é criador)
+    '404':
+      description: Não encontrada

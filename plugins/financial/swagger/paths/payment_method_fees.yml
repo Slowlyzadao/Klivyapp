@@ -1,0 +1,86 @@
+get:
+  tags:
+    - Financeiro · Formas de Pagamento
+  summary: Listar taxas do método
+  description: |
+    Lista as taxas vivas do método (ordem `installments_count ASC, valid_from DESC`).
+    Read-only, sem gate de RBAC — qualquer usuário autenticado. Acessível mesmo
+    com setup incompleto.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: payment_method_id
+      in: path
+      required: true
+      schema: { type: integer }
+    - name: status
+      in: query
+      schema: { type: string, enum: [active, inactive] }
+    - name: vigent_on
+      in: query
+      description: "Filtra taxas vigentes na data ISO 'YYYY-MM-DD' (valid_from ≤ data ≤ valid_to|null)."
+      schema: { type: string, format: date }
+  responses:
+    '200':
+      description: Lista de taxas
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/PaymentMethodFee.yml'
+post:
+  tags:
+    - Financeiro · Formas de Pagamento
+  summary: Criar taxa (versionada)
+  description: |
+    Cria uma nova taxa para o método. Requer ADMIN ou GERENTE (`authorize_write!`).
+    Idempotência via header `Idempotency-Key`. O `payment_method_id` vem da rota
+    (qualquer valor no body é ignorado).
+
+    Canon: **NÃO existe `update`** — para alterar, inative a vigente
+    (`POST /deactivate`) e crie nova com `valid_from` futuro. Se já houver taxa
+    vigente para a mesma combinação `(installments_count, vigência)`, o exclusion
+    constraint do banco rejeita com `422` (`error: overlapping_fee_vigency`).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: payment_method_id
+      in: path
+      required: true
+      schema: { type: integer }
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [payment_method_fee]
+          properties:
+            payment_method_fee:
+              type: object
+              required: [installments_count, fee_percent_basis_points, fee_fixed_cents, liquidation_days, valid_from]
+              properties:
+                installments_count: { type: integer, minimum: 1, maximum: 24 }
+                fee_percent_basis_points: { type: integer, minimum: 0, maximum: 10000, description: "Basis points (250 = 2,50%)." }
+                fee_fixed_cents: { type: integer, minimum: 0 }
+                liquidation_days: { type: integer, minimum: 0 }
+                valid_from: { type: string, format: date }
+                valid_to: { type: string, format: date, nullable: true }
+                status: { type: string, enum: [active, inactive] }
+  responses:
+    '201':
+      description: Taxa criada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PaymentMethodFee.yml'
+    '403':
+      description: Sem permissão (requer ADMIN/GERENTE)
+    '422':
+      description: "Erro de validação ou sobreposição de vigência (`error: overlapping_fee_vigency`)"
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'

@@ -16,7 +16,12 @@ class Api::V1::Accounts::InternalChat::StickersController < Api::V1::Accounts::B
   def index
     filter = params[:filter].presence || 'all'
     category = params[:category].presence
-    favorite_ids = Current.user.internal_chat_sticker_favorites.pluck(:sticker_id)
+    # MT-11: scope explicito por account_id. Antes pluck retornava
+    # sticker_ids de TODAS as contas que o user é membro (multi-account
+    # user vê favoritos cruzados). Agora só os desta conta.
+    favorite_ids = Current.user.internal_chat_sticker_favorites
+                              .where(account_id: Current.account.id)
+                              .pluck(:sticker_id)
 
     if filter == 'recent'
       data = recent_stickers_for(Current.user, favorite_ids.to_set)
@@ -44,7 +49,7 @@ class Api::V1::Accounts::InternalChat::StickersController < Api::V1::Accounts::B
   # Espera multipart com `image` (já redimensionado/convertido pelo client).
   # Cria sticker + auto-salva na coleção do criador (favorite implícito).
   def create
-    return render json: { error: 'imagem ausente' }, status: :unprocessable_entity if params[:image].blank?
+    return render json: { error: I18n.t('internal_chat.controllers.stickers.image_missing') }, status: :unprocessable_entity if params[:image].blank?
 
     sticker = Current.account.internal_chat_stickers.new(
       created_by_user_id: Current.user.id,
@@ -56,7 +61,12 @@ class Api::V1::Accounts::InternalChat::StickersController < Api::V1::Accounts::B
     )
     sticker.image.attach(params[:image])
     if sticker.save
-      InternalChat::StickerFavorite.create!(user_id: Current.user.id, sticker_id: sticker.id)
+      # MT-11: account_id explícito.
+      InternalChat::StickerFavorite.create!(
+        user_id: Current.user.id,
+        sticker_id: sticker.id,
+        account_id: Current.account.id
+      )
       InternalChat::Telemetry.track('sticker_created',
                                     account_id: Current.account.id,
                                     user_id: Current.user.id,
@@ -70,7 +80,7 @@ class Api::V1::Accounts::InternalChat::StickersController < Api::V1::Accounts::B
   end
 
   def destroy
-    return render json: { error: 'figurinha padrão não pode ser excluída' }, status: :forbidden if @sticker.kind == 'default'
+    return render json: { error: I18n.t('internal_chat.controllers.stickers.default_cannot_delete') }, status: :forbidden if @sticker.kind == 'default'
 
     @sticker.destroy!
     head :ok
@@ -78,13 +88,23 @@ class Api::V1::Accounts::InternalChat::StickersController < Api::V1::Accounts::B
 
   # POST /internal_chat/stickers/:id/favorite
   def favorite
-    # Defaults já são visíveis automaticamente — não precisam de favorito.
+    # FE-22 (auditoria 2026-05-18): defaults já são visíveis automaticamente
+    # — não há persistência de favorito a fazer. Mas semanticamente o user
+    # "favoritou" → retornar `is_favorite: true, default: true` evita UI
+    # inconsistente (antes retornava `is_favorite: false`, fazendo o
+    # frontend mostrar o botão de "favoritar" de novo). Frontend store
+    # também detecta `kind === 'default'` e faz no-op (defesa em
+    # profundidade — caso alguém chame a API direto sem store).
     if @sticker.kind == 'default'
-      return render json: { data: { sticker_id: @sticker.id, is_favorite: false, default: true } }
+      return render json: { data: { sticker_id: @sticker.id, is_favorite: true, default: true } }
     end
 
+    # MT-11: account_id explícito — mesmo user pode favoritar mesmo default
+    # em N contas, então a unicidade é por (user, account, sticker).
     InternalChat::StickerFavorite.find_or_create_by!(
-      user_id: Current.user.id, sticker_id: @sticker.id,
+      user_id: Current.user.id,
+      sticker_id: @sticker.id,
+      account_id: Current.account.id
     )
     render json: { data: { sticker_id: @sticker.id, is_favorite: true } }
   end
@@ -94,7 +114,7 @@ class Api::V1::Accounts::InternalChat::StickersController < Api::V1::Accounts::B
   # apaga fisicamente do banco. Defaults da Klivy não podem ser removidos.
   def unfavorite
     if @sticker.kind == 'default'
-      return render json: { error: 'figurinha padrão não pode ser removida' }, status: :forbidden
+      return render json: { error: I18n.t('internal_chat.controllers.stickers.default_cannot_remove') }, status: :forbidden
     end
 
     deleted = false
@@ -106,10 +126,17 @@ class Api::V1::Accounts::InternalChat::StickersController < Api::V1::Accounts::B
       locked = InternalChat::Sticker.lock.find_by(id: sticker_id)
       next unless locked
 
+      # MT-11: scoped por account_id — unfavorite só do registro desta
+      # conta. Outras contas (multi-account user) mantêm o favorito.
       InternalChat::StickerFavorite.where(
-        user_id: Current.user.id, sticker_id: sticker_id,
+        user_id: Current.user.id,
+        sticker_id: sticker_id,
+        account_id: Current.account.id
       ).destroy_all
 
+      # Cascade-delete do sticker custom continua global — se ninguém em
+      # NENHUMA conta favorita mais, apaga o blob físico. Defaults nunca
+      # caem aqui (kind='default' já é rejeitado no return acima).
       if InternalChat::StickerFavorite.where(sticker_id: sticker_id).none?
         locked.destroy!
         deleted = true
@@ -129,6 +156,12 @@ class Api::V1::Accounts::InternalChat::StickersController < Api::V1::Accounts::B
   # Top 10 stickers que o user mais enviou. Agrupa Messages.sticker_id por
   # contagem DESC. Stickers cuja referência foi cascade-deletada (sticker_id
   # virou NULL) são automaticamente excluídos via `where.not(sticker_id: nil)`.
+  #
+  # PERF-3 (auditoria 2026-05-18): ordenação + limit no SQL em vez de
+  # `sort_by/first(10)` em Ruby. User com 5000 sticker usages fazia full
+  # sort em memória; agora PG ordena com index parcial e retorna só 10
+  # linhas. Hash preserva ordem de inserção (Ruby 2.0+), então `counts.keys`
+  # já vem ordenado.
   def recent_stickers_for(user, favorite_ids)
     counts = InternalChat::Message
              .joins(:room)
@@ -136,10 +169,12 @@ class Api::V1::Accounts::InternalChat::StickersController < Api::V1::Accounts::B
              .where(internal_chat_rooms: { account_id: Current.account.id })
              .where.not(sticker_id: nil)
              .group(:sticker_id)
+             .order(Arel.sql('COUNT(*) DESC'))
+             .limit(10)
              .count
     return [] if counts.empty?
 
-    sorted_ids = counts.sort_by { |_, count| -count }.first(10).map(&:first)
+    sorted_ids = counts.keys
     found = InternalChat::Sticker.where(id: sorted_ids).index_by(&:id)
     sorted_ids.map { |id| found[id] }.compact.map do |s|
       InternalChat::StickerSerializer.new(s, current_user: user, favorite_ids: favorite_ids).as_json

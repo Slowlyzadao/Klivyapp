@@ -1,22 +1,34 @@
 <script>
-import { PRIORITIES, EVENT_TYPES, TREATMENTS, PERIOD_LABELS, DOW_LABELS_PT } from '../utils/agenda-constants.js';
+import { PRIORITIES, EVENT_TYPES, TREATMENTS, PERIOD_LABELS, DOW_LABELS_PT, STATUS_OPTIONS, STATUS_CONFIGS } from '../utils/agenda-constants.js';
 import { getPriorityColor } from '../utils/agenda-colors.js';
+import SidebarCountBadge from './SidebarCountBadge.vue';
+import SidebarAllPill from './SidebarAllPill.vue';
 
 export default {
   name: 'AgendaSidebar',
+  components: { SidebarCountBadge, SidebarAllPill },
   props: {
     calendarDays: { type: Array, required: true },
     miniDayHeaders: { type: Array, required: true },
+    currentDateLabel: { type: String, default: '' },
     isAdmin: { type: Boolean, default: false },
     visibleAgentList: { type: Array, default: () => [] },
     hiddenAgents: { type: Array, default: () => [] },
     hiddenPriorities: { type: Array, default: () => [] },
     hiddenEventTypes: { type: Array, default: () => [] },
-    hiddenTreatments: { type: Array, default: () => [] },
+    // PR #6 da auditoria 2026-05-13: agora armazena IDs de `agenda_services`
+    // em vez de NAMES. Imune a rename do serviço.
+    hiddenServiceIds: { type: Array, default: () => [] },
     hiddenCategories: { type: Array, default: () => [] },
+    hiddenStatuses: { type: Array, default: () => [] },
     expandedFilters: { type: Object, required: true },
     treatmentOptions: { type: Array, default: () => TREATMENTS },
     categoryOptions: { type: Array, default: () => [] },
+    eventTypeCounts: { type: Object, default: () => ({}) },
+    // Auditoria 2026-05-15: badge de contagem por status, espelhando o
+    // padrão de `eventTypeCounts`. Vem do pai (AgendaDashboard) que tem
+    // acesso à lista filtrada de eventos.
+    statusCounts: { type: Object, default: () => ({}) },
     waitingListEntries: { type: Array, default: () => [] },
     wlInfoPopup: { type: Object, default: null },
     showMobileSidebar: { type: Boolean, default: false },
@@ -33,6 +45,9 @@ export default {
     'toggle-category',
     'solo-category',
     'show-all-categories',
+    'toggle-status',
+    'solo-status',
+    'show-all-statuses',
     'show-wl-info',
     'close-wl-info',
     'remove-wl',
@@ -42,10 +57,14 @@ export default {
     return {
       priorityOptions: PRIORITIES,
       eventTypeOptions: EVENT_TYPES,
+      statusOptions: STATUS_OPTIONS,
     };
   },
   methods: {
     getPriorityColor,
+    statusColor(key) {
+      return (STATUS_CONFIGS[key] && STATUS_CONFIGS[key].color) || '#9ca3af';
+    },
     isToday(dayObj) {
       const n = new Date();
       return (
@@ -83,8 +102,8 @@ export default {
     >
       <!-- Mini Calendar -->
       <div class="sidebar-section">
-        <div class="sidebar-title">
-          {{ $t('AGENDA.SIDEBAR.MINI_CALENDAR') }}
+        <div class="sidebar-title sidebar-title--date">
+          {{ currentDateLabel }}
         </div>
         <div class="mini-calendar">
           <div class="mini-cal-header">
@@ -119,11 +138,11 @@ export default {
         >
           <span>{{ $t('AGENDA.SIDEBAR.AGENTS') }}</span>
           <span class="sidebar-header-right">
-            <span
-              class="sidebar-all-pill"
-              :class="{ 'is-active': hiddenAgents.length === 0 }"
-              @click.stop="$emit('show-all-agents')"
-            >{{ $t('AGENDA.SIDEBAR.ALL_AGENTS') }}</span>
+            <SidebarAllPill
+              :label="$t('AGENDA.SIDEBAR.ALL_AGENTS')"
+              :active="hiddenAgents.length === 0"
+              @click="$emit('show-all-agents')"
+            />
             <i
               :class="
                 expandedFilters.agents
@@ -230,6 +249,10 @@ export default {
               }"
             />
             <span class="agent-name">{{ type.label }}</span>
+            <SidebarCountBadge
+              v-if="eventTypeCounts[type.value] != null"
+              :count="eventTypeCounts[type.value]"
+            />
           </div>
         </div>
       </div>
@@ -250,17 +273,23 @@ export default {
           />
         </button>
         <div v-if="expandedFilters.treatments" class="filter-content">
+          <!--
+            PR #6 da auditoria 2026-05-13: emit do `toggle-treatment` carrega
+            o ID do serviço (não o NAME). Itens legado em formato string seguem
+            como fallback para o caso raro de a lista ter entradas antigas
+            sem id — segue padrão defensivo do componente.
+          -->
           <div
             v-for="tr in treatmentOptions"
             :key="typeof tr === 'string' ? tr : tr.id"
             class="agent-item"
-            @click="$emit('toggle-treatment', typeof tr === 'string' ? tr : tr.name)"
+            @click="$emit('toggle-treatment', typeof tr === 'string' ? tr : tr.id)"
           >
             <span
               class="agent-dot"
               :style="{
-                backgroundColor: hiddenTreatments.includes(
-                  typeof tr === 'string' ? tr : tr.name
+                backgroundColor: hiddenServiceIds.includes(
+                  typeof tr === 'string' ? tr : tr.id
                 )
                   ? 'transparent'
                   : tr.color || 'rgb(var(--slate-8))',
@@ -284,13 +313,11 @@ export default {
         >
           <span>{{ $t('AGENDA.SIDEBAR.CATEGORIES', 'CATEGORIAS') }}</span>
           <span class="sidebar-header-right">
-            <span
-              class="sidebar-all-pill"
-              :class="{ 'is-active': hiddenCategories.length === 0 }"
-              @click.stop="$emit('show-all-categories')"
-            >
-              {{ $t('AGENDA.SIDEBAR.ALL_CATEGORIES', 'Todos') }}
-            </span>
+            <SidebarAllPill
+              :label="$t('AGENDA.SIDEBAR.ALL_CATEGORIES', 'Todos')"
+              :active="hiddenCategories.length === 0"
+              @click="$emit('show-all-categories')"
+            />
             <i
               :class="
                 expandedFilters.categories
@@ -320,12 +347,60 @@ export default {
               @click.stop="$emit('toggle-category', cat.id)"
             />
             <span class="agent-name">{{ cat.name }}</span>
-            <span
+            <SidebarCountBadge
               v-if="cat.appointments_count != null"
-              class="cat-sidebar-count"
-            >
-              {{ cat.appointments_count }}
-            </span>
+              :count="cat.appointments_count"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Status (filtra apenas eventos do tipo Consulta) -->
+      <div class="sidebar-section">
+        <button
+          class="sidebar-collapse-btn"
+          @click="$emit('toggle-filter', 'status')"
+        >
+          <span>Status</span>
+          <span class="sidebar-header-right">
+            <SidebarAllPill
+              label="Todos"
+              :active="hiddenStatuses.length === 0"
+              @click="$emit('show-all-statuses')"
+            />
+            <i
+              :class="
+                expandedFilters.status
+                  ? 'i-lucide-chevron-up'
+                  : 'i-lucide-chevron-down'
+              "
+            />
+          </span>
+        </button>
+        <div v-if="expandedFilters.status" class="filter-content">
+          <div
+            v-for="opt in statusOptions"
+            :key="opt.key"
+            class="agent-item"
+            @click="$emit('solo-status', opt.key)"
+          >
+            <span
+              class="agent-dot agent-dot--clickable"
+              :style="{
+                backgroundColor: hiddenStatuses.includes(opt.key)
+                  ? 'transparent'
+                  : statusColor(opt.key),
+                borderColor: statusColor(opt.key),
+                borderStyle: 'solid',
+                borderWidth: '2px',
+              }"
+              @click.stop="$emit('toggle-status', opt.key)"
+            />
+            <span class="agent-name">{{ opt.label }}</span>
+            <SidebarCountBadge
+              v-if="statusCounts[opt.key] != null"
+              :count="statusCounts[opt.key]"
+            />
           </div>
         </div>
       </div>
@@ -469,6 +544,12 @@ export default {
   padding: 10px 12px 4px;
 }
 
+.sidebar-title--date {
+  text-transform: none;
+  letter-spacing: 0;
+  color: rgb(var(--slate-12));
+}
+
 .sidebar-collapse-btn {
   display: flex;
   align-items: center;
@@ -500,30 +581,6 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.sidebar-all-pill {
-  @apply text-xs;
-  font-weight: 600;
-  text-transform: none;
-  letter-spacing: 0;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: rgb(var(--slate-3));
-  color: rgb(var(--slate-11));
-  border: 1px solid rgb(var(--slate-5));
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
-}
-
-.sidebar-all-pill:hover {
-  background: rgb(var(--slate-4));
-}
-
-.sidebar-all-pill.is-active {
-  background: rgb(var(--blue-9));
-  color: #fff;
-  border-color: rgb(var(--blue-9));
 }
 
 .filter-content {
@@ -633,19 +690,6 @@ export default {
   padding: 2px 6px;
   border-radius: 8px;
   margin-left: 6px;
-}
-
-.cat-sidebar-count {
-  margin-left: auto;
-  @apply text-xs;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: rgb(var(--slate-9));
-  background: rgb(var(--slate-3));
-  padding: 1px 6px;
-  border-radius: 8px;
-  min-width: 22px;
-  text-align: center;
 }
 
 .wl-sidebar-empty {

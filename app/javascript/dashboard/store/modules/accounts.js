@@ -51,6 +51,16 @@ export const getters = {
     const { features = {} } = findRecordById($state, id);
     return features[featureName] || false;
   },
+  // Análogo ao acima, mas para feature flags em
+  // `Account#custom_attributes['beta_features']` (PR 1 do refactor financeiro
+  // 2026-05-06). Necessário porque `Featurable`/`feature_flags` (bigint signed)
+  // estourou em produção do Klivy ao chegar à 64ª feature. Detalhes:
+  // [`Patients::BetaFeatureChecker`](app/services/patients/beta_feature_checker.rb)
+  // e plugins/patients/PLANO_FINANCEIRO_2026-05-06.md §11.
+  isBetaFeatureEnabledOnAccount: $state => (id, featureName) => {
+    const { beta_features: betaFeatures = [] } = findRecordById($state, id);
+    return Array.isArray(betaFeatures) && betaFeatures.includes(featureName);
+  },
 };
 
 export const actions = {

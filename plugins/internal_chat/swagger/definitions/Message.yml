@@ -1,0 +1,125 @@
+type: object
+description: |
+  Mensagem dentro de uma `Room`, conforme `MessageSerializer`. O `sender` é
+  `User` (humano, `is_ai=false`) OU a Bea (agente de IA, `is_ai=true`), nunca
+  ambos — e é `null` em mensagens de sistema. `content_attributes` é JSONB
+  livre (reply-to, mention metadata, etc.). Quando a mensagem é uma figurinha,
+  `content_type='sticker'` e `sticker` traz o payload reduzido.
+properties:
+  id: { type: integer }
+  account_id:
+    type: integer
+    description: |
+      `room.account_id`. Obrigatório no payload de cable events — o
+      ActionCableConnector do core filtra eventos por `account_id`.
+  room_id: { type: integer }
+  sender:
+    type: object
+    nullable: true
+    description: Autor da mensagem. `null` em mensagens de sistema.
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      avatar_url: { type: string, nullable: true }
+      is_ai:
+        type: boolean
+        description: '`true` quando o autor é a Bea (agente de IA).'
+  content:
+    type: string
+    nullable: true
+  content_type:
+    type: string
+    enum: [text, image, audio, video, file, system, sticker]
+    default: text
+  content_attributes:
+    type: object
+    additionalProperties: true
+  in_reply_to:
+    type: integer
+    nullable: true
+    description: ID da mensagem citada (de `content_attributes['in_reply_to']`).
+  in_reply_to_message:
+    type: object
+    nullable: true
+    description: Preview da mensagem citada (resolvido pelo serializer).
+    properties:
+      id: { type: integer }
+      sender_name: { type: string, nullable: true }
+      content_type: { type: string }
+      content_preview:
+        type: string
+        description: Primeiros 140 chars do conteúdo citado.
+      deleted_at:
+        type: string
+        format: date-time
+        nullable: true
+      first_attachment_type:
+        type: string
+        nullable: true
+      thumb_url:
+        type: string
+        nullable: true
+  mentioned_user_ids:
+    type: array
+    items: { type: integer }
+  mentioned_ai_agent_ids:
+    type: array
+    items: { type: integer }
+  edited_at:
+    type: string
+    format: date-time
+    nullable: true
+  deleted_at:
+    type: string
+    format: date-time
+    nullable: true
+  created_at:
+    type: string
+    format: date-time
+  attachments:
+    type: array
+    items:
+      type: object
+      properties:
+        id: { type: integer }
+        file_type: { type: string }
+        file_name: { type: string, nullable: true }
+        content_type: { type: string, nullable: true }
+        file_size: { type: integer, nullable: true }
+        file_url: { type: string, nullable: true }
+        thumb_url:
+          type: string
+          nullable: true
+          description: Presente só para `file_type='image'`.
+        download_url:
+          type: string
+          nullable: true
+          description: |
+            Rota custom de download (reconverte WebP → JPG/PNG); para outros
+            tipos, URL direta do ActiveStorage.
+  sticker:
+    type: object
+    nullable: true
+    description: Payload reduzido da figurinha quando a mensagem é um sticker.
+    properties:
+      id: { type: integer }
+      image_url: { type: string, nullable: true }
+      width: { type: integer, nullable: true }
+      height: { type: integer, nullable: true }
+  is_favorited:
+    type: boolean
+    description: True se o requester favoritou esta mensagem.
+  reactions:
+    type: array
+    description: Reações agregadas por emoji, ordenadas por `count` DESC.
+    items:
+      type: object
+      properties:
+        emoji: { type: string }
+        count: { type: integer }
+        by_me:
+          type: boolean
+          description: True se o requester reagiu com esse emoji.
+        user_ids:
+          type: array
+          items: { type: integer }

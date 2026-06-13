@@ -36,13 +36,19 @@ export function createAgendaState() {
       eventType: false,
       treatments: false,
       categories: false,
+      status: false,
       waitingList: false,
     },
     hiddenAgents: [],
     hiddenPriorities: [],
     hiddenEventTypes: [],
-    hiddenTreatments: [],
+    // PR #6 da auditoria 2026-05-13: filtro armazena IDs de serviço em vez de
+    // NAMES — evita filtro órfão quando o serviço é renomeado/arquivado.
+    // Para eventos legados com `agenda_service_id` NULL, a comparação cai pra
+    // NAME via `event.custom_attributes.treatment` (compat).
+    hiddenServiceIds: [],
     hiddenCategories: [],
+    hiddenStatuses: [],
 
     // ─── Modal de Evento ───────────────────────────────
     showNewEventModal: false,
@@ -340,14 +346,23 @@ export function createAgendaState() {
     return DAY_KEYS.map(k => i18n(`AGENDA.DAYS.${k}`).charAt(0));
   }
 
+  function getCurrentDateLabel(i18n) {
+    const d = state.currentDate;
+    const dayKey = DAY_KEYS[d.getDay()];
+    const monthKey = MONTH_KEYS[d.getMonth()];
+    const dayLabel = i18n(`AGENDA.DAYS.${dayKey}`);
+    const monthLabel = i18n(`AGENDA.MONTHS.${monthKey}`);
+    return `${dayLabel}, ${d.getDate()} ${i18n('AGENDA.OF')} ${monthLabel} ${d.getFullYear()}`;
+  }
+
   function getMonthLabel(i18n) {
+    if (state.viewMode === 'year') {
+      // Year View: rótulo é só o número do ano — o YearHeader interno
+      // já mostra título grande, então mantemos o header minimalista.
+      return String(currentYear.value);
+    }
     if (state.viewMode === 'day') {
-      const d = state.currentDate;
-      const dayKey = DAY_KEYS[d.getDay()];
-      const monthKey = MONTH_KEYS[d.getMonth()];
-      const dayLabel = i18n(`AGENDA.DAYS.${dayKey}`);
-      const monthLabel = i18n(`AGENDA.MONTHS.${monthKey}`);
-      return `${dayLabel}, ${d.getDate()} ${i18n('AGENDA.OF')} ${monthLabel} ${d.getFullYear()}`;
+      return getCurrentDateLabel(i18n);
     }
     if (state.viewMode === 'week') {
       const week = getCurrentWeekDays(i18n);
@@ -408,6 +423,8 @@ export function createAgendaState() {
       d.setDate(d.getDate() - 1);
     } else if (state.viewMode === 'week') {
       d.setDate(d.getDate() - 7);
+    } else if (state.viewMode === 'year') {
+      d.setFullYear(d.getFullYear() - 1);
     } else {
       d.setMonth(d.getMonth() - 1);
     }
@@ -420,6 +437,8 @@ export function createAgendaState() {
       d.setDate(d.getDate() + 1);
     } else if (state.viewMode === 'week') {
       d.setDate(d.getDate() + 7);
+    } else if (state.viewMode === 'year') {
+      d.setFullYear(d.getFullYear() + 1);
     } else {
       d.setMonth(d.getMonth() + 1);
     }
@@ -470,10 +489,12 @@ export function createAgendaState() {
     else state.hiddenEventTypes.push(val);
   }
 
+  // `val` é o ID do serviço (numérico). PR #6 da auditoria 2026-05-13 —
+  // antes recebia o NAME, agora ID estável.
   function toggleTreatment(val) {
-    const idx = state.hiddenTreatments.indexOf(val);
-    if (idx >= 0) state.hiddenTreatments.splice(idx, 1);
-    else state.hiddenTreatments.push(val);
+    const idx = state.hiddenServiceIds.indexOf(val);
+    if (idx >= 0) state.hiddenServiceIds.splice(idx, 1);
+    else state.hiddenServiceIds.push(val);
   }
 
   function toggleCategory(id) {
@@ -490,14 +511,35 @@ export function createAgendaState() {
     state.hiddenCategories = [];
   }
 
+  function toggleStatus(val) {
+    const idx = state.hiddenStatuses.indexOf(val);
+    if (idx >= 0) state.hiddenStatuses.splice(idx, 1);
+    else state.hiddenStatuses.push(val);
+  }
+
+  function soloStatus(key, allKeys) {
+    state.hiddenStatuses = allKeys.filter(k => k !== key);
+  }
+
+  function showAllStatuses() {
+    state.hiddenStatuses = [];
+  }
+
   // ─── Agentes ────────────────────────────────────────
 
+  // Mantém apenas usuários que atendem na agenda. Backend resolve a flag
+  // (per-user override → role default → false) e expõe como
+  // `is_agenda_provider` no payload do agente. Agentes legados sem a flag
+  // (campo undefined) seguem aparecendo — o backfill da migration garante
+  // que todos os existentes recebem `true`.
   function buildAgentList(agents) {
     if (agents && agents.length) {
-      return agents.map(a => ({
-        ...a,
-        color: agentIdToColor(a.id),
-      }));
+      return agents
+        .filter(a => a.is_agenda_provider !== false)
+        .map(a => ({
+          ...a,
+          color: agentIdToColor(a.id),
+        }));
     }
     return [
       { id: 1, name: 'Rafael', color: agentIdToColor(1) },
@@ -521,12 +563,27 @@ export function createAgendaState() {
 
   // ─── Eventos ────────────────────────────────────────
 
+  // PR #6 da auditoria 2026-05-13 (follow-up²):
+  // 1) Live lookup por ID em `treatmentOptions` (store reativo) — refletir
+  //    rename/recolor de serviço imediatamente, sem precisar refetchar eventos.
+  // 2) Fallback: snapshot inline `event.agenda_service.color` — útil para
+  //    serviços soft-deletados que não estão mais no store mas vieram no
+  //    payload do jbuilder.
+  // 3) Fallback final: lookup por NAME em `custom_attributes.treatment` —
+  //    eventos legados sem FK (raro após backfill PR #5).
   function getTreatmentColor(event, treatmentOptions) {
-    if (!treatmentOptions || !treatmentOptions.length) return null;
-    const tName = event.custom_attributes?.treatment;
-    if (!tName) return null;
-    const matched = treatmentOptions.find(t => t.name === tName);
-    return matched ? matched.color : null;
+    const sid = event?.agenda_service_id;
+    if (sid != null && treatmentOptions?.length) {
+      const matchedById = treatmentOptions.find(t => t.id === sid);
+      if (matchedById?.color) return matchedById.color;
+    }
+
+    if (event?.agenda_service?.color) return event.agenda_service.color;
+
+    const tName = event?.custom_attributes?.treatment;
+    if (!tName || !treatmentOptions?.length) return null;
+    const matchedByName = treatmentOptions.find(t => t.name === tName);
+    return matchedByName ? matchedByName.color : null;
   }
 
   // Cor da categoria — tem prioridade sobre treatment/agent quando o evento
@@ -583,9 +640,19 @@ export function createAgendaState() {
       const evType = e.event_type || 'consultation';
       if (state.hiddenEventTypes.includes(evType)) return false;
 
-      const eventTreatment = e.custom_attributes?.treatment;
-      if (eventTreatment && state.hiddenTreatments.includes(eventTreatment))
-        return false;
+      // PR #6 da auditoria 2026-05-13: prioriza ID, cai pra NAME só em eventos
+      // legados (agenda_service_id NULL após backfill — serviços renomeados
+      // antes da migração). Sem essa busca dupla, eventos órfãos vazariam o
+      // filtro sempre, perdendo a UX de "esconder esse serviço".
+      if (e.agenda_service_id != null) {
+        if (state.hiddenServiceIds.includes(e.agenda_service_id)) return false;
+      } else {
+        const eventTreatment = e.custom_attributes?.treatment;
+        if (eventTreatment && treatmentOptions?.length) {
+          const matched = treatmentOptions.find(t => t.name === eventTreatment);
+          if (matched && state.hiddenServiceIds.includes(matched.id)) return false;
+        }
+      }
 
       if (e.category_id && state.hiddenCategories.includes(e.category_id))
         return false;
@@ -1024,6 +1091,7 @@ export function createAgendaState() {
     getDayHeaders,
     getMiniDayHeaders,
     getMonthLabel,
+    getCurrentDateLabel,
     getCurrentWeekDays,
     getCurrentDayObj,
 
@@ -1045,6 +1113,9 @@ export function createAgendaState() {
     toggleCategory,
     soloCategory,
     showAllCategories,
+    toggleStatus,
+    soloStatus,
+    showAllStatuses,
 
     // Agents
     buildAgentList,

@@ -1,7 +1,8 @@
 import { createApp } from 'vue';
 import { createI18n } from 'vue-i18n';
 
-import i18nMessages from 'dashboard/i18n';
+import en from 'dashboard/i18n/locale/en';
+import { loadLocaleMessages } from 'dashboard/i18n/lazy';
 import * as Sentry from '@sentry/vue';
 import {
   initializeAnalyticsEvents,
@@ -20,7 +21,8 @@ import FluentIcon from 'shared/components/FluentIcon/DashboardIcon.vue';
 const i18n = createI18n({
   legacy: false, // https://github.com/intlify/vue-i18n/issues/1902
   locale: 'en',
-  messages: i18nMessages,
+  fallbackLocale: 'en', // qualquer chave ausente cai pro inglês — sem tela quebrada
+  messages: { en },
 });
 
 const app = createApp(App);
@@ -61,6 +63,14 @@ initializeChatwootEvents();
 initializeAnalyticsEvents();
 initalizeRouter();
 
-window.onload = () => {
+window.onload = async () => {
+  // Login precisa de ~1 locale, não dos ~40. Carrega só o idioma do usuário
+  // antes do mount (App.vue aplica `selectedLocale` no mounted). 'en' já vem
+  // estático como fallback.
+  const selectedLocale = window.chatwootConfig?.selectedLocale;
+  if (selectedLocale && selectedLocale !== 'en') {
+    const messages = await loadLocaleMessages(selectedLocale);
+    if (messages) i18n.global.setLocaleMessage(selectedLocale, messages);
+  }
   app.mount('#app');
 };

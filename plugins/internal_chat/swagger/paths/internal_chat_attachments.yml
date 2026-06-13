@@ -1,0 +1,66 @@
+get:
+  tags:
+    - Chat Interno — Anexos
+  summary: Listar anexos da sala
+  description: |
+    Lista os anexos da sala pra aba "Arquivos" das settings. Stickers e
+    mensagens deletadas (`deleted_at`) ficam de fora. Ordem por
+    `messages.created_at DESC`.
+
+    - `type=media` (default): imagens + vídeos (galeria com miniaturas).
+    - `type=documents`: arquivos genéricos (PDFs, planilhas, etc).
+
+    Paginação opt-in (`per_page` default 200, máx 200; `page` clamp 1..10000).
+    Imagens em `image/webp` recebem `download_url` apontando pro endpoint de
+    download convertido; demais tipos recebem a URL direta do ActiveStorage.
+
+    Autorização: admin OR (Klivy `internal_chat.view` AND member).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/roomId'
+    - name: type
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [media, documents]
+        default: media
+      description: 'Qualquer valor diferente de `documents` cai no default `media`.'
+    - name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+        maximum: 10000
+    - name: per_page
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 200
+        minimum: 1
+        maximum: 200
+  responses:
+    '200':
+      description: Lista paginada de anexos
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/Attachment.yml'
+              meta:
+                type: object
+                properties:
+                  page: { type: integer }
+                  per_page: { type: integer }
+                  total: { type: integer }
+    '403':
+      description: Sem permissão / não é membro
+    '404':
+      description: Sala não encontrada (ou pertence a outra conta)

@@ -81,23 +81,11 @@ json.payload do
     end
   end
 
-  # Resumo financeiro real
-  transactions = @patient.transactions.where(deleted_at: nil)
-  estimates    = @patient.financial_estimates.where(deleted_at: nil, status: 'aprovado')
-
-  total_approved = estimates.sum { |e| e.total.to_f }
-  total_paid     = transactions.where(status: 'pago').sum { |t| t.amount.to_f }
-  total_open     = transactions.where(status: 'pendente').where('due_date >= ? OR due_date IS NULL', Date.today).sum { |t| t.amount.to_f }
-  total_overdue  = transactions.where(status: 'pendente').where('due_date < ?', Date.today).sum { |t| t.amount.to_f }
-  credit_balance = transactions.where(status: 'credito').sum { |t| t.amount.to_f }
-
-  json.financial_status do
-    json.total_approved total_approved
-    json.total_paid     total_paid
-    json.total_open     total_open
-    json.total_overdue  total_overdue
-    json.credit_balance credit_balance
-  end
+  # Bloco financial_status (v1) removido em 2026-05-11 com a Fase A da
+  # depreciação. Frontend lê esses números via endpoint v2
+  # `GET /financial/v2/patient_summaries/:patient_id` (composable
+  # `useFinancialData` em `FinancialTab.vue`) — esse jbuilder serve só o
+  # resumo demográfico/clínico do paciente.
 
   # Consentimentos pendentes
   json.urgent_consent_required @urgent_consents.any?

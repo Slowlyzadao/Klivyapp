@@ -1,0 +1,70 @@
+get:
+  tags:
+    - Bea — Notificações Internas
+  summary: Obter template
+  description: 'Autorização: admin OR Klivy `captain.view`.'
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Template
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/InternalNotificationTemplate.yml'
+    '404':
+      description: Não encontrado
+put:
+  tags:
+    - Bea — Notificações Internas
+  summary: Atualizar template
+  description: 'Autorização: admin OR Klivy `captain.manage_templates`.'
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            internal_notification_template:
+              type: object
+              properties:
+                name: { type: string, maxLength: 120 }
+                body: { type: string, maxLength: 4000 }
+                target_type:
+                  type: string
+                  enum: [room, user, disabled]
+                target_id:
+                  type: integer
+                  nullable: true
+                enabled: { type: boolean }
+  responses:
+    '200':
+      description: Atualizado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/InternalNotificationTemplate.yml'
+    '403':
+      description: Sem permissão (`captain.manage_templates`)
+    '404':
+      description: Não encontrado
+delete:
+  tags:
+    - Bea — Notificações Internas
+  summary: Deletar template
+  description: 'Autorização: admin OR Klivy `captain.manage_templates`.'
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204':
+      description: Deletado
+    '403':
+      description: Sem permissão
+    '404':
+      description: Não encontrado

@@ -1,0 +1,72 @@
+{
+  "PATIENT_ANAMNESIS": {
+    "HEADER": {
+      "TITLE": "Clinical Questionnaire",
+      "SUBTITLE": "Health history, chief complaint, allergies and restrictions.",
+      "READONLY_BADGE": "Read-only (Signed)",
+      "LAST_UPDATED": "Last updated: {date}",
+      "VIEW_PDF": "View PDF",
+      "NEW": "New Anamnesis",
+      "SAVE_DRAFT": "Save Draft",
+      "SAVE_DRAFT_DIRTY": "Save Draft *",
+      "FINALIZE": "Sign and Finalize"
+    },
+    "SECTIONS": {
+      "CHIEF_COMPLAINT": {
+        "TITLE": "Reason for Visit",
+        "SUBTITLE": "Specialty, chief complaint and objective",
+        "SPECIALTY_LABEL": "Specialty / Main Focus",
+        "SPECIALTY_PLACEHOLDER": "Select specialty",
+        "COMPLAINT_LABEL": "Chief Complaint",
+        "COMPLAINT_PLACEHOLDER": "Describe in patient's own words what brought them to the clinic..."
+      },
+      "MEDICAL_HISTORY": {
+        "TITLE": "Health History",
+        "SUBTITLE": "Pre-existing diseases and systemic conditions",
+        "HYPERTENSION": "Hypertension or cardiovascular problems",
+        "PREGNANT": "Pregnant / Breastfeeding",
+        "DIABETES": "Diabetes",
+        "ONCOLOGY": "Oncology treatment (current or past)",
+        "BLEEDING": "Coagulation / bleeding disorders",
+        "HEPATITIS": "Hepatitis / Liver diseases",
+        "OTHER_LABEL": "Other Diseases or Conditions",
+        "OTHER_PLACEHOLDER": "Specify in detail if any..."
+      },
+      "ALLERGIES": {
+        "TITLE": "Allergies and Medications",
+        "SUBTITLE": "Known allergies and ongoing use",
+        "ALLERGIES_LABEL": "Known Allergies",
+        "ALLERGIES_PLACEHOLDER": "e.g. Dipyrone, Iodine — comma separated",
+        "MEDICATIONS_LABEL": "Ongoing Medications",
+        "MEDICATIONS_PLACEHOLDER": "e.g. Losartan 50mg, ASA...",
+        "REMOVE_ARIA": "Remove {name}"
+      },
+      "SURGICAL": {
+        "TITLE": "Surgical History and Implants",
+        "SUBTITLE": "Recent surgeries, implants and anesthesia reactions",
+        "RECENT_SURGERIES": "Had surgeries in the last 6 months?",
+        "IMPLANTS": "Has implants, prostheses or pacemaker?",
+        "ANESTHESIA": "Had complications or reactions to anesthesia in the past?",
+        "DETAILS_LABEL": "Details of Recent Interventions",
+        "DETAILS_PLACEHOLDER": "Specify procedures, areas and adverse reactions..."
+      },
+      "HABITS": {
+        "TITLE": "Habits and Lifestyle",
+        "SUBTITLE": "Smoking, alcohol, physical activity and notes",
+        "SMOKER_LABEL": "Smoker?",
+        "ALCOHOL_LABEL": "Alcohol Consumption",
+        "SPORTS_LABEL": "Sports Practice",
+        "SELECT_PLACEHOLDER": "Select",
+        "NOTES_TITLE": "Confidential Notes",
+        "NOTES_PLACEHOLDER": "Contraindications, specific restrictions of clinical practice..."
+      }
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Could not load anamnesis.",
+      "SAVE_DRAFT_SUCCESS": "Anamnesis saved as draft successfully!",
+      "SAVE_FINALIZED_SUCCESS": "Anamnesis signed and finalized successfully!",
+      "SAVE_ERROR": "Error saving anamnesis.",
+      "DIRTY_LEAVE_CONFIRM": "You have unsaved changes in the anamnesis. Are you sure you want to leave? Changes will be lost."
+    }
+  }
+}

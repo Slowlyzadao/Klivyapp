@@ -34,7 +34,7 @@ export default {
     tooltipText() {
       return [
         this.event.title,
-        this.event.custom_attributes?.treatment,
+        this.treatment,
         this.statusConfig.label,
         this.isLate ? 'Atrasado' : null,
       ]
@@ -42,13 +42,37 @@ export default {
         .join(' · ');
     },
     hasStarIcon() {
-      return (
-        this.event.custom_attributes?.treatment === 'Avaliação' ||
-        this.event.icon
-      );
+      return this.treatment === 'Avaliação' || this.event.icon;
     },
+    isBlock() {
+      return this.event.event_type === 'agenda_block';
+    },
+    isAppointment() {
+      return this.event.event_type === 'appointment';
+    },
+    isNonConsultation() {
+      return this.isBlock || this.isAppointment;
+    },
+    typeIconClass() {
+      if (this.isBlock) return 'i-lucide-lock';
+      if (this.isAppointment) return 'i-lucide-calendar-clock';
+      return null;
+    },
+    typeIconTooltip() {
+      if (this.isBlock) return 'Horário bloqueado';
+      if (this.isAppointment) return 'Compromisso';
+      return null;
+    },
+    // PR #6 (follow-up²): live lookup no store de serviços PRIMEIRO — captura
+    // rename imediato sem precisar refetchar eventos (snapshot inline congela
+    // no momento do fetch). Fallback: snapshot inline → JSONB legado.
     treatment() {
-      return this.event.custom_attributes?.treatment;
+      const sid = this.event?.agenda_service_id;
+      if (sid != null && this.$store) {
+        const live = this.$store.getters['agendaServices/getServiceById'](sid);
+        if (live?.name) return live.name;
+      }
+      return this.event?.agenda_service?.name || this.event.custom_attributes?.treatment || '';
     },
     displayEndTime() {
       if (this.isResizingThis && this.resizingEndAt) {
@@ -77,6 +101,13 @@ export default {
         'evt-medium': sizeTier === 'medium',
         'evt-late': isLate,
         'evt-no-show': event.status === 'no_show',
+        // Auditoria 2026-05-15: cancelados ganham strikethrough + opacidade
+        // pra clínica distinguir visualmente do agendamento ativo. Padrão de
+        // calendário (Google/Outlook). Cor de base permanece pra preservar
+        // identidade do tratamento, mas título fica riscado e card opaco.
+        'evt-cancelled': event.status === 'cancelled',
+        'evt-type-block': isBlock,
+        'evt-type-appointment': isAppointment,
       },
     ]"
     :style="cardStyle"
@@ -87,7 +118,43 @@ export default {
     <!-- ══ PILL (≤26px) — linha única badge ══ -->
     <template v-if="sizeTier === 'pill'">
       <div class="evt-pill-body">
+        <span v-if="isNonConsultation" class="evt-type-icon-wrap">
+          <svg
+            v-if="isBlock"
+            class="evt-type-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          <svg
+            v-else
+            class="evt-type-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5" />
+            <path d="M16 2v4" />
+            <path d="M8 2v4" />
+            <path d="M3 10h5" />
+            <path d="M17.5 17.5 16 16.3V14" />
+            <circle cx="16" cy="16" r="6" />
+          </svg>
+          <span class="evt-type-tooltip" role="tooltip">{{ typeIconTooltip }}</span>
+        </span>
         <span
+          v-else
           class="evt-status-dot-sm"
           :style="{ background: statusConfig.color }"
         />
@@ -109,7 +176,43 @@ export default {
 
     <!-- ══ SMALL (27–44px) — nome + hora início ══ -->
     <div v-else-if="sizeTier === 'small'" class="evt-small-body">
+      <span v-if="isNonConsultation" class="evt-type-icon-wrap">
+        <svg
+          v-if="isBlock"
+          class="evt-type-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+        <svg
+          v-else
+          class="evt-type-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5" />
+          <path d="M16 2v4" />
+          <path d="M8 2v4" />
+          <path d="M3 10h5" />
+          <path d="M17.5 17.5 16 16.3V14" />
+          <circle cx="16" cy="16" r="6" />
+        </svg>
+        <span class="evt-type-tooltip" role="tooltip">{{ typeIconTooltip }}</span>
+      </span>
       <span
+        v-else
         class="evt-status-dot-sm"
         :style="{ background: statusConfig.color }"
       />
@@ -148,7 +251,43 @@ export default {
       </div>
       <div class="evt-sbs-body">
         <span class="evt-title-wrap">
+          <span v-if="isNonConsultation" class="evt-type-icon-wrap">
+            <svg
+              v-if="isBlock"
+              class="evt-type-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <svg
+              v-else
+              class="evt-type-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5" />
+              <path d="M16 2v4" />
+              <path d="M8 2v4" />
+              <path d="M3 10h5" />
+              <path d="M17.5 17.5 16 16.3V14" />
+              <circle cx="16" cy="16" r="6" />
+            </svg>
+            <span class="evt-type-tooltip" role="tooltip">{{ typeIconTooltip }}</span>
+          </span>
           <span
+            v-else
             class="evt-status-dot-sm"
             :style="{ background: statusConfig.color }"
           />
@@ -191,7 +330,43 @@ export default {
 
       <div class="evt-sbs-body">
         <span class="evt-title-wrap">
+          <span v-if="isNonConsultation" class="evt-type-icon-wrap">
+            <svg
+              v-if="isBlock"
+              class="evt-type-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <svg
+              v-else
+              class="evt-type-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5" />
+              <path d="M16 2v4" />
+              <path d="M8 2v4" />
+              <path d="M3 10h5" />
+              <path d="M17.5 17.5 16 16.3V14" />
+              <circle cx="16" cy="16" r="6" />
+            </svg>
+            <span class="evt-type-tooltip" role="tooltip">{{ typeIconTooltip }}</span>
+          </span>
           <span
+            v-else
             class="evt-status-dot-sm"
             :style="{ background: statusConfig.color }"
           />

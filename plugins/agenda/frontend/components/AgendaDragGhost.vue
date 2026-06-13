@@ -22,8 +22,14 @@ export default {
       if (h <= 70) return 'medium';
       return 'full';
     },
+    // PR #6 (follow-up²): live lookup no store → snapshot inline → JSONB legado.
     treatment() {
-      return this.event.custom_attributes?.treatment;
+      const sid = this.event?.agenda_service_id;
+      if (sid != null && this.$store) {
+        const live = this.$store.getters['agendaServices/getServiceById'](sid);
+        if (live?.name) return live.name;
+      }
+      return this.event?.agenda_service?.name || this.event.custom_attributes?.treatment;
     },
   },
   methods: { formatEventTime },

@@ -22,6 +22,8 @@ export default {
   computed: {
     shortMonthLabel() {
       if (!this.monthLabel) return '';
+      // Year View: label é só o número (ex. "2026") — devolve direto.
+      if (this.viewMode === 'year') return this.monthLabel;
       const parts = this.monthLabel.split(' ');
       if (parts.length >= 3) {
         let month = parts[0];
@@ -31,6 +33,15 @@ export default {
         return `${month} ${parts[parts.length - 1]}`;
       }
       return this.monthLabel;
+    },
+    currentViewLabel() {
+      const map = {
+        day: this.$t('AGENDA.HEADER.DAY'),
+        week: this.$t('AGENDA.HEADER.WEEK'),
+        month: this.$t('AGENDA.HEADER.MONTH'),
+        year: this.$t('AGENDA.HEADER.YEAR'),
+      };
+      return map[this.viewMode] || map.day;
     }
   },
   methods: {
@@ -75,6 +86,14 @@ export default {
         >
           {{ $t('AGENDA.HEADER.MONTH') }}
         </button>
+        <button
+          type="button"
+          class="view-btn"
+          :class="{ active: viewMode === 'year' }"
+          @click="setViewMode('year')"
+        >
+          {{ $t('AGENDA.HEADER.YEAR') }}
+        </button>
       </div>
 
       <!-- Mobile dropdown -->
@@ -84,13 +103,7 @@ export default {
           class="view-dropdown-trigger"
           @click="toggleDropdown"
         >
-          <span>{{
-            viewMode === 'month'
-              ? $t('AGENDA.HEADER.MONTH')
-              : viewMode === 'week'
-                ? $t('AGENDA.HEADER.WEEK')
-                : $t('AGENDA.HEADER.DAY')
-          }}</span>
+          <span>{{ currentViewLabel }}</span>
           <i
             class="i-lucide-chevron-down view-dropdown-arrow"
             :class="{ 'rotate-180': viewDropdownOpen }"
@@ -123,6 +136,15 @@ export default {
           >
             <i class="i-lucide-calendar" />
             {{ $t('AGENDA.HEADER.MONTH') }}
+          </button>
+          <button
+            type="button"
+            class="view-dropdown-item"
+            :class="{ active: viewMode === 'year' }"
+            @click="setViewMode('year')"
+          >
+            <i class="i-lucide-calendar-range" />
+            {{ $t('AGENDA.HEADER.YEAR') }}
           </button>
         </div>
       </div>

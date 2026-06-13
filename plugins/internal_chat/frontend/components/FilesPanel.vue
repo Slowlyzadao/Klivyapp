@@ -1,11 +1,22 @@
 <script setup>
+// FE-16/17 (auditoria 2026-05-19): strings PT-BR migradas pra
+// `INTERNAL_CHAT.FILES.*` via i18n. `useI18n()` em JS pra resolver
+// `error` (catch) e helper `formatDate` (Hoje/Ontem/data).
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
+// FE-6: Tooltip moderno em vez de title="..." nativo.
+import Tooltip from '@plugins/beclinic_core/frontend/components/Tooltip.vue';
+// FE-8: BeclinicButton para botão de retry (mantém ações de tabs/grid nativas
+// por terem layout custom — sub-tabs com border-b e cards com aspect-square).
+import BeclinicButton from '@plugins/beclinic_core/frontend/components/Button.vue';
 import AttachmentsAPI from '@plugins/internal_chat/frontend/api/attachments';
 
 const props = defineProps({
   roomId: { type: Number, required: true },
 });
+
+const { t } = useI18n();
 
 const subTab = ref('media'); // 'media' | 'documents'
 const items = ref([]);
@@ -20,7 +31,7 @@ const fetchItems = async () => {
     const res = await AttachmentsAPI.list(props.roomId, { type: subTab.value });
     items.value = res.data?.data || [];
   } catch {
-    error.value = 'Falha ao carregar arquivos';
+    error.value = t('INTERNAL_CHAT.FILES.ERROR_LOAD');
   } finally {
     loading.value = false;
   }
@@ -56,9 +67,14 @@ const formatDate = ts => {
   const yest = new Date(today);
   yest.setDate(yest.getDate() - 1);
   const time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  if (d.toDateString() === today.toDateString()) return `Hoje às ${time}`;
-  if (d.toDateString() === yest.toDateString()) return `Ontem às ${time}`;
-  return `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} às ${time}`;
+  if (d.toDateString() === today.toDateString()) {
+    return t('INTERNAL_CHAT.FILES.DATE_TODAY', { time });
+  }
+  if (d.toDateString() === yest.toDateString()) {
+    return t('INTERNAL_CHAT.FILES.DATE_YESTERDAY', { time });
+  }
+  const date = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return t('INTERNAL_CHAT.FILES.DATE_DEFAULT', { date, time });
 };
 
 const isEmpty = computed(() => !loading.value && items.value.length === 0);
@@ -88,7 +104,7 @@ const docIcon = ct => {
         "
         @click="subTab = 'media'"
       >
-        Imagens e vídeos
+        {{ $t('INTERNAL_CHAT.FILES.SUBTAB_MEDIA') }}
       </button>
       <button
         type="button"
@@ -100,7 +116,7 @@ const docIcon = ct => {
         "
         @click="subTab = 'documents'"
       >
-        Documentos
+        {{ $t('INTERNAL_CHAT.FILES.SUBTAB_DOCUMENTS') }}
       </button>
     </div>
 
@@ -109,19 +125,19 @@ const docIcon = ct => {
       class="flex items-center justify-center py-8 text-sm text-n-slate-11"
     >
       <span class="i-lucide-loader-2 animate-spin mr-2 text-base" />
-      Carregando…
+      {{ $t('INTERNAL_CHAT.FILES.LOADING') }}
     </div>
 
     <div v-else-if="error" class="flex flex-col items-center py-8 text-sm text-n-ruby-11">
       <span class="i-lucide-alert-circle text-2xl mb-1" />
       {{ error }}
-      <button
-        type="button"
-        class="mt-2 text-xs text-n-brand hover:underline"
+      <BeclinicButton
+        class="mt-2"
+        :label="$t('INTERNAL_CHAT.FILES.RETRY')"
+        variant="link"
+        size="sm"
         @click="fetchItems"
-      >
-        Tentar de novo
-      </button>
+      />
     </div>
 
     <div
@@ -135,8 +151,8 @@ const docIcon = ct => {
       <p>
         {{
           subTab === 'media'
-            ? 'Nenhuma imagem ou vídeo enviado ainda.'
-            : 'Nenhum documento enviado ainda.'
+            ? $t('INTERNAL_CHAT.FILES.EMPTY_MEDIA')
+            : $t('INTERNAL_CHAT.FILES.EMPTY_DOCUMENTS')
         }}
       </p>
     </div>
@@ -198,21 +214,22 @@ const docIcon = ct => {
               {{ item.file_name }}
             </p>
             <p class="text-xs text-n-slate-11 truncate mt-0.5">
-              {{ formatSize(item.file_size) }} · {{ item.sender?.name || 'Usuário' }} ·
+              {{ formatSize(item.file_size) }} · {{ item.sender?.name || $t('INTERNAL_CHAT.FILES.USER_FALLBACK_NAME') }} ·
               {{ formatDate(item.message_created_at) }}
             </p>
           </div>
-          <a
-            :href="item.download_url || item.file_url"
-            :download="item.file_name"
-            target="_blank"
-            rel="noopener"
-            class="shrink-0 p-1.5 rounded text-n-slate-11 hover:bg-n-alpha-2"
-            title="Baixar"
-            @click.stop
-          >
-            <span class="i-lucide-download text-base" />
-          </a>
+          <Tooltip :label="$t('INTERNAL_CHAT.FILES.DOWNLOAD_TOOLTIP')">
+            <a
+              :href="item.download_url || item.file_url"
+              :download="item.file_name"
+              target="_blank"
+              rel="noopener"
+              class="shrink-0 p-1.5 rounded text-n-slate-11 hover:bg-n-alpha-2"
+              @click.stop
+            >
+              <span class="i-lucide-download text-base" />
+            </a>
+          </Tooltip>
         </button>
       </li>
     </ul>
@@ -231,14 +248,14 @@ const docIcon = ct => {
         >
           <div class="flex items-center gap-3 min-w-0">
             <Avatar
-              :name="selected.sender?.name || 'Usuário'"
+              :name="selected.sender?.name || $t('INTERNAL_CHAT.FILES.USER_FALLBACK_NAME')"
               :src="selected.sender?.avatar_url || ''"
               :size="36"
               rounded-full
             />
             <div class="min-w-0">
               <p class="text-sm font-semibold truncate text-n-slate-12">
-                {{ selected.sender?.name || 'Usuário' }}
+                {{ selected.sender?.name || $t('INTERNAL_CHAT.FILES.USER_FALLBACK_NAME') }}
               </p>
               <p class="text-xs truncate text-n-slate-11">
                 {{ formatDate(selected.message_created_at) }}
@@ -247,24 +264,26 @@ const docIcon = ct => {
             </div>
           </div>
           <div class="flex items-center gap-2 shrink-0">
-            <a
-              :href="selected.download_url || selected.file_url"
-              :download="selected.file_name"
-              target="_blank"
-              rel="noopener"
-              class="ic-files-lightbox-btn"
-              title="Baixar"
-            >
-              <span class="i-lucide-download text-xl" />
-            </a>
-            <button
-              type="button"
-              class="ic-files-lightbox-btn"
-              title="Fechar"
-              @click="closeItem"
-            >
-              <span class="i-lucide-x text-xl" />
-            </button>
+            <Tooltip :label="$t('INTERNAL_CHAT.FILES.DOWNLOAD_TOOLTIP')">
+              <a
+                :href="selected.download_url || selected.file_url"
+                :download="selected.file_name"
+                target="_blank"
+                rel="noopener"
+                class="ic-files-lightbox-btn"
+              >
+                <span class="i-lucide-download text-xl" />
+              </a>
+            </Tooltip>
+            <Tooltip :label="$t('INTERNAL_CHAT.FILES.CLOSE_TOOLTIP')">
+              <button
+                type="button"
+                class="ic-files-lightbox-btn"
+                @click="closeItem"
+              >
+                <span class="i-lucide-x text-xl" />
+              </button>
+            </Tooltip>
           </div>
         </header>
         <div
@@ -284,6 +303,9 @@ const docIcon = ct => {
             autoplay
             class="max-w-[90vw] max-h-full rounded-lg shadow-2xl"
           />
+          <!-- FE-6: `title` em <iframe> é atributo A11Y obrigatório (nome
+               acessível do frame pra leitores de tela), NÃO tooltip visual.
+               Não substituir por <Tooltip>. -->
           <iframe
             v-else
             :src="selected.file_url"

@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import AgendaSettingsAPI from '@plugins/agenda/frontend/api/agendaSettings';
+import { useAgendaEventLauncher } from '@plugins/agenda/frontend/composables/useAgendaEventLauncher';
 
 import SettingsTabSchedules from '../../features/settings/components/SettingsTabSchedules.vue';
 import SettingsTabNotifications from '../../features/settings/components/SettingsTabNotifications.vue';
@@ -10,6 +11,7 @@ import SettingsTabOnlineBooking from '../../features/settings/components/Setting
 import SettingsTabServices from '../../features/settings/components/SettingsTabServices.vue';
 
 const store = useStore();
+const { agenda } = useAgendaEventLauncher();
 
 // ─── TABS ───
 const activeTab = ref('horarios');
@@ -36,7 +38,9 @@ const isAdmin = computed(() => {
 });
 const agents = computed(() => {
   const all = store.getters['agents/getAgents'] || [];
-  return all.filter((a) => a.id !== currentUser.value?.id);
+  return all
+    .filter((a) => a.is_agenda_provider !== false)
+    .filter((a) => a.id !== currentUser.value?.id);
 });
 
 // ─── SETTINGS CORE (Schedules / Global) ───
@@ -64,7 +68,12 @@ const persistSettings = async () => {
     holidays: holidays.value,
   };
   try {
-    await AgendaSettingsAPI.update(payload);
+    const { data } = await AgendaSettingsAPI.update(payload);
+    // Sincroniza o singleton da Agenda para refletir feriados/exceções/horários
+    // no calendário sem precisar de F5. fetchInitialData só roda uma vez por
+    // sessão (gated por hasInitialized), então sem este sync os settings ficam
+    // stale até reload completo da página.
+    agenda.state.agendaSettingsData = data;
   } catch (e) {
     console.error('[AgendaSettings] Falha ao salvar no servidor:', e);
   }

@@ -1,17 +1,19 @@
 get:
   tags:
     - Agendamentos
-  summary: Detalhes do agendamento
+  summary: Detalhar agendamento
   parameters:
     - $ref: '../common.yml#/components/parameters/accountId'
     - $ref: '../common.yml#/components/parameters/id'
   responses:
     '200':
-      description: Detalhes do evento
+      description: Evento encontrado (inclui mesmo eventos soft-deletados)
       content:
         application/json:
           schema:
             $ref: '../definitions/AgendaEvent.yml'
+    '404':
+      description: Evento não encontrado nesta conta
 patch:
   tags:
     - Agendamentos
@@ -25,19 +27,83 @@ patch:
       application/json:
         schema:
           type: object
+          required: [agenda_event]
           properties:
             agenda_event:
-              $ref: '../definitions/AgendaEvent.yml'
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string, nullable: true }
+                starts_at: { type: string, format: date-time }
+                ends_at: { type: string, format: date-time }
+                user_id: { type: integer, nullable: true }
+                contact_id: { type: integer, nullable: true }
+                category_id: { type: integer, nullable: true }
+                agenda_service_id: { type: integer, nullable: true }
+                status:
+                  type: string
+                  enum: [scheduled, confirmed, arrived, in_progress, completed, cancelled, no_show]
+                event_type: { type: string }
+                custom_attributes:
+                  type: object
+                  additionalProperties: true
+  responses:
+    '200':
+      description: Evento atualizado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaEvent.yml'
+    '422':
+      description: Erro de validação
+put:
+  tags:
+    - Agendamentos
+  summary: Atualizar agendamento (alias PUT do PATCH)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            agenda_event:
+              type: object
+              additionalProperties: true
   responses:
     '200':
       description: Evento atualizado
 delete:
   tags:
     - Agendamentos
-  summary: Excluir agendamento
+  summary: Excluir agendamento (soft-delete)
+  description: |
+    Soft-delete: o evento NÃO é removido do banco — permanece visível no
+    prontuário do paciente para histórico. `reason` é obrigatório; `note` é
+    obrigatória quando `reason="outro"`.
   parameters:
     - $ref: '../common.yml#/components/parameters/accountId'
     - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [reason]
+          properties:
+            reason:
+              type: string
+              enum: [cancelamento_usuario, cancelamento_paciente, reagendamento, outro]
+            note:
+              type: string
+              description: Obrigatória quando `reason="outro"`.
   responses:
     '200':
-      description: Evento excluído
+      description: Evento excluído (soft)
+    '422':
+      description: |
+        Motivo ausente / inválido, ou `reason="outro"` sem `note`, ou evento já estava excluído.

@@ -1,12 +1,18 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useRoute, useRouter } from 'vue-router';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
+// FE-6: Tooltip moderno em vez de title="..." nativo.
+import Tooltip from '@plugins/beclinic_core/frontend/components/Tooltip.vue';
+// RT-5: reconciliação ao reconectar WebSocket (mensagens que chegaram
+// durante disconnect ficavam invisíveis na sala aberta).
+import { emitter } from 'shared/helpers/mitt';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
 import MessageThread from './MessageThread.vue';
 import MessageComposer from './MessageComposer.vue';
 import GroupSettingsDrawer from './GroupSettingsDrawer.vue';
-import FavoritesPanel from './FavoritesPanel.vue';
+import DmUserDrawer from './DmUserDrawer.vue';
 import PresenceDot from './PresenceDot.vue';
 import TypingIndicator from './TypingIndicator.vue';
 
@@ -19,13 +25,21 @@ const route = useRoute();
 const router = useRouter();
 const showSettings = ref(false);
 const settingsTab = ref('members'); // 'members' | 'edit' | 'favorites'
-const showDmFavorites = ref(false); // drawer simples só pra DMs
+// DM: drawer unificado de "Dados do contato" — substitui o antigo showDmFavorites.
+// Tem 3 sub-views: 'main' (perfil + ações), 'files', 'favorites'.
+const showDmDrawer = ref(false);
+const dmDrawerView = ref('main');
 const replyTarget = ref(null);
 const wasLoaded = ref(false);
 
 const openSettings = (tab = 'members') => {
   settingsTab.value = tab;
   showSettings.value = true;
+};
+
+const openDmDrawer = (subView = 'main') => {
+  dmDrawerView.value = subView;
+  showDmDrawer.value = true;
 };
 
 const room = computed(() =>
@@ -87,7 +101,20 @@ const loadRoom = async id => {
   }
 };
 
-onMounted(() => loadRoom(props.roomId));
+// RT-5: reconciliação no reconnect. Quando WebSocket reconnecta, refetcha
+// mensagens da sala atual a partir do zero — eventos perdidos durante o
+// disconnect (room.updated, message.created) entram via re-fetch. ChatShell
+// também listenera; este handler aqui foca em recarregar a thread da sala
+// aberta (refetch de messages é mais caro que rooms list).
+const onWebsocketReconnect = () => {
+  if (!props.roomId) return;
+  store.dispatch('internalChatMessages/fetch', { roomId: Number(props.roomId) });
+};
+
+onMounted(() => {
+  loadRoom(props.roomId);
+  emitter.on(BUS_EVENTS.WEBSOCKET_RECONNECT, onWebsocketReconnect);
+});
 watch(
   () => props.roomId,
   id => {
@@ -99,16 +126,35 @@ watch(
 
 // Se a sala foi removida da store (cable: room.deleted) enquanto eu estava
 // olhando ela, volta pra home — senão o usuário fica com tela em branco.
+//
+// FE-23 (auditoria 2026-05-18): debounce 300ms protege contra redirects em
+// `room === null` transiente — situação que rolava durante refetch após
+// cable `room.updated` (a sala "some" do getter por ~50ms enquanto o
+// upsert no store é processado) e durante account-switch.
+let redirectTimer = null;
 watch(room, val => {
   if (val) {
     wasLoaded.value = true;
+    if (redirectTimer) {
+      clearTimeout(redirectTimer);
+      redirectTimer = null;
+    }
   } else if (wasLoaded.value) {
-    showSettings.value = false;
-    router.push({
-      name: 'internal_chat_home',
-      params: { accountId: route.params.accountId },
-    });
+    redirectTimer = setTimeout(() => {
+      if (!room.value) {
+        showSettings.value = false;
+        router.push({
+          name: 'internal_chat_home',
+          params: { accountId: route.params.accountId },
+        });
+      }
+      redirectTimer = null;
+    }, 300);
   }
+});
+onBeforeUnmount(() => {
+  if (redirectTimer) clearTimeout(redirectTimer);
+  emitter.off(BUS_EVENTS.WEBSOCKET_RECONNECT, onWebsocketReconnect);
 });
 
 const onReply = msg => {
@@ -120,66 +166,87 @@ const cancelReply = () => {
 const onSent = () => {
   replyTarget.value = null;
 };
+
+// Mobile: botão "voltar" no header volta pra lista de salas (sem ele, em
+// telas <768px o user fica preso na sala sem caminho de volta visível).
+const goBackToList = () => {
+  router.push({
+    name: 'internal_chat_home',
+    params: { accountId: route.params.accountId },
+  });
+};
 </script>
 
 <template>
   <div v-if="room" class="flex flex-col flex-1 h-full">
     <header
-      class="flex items-center gap-3 px-4 py-3 border-b border-n-weak bg-n-solid-1"
+      class="flex items-center gap-2 px-2 md:px-3 h-[60px] border-b border-n-weak bg-n-solid-1"
     >
+      <!-- Mobile: voltar pra lista de salas. Some em md+ onde a sidebar
+           já está visível ao lado. -->
       <button
         type="button"
-        class="flex items-center flex-1 min-w-0 gap-3 text-start rounded-md px-1 py-1 -mx-1 transition"
-        :class="room.kind === 'group' ? 'hover:bg-n-alpha-1 cursor-pointer' : 'cursor-default'"
-        :disabled="room.kind !== 'group'"
-        :title="room.kind === 'group' ? 'Abrir detalhes do grupo' : null"
-        @click="room.kind === 'group' && openSettings('edit')"
+        class="md:hidden inline-flex items-center justify-center w-9 h-9 rounded-md text-n-slate-11 hover:bg-n-alpha-1 hover:text-n-slate-12 transition shrink-0"
+        @click="goBackToList"
       >
-        <span class="relative shrink-0">
-          <Avatar :name="room.name || 'Conversa'" :src="room.avatar_url || ''" :size="36" rounded-full />
-          <PresenceDot
-            v-if="otherUserId"
-            :user-id="otherUserId"
-            :size="10"
-            class="absolute bottom-0 right-0"
-          />
-        </span>
-        <span class="flex-1 min-w-0">
-          <span class="block text-sm font-semibold truncate text-n-slate-12">
-            {{ room.name || 'Conversa' }}
+        <span class="i-lucide-arrow-left text-xl" />
+      </button>
+      <!-- Header clicável: avatar+nome abrem o drawer (group: settings;
+           DM: dados do contato). Sem tooltip, sem hover-bg, sem outline
+           no foco — affordância visual já é clara (avatar+nome clicáveis
+           = padrão WhatsApp/Telegram). -->
+      <div class="flex-1 min-w-0">
+        <button
+          type="button"
+          class="flex items-center w-full min-w-0 gap-3 text-start cursor-pointer outline-none focus:outline-none"
+          @click="room.kind === 'group' ? openSettings('edit') : openDmDrawer('main')"
+        >
+          <span class="relative shrink-0">
+            <Avatar :key="room.avatar_updated_at || 'no-avatar'" :name="room.name || $t('INTERNAL_CHAT.ROOM.DEFAULT_TITLE')" :src="room.avatar_url || ''" :size="36" rounded-full />
+            <PresenceDot
+              v-if="otherUserId"
+              :user-id="otherUserId"
+              :size="10"
+              class="absolute bottom-0 right-0"
+            />
           </span>
-          <span class="block text-xs text-n-slate-11">
-            {{ subtitleText }}
+          <span class="flex-1 min-w-0">
+            <span class="block text-sm font-semibold truncate text-n-slate-12">
+              {{ room.name || $t('INTERNAL_CHAT.ROOM.DEFAULT_TITLE') }}
+            </span>
+            <span class="block text-xs text-n-slate-11">
+              {{ subtitleText }}
+            </span>
           </span>
-        </span>
-      </button>
-      <button
-        v-if="room.kind === 'direct'"
-        type="button"
-        class="inline-flex items-center justify-center w-9 h-9 rounded-md text-n-slate-11 hover:bg-n-alpha-1 hover:text-n-slate-12 transition"
-        title="Mensagens favoritas"
-        @click="showDmFavorites = true"
-      >
-        <span class="i-lucide-star text-lg" />
-      </button>
-      <button
-        v-if="room.kind === 'group'"
-        type="button"
-        class="inline-flex items-center justify-center w-9 h-9 rounded-md text-n-slate-11 hover:bg-n-alpha-1 hover:text-n-slate-12 transition"
-        title="Mensagens favoritas"
-        @click="openSettings('favorites')"
-      >
-        <span class="i-lucide-star text-lg" />
-      </button>
-      <button
-        v-if="room.kind === 'group'"
-        type="button"
-        class="inline-flex items-center justify-center w-9 h-9 rounded-md text-n-slate-11 hover:bg-n-alpha-1 hover:text-n-slate-12 transition"
-        title="Configurações do grupo"
-        @click="openSettings('members')"
-      >
-        <span class="i-lucide-settings text-lg" />
-      </button>
+        </button>
+      </div>
+      <Tooltip v-if="room.kind === 'direct'" :label="$t('INTERNAL_CHAT.ROOM.FAVORITES_TOOLTIP')">
+        <button
+          type="button"
+          class="inline-flex items-center justify-center w-9 h-9 rounded-md text-n-slate-11 hover:bg-n-alpha-1 hover:text-n-slate-12 transition"
+          @click="openDmDrawer('favorites')"
+        >
+          <span class="i-lucide-star text-lg" />
+        </button>
+      </Tooltip>
+      <Tooltip v-if="room.kind === 'group'" :label="$t('INTERNAL_CHAT.ROOM.FAVORITES_TOOLTIP')">
+        <button
+          type="button"
+          class="inline-flex items-center justify-center w-9 h-9 rounded-md text-n-slate-11 hover:bg-n-alpha-1 hover:text-n-slate-12 transition"
+          @click="openSettings('favorites')"
+        >
+          <span class="i-lucide-star text-lg" />
+        </button>
+      </Tooltip>
+      <Tooltip v-if="room.kind === 'group'" :label="$t('INTERNAL_CHAT.ROOM.SETTINGS_TOOLTIP')">
+        <button
+          type="button"
+          class="inline-flex items-center justify-center w-9 h-9 rounded-md text-n-slate-11 hover:bg-n-alpha-1 hover:text-n-slate-12 transition"
+          @click="openSettings('members')"
+        >
+          <span class="i-lucide-settings text-lg" />
+        </button>
+      </Tooltip>
     </header>
 
     <MessageThread :room-id="Number(props.roomId)" @reply="onReply" />
@@ -194,44 +261,33 @@ const onSent = () => {
       @sent="onSent"
     />
 
-    <GroupSettingsDrawer
-      v-if="showSettings && room.kind === 'group'"
-      :room="room"
-      :initial-tab="settingsTab"
-      @close="showSettings = false"
-    />
-
-    <!-- Drawer simples de Favoritos para DM (grupo usa o GroupSettingsDrawer) -->
-    <div
-      v-if="showDmFavorites && room.kind === 'direct'"
-      class="fixed inset-0 z-50 flex"
-    >
-      <div
-        class="flex-1 bg-black/40"
-        @click="showDmFavorites = false"
+    <!-- Transition `ic-drawer` (CSS em styles/internal-chat.css):
+         backdrop fade + aside slide-in da direita. Tempo curto (200ms
+         fade / 280ms slide) pra não atrasar interação. Mesma animação
+         pros 2 drawers — consistência visual. -->
+    <Transition name="ic-drawer">
+      <GroupSettingsDrawer
+        v-if="showSettings && room.kind === 'group'"
+        :room="room"
+        :initial-tab="settingsTab"
+        @close="showSettings = false"
       />
-      <aside class="w-[380px] max-w-full bg-n-solid-1 border-l border-n-weak shadow-2xl flex flex-col">
-        <header class="flex items-center justify-between px-5 py-3 border-b border-n-weak">
-          <p class="text-sm font-semibold text-n-slate-12 flex items-center gap-2">
-            <span class="i-lucide-star text-base text-n-amber-11" />
-            Favoritos
-          </p>
-          <button
-            type="button"
-            class="inline-flex items-center justify-center w-8 h-8 rounded-md text-n-slate-11 hover:bg-n-alpha-1 hover:text-n-slate-12"
-            @click="showDmFavorites = false"
-          >
-            <span class="i-lucide-x text-lg" />
-          </button>
-        </header>
-        <FavoritesPanel
-          :room-id="Number(props.roomId)"
-          @jump-to-message="showDmFavorites = false"
-        />
-      </aside>
-    </div>
+    </Transition>
+
+    <!-- DM: drawer unificado de "Dados do contato" — substituiu o drawer
+         simples antigo de Favoritos. Contém: perfil + arquivos + favoritos +
+         ações (silenciar/arquivar). -->
+    <Transition name="ic-drawer">
+      <DmUserDrawer
+        v-if="showDmDrawer && room.kind === 'direct' && otherUserId"
+        :room="room"
+        :other-user-id="otherUserId"
+        :initial-view="dmDrawerView"
+        @close="showDmDrawer = false"
+      />
+    </Transition>
   </div>
   <div v-else class="flex items-center justify-center flex-1 text-sm text-n-slate-11">
-    Carregando conversa…
+    {{ $t('INTERNAL_CHAT.ROOM.LOADING_CONVERSATION') }}
   </div>
 </template>

@@ -6,15 +6,18 @@ import { routes as companyRoutes } from './companies/routes';
 import { routes as notificationRoutes } from './notifications/routes';
 import { routes as inboxRoutes } from './inbox/routes';
 import { frontendURL } from '../../helper/URLHelper';
+import { hideCopilotLauncherOn } from '../../helper/copilotLauncherRoutes';
 import helpcenterRoutes from './helpcenter/helpcenter.routes';
 import campaignsRoutes from './campaigns/campaigns.routes';
 import { routes as captainRoutes } from './captain/captain.routes';
 import { routes as agendaRoutes } from '@plugins/agenda/frontend/routes/routes';
-import { routes as aiAgentRoutes } from '@plugins/ai_agent/frontend/routes/routes';
 import { routes as patientRoutes } from '@plugins/patients/frontend/routes/patients/routes';
 import { routes as financialRoutes } from '@plugins/financial/frontend/features/financial/routes';
 import { routes as ajudaRoutes } from '@plugins/ajuda/frontend/routes/routes';
+import { routes as aiAgentRoutes } from '@plugins/ai_agent/frontend/routes/routes';
 import { routes as internalChatRoutes } from '@plugins/internal_chat/frontend/routes/routes';
+import { routes as documentTemplateRoutes } from '@plugins/document_templates/frontend/routes/routes';
+import { routes as telemedRoutes } from '@plugins/telemed/frontend/dashboard/routes/routes';
 import AppContainer from './Dashboard.vue';
 import Suspended from './suspended/Index.vue';
 import NoAccounts from './noAccounts/Index.vue';
@@ -36,12 +39,19 @@ export default {
         ...notificationRoutes,
         ...helpcenterRoutes.routes,
         ...campaignsRoutes.routes,
-        ...agendaRoutes,
-        ...aiAgentRoutes,
-        ...patientRoutes,
-        ...financialRoutes,
-        ...ajudaRoutes,
-        ...internalChatRoutes,
+        // Módulos Klivy (plugins): escondem o FAB do Captain (IA de
+        // atendimento, sem atuação aqui) via `meta.hideCopilotLauncher`.
+        // Módulo novo → adicione o spread dentro deste helper.
+        ...hideCopilotLauncherOn([
+          ...agendaRoutes,
+          ...patientRoutes,
+          ...financialRoutes,
+          ...ajudaRoutes,
+          ...aiAgentRoutes,
+          ...internalChatRoutes,
+          ...documentTemplateRoutes,
+          ...telemedRoutes,
+        ]),
       ],
     },
     {

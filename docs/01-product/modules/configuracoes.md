@@ -1,14 +1,27 @@
-> [!IMPORTANT]
-> **Nota de Auditoria Arquitetural Atualizada:** 
-> O texto a seguir contém a Especificação Histórica das Regras de Negócio deste módulo.
-> Em nível sistêmico (código, frontend, backend e Banco de Dados), todas as estruturas listadas abaixo encontram-se 100% isoladas na Arquitetura Modular (Rails Engines), localizadas especificamente dentro do seu diretório `plugins/`. O modelo de banco de dados original do Chatwoot citado como destino de colunas no documento abaixo já foi refatorado utilizando Satélites DB Profiles (`beclinic_profiles`) visando prevenir colisões de migrações nativas do Chatwoot no longo prazo.
-> Leia `02-architecture/system-architecture.md` para visualizar as ligações sistêmicas exatas em código. Tudo detalhado abaixo responde ao Produto e Usuário.
+> [!CAUTION]
+> **STATUS: HISTÓRICO — não é mais a fonte de verdade.**
+>
+> Este documento descreve o **plano RBAC V1** (`BeClinicRole` baseado em Times com base_role `dono/gerente/especialista`), aprovado em março/2026. **Esse sistema foi inteiramente removido em 2026-04-30** — tabela `beclinic_team_profiles` droppada, conceito `dono` extinto, painel `/beclinic_admin/owners` apagado.
+>
+> O RBAC atual usa **`KlivyRole`** atribuído direto ao `account_user.klivy_role_id` (12 módulos × N sub-permissões via JSONB). Resolução em 3 passos: `super_admin` → `account_user.administrator` → `KlivyRole`.
+>
+> **Para a verdade atual, consulte:**
+>
+> | O que você quer | Documento |
+> |---|---|
+> | Como o RBAC funciona hoje (canon) | [`funcoes-personalizadas.md`](./funcoes-personalizadas.md) |
+> | Arquitetura sistêmica (modular monolith) | [`../../02-architecture/system-architecture.md`](../../02-architecture/system-architecture.md) |
+> | Configurações do produto (Agenda, Financeiro, templates) | módulos específicos: [`agenda.md`](./agenda.md), [`financeiro-funcionamento.md`](./financeiro-funcionamento.md) |
+>
+> Mantemos o texto abaixo por contexto histórico — útil para entender por que o sistema legado existia e quais decisões guiaram a migração para `KlivyRole`. **Não use como referência de implementação.**
 
-# RBAC Plan — BeClinic
+---
+
+# RBAC Plan — BeClinic (V1 HISTÓRICO)
 ## Role-Based Access Control — Plano de Ação Completo
 
 > **Versão:** 1.0 — 2026-03-16
-> **Status:** Aprovado e pronto para implementação
+> **Status:** Substituído pelo plugin `custom_roles/` (KlivyRole) em 2026-04-30
 > **Sessão de Brainstorming:** Concluída e validada com o produto
 
 ---
@@ -112,18 +125,39 @@ Abaixo está o mapa de **todas as permissões** configuráveis em cada perfil. C
 
 #### 💰 MÓDULO: Financeiro
 
+> ⚠️ **Correção 2026-05-30 (auditoria de APIs).** As chaves abaixo foram **reescritas** para refletir o catálogo REAL do KlivyRole
+> ([`plugins/custom_roles/app/models/klivy_role/permissions_catalog.rb`](../../../plugins/custom_roles/app/models/klivy_role/permissions_catalog.rb)).
+> As chaves antigas `financial.view_transactions`, `view_estimates`, `create_estimate`, `edit_estimate`, `delete_estimate` e `export_cashflow`
+> **NÃO existem** — eram fantasmas e já fizeram a aba financeira do paciente sumir 2×.
+>
+> **Atenção crítica:** a **aba Financeira do prontuário do paciente** é gateada por **`patients.view_financial`** / **`patients.manage_financial`** —
+> **NUNCA** por `financial.*`. As chaves `financial.*` gateiam apenas o **módulo financeiro standalone** (Dashboard, Fluxo de Caixa, A Receber, A Pagar, DRE).
+
+**Módulo standalone `financial`** (catálogo real):
+
 | Chave de Permissão | Descrição |
 |---|---|
-| `financial.view_transactions` | Ver transações do paciente |
-| `financial.create_transaction` | Registrar pagamento/cobrança |
-| `financial.delete_transaction` | Excluir transação |
-| `financial.view_estimates` | Ver orçamentos |
-| `financial.create_estimate` | Criar orçamento |
-| `financial.edit_estimate` | Editar orçamento |
+| `financial.view_dashboard` | Ver o Dashboard financeiro |
+| `financial.view_cashflow` | Ver o Fluxo de Caixa (lançamentos) |
+| `financial.view_receivables` | Ver Contas a Receber (parcelas) |
+| `financial.view_payables` | Ver Contas a Pagar (despesas) |
+| `financial.view_dre` | Ver o DRE |
+| `financial.view_reports` | Ver relatórios financeiros |
+| `financial.view_cash_register` | Ver sessões de caixa |
+| `financial.create_transaction` | Registrar pagamento/lançamento |
+| `financial.edit_transaction` | Editar lançamento |
+| `financial.delete_transaction` | Excluir/estornar lançamento |
+| `financial.manage_estimates` | Criar/editar orçamentos |
 | `financial.approve_estimate` | Aprovar orçamento |
-| `financial.delete_estimate` | Excluir orçamento |
-| `financial.view_cashflow` | Ver relatório geral de caixa da clínica |
-| `financial.export_cashflow` | Exportar relatório financeiro |
+| `financial.export_data` | Exportar dados financeiros |
+| `financial.manage_settings` | Configurações do módulo (contas, formas de pagamento, comissões…) |
+
+**Aba Financeira do prontuário do paciente** (módulo `patients`):
+
+| Chave de Permissão | Descrição |
+|---|---|
+| `patients.view_financial` | Ver a aba Financeira do paciente (summary + timeline) |
+| `patients.manage_financial` | Operar a aba (receber, estornar, lançar) |
 
 #### 💬 MÓDULO: Chat / Conversas (WhatsApp)
 
@@ -357,7 +391,12 @@ db/migrate/TIMESTAMP_add_beclinic_role_id_to_account_users.rb
 
 ---
 
-### ✅ FASE 5 — Financeiro — CONCLUÍDA
+### ✅ FASE 5 — Financeiro — CONCLUÍDA (⚠️ histórico — modelo V1 superado)
+
+> ⚠️ **Esta fase descreve o modelo Pundit/`financial.*` V1, substituído pelo KlivyRole desde 2026-04-30.**
+> Em particular, a aba "Financeiro" do prontuário **NÃO** é mais filtrada por `financial.view_transactions` (chave fantasma) —
+> o gate real é **`patients.view_financial`**. Mantido apenas como registro histórico; ver a tabela corrigida em "MÓDULO: Financeiro" acima.
+
 **Objetivo:** Aplicar permissões no módulo financeiro.
 
 - [x] Gate no sub-módulo Transações (ver / criar / deletar)

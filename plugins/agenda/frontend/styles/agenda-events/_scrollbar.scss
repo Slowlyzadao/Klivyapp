@@ -1,0 +1,44 @@
+/* ── Custom Scrollbar ────────────────────────────── */
+.custom-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+  background: rgb(var(--slate-1));
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--slate-8) / 0.4);
+  border-radius: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(var(--slate-8) / 0.6);
+}
+
+/* ── Modal Scrollbar (always visible to indicate scroll) ─
+   Note: must use modern slash syntax `rgb(R G B / A)` — legacy
+   `rgba(var(--token), A)` is invalid and the thumb renders invisible. */
+.modal-scroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--slate-8) / 0.45) transparent;
+}
+.modal-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+.modal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+.modal-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--slate-8) / 0.45);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  min-height: 40px;
+}
+.modal-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(var(--slate-8) / 0.7);
+  background-clip: padding-box;
+}
