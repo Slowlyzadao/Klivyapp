@@ -1,0 +1,22 @@
+type: object
+description: |
+  Campos de ESTILO (superfície) do tom de voz da clínica — como a Bea fala.
+  Não muda O QUE ela pode dizer. `enabled` (só no perfil ATIVO) e os metadados
+  de geração (só no RASCUNHO) ficam fora deste schema base.
+properties:
+  summary: { type: string }
+  greeting: { type: string }
+  closing: { type: string }
+  emojis:
+    type: array
+    items: { type: string }
+  expressions:
+    type: array
+    items: { type: string }
+  examples:
+    type: array
+    items:
+      type: object
+      properties:
+        paciente: { type: string }
+        clinica: { type: string }

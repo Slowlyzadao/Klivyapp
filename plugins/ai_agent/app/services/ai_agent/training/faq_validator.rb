@@ -7,7 +7,8 @@
 # FONTE (trecho literal da conversa) vai junto pro juiz, que vê a origem real.
 #
 # Vereditos: manter | reescrever (fato válido, texto contaminado — ex.: nome
-# de paciente; o juiz devolve a versão limpa) | rejeitar (motivo logado).
+# de paciente; o juiz devolve a versão limpa PRESERVANDO o tom da clínica —
+# emoji/gíria/jeitão) | rejeitar (motivo logado).
 # Fail-closed: FAQ sem veredito é rejeitada. Juiz indisponível → UNAVAILABLE
 # (o job falha visível e o Sidekiq reprocessa — nunca publica sem validar).
 class AiAgent::Training::FaqValidator
@@ -113,10 +114,18 @@ class AiAgent::Training::FaqValidator
       12. REFERÊNCIA ÓRFÃ: "como te falei", "o vídeo que mandei", "naquele
           valor que combinamos" — não se sustenta fora da conversa original.
 
-      REESCREVA (em vez de rejeitar) sempre que o FATO for institucional válido
-      mas o texto tiver um detalhe removível (nome de paciente, uma data, uma
-      saudação): devolva pergunta e resposta limpas e gerais, SEM inventar nada
-      que não esteja na fonte. Prefira REESCREVER a rejeitar quando for core.
+      REESCREVA (em vez de rejeitar) quando o FATO for institucional válido mas
+      o texto tiver um detalhe removível (NOME PRÓPRIO de paciente ou uma DATA
+      específica). Ao reescrever, TIRE só esse detalhe e PRESERVE O JEITO DA
+      CLÍNICA FALAR. ATENÇÃO: emojis, termos de carinho ("amor", "querida", "meu
+      bem", "viu", "tá") e o tom acolhedor/informal são ESTILO da clínica, NÃO
+      são dado pessoal — MANTENHA. Só nome próprio e data saem. A resposta deve
+      continuar SOANDO como a clínica, não virar texto corporativo neutro.
+      Exemplo: "Oi Nancy! 😊 Atendemos sábado das 8 às 12, pode vir tranquila
+      amor!" → "Oii! 😊 Atendemos sábado das 8 às 12, pode vir tranquila amor!"
+      (tirou só o nome; manteve o emoji, o "amor" e o jeitão). NÃO invente nada
+      fora da fonte nem adicione emoji que ela não usou. Prefira REESCREVER a
+      rejeitar quando for core.
 
       REGRA DE DECISÃO:
       - É conhecimento institucional core? → manter ou reescrever. Nunca rejeitar.

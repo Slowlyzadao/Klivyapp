@@ -170,6 +170,7 @@ Rails.application.routes.draw do
               delete :destroy_all
               get :pending_faqs
               post :approve_all
+              post :select_clinic_bulk
             end
             member do
               post :publish
@@ -184,6 +185,20 @@ Rails.application.routes.draw do
               delete :destroy_all
             end
           end
+          resource :ai_agent_style_profile,
+                   path: 'ai_agent/style_profile',
+                   only: [:show, :update],
+                   controller: '/ai_agent/api/v1/accounts/style_profiles' do
+            post :generate
+          end
+          resource :ai_agent_system_prompt,
+                   path: 'ai_agent/system_prompt',
+                   only: [:show, :update],
+                   controller: '/ai_agent/api/v1/accounts/system_prompts'
+          resource :ai_agent_voucher_config,
+                   path: 'ai_agent/voucher_config',
+                   only: [:show, :update],
+                   controller: '/ai_agent/api/v1/accounts/voucher_configs'
           resources :ai_agent_follow_up_rules,
                     path: 'ai_agent/follow_up_rules',
                     only: [:index, :show, :create, :update, :destroy],

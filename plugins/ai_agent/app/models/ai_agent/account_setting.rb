@@ -13,6 +13,10 @@ class AiAgent::AccountSetting < ApplicationRecord
              optional: true
 
   validates :account_id, uniqueness: true
+  # System message próprio da conta. Vazio = herda o default global do super
+  # admin (ver ConfigResolver#system_prompt). Teto defensivo igual ao do
+  # Captain::Document.content (200k) — o prompt real fica em ~30k.
+  validates :system_prompt, length: { maximum: 200_000 }, allow_blank: true
   validates :monthly_token_budget,
             numericality: { greater_than: 0, allow_nil: true }
   validates :max_tokens_per_conversation,

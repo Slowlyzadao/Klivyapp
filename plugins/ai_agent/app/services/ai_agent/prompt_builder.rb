@@ -62,6 +62,7 @@ class AiAgent::PromptBuilder
     [
       persona_block,
       beatriz_assistant_block,
+      style_block,
       responsible_physician_block,
       account_prefix_block,
       contact_identity_block,
@@ -70,21 +71,69 @@ class AiAgent::PromptBuilder
     ].compact.join("\n\n---\n\n")
   end
 
-  private
-
-  def persona_block
+  # Default global do super admin: o override do InstallationConfig (o que se
+  # edita em /super_admin/bea). Fonte ÚNICA usada tanto pelo persona_block
+  # (fallback de runtime) quanto pelo SystemPromptsController (botão "Restaurar
+  # padrão"), pra os dois nunca divergirem. `persona` opcional só pro fallback.
+  def self.global_default_prompt(persona: nil)
     override = InstallationConfig.find_by(name: GLOBAL_PROMPT_CONFIG_KEY)&.value.to_s.strip
     return override if override.present?
 
-    template = @resolver.persona
-    template&.system_prompt.presence || DEFAULT_PERSONA_PROMPT
+    persona&.system_prompt.presence || DEFAULT_PERSONA_PROMPT
   end
 
-  def account_prefix_block
-    prefix = @resolver.system_prompt_prefix
-    return nil if prefix.blank?
+  private
 
-    "Instruções específicas desta clínica:\n#{prefix}"
+  # Precedência: system message PRÓPRIO da conta → default global do super admin
+  # → persona template → fallback embutido. Account-first é o que dá a cada
+  # clínica o seu prompt (congelado); só cai no default global quando a conta
+  # ainda não tem o seu (conta nova ou que limpou o campo) — a Bea nunca roda
+  # sem prompt.
+  def persona_block
+    account_prompt = @resolver.system_prompt.to_s.strip
+    return account_prompt if account_prompt.present?
+
+    self.class.global_default_prompt(persona: @resolver.persona)
+  end
+
+  # MVP lançamento: fluxo do voucher (comemora + agenda; troca de procedimento
+  # → encaminha pro humano e para). Injetado só quando a conta está em modo
+  # voucher. NÃO mexe na persona global.
+  VOUCHER_FLOW = <<~PT.strip
+    FLUXO DE LANÇAMENTO (VOUCHER) — prioritário nesta conversa: esta paciente
+    chegou por um VOUCHER de desconto de um lançamento.
+    1. Quando ela mandar/contar o voucher, COMEMORE de forma calorosa o que ela
+       ganhou (ex.: "Aii que delícia, você ganhou X!") e já convide pra agendar
+       o procedimento do voucher.
+    2. Conduza o agendamento normalmente do procedimento do voucher.
+    3. NÃO precisa informar nem confirmar o valor/desconto — a recepção aplica o
+       desconto no atendimento. Só comemore e agende.
+    4. Se a paciente quiser TROCAR por um procedimento DIFERENTE do voucher (ex.:
+       "não quero esse, queria outra coisa"): diga com carinho que vai verificar
+       com a Sabrina o que dá pra fazer ("deixa eu dar uma olhada e falar com a
+       Sabrina pra ver o que a gente consegue, tá?") e PERGUNTE qual procedimento
+       ela gostaria. ASSIM QUE ela disser o procedimento, chame a ferramenta
+       transfer_to_human e NÃO responda mais — a equipe assume daqui. NUNCA
+       prometa desconto em outro procedimento.
+  PT
+
+  def account_prefix_block
+    parts = []
+    prefix = @resolver.system_prompt_prefix
+    parts << prefix if prefix.present?
+    parts << VOUCHER_FLOW if @resolver.voucher_mode?
+    return nil if parts.empty?
+
+    "Instruções específicas desta clínica:\n#{parts.join("\n\n")}"
+  end
+
+  # Tom de voz da clínica (projeto de estilo): perfil destilado das conversas
+  # reais — emoji, saudação, bordões, exemplos. Camada de SUPERFÍCIE: muda só
+  # COMO a Bea fala, nunca O QUE ela pode dizer. Vem DEPOIS da persona (que
+  # carrega os limites e a ordem de busca de fatos) de propósito. Retorna nil
+  # quando a conta não tem perfil ativo.
+  def style_block
+    AiAgent::StyleProfile::PromptSection.for_account(@account)
   end
 
   # Pulls the per-account Beatriz config from the Captain::Assistant row
@@ -277,7 +326,9 @@ class AiAgent::PromptBuilder
   def format_services
     return nil unless defined?(::AgendaService)
 
-    services = ::AgendaService.where(account_id: @account.id).order(:position, :created_at).limit(30)
+    # `.kept`: ignora serviços arquivados (soft-delete) — sem isto, um serviço
+    # removido continuaria sendo oferecido pela Bea.
+    services = ::AgendaService.kept.where(account_id: @account.id).order(:position, :created_at).limit(30)
     return nil if services.empty?
 
     services.map do |s|

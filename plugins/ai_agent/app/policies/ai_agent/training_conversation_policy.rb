@@ -42,6 +42,11 @@ class AiAgent::TrainingConversationPolicy < ApplicationPolicy
     @account_user.administrator? || beclinic_can?(:captain, :manage_faqs)
   end
 
+  # Seleção da clínica em massa — mesma perm do select_clinic unitário.
+  def select_clinic_bulk?
+    @account_user.administrator? || beclinic_can?(:captain, :manage_faqs)
+  end
+
   def update?
     @account_user.administrator? || beclinic_can?(:captain, :manage_faqs)
   end

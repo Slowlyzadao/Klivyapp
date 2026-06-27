@@ -24,6 +24,10 @@ class AiAgent::FollowUps::MessageGenerator
   # Quantas mensagens recentes da conversa injetar como contexto.
   HISTORY_LIMIT = 8
 
+  # Quantos trechos da base de conhecimento (RAG) injetar pra endereçar a
+  # objeção do paciente no follow-up.
+  MAX_KNOWLEDGE = 2
+
   # Tom base da Bea (PT-BR profissional, neutro, curto). A persona da
   # regra (Fase 5) é anexada a isso no `system_prompt`.
   BASE_PROMPT = <<~PROMPT.strip.freeze
@@ -42,9 +46,17 @@ class AiAgent::FollowUps::MessageGenerator
     foi dito). Se o cenário pedir uma resposta (ex: confirmação), deixe a
     pergunta clara e direta.
 
+    IMPORTANTE — leia o HISTÓRICO: se o paciente levantou uma OBJEÇÃO ou
+    dúvida concreta (preço/"não tenho dinheiro", medo, falta de tempo,
+    indecisão, "vou pensar", "preciso falar com alguém"), o follow-up deve
+    ENDEREÇAR isso diretamente e com acolhimento — usando as INFORMAÇÕES DA
+    CLÍNICA fornecidas abaixo (ex.: opções de parcelamento) pra ajudar a
+    superar a objeção. NÃO mande um "ficou alguma dúvida?" genérico que
+    ignora o que o paciente acabou de dizer.
+
     NUNCA invente data, hora, profissional, valor ou dado clínico que não
-    esteja no contexto fornecido. Se algo essencial faltar, escreva
-    mensagem genérica de check-in.
+    esteja no contexto fornecido (incluindo as informações da clínica
+    abaixo). Se algo essencial faltar, escreva mensagem genérica de check-in.
   PROMPT
 
   # SEC-25 (auditoria 2026-05-18): hard cap pra output do LLM antes de
@@ -123,13 +135,38 @@ class AiAgent::FollowUps::MessageGenerator
 
   private
 
-  # Persona da campanha (Fase 5): anexa o tom próprio da regra ao prompt
-  # base, mantendo as regras de segurança. Sem persona → só o base.
+  # Monta o system prompt em camadas de tom, da mais geral pra mais específica:
+  #   1. BASE_PROMPT      — regras de segurança + tom neutro padrão
+  #   2. tom da CLÍNICA   — perfil de estilo da conta (projeto tom de voz), se
+  #                         ativo; prioritário em COMO falar sobre o neutro
+  #   3. tom da CAMPANHA  — persona_override da regra (Fase 5), prioritário
+  #                         sobre tudo acima
+  # As regras de segurança do BASE_PROMPT seguem soberanas em qualquer caso.
   def system_prompt
-    persona = @rule.persona_override.to_s.strip
-    return BASE_PROMPT if persona.blank?
+    parts = [BASE_PROMPT]
 
-    "#{BASE_PROMPT}\n\nTOM DESTE FOLLOW-UP (prioritário sobre o tom padrão acima):\n#{persona}"
+    style = AiAgent::StyleProfile::PromptSection.for_account(rule_account)
+    # O BASE_PROMPT proíbe emoji/gíria por NOME (ex.: "nunca 👋🙂😊"). O perfil
+    # da clínica pode legitimamente pedir exatamente esses — então um preâmbulo
+    # de desempate explícito: a allow-list da clínica vence a deny-list nominal
+    # acima; só as regras de SEGURANÇA e o teto de 3 frases seguem soberanos.
+    if style.present?
+      parts << 'O perfil de tom da clínica abaixo SUBSTITUI as restrições de ' \
+               'estilo do tom padrão acima (emoji, saudação, gírias): a lista ' \
+               'de emojis da clínica vale mesmo que algum apareça como proibido ' \
+               'acima. As regras de segurança e o limite de no máximo 3 frases ' \
+               "permanecem.\n\n#{style}"
+    end
+
+    persona = @rule.persona_override.to_s.strip
+    parts << "TOM DESTE FOLLOW-UP (prioritário sobre o tom acima):\n#{persona}" if persona.present?
+
+    parts.join("\n\n")
+  end
+
+  # Conta dona da regra — fonte de verdade do tenant (rule sempre vinculada).
+  def rule_account
+    @rule_account ||= ::Account.find_by(id: @rule.account_id)
   end
 
   # Cenário efetivo: o do passo da cadência quando houver, senão o da
@@ -146,9 +183,40 @@ class AiAgent::FollowUps::MessageGenerator
       *appointment_lines,
       *preferences_lines,
       *history_lines,
+      *knowledge_lines,
       '',
       'Escreva agora a mensagem que a Bea vai enviar pelo WhatsApp. Apenas a mensagem, sem explicação, sem prefixo.'
     ].join("\n")
+  end
+
+  # RAG no follow-up: busca na base de conhecimento da clínica trechos que
+  # respondam à objeção/assunto do paciente (ex.: "não tenho dinheiro" →
+  # parcelamento). Sem isto o follow-up vira um "ficou alguma dúvida?"
+  # genérico. Best-effort: erro de embedding/credencial → segue sem RAG.
+  def knowledge_lines
+    query = last_patient_message.presence || effective_brief.to_s
+    return [] if query.blank?
+
+    hits = AiAgent::Rag::Retriever.new(rule_account, parent_limit: MAX_KNOWLEDGE).call(query)
+    excerpts = Array(hits).first(MAX_KNOWLEDGE).filter_map { |h| h.parent_chunk.content.to_s.strip.presence }
+    return [] if excerpts.empty?
+
+    ['', 'Informações da clínica (base de conhecimento — use pra responder a dúvida/objeção; não invente além disto):',
+     *excerpts.map { |e| "- #{e}" }]
+  rescue StandardError => e
+    Rails.logger.warn("[AiAgent::FollowUps::MessageGenerator] RAG falhou: #{e.message}")
+    []
+  end
+
+  # Última mensagem do PACIENTE (incoming) — a objeção/assunto que o
+  # follow-up deve endereçar. Usada como query do RAG.
+  def last_patient_message
+    return @last_patient_message if defined?(@last_patient_message)
+
+    @last_patient_message = @conversation&.messages
+                                         &.where(message_type: :incoming, private: false)
+                                         &.reorder('messages.created_at DESC, messages.id DESC')
+                                         &.limit(1)&.pick(:content).to_s.strip
   end
 
   def appointment_lines
@@ -258,7 +326,7 @@ class AiAgent::FollowUps::MessageGenerator
   # `@rule.account_id` é o source of truth de conta (rule sempre vinculada);
   # contact pode ser nil em cenários edge.
   def cost_cap_blocked?
-    account = ::Account.find_by(id: @rule.account_id)
+    account = rule_account
     return false if account.nil?
 
     over = AiAgent::ConfigResolver.new(account).over_monthly_cost_cap?

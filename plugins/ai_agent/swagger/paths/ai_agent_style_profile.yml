@@ -1,0 +1,109 @@
+show:
+  get:
+    tags:
+      - Bea — Tom de voz
+    summary: Ler o tom de voz da clínica (ativo + rascunho)
+    description: |
+      Retorna o perfil de estilo ATIVO (aplicado no system prompt da Bea) e o
+      RASCUNHO (última geração pendente de aprovação). Camada de superfície —
+      define só COMO a Bea fala (emoji/saudação/bordões/exemplos), nunca o que
+      ela pode dizer.
+
+      Autorização: admin OR Klivy `captain.view`.
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+    responses:
+      '200':
+        description: Perfil ativo e rascunho
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                active:
+                  allOf:
+                    - $ref: '../definitions/StyleProfile.yml'
+                    - type: object
+                      properties:
+                        enabled: { type: boolean }
+                draft:
+                  allOf:
+                    - $ref: '../definitions/StyleProfile.yml'
+                    - type: object
+                      properties:
+                        status: { type: string, enum: [generating, ready, failed] }
+                        error: { type: string }
+                        sample_count: { type: integer }
+                        source_conversation_count: { type: integer }
+                        generated_at: { type: string, format: date-time }
+      '401':
+        description: Sem permissão (`captain.view`) — Pundit renderiza 401
+  patch:
+    tags:
+      - Bea — Tom de voz
+    summary: Aprovar/ativar o tom de voz (e editar/ligar-desligar)
+    description: |
+      Grava os campos no perfil ATIVO. Com `approve: true` promove o rascunho
+      revisado (onde nomes residuais são limpos) e o CONSOME; sem `approve` é só
+      edição/toggle do ativo e o rascunho NÃO é tocado (ligar/desligar o tom não
+      apaga um rascunho pendente). A Bea passa a falar nesse tom com `enabled: true`.
+
+      Autorização: admin OR Klivy `captain.manage_faqs`.
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [style_profile]
+            properties:
+              approve:
+                type: boolean
+                description: Quando true, consome o rascunho (aprovação). Default false (toggle/edição).
+              style_profile:
+                allOf:
+                  - $ref: '../definitions/StyleProfile.yml'
+                  - type: object
+                    properties:
+                      enabled: { type: boolean }
+    responses:
+      '200':
+        description: Perfil ativo atualizado (rascunho consumido)
+      '401':
+        description: Sem permissão (`captain.manage_faqs`) — Pundit renderiza 401
+generate:
+  post:
+    tags:
+      - Bea — Tom de voz
+    summary: Gerar o tom de voz a partir das conversas do Treinamento
+    description: |
+      Dispara (async) a destilação do estilo da clínica das conversas concluídas
+      do Treinamento, gravando o resultado no RASCUNHO (`draft`). O perfil ATIVO
+      não é tocado — a aprovação do rascunho é à parte. Responde `202` com o
+      rascunho marcado `generating`; se já houver uma geração em andamento, NÃO
+      re-enfileira (debounce).
+
+      O estado terminal vem por POLLING do `GET`:
+      - `draft.status: ready` — perfil gerado, pronto pra revisar/aprovar.
+      - `draft.status: failed` + `draft.error` — por falta de conversa é
+        terminal; por rate-limit/crédito da IA o Sidekiq reprocessa sozinho.
+
+      Autorização: admin OR Klivy `captain.manage_faqs`.
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+    responses:
+      '202':
+        description: Geração enfileirada (rascunho em `generating`)
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                draft:
+                  type: object
+                  properties:
+                    status: { type: string, example: generating }
+      '401':
+        description: Sem permissão (`captain.manage_faqs`) — Pundit renderiza 401

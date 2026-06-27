@@ -39,8 +39,38 @@ class AiAgent::ConfigResolver
     @account_setting&.persona || @global.default_persona
   end
 
+  # System message PRÓPRIO da conta (texto completo). Vazio = nil → o
+  # PromptBuilder cai no default global do super admin. Quando preenchido, a
+  # conta segue 100% o texto dela (congelado). Ver AiAgent::PromptBuilder.
+  def system_prompt
+    @account_setting&.system_prompt.presence
+  end
+
+  # Default global do super admin (InstallationConfig 'CAPTAIN_BEA_SYSTEM_PROMPT',
+  # editável em /super_admin/bea). É o fallback de runtime quando a conta não tem
+  # o seu, e a fonte do botão "Restaurar padrão". Fonte única em PromptBuilder.
+  def default_system_prompt
+    AiAgent::PromptBuilder.global_default_prompt
+  end
+
   def system_prompt_prefix
     @account_setting&.system_prompt_prefix
+  end
+
+  # MVP voucher: { 'enabled' => bool, 'triggers' => [String] }. Sempre Hash.
+  def voucher_config
+    cfg = @account_setting&.voucher_config
+    cfg.is_a?(Hash) ? cfg : {}
+  end
+
+  def voucher_mode?
+    voucher_config['enabled'] == true
+  end
+
+  # Textos-gatilho do QR (lista que o usuário gerencia na UI). Normalizados:
+  # sem vazios, strip.
+  def voucher_triggers
+    Array(voucher_config['triggers']).filter_map { |t| t.to_s.strip.presence }
   end
 
   def enabled_tools

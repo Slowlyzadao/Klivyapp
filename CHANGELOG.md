@@ -10,6 +10,350 @@ Todas as mudanças relevantes no projeto serão documentadas neste arquivo.
 - **D**: Correções de bugs e mudanças menores.
 - **Obrigatório**: Cada entrada deve listar os **Arquivos Modificados** ao final da descrição.
 
+## [1.12.0.98] - 2026-06-27T12:00:00-03:00
+
+### feat(ai-agent): MVP de LANÇAMENTO por voucher (gate, OCR do voucher por visão, fluxo + UI self-service)
+
+**Problema:** uma clínica vai fazer um lançamento dando vouchers físicos de desconto pras alunas. A aluna manda a FOTO do voucher (ou escaneia um QR que abre o WhatsApp com um texto pronto) e a Bea entra em ação: comemora o desconto e conduz o agendamento. Quem chega de QUALQUER outro jeito NÃO deve receber resposta da Bea. E se a aluna quiser trocar por um procedimento diferente do voucher, a Bea encaminha pra um humano e para.
+
+**Solução (modo voucher por conta, ligável na UI):**
+
+- **Gate (`AiAgent::Voucher::Gate` + `ChatResponseJob`):** com o modo voucher ligado, a Bea SÓ responde quem chegou por voucher — uma IMAGEM (foto do voucher) OU um dos textos-gatilho do QR (match tolerante a caixa/acento via `I18n.transliterate`). Quem não chegou assim fica sem resposta (nem "digitando"). A ativação persiste por conversa (`ConversationState.working_memory['voucher']`) → segue atendendo por texto nos próximos turnos.
+- **OCR do voucher por VISÃO (`AiAgent::Multimodal::VoucherTextExtractor`):** lê o texto do voucher na foto via Gemini multimodal (RubyLLM, `chat.ask(prompt, with: path)`, thinkingBudget 0), espelhando o blob+retry do `AudioTranscriber` (race do upload) e copiando o blob pra um path com extensão (RubyLLM detecta o mime pela extensão). O texto vira uma "mensagem do paciente" sintetizada → a Bea comemora e agenda. OCR ilegível → pede pra confirmar por texto (sem handoff).
+- **Fluxo no prompt (`PromptBuilder#account_prefix_block` + `VOUCHER_FLOW`):** comemora o desconto → conduz o agendamento do procedimento do voucher → NÃO informa valor (recepção aplica) → se a aluna quer TROCAR de procedimento, fala que vai ver com a Sabrina, pergunta qual, e ao saber chama `transfer_to_human` e para. Injetado só no modo voucher; NÃO mexe na persona global.
+- **Config self-service (nova aba "Vouchers" no menu BEA):** toggle do modo voucher + lista dinâmica de textos-gatilho (adiciona/remove caixas) — o dono cadastra os textos do QR sem deploy. Storage: `ai_agent_account_settings.voucher_config` jsonb `{enabled, triggers:[]}`; endpoint `GET/PATCH ai_agent/voucher_config` (+ `VoucherConfigPolicy`, perm captain).
+
+Validado ao vivo (Gemini real): OCR leu "30% OFF em Preenchimento Labial" do blob; gate (random→mudo, gatilho/imagem→passa, ativada→continua); fluxo (comemorou → conduziu agenda → troca de procedimento → `transfer_to_human`). **Modo voucher entregue DESLIGADO** — ligar na aba Vouchers quando for lançar.
+
+**Arquivos Modificados:**
+
+- `plugins/ai_agent/db/migrate/20260627000001_add_voucher_config_to_ai_agent_account_settings.rb` — coluna `voucher_config` jsonb
+- `plugins/ai_agent/app/services/ai_agent/voucher/gate.rb` — NOVO (gate + ativação por conversa)
+- `plugins/ai_agent/app/services/ai_agent/multimodal/voucher_text_extractor.rb` — NOVO (OCR do voucher via Gemini)
+- `plugins/ai_agent/app/services/ai_agent/config_resolver.rb` — `voucher_config`/`voucher_mode?`/`voucher_triggers`
+- `plugins/ai_agent/app/jobs/ai_agent/chat_response_job.rb` — gate + caminho de imagem→OCR no modo voucher
+- `plugins/ai_agent/app/services/ai_agent/prompt_builder.rb` — `VOUCHER_FLOW` no `account_prefix_block`
+- `plugins/ai_agent/app/controllers/ai_agent/api/v1/accounts/voucher_configs_controller.rb` + `app/policies/ai_agent/voucher_config_policy.rb` — NOVOS (config por conta)
+- `config/routes.rb` — rota `ai_agent/voucher_config`
+- `plugins/ai_agent/frontend/{api/voucherConfig.js, store/aiAgentVoucherConfig.js, routes/vouchers/Index.vue, routes/routes.js}` — UI self-service
+- `app/javascript/dashboard/store/index.js`, `components-next/sidebar/Sidebar.vue`, `i18n/locale/pt_BR|en/settings.json`, `i18n/locale/pt_BR/aiAgent.json` — registro da página/menu/i18n
+
+## [1.12.0.97] - 2026-06-24T10:57:01-03:00
+
+### feat(ai-agent): System Message da Bea POR CONTA (default do super admin como base + restaurar)
+
+**Problema:** o system message (system prompt) da Bea era ÚNICO e global (`InstallationConfig['CAPTAIN_BEA_SYSTEM_PROMPT']`, editável só pelo super admin em `/super_admin/bea`), aplicado igual a todas as contas. Cada clínica precisava do SEU próprio comportamento, sem depender do super admin nem interferir nas outras.
+
+**Solução (decisão do dono: cópia por conta CONGELADA + admin da clínica edita):** cada conta passa a ter o seu system message próprio; o do super admin vira o **default/base** (fonte do botão "Restaurar padrão" e fallback de runtime). Espelha o padrão do `style_profile` (recurso singleton por conta), tudo no plugin `ai_agent`.
+
+- **Coluna `ai_agent_account_settings.system_prompt` (text):** vazio → herda o default global em runtime (a Bea nunca roda sem prompt); preenchido → a conta segue 100% o texto dela, **congelado** (melhorias futuras no default global NÃO a alteram). Texto em branco/só-espaços normaliza pra `nil` na escrita (volta a herdar) — serialização `content`/`using_default` consistente com o `ConfigResolver` (ambos usam `.presence`).
+- **`PromptBuilder#persona_block`:** precedência **conta → default global → persona template → fallback**. `AiAgent::PromptBuilder.global_default_prompt` (classe pública) é a fonte ÚNICA do default — usada pelo fallback de runtime E pelo botão "Restaurar padrão" (nunca divergem).
+- **`ConfigResolver#system_prompt` / `#default_system_prompt`** expõem o da conta e o global.
+- **Endpoint `AiAgent::Api::V1::Accounts::SystemPromptsController`** (`ai_agent/system_prompt`, show/update) + **`SystemPromptPolicy`** (`captain.view` pra ler, `captain.manage_settings` pra editar; admin passa por cima). "Restaurar padrão" é client-side (GET devolve `{ content, default, using_default }`; o botão preenche o editor com o default e o usuário revisa antes de salvar).
+- **Frontend:** aba **"System Message"** na seção BEA (página no plugin: `systemPrompt/Index.vue` — textarea monospace + origem (herdado/próprio) + Restaurar padrão + Salvar/Descartar) + `api/systemPrompt.js` + store `aiAgentSystemPrompt` + i18n.
+- **Isolamento/cache (dúvida do dono):** cada conta tem a sua linha e o seu conteúdo. O `PromptBuilder` lê o prompt por-conta a cada turno, sem `Rails.cache`/memoização global na construção do prompt — editar o de uma conta NÃO afeta o cache (app ou prompt-cache do LLM, que é por-conteúdo) de outra. Contexto por-turno segue como prefixo da mensagem do usuário (cache estável). Validado em review adversarial multi-agente (veredito: ship; isolamento OK).
+
+**Arquivos Modificados:**
+
+- `plugins/ai_agent/db/migrate/20260624000001_add_system_prompt_to_ai_agent_account_settings.rb` — NOVO (coluna `system_prompt`)
+- `plugins/ai_agent/app/models/ai_agent/account_setting.rb` — validação de tamanho do `system_prompt`
+- `plugins/ai_agent/app/services/ai_agent/config_resolver.rb` — `#system_prompt` + `#default_system_prompt`
+- `plugins/ai_agent/app/services/ai_agent/prompt_builder.rb` — precedência conta-first + `self.global_default_prompt` (fonte única)
+- `plugins/ai_agent/app/controllers/ai_agent/api/v1/accounts/system_prompts_controller.rb` — NOVO
+- `plugins/ai_agent/app/policies/ai_agent/system_prompt_policy.rb` — NOVO
+- `config/routes.rb` — `resource :ai_agent_system_prompt`
+- `plugins/ai_agent/swagger/paths/ai_agent_system_prompt.yml` — NOVO + `swagger/plugins_index.yml`
+- `plugins/ai_agent/frontend/api/systemPrompt.js` — NOVO
+- `plugins/ai_agent/frontend/store/aiAgentSystemPrompt.js` — NOVO + registro em `app/javascript/dashboard/store/index.js`
+- `plugins/ai_agent/frontend/routes/systemPrompt/Index.vue` — NOVO + rota em `plugins/ai_agent/frontend/routes/routes.js`
+- `app/javascript/dashboard/components-next/sidebar/Sidebar.vue` — item de menu "System Message" na seção BEA
+- `app/javascript/dashboard/helper/routeHelpers.js` — gate `['captain','manage_settings']`
+- `app/javascript/dashboard/i18n/locale/{en,pt_BR}/settings.json` + `pt_BR/aiAgent.json` — i18n
+
+## [1.12.0.96] - 2026-06-23T18:30:00-03:00
+
+### fix(ai-agent): Bea transferia em vez de agendar (clinic_info vazio) + ignora serviços arquivados
+
+**Problema:** ao chegar no agendamento, a Bea chamava `transfer_to_human` ("vou te transferir pro setor responsável") em vez de agendar. Motivo (do trace): *"os serviços em clinic_info retornaram vazios, impossibilitando encontrar o ID do serviço"*. Causa: (1) o `clinic_info` só lista serviços VINCULADOS a um profissional (`AgendaServiceUser`) e a conta não tinha NENHUM vínculo serviço↔profissional → lista vazia → a Bea não achava o `service_id` pra agendar; (2) tanto `clinic_info` quanto `format_services` não filtravam `.kept`, então serviços arquivados (soft-delete) ainda apareciam/atrapalhavam.
+
+**Solução:**
+
+- `clinic_info` e `format_services` agora filtram `.kept` (ignoram serviços arquivados).
+- (Dado, não código) Vinculados os serviços ao profissional via `AgendaServiceUser` — sem isso a clínica não consegue agendar nada pela Bea.
+
+**Arquivos Modificados:**
+
+- `plugins/ai_agent/app/services/ai_agent/prompt_builder.rb` — `format_services` usa `AgendaService.kept`
+- `plugins/ai_agent/app/services/ai_agent/tools/clinic_info_tool.rb` — lista de serviços usa `AgendaService.kept`
+
+## [1.12.0.95] - 2026-06-23T16:00:00-03:00
+
+### fix(ai-agent): emoji variado (rodízio), quebra de linha em bolhas, e follow-up com RAG/contexto
+
+**Problema (3 queixas do dono, validadas ao vivo no gemini-3.5-flash):** (1) a Bea ficava PRESA no mesmo emoji (🤎), ignorando os outros 10+ que a clínica usa; (2) não fazia quebra de linha — mandava tudo num bloco só, em vez de mensagens curtas como a clínica faz; (3) o follow-up proativo NÃO entendia o contexto nem puxava a RAG — respondia "ficou alguma dúvida?" genérico mesmo quando o paciente tinha dito "não tenho dinheiro" (devia oferecer parcelamento, que está na RAG).
+
+**Solução:**
+
+- **Emoji variado SEM inventar (drop-only):** o `EmojiNormalizer` foi reescrito pra operar POR PARÁGRAFO (= bolha do WhatsApp). PRINCÍPIO: nunca inserir um emoji que o modelo não escolheu — só REMOVER repetidos/excedentes. Assim cada emoji que sobra está no contexto certo (escolhido pelo modelo) e a variedade vem de tirar a muleta do 🤎 (deixando aparecer os outros que o modelo naturalmente usa). Regras: máx 1 emoji/bolha (de-stack); um emoji não reaparece dentro de `RECENT=2` bolhas (mata a repetição do 🤎 sem trocar por outro fora de contexto); funcionais (🗓 📍 ✅ …) preservados; máx `MAX_STREAK=3` bolhas seguidas com emoji. Provado ao vivo: numa conversa a saída teve 6 emojis distintos (🤎 🤩 🗓 ✅ 📍 ✨), 🤎 sem dominar, todos no lugar certo (✅ na confirmação, 📍 no endereço, 🗓 na agenda). NOTA: uma tentativa intermediária de RODIZIAR pela paleta (substituir o emoji do modelo) inseria emoji fora de contexto (ex.: 🤩 numa frase séria) — descartada em favor do drop-only.
+- **Quebra de linha → bolhas:** o `MessageChunker` já corta a resposta em bolhas por linha em branco (`\n\n`), mas o modelo não produzia os `\n\n`. Adicionada instrução de FORMATO no HEADER do tom: "escreva como no WhatsApp, separando ideias em parágrafos com uma linha em branco; nunca junte tudo num bloco". Provado ao vivo: cada resposta agora vem em 2-3 parágrafos → bolhas separadas.
+- **Follow-up com RAG + endereçamento de objeção:** o `MessageGenerator` agora (a) busca na base de conhecimento (RAG) trechos que respondam à última mensagem/objeção do paciente e injeta no contexto; (b) instrui a ENDEREÇAR a objeção (preço, medo, "vou pensar") com essas infos, em vez de um check-in genérico. Provado ao vivo: cenário "não tenho dinheiro" → RAG puxou a FAQ de parcelamento → follow-up ofereceu parcelamento e convidou a agendar.
+
+**Arquivos Modificados:**
+
+- `plugins/ai_agent/app/services/ai_agent/style_profile/emoji_normalizer.rb` — reescrito: por parágrafo + drop-only (variedade sem inventar emoji) + preserva funcionais
+- `plugins/ai_agent/app/services/ai_agent/style_profile/prompt_section.rb` — HEADER: instrução de FORMATO (quebra de linha/parágrafos) + CALOR em TODA mensagem inclusive operacionais (reagir antes de pedir dado, com exemplo concreto de pedido de CPF caloroso vs seco; removido o "secas" que dava licença pra secar) + barreira anti-narração (escrever só a mensagem final, nunca o raciocínio) + a reação calorosa NÃO pode INVENTAR o motivo/benefício/ramo da clínica (ex.: não dizer "cuidar da saúde"/"cuidar do sorriso" se o paciente não falou)
+- `plugins/ai_agent/app/services/ai_agent/chat_service.rb` — aplica o `EmojiNormalizer` na fala final (gate: tom ativo) + persiste estado no working_memory
+- `plugins/ai_agent/app/services/ai_agent/follow_ups/message_generator.rb` — RAG (`knowledge_lines`/`last_patient_message`) + instrução de endereçar objeção
+
+## [1.12.0.94] - 2026-06-23T13:22:37-03:00
+
+### fix(whatsapp-bridge): timeout do webhook 10s→30s (evita "network timeout" em cold-start do Rails dev)
+
+**Problema:** durante testes, mensagens do paciente às vezes pareciam "sem resposta da Bia". Investigando: o POST do bridge pro webhook do Chatwoot (`lib/whatsapp/server.js`) tinha `timeout: 10000` (10s). Quando uma edição de código Ruby dispara o reload de classes do Rails em dev, o PRIMEIRO webhook seguinte demora ~20s (carregamento a frio) — acima dos 10s. O bridge desistia e logava `❌ network timeout`, MAS o Rails seguia processando e entregava a resposta ~29s depois (a mensagem ficava `delivered`, só com latência alta). Era um falso-negativo do bridge, não perda de mensagem.
+
+**Solução:** subir o `timeout` do POST de encaminhamento da mensagem pra 30s. Em produção (sem reload) o webhook responde em < 2s; os 30s são folga só pro cold-start de dev, evitando o log de falha e tornando a entrega mais robusta. (App também foi aquecido após as edições pra a próxima mensagem não pegar reload.)
+
+**Arquivos Modificados:**
+
+- `lib/whatsapp/server.js` — `timeout` do fetch de encaminhamento ao webhook do Chatwoot: 10000 → 30000 ms (+ comentário do porquê)
+
+## [1.12.0.93] - 2026-06-23T12:56:37-03:00
+
+### feat(ai-agent): Bea quebra objeção de dinheiro usando a RAG + guardrail anti-invenção de financiamento
+
+**Problema:** mesmo com a base de conhecimento corrigida (1.12.0.92), a Bea NÃO usava o material de "quebra de objeção" no atendimento real. Diante de "não tenho dinheiro no momento" ela chamava só `find_patient_by_phone` (trace confirmou: `search_knowledge` nunca era chamada) e respondia genérico desengajando ("quando puder, as portas estão abertas"). Causa: o `CAPTAIN_BEA_SYSTEM_PROMPT` não tinha NENHUM gatilho de objeção — os triggers de `search_knowledge` cobriam só multa/política/FAQ/dúvida, e "não tenho dinheiro" não casa com nenhum, então a persona calorosa apenas encerrava.
+
+**Solução (decisão do dono: "a RAG manda — se o material ensina a responder de tal forma, a Bea segue"):**
+
+- **Prompt (`InstallationConfig['CAPTAIN_BEA_SYSTEM_PROMPT']`, editável em `/super_admin/bea` — não é arquivo do repo):** nova regra de ouro nº 11 "OBJEÇÃO/HESITAÇÃO NÃO É FIM DE PAPO" — diante de objeção de dinheiro/preço ("tá caro", "não tenho dinheiro", "vou pensar"), medo do resultado ou "preciso falar com meu marido", a Bea chama `search_knowledge` e RESPONDE SEGUINDO o material da clínica (inclusive parcelamento SE o material trouxer), com 1 pergunta pra manter o papo, e só encerra se o paciente insistir. Referência da tool `search_knowledge` ampliada pra objeções. Reforço anti-invenção proibindo número de parcelas/juros/forma de pagamento de cabeça. Verificado ao vivo: 6/6 objeções passaram a disparar a RAG, sem regressão no "parar" nem no agendamento normal.
+- **Guardrail determinístico (`AiAgent::Guardrail::PaymentSpecifics`, NOVO):** regra de prompt não segura 100% num modelo estocástico — em ~1/6 turnos o Gemini-flash ainda carimbava "em até 8x sem juros no cartão de crédito" (termo que NÃO está no material). O guardrail pós-LLM (mesma família de `ReasoningLeak`/`Validator`, roda no `ChatService#respond`) detecta termos de FINANCIAMENTO específicos (nº de parcelas, "sem juros", "X% de juros") e generaliza pra "em condições facilitadas". DELIBERADAMENTE não toca em valores "R$ ..." (preço pode vir legítimo do `clinic_info`) nem em formas de pagamento isoladas. Hoje generaliza incondicionalmente (não existe config de pagamento por clínica — é feature FUTURA, que passará a autorizar termos específicos via a fonte de verdade); `account` já está na assinatura pra esse hook. Verificado ao vivo: 9/9 objeções de dinheiro saíram sem vazamento de financiamento, ainda chamando `search_knowledge` e oferecendo parcelamento genérico.
+
+**Arquivos Modificados:**
+
+- `plugins/ai_agent/app/services/ai_agent/guardrail/payment_specifics.rb` — NOVO, guardrail determinístico que generaliza termos de financiamento inventados
+- `plugins/ai_agent/app/services/ai_agent/chat_service.rb` — wired `sanitize_payment_terms` no `#respond` (após o `Validator`, antes da cadência de emoji) + método privado com rescue defensivo
+- _(runtime, fora do repo)_ `InstallationConfig['CAPTAIN_BEA_SYSTEM_PROMPT']` — regra de ouro 11 + referência da tool + reforço anti-invenção (backup do anterior salvo)
+
+## [1.12.0.92] - 2026-06-23T11:02:46-03:00
+
+### fix(ai-agent): aba "Documentos" da Bea gravava na base de conhecimento errada (Captain legado) — o agente nunca lia
+
+**Problema:** documentos subidos pela aba **BEA → Documentos** não eram puxados pela Bea no atendimento (ex.: PDF "49 quebras de objeção", que foi processado corretamente em 49 FAQs aprovadas com embeddings). Causa-raiz: existem **dois RAGs paralelos** e a tela apontava para o errado. A Bea (plugin `ai_agent`) consulta SOMENTE `AiAgent::Document` → `AiAgent::ParentChunk/ChildChunk` (pgvector) via a tool `search_knowledge` (`AiAgent::Rag::Retriever`). Mas o ApiClient da tela ainda postava no endpoint **legado** `captain/documents` (`Captain::Document`), que o agente NUNCA consulta (`engine.rb`: "legacy reads from Captain::Document which is empty by design — Bea's RAG lives in AiAgent::Document"). O backend novo (`AiAgent::Api::V1::Accounts::DocumentsController`) já existia e foi desenhado pra espelhar o JSON do Captain "com só uma troca de URL no API client" — mas essa troca no frontend nunca tinha sido feita (migração incompleta).
+
+**Solução:** repontar o ApiClient de documentos de `captain/documents` para `ai_agent/documents`. Verificado compatível ponta a ponta: o payload de create do `DocumentForm` (`document[name|external_link|pdf_file|assistant_id]`) bate com `params.require(:document).permit(...)` do controller da Bea; o índice retorna `{ payload, meta: { total_count, page } }` idêntico ao jbuilder legado (e o `storeFactory` mapeia `total_count`→`totalCount`); `show`/`destroy` também batem. Agora todo upload pela aba alimenta o RAG real e a Bea passa a recuperar o conteúdo (tool `search_knowledge` já estava ativa e o prompt já manda usá-la). Backfill pontual do doc existente: as 49 Q&A do `Captain::Document #1` foram reingeridas como `AiAgent::Document` (`source_type: text`) via `IngestDocumentJob` → 9 parent / 53 child chunks embeddados; `SearchKnowledgeTool` agora retorna `found: true` para as objeções (validado ao vivo). Caveat conhecido: a ação "ver perguntas relacionadas" do card consulta `captainResponses` por `documentId` e exibirá vazio para docs da Bea (eles têm chunks, não respostas do Captain) — degradação cosmética de feature secundária, sem quebra.
+
+**Arquivos Modificados:**
+
+- `app/javascript/dashboard/api/captain/document.js` — base URL do ApiClient repontada de `captain/documents` → `ai_agent/documents` (a aba Documentos da Bea passa a gravar/ler no `AiAgent::Document`, o store que o agente realmente consulta)
+
+## [1.12.0.91] - 2026-06-17T15:00:00-03:00
+
+### fix(ai-agent): cadência de emoji da Bea — recalibra o tom (não secar) + normalizador determinístico
+
+**Problema:** o fix anterior (1.12.0.90) overcorrigiu — a Bea ficou SECA (perdeu o calor/informalidade do tom gerado). E, testando contra a LLM real (gemini-3.5-flash, system prompt real de 33k), comprovou-se que **o prompt sozinho NÃO controla a frequência de emoji**: o modelo imita o tom caloroso e carimba emoji em ~100% das mensagens (🤎/✨ repetidos, às vezes 4 emojis numa msg só). Instrução não segura isso.
+
+**Solução (decisão do dono: opção "Equilibrado"):** palavras SEMPRE calorosas; emoji controlado de forma determinística.
+
+- **HEADER do `PromptSection` reescrito warm-first:** lidera com "CALOROSO, amigável, informal, NUNCA seco/robótico" (recupera o calor que o 1.12.0.90 matou). Sobre emoji: positivo ("faz parte do calor, pode e deve usar") mas VARIADO e natural — separa QUAIS emojis (os da clínica) de QUANTO. Few-shot des-saturado por **cap por glifo** (`EMOJI_MAX_REPEAT=2`) no lugar do "strip quase tudo" anterior (que secava): mantém emoji nos bordões/exemplos, só quebra o monopólio do 🤎.
+- **`AiAgent::StyleProfile::EmojiNormalizer` (NOVO) — garante 100% no que o prompt não garante:** normaliza a fala FINAL da Bea (mexe SÓ no emoji, nunca nas palavras): (1) máx 1 emoji por mensagem (de-stack); (2) nunca o MESMO emoji em mensagens consecutivas (variedade — mata o "sempre o coração marrom"); (3) máx 2 mensagens seguidas com emoji → a 3ª sai limpa (~2 a cada 3). Estado por conversa (último emoji + streak) no `working_memory` do `ConversationState`. Validado contra as saídas REAIS capturadas da Bea: `🤎 🤩 · 🤎 ✨ · 🤎 ·` (63% com emoji, máx 1/msg, sem repetir o mesmo seguido, streak ≤ 2, empilhamento de 4 emojis → limpo).
+- **Wired no `ChatService`** (gate: só quando o tom de voz está ATIVO na conta; em qualquer erro devolve a msg original — nunca quebra o atendimento). Toma efeito na próxima mensagem, sem restart.
+
+**Arquivos Modificados:**
+
+- `plugins/ai_agent/app/services/ai_agent/style_profile/prompt_section.rb` — HEADER warm-first, `EMOJI_MAX_REPEAT` (cap por glifo no few-shot, substitui o strip), `emoji_line`/`EXAMPLES_HEADER` reescritos
+- `plugins/ai_agent/app/services/ai_agent/style_profile/emoji_normalizer.rb` — NOVO, normalizador determinístico de cadência de emoji
+- `plugins/ai_agent/app/services/ai_agent/chat_service.rb` — `apply_emoji_cadence` + `persist_turn_state!` + gate `style_profile_active?`
+
+## [1.12.0.90] - 2026-06-17T11:00:00-03:00
+
+### fix(ai-agent): tom de voz exagerando emoji (Bea punha emoji em toda mensagem, sempre o mesmo)
+
+**Problema:** com o tom de voz ativo, a Bea colocava emoji em TODA mensagem (e quase sempre o mesmo 🤎), inclusive em perguntas operacionais. Duas causas no bloco de tom injetado no system prompt: (1) o HEADER mandava "use os emojis DAQUI, não o emoji raro genérico" — removia o freio de frequência da persona padrão; (2) o few-shot estava saturado — greeting/closing/bordões e os 5 exemplos terminavam em 🤎, então o LLM imitava "emoji em toda mensagem" (exemplo vence instrução).
+
+**Solução:** separar **quais** emojis (os da clínica) de **com que frequência** (raro), atacando as duas causas no renderizador (`PromptSection`) — sem mexer no perfil salvo:
+
+- **HEADER reescrito:** "a MAIORIA das mensagens NÃO deve ter emoji; reserve pra momentos pontuais (boas-vindas, fechar com carinho, boa notícia), no máximo 1 por mensagem; NUNCA em respostas operacionais (horário, valor, confirmação de dado, pergunta objetiva), NUNCA repita o mesmo emoji em mensagens seguidas, NUNCA termine toda mensagem com emoji". O conjunto de emojis da clínica continua listado (pra usar SÓ esses quando usar).
+- **Few-shot des-saturado no render:** emoji removido dos bordões (o jeito de falar é o que importa; o conjunto já está listado à parte) e mantido só no 1º exemplo (mostra a colocação UMA vez), removido nos demais — assim o sinal dominante do few-shot vira "quase sem emoji". Validado no perfil real da conta: bordões 0 emoji, exemplos 2 emojis no total (ambos no 1º).
+- **EXAMPLES_HEADER:** aviso explícito "os exemplos podem ter mais emoji que o normal — NÃO copie a frequência deles".
+- Aplica nos dois caminhos (chat reativo e follow-ups) — toma efeito na próxima mensagem, sem restart.
+
+**Arquivos Modificados:**
+
+- `plugins/ai_agent/app/services/ai_agent/style_profile/prompt_section.rb` — HEADER/EXAMPLES_HEADER reescritos, `EMOJI_RE` + `thin_emojis` (afina emoji no render), bordões sem emoji, emoji só no 1º exemplo; `trait_lines`/`example_lines` refatorados em helpers
+
+## [1.12.0.89] - 2026-06-16T21:30:00-03:00
+
+### feat(ai-agent): upload de conversas em massa robusto (fila throttled + retry) + lista paginada
+
+**Problema:** o upload disparava TODOS os arquivos de uma vez (`Promise.all`) — com 40+ (e a meta é ~1000) isso sobrecarregava o servidor e parte falhava em silêncio, "sumindo" conversas. E a lista mostrava só 25 (paginação) sem carregar o resto, então o usuário via "25" mesmo tendo subido mais.
+
+**Solução:**
+
+- **Upload em fila controlada (`bulkCreate` no store):** concorrência LIMITADA (3 por vez, nunca N de uma vez — não sobrecarrega) + RETRY por arquivo (2 tentativas com backoff) + barra de progresso ("Enviando X de N"). Os que falharem mesmo após retry vão pra um banner "Reenviar os que faltaram" → nenhum fica de fora. Ao final, 1 fetch (não infla a lista com N inserções). Algoritmo validado por simulação: 200 arquivos com 40% de falha transitória → 200/200 enviados, concorrência sempre ≤ 3.
+- **Lista paginada de verdade:** o header mostra o TOTAL real do servidor (`meta.total_count`) e um botão "Carregar mais ({n} de {total})" pagina de 25 em 25 — escala pra centenas/milhares sem renderizar tudo de uma vez nem esconder conversas.
+
+**Arquivos Modificados:**
+
+- `plugins/ai_agent/frontend/store/aiAgentTraining.js` — `bulkCreate` (fila+retry+progresso), `fetchMore`, `meta`, mutations SET_META/APPEND_RECORDS
+- `plugins/ai_agent/frontend/api/training.js` — `get(page)`
+- `plugins/ai_agent/frontend/routes/training/Index.vue` — upload via `bulkCreate` + banners de progresso/falha + "carregar mais" + contagem real
+- `app/javascript/dashboard/i18n/locale/pt_BR/aiAgent.json` — `LOAD_MORE`, `UPLOAD_PROGRESS`, `UPLOAD_FAILED`, `UPLOAD_RETRY`
+
+## [1.12.0.88] - 2026-06-16T20:30:00-03:00
+
+### feat(ai-agent): seleção da clínica em massa com auto-detecção (Treinamento)
+
+**Problema:** ao subir muitas conversas (ex.: 46), cada uma fica em "Escolha a clínica" e o usuário tinha que selecionar manualmente quem é a clínica em CADA card — sendo que a clínica é sempre a mesma (o nome se repete em todas).
+
+**Solução:** auto-detecção + confirmação em 1 clique.
+
+- **Auto-detecção (front):** entre as conversas em `awaiting_clinic`, o nome de participante que aparece em MAIS conversas é a clínica (o paciente aparece em 1; a clínica, em quase todas). Validado nos dados reais: "DRA SABRINA ALVES…" detectada em 46/46.
+- **Banner** no topo da aba Conversas: "Detectamos que a clínica é '{nome}' em {N} conversas. Confirmar pra todas?" + botão.
+- **Endpoint bulk** `POST training_conversations/select_clinic_bulk` (`clinic_sender_name`): aplica a todas as `awaiting_clinic` que TÊM esse participante (as que não têm ficam pra seleção manual), cada uma volta a `:pending` e reprocessa. Espelha o padrão de `approve_all`/`destroy_all`. Policy `select_clinic_bulk?` (`captain.manage_faqs`).
+
+**Arquivos Modificados:**
+
+- `plugins/ai_agent/app/controllers/ai_agent/api/v1/accounts/training_conversations_controller.rb` — action `select_clinic_bulk`
+- `plugins/ai_agent/app/policies/ai_agent/training_conversation_policy.rb` — `select_clinic_bulk?`
+- `config/routes.rb` — rota de coleção
+- `plugins/ai_agent/frontend/api/training.js` + `store/aiAgentTraining.js` — `selectClinicBulk`
+- `plugins/ai_agent/frontend/routes/training/Index.vue` — auto-detecção + banner
+- `app/javascript/dashboard/i18n/locale/pt_BR/aiAgent.json` — `BULK_CLINIC.*`
+
+## [1.12.0.87] - 2026-06-16T19:30:00-03:00
+
+### feat(ai-agent): tom de voz mais rico + substitui o tom padrão + usa conversas arquivadas
+
+**Problema:** (1) o tom gerado era raso (3-5 exemplos); a clínica queria mais exemplos/detalhe. (2) o perfil da clínica era ANEXADO depois do system prompt global ("emoji raro, respostas curtas") e BATIA com ele. (3) bug: o Distiller ignorava conversas arquivadas — quem arquivava as conversas após publicar ficava sem fonte e a geração falhava com "sem mensagens".
+
+**Solução:**
+
+- **Mais rico:** Distiller agora pede 8-12 exemplos VARIADOS (dúvida/preço/agendamento/reclamação/pós), resumo detalhado (formalidade, ritmo, como conduz) e até ~15 bordões. Caps subiram (MAX_EXAMPLES_OUT 5→10, MAX_PAIRS 30→50, expressions 12→18) no Distiller, no renderer (`PromptSection`) e no controller.
+- **Substitui o padrão (resolve o "não bater"):** o `PromptSection` HEADER agora declara que o tom da clínica SUBSTITUI as orientações de tom/emoji/saudação da persona padrão (usa os emojis daqui, não o "emoji raro" genérico) — continuam soberanos só segurança, fatos-por-ferramenta e respostas curtas pra WhatsApp. Quando não há tom gerado, segue o padrão (como hoje).
+- **Bug arquivadas:** o Distiller agora lê conversas concluídas INCLUSIVE arquivadas (arquivar = tirar da lista, não "não aprender") — só conversa deletada some de vez.
+- FAQs seguem com o tom da clínica (decisão mantida).
+- ⚠️ Nota: a riqueza do tom depende do volume de conversas disponíveis — com 1 conversa o resultado é limitado.
+
+**Arquivos Modificados:**
+
+- `plugins/ai_agent/app/services/ai_agent/style_profile/distiller.rb` — caps + prompt mais detalhado + inclui arquivadas
+- `plugins/ai_agent/app/services/ai_agent/style_profile/prompt_section.rb` — caps + HEADER (tom substitui o padrão)
+- `plugins/ai_agent/app/controllers/ai_agent/api/v1/accounts/style_profiles_controller.rb` — cap de exemplos no approve
+
+## [1.12.0.86] - 2026-06-16T18:00:00-03:00
+
+### fix(ai-agent): auditoria holística do tom de voz (Fases 1-4) — correções de LGPD, robustez e UX
+
+**Problema:** auditoria multi-agente do projeto inteiro (não por diff) achou inconsistências entre fases e arestas: redação de PII assimétrica, robustez de polling e estado de UI no account-switch.
+
+**Solução (correções confirmadas; nits design-aceitos deixados como nota):**
+
+- **LGPD — redação simétrica (medium):** o `NameRedactor` agora roda em `summary` e `expressions` no Distiller (antes só greeting/closing/examples) — fecha o gap de nome de paciente gerado pelo LLM nesses campos chegar ao prompt.
+- **Prompt (Fase 1):** `PromptSection` HEADER deixa explícito que o tom NÃO sobrepõe brevidade/tamanho/limites da persona (antes "ritmo" podia inflar a resposta no chat reativo) e pede pra calibrar a intimidade ao paciente/contexto; `EXAMPLES_HEADER` idem (primeiro contato/reclamação → tom contido).
+- **Robustez (geração órfã):** `generating?` do controller agora trata um rascunho `generating` velho (worker morto antes do status terminal) como STALE (`started_at` + janela de 5min) → não bloqueia mais regerar; o front tem teto de polling (~6min) que cai num estado "demorou, tente de novo" em vez de spinner infinito.
+- **Frontend (account-switch):** o watch re-busca o tom da nova conta (a aba fica montada com v-show) e o `form` local é limpo quando a store zera — não retém edição não-aprovada de outra conta. Flag `is-loading` dos botões Gerar/Regerar corrigida (isGenerating).
+- Reverificado: geração E2E ok, render com gate, staleness, toggle preserva rascunho/aprovar consome, e o juiz preserva tom mantendo as 12 rejeições. eslint limpo; rubocop limpo (exceto ClassLength 177/175 do Distiller, aceito — classe coesa, dentro da diretriz ~200 do projeto).
+
+**Arquivos Modificados:**
+
+- `plugins/ai_agent/app/services/ai_agent/style_profile/distiller.rb` — redact em summary/expressions (clean_field) + merge de example_pairs
+- `plugins/ai_agent/app/services/ai_agent/style_profile/prompt_section.rb` — HEADER/EXAMPLES_HEADER (limites soberanos + calibrar intimidade)
+- `plugins/ai_agent/app/jobs/ai_agent/generate_style_profile_job.rb` — carimba `started_at`
+- `plugins/ai_agent/app/controllers/ai_agent/api/v1/accounts/style_profiles_controller.rb` — `generating?` stale-aware
+- `plugins/ai_agent/frontend/routes/training/components/TrainingVoiceTab.vue` — teto de polling + estado stalled, reset do form, is-loading
+- `plugins/ai_agent/frontend/routes/training/Index.vue` — re-fetch do tom no account-switch
+- `app/javascript/dashboard/i18n/locale/pt_BR/aiAgent.json` — `VOICE.STALLED`
+
+## [1.12.0.85] - 2026-06-16T15:00:00-03:00
+
+### feat(ai-agent): tom de voz da Bea — FAQs também com a "cara da clínica" (Fase 4, fim do projeto)
+
+**Problema:** o juiz semântico das FAQs (`FaqValidator`), ao reescrever uma FAQ pra tirar um detalhe de risco (nome de paciente, data), devolvia o texto "limpo e geral" — neutralizava o tom (tirava emoji, gírias, termos de carinho). Resultado: nos casos cobertos por FAQ, a Bea respondia robótico-neutro mesmo com o perfil de tom de voz ativo.
+
+**Solução (só prompt do `reescrever`, fail-closed e 12 regras de rejeição INTACTAS):** ao reescrever, o juiz agora TIRA só o detalhe de risco (nome próprio, data) e PRESERVA o jeitão — emojis, termos de carinho ("amor", "querida", "viu") e o tom acolhedor são tratados como ESTILO, não dado pessoal. Um exemplo concreto no prompt (antes/depois) ancora o comportamento (exemplo > regra abstrata, igual o painel de fidelidade concluiu).
+
+- Validado: FAQ com nome+emoji → reescrita mantém 😊 e "amor", remove só o nome; FAQ segura com emoji → mantida verbatim.
+- **Segurança reverificada (lote adversarial):** conselho clínico, encaixe pontual, preço negociado, promessa de resultado e promo com prazo — TODOS continuam rejeitados, mesmo carregando emoji/carinho. Afrouxar o tom NÃO afrouxou o juiz.
+
+**Arquivos Modificados:**
+
+- `plugins/ai_agent/app/services/ai_agent/training/faq_validator.rb` — instrução de reescrita preserva o tom (emoji/gíria/carinho); só nome próprio e data saem
+
+## [1.12.0.84] - 2026-06-16T10:00:00-03:00
+
+### feat(ai-agent): tom de voz da Bea — aba de revisão/aprovação (Fase 3, ciclo fechado)
+
+**Problema:** as Fases 1-2 deixaram o backbone (aplicar no prompt) e a geração (rascunho), mas não havia UI — o perfil só dava pra mexer no console. Faltava a clínica REVISAR, EDITAR (limpar nomes residuais — o gate de LGPD) e APROVAR pra ativar a voz.
+
+**Solução:** 3ª aba "Tom de voz" dentro do Treinamento (ao lado de Conversas / FAQs aprovadas) + endpoint de aprovar/ativar. Fecha o ciclo gerar → revisar → ativar.
+
+- **Backend** — endpoint `PATCH ai_agent/style_profile` (`update`): grava os campos revisados no perfil ATIVO e consome o rascunho; serve também pra ligar/desligar (`enabled`) sem regerar. Mass-assignment com whitelist (`permit`), tetos defensivos. `StyleProfilePolicy#update?` (`captain.manage_faqs`). Swagger atualizado.
+- **Frontend** — `TrainingVoiceTab.vue`: mostra o tom ATIVO com toggle ligar/desligar; botão "Gerar tom de voz" → polling do status (`generating → ready | failed`); revisão editável do rascunho (summary/greeting/closing + remover emoji/bordão/exemplo + editar a fala da clínica) com aviso de LGPD; "Aprovar e ativar a Bea". API client (`styleProfile.js`) + store Vuex (`aiAgentStyleProfile`, com reset no account-switch MT-19) + i18n pt_BR (`AI_AGENT.TRAINING.VOICE.*`).
+- Validado: aprovar → ativo `enabled:true` + rascunho consumido + renderer aplica; toggle liga/desliga; eslint e rubocop limpos.
+- **Robustez (pós-review adversarial):** (1) toggle ligar/desligar NÃO apaga mais um rascunho `ready` não revisado — só `approve: true` consome o rascunho (param novo; toggle manda sem ele); (2) abas com `v-show` em vez de `v-if` pra não destruir o componente ao alternar — preserva as edições do rascunho (o gate de LGPD) ao ir/voltar; (3) const `DRAFT_PROCESSING_STATUS` em vez de `'generating'` hardcoded; `.catch` no polling; 4 chaves i18n órfãs removidas.
+
+**Arquivos Modificados:**
+
+- `plugins/ai_agent/app/controllers/ai_agent/api/v1/accounts/style_profiles_controller.rb` — action `update` + `build_active`/`normalize_examples`
+- `plugins/ai_agent/app/policies/ai_agent/style_profile_policy.rb` — `update?`
+- `config/routes.rb` — `:update` no `resource :ai_agent_style_profile`
+- `plugins/ai_agent/swagger/paths/ai_agent_style_profile.yml` (patch) + `swagger/plugins_swagger.json` (regerado)
+- `plugins/ai_agent/frontend/api/styleProfile.js` (novo)
+- `plugins/ai_agent/frontend/store/aiAgentStyleProfile.js` (novo) + `app/javascript/dashboard/store/index.js` (registro)
+- `plugins/ai_agent/frontend/routes/training/components/TrainingVoiceTab.vue` (novo)
+- `plugins/ai_agent/frontend/routes/training/Index.vue` — aba "Tom de voz" + reset no account-switch
+- `app/javascript/dashboard/i18n/locale/pt_BR/aiAgent.json` — `TABS.VOICE` + seção `VOICE`
+
+## [1.12.0.83] - 2026-06-15T16:30:00-03:00
+
+### feat(ai-agent): tom de voz da Bea — geração automática do perfil a partir das conversas (Fase 2)
+
+**Problema:** a Fase 1 deixou o backbone (perfil de estilo aplicado no prompt), mas o perfil tinha que ser preenchido à mão. Faltava DESTILAR automaticamente o jeito da clínica falar a partir das conversas reais que ela já subiu no Treinamento.
+
+**Solução:** geração assíncrona que lê as conversas concluídas, destila o estilo e grava num RASCUNHO separado (`style_profile_draft`) — o perfil ATIVO não é tocado, então regerar não derruba a voz ao vivo (padrão "sugestão pendente", igual as FAQs; a aprovação rascunho→ativo é a Fase 3).
+
+- **`AiAgent::StyleProfile::Distiller`** — híbrido determinístico + LLM (filosofia do FaqExtractor): emojis extraídos por regex/frequência (set REAL, sem alucinação); traços (summary/greeting/closing/expressions) via LLM (gpt-4o-mini, fallback Gemini, temperatura 0, retry via `LlmResilience`); exemplos few-shot que o LLM só SELECIONA por índice — texto vem VERBATIM da lista (anti-alucinação). Amostragem uniforme das mensagens `role:CLINICA` (teto de conversas/mensagens), filtro de ruído de export (aviso Business da Meta, mídia omitida) que escapa do ChatParser.
+- **`AiAgent::StyleProfile::NameRedactor`** — redige nome de paciente → `[nome]` (LGPD; o `PiiRedactor` não pega nomes): vocativo após saudação ("Bom dia Nancy") + lista conhecida (senders salvos + nomes detectados pelo LLM). Best-effort — resíduo (typo de saudação, nome no meio da frase) é coberto pelo gate de revisão humana na aprovação (Fase 3).
+- **`AiAgent::GenerateStyleProfileJob`** (queue low) — orquestra, status do rascunho `generating → ready | failed`; `InsufficientData` (sem conversa) marca failed sem retry; indisponibilidade do LLM re-levanta pra Sidekiq reprocessar.
+- **Endpoint** `GET ai_agent/style_profile` (ativo+rascunho) e `POST .../generate` (dispara) — `StyleProfilesController` + `StyleProfilePolicy` (mesma perm do Treinamento: `captain` view/manage_faqs). Swagger incluído.
+- Validado end-to-end contra 33 conversas reais (account 1, 528 msgs): perfil de qualidade — tom caloroso captado, greeting/closing/bordões realistas, exemplos verbatim com nomes redigidos. rubocop limpo nos arquivos novos.
+- **Robustez (pós-review adversarial):** erro DEFINITIVO do LLM (billing/auth) não vira mais rascunho `ready` vazio — `[]` agora tenta fallback e, sem traço útil, marca `failed` (guard `blank_profile?`); `generate` com debounce (não re-enfileira se já `generating`); regerar/falhar PRESERVA o rascunho anterior (merge de status, não overwrite); `NameRedactor` com stoplist (não redige "Oi Dra"); swagger `StyleProfile` extraído pra `definitions/` (a ref `#/` irmã ficava pendurada no JSON compilado) e `plugins_swagger.json` regerado.
+
+**Arquivos Modificados:**
+
+- `plugins/ai_agent/db/migrate/20260615000002_add_style_profile_draft_to_ai_agent_account_settings.rb` (novo) + `db/schema.rb`
+- `plugins/ai_agent/app/services/ai_agent/style_profile/distiller.rb` (novo)
+- `plugins/ai_agent/app/services/ai_agent/style_profile/name_redactor.rb` (novo)
+- `plugins/ai_agent/app/jobs/ai_agent/generate_style_profile_job.rb` (novo)
+- `plugins/ai_agent/app/controllers/ai_agent/api/v1/accounts/style_profiles_controller.rb` (novo)
+- `plugins/ai_agent/app/policies/ai_agent/style_profile_policy.rb` (novo)
+- `plugins/ai_agent/app/services/ai_agent/style_profile/prompt_section.rb` — header de exemplos: nomes são ilustrativos
+- `config/routes.rb` — `resource :ai_agent_style_profile`
+- `plugins/ai_agent/swagger/paths/ai_agent_style_profile.yml` (novo) + `plugins/ai_agent/swagger/definitions/StyleProfile.yml` (novo) + `swagger/plugins_index.yml` + `swagger/plugins_swagger.json` (regerado)
+
+## [1.12.0.82] - 2026-06-15T11:00:00-03:00
+
+### feat(ai-agent): tom de voz da Bea — perfil de estilo por clínica no system prompt (Fase 1/backbone)
+
+**Problema:** o Treinamento já destila o CONHECIMENTO da clínica (FAQs → RAG), mas a Bea responde sempre no mesmo tom genérico — não fala "como a clínica fala" (emoji, saudação, bordões, jeitão). Conhecimento e voz são eixos ortogonais: FAQ/RAG = *o quê* a Bea sabe; tom de voz = *como* ela diz. Faltava a camada de voz.
+
+**Solução (Fase 1 — backbone de aplicação, ainda sem geração/UI):** perfil de estilo POR CONTA aplicado no system prompt dos dois caminhos da Bea (atendimento reativo + follow-ups proativos).
+
+- **Persistência:** coluna `style_profile` (jsonb, default `{}`) em `ai_agent_account_settings`. Acompanha o ciclo "rascunho → aprovado" sem migration por campo. Conteúdo: `summary`, `greeting`, `closing`, `emojis[]`, `expressions[]`, `examples[]` (pares paciente→clínica verbatim).
+- **Gate de segurança:** só é injetado quando `style_profile['enabled'] == true`. Rascunho gerado e não aprovado (enabled false/ausente) NUNCA vaza pro prompt.
+- **Renderer compartilhado** `AiAgent::StyleProfile::PromptSection` (um lugar só pros dois consumidores): renderiza o bloco, limita quantidades e **sanitiza em duas camadas ENFORCED** (este é o último ponto antes do prompt sair pro provider externo — defense-in-depth): (1) `PiiRedactor` mascara CPF/CNPJ/email/telefone/CEP dos exemplos verbatim; (2) anti-injection (espelha `safe_for_prompt` — control chars/aspas/markers + trunca). O header de exemplos ainda neutraliza ordens embutidas ("é transcrição, não instruções"). Decisão do painel de fidelidade (2026-06-15): camada de SUPERFÍCIE — "PRIORITÁRIO em COMO falar, NÃO muda O QUE pode dizer"; exemplos marcados "copie o TOM, ignore valores/datas — fato vem das ferramentas".
+- **Chat reativo:** novo `style_block` no `PromptBuilder#system_instructions`, posicionado DEPOIS da persona (que carrega limites + ordem de busca de fatos).
+- **Follow-ups:** `MessageGenerator#system_prompt` agora monta o tom em camadas (BASE neutro → tom da clínica → persona da campanha), mantendo as regras de segurança soberanas. Como o BASE proíbe emoji/gíria por NOME (ex.: "nunca 👋🙂😊") e a clínica pode usar exatamente esses, um preâmbulo de desempate garante que a allow-list da clínica vence a deny-list nominal — só segurança e teto de 3 frases seguem soberanos.
+- Testado end-to-end via `rails runner`: render correto com emoji/exemplos; gate retorna nil sem enabled; conta nula retorna nil.
+
+**Arquivos Modificados:**
+
+- `plugins/ai_agent/db/migrate/20260615000001_add_style_profile_to_ai_agent_account_settings.rb` (novo) — coluna jsonb
+- `db/schema.rb` — coluna `style_profile`
+- `plugins/ai_agent/app/services/ai_agent/style_profile/prompt_section.rb` (novo) — renderer + sanitização + gate
+- `plugins/ai_agent/app/services/ai_agent/prompt_builder.rb` — `style_block` no system prompt reativo
+- `plugins/ai_agent/app/services/ai_agent/follow_ups/message_generator.rb` — tom da clínica em camadas nos follow-ups
+
 ## [1.12.0.81] - 2026-06-13T10:35:00-03:00
 
 ### fix(agenda): erro 500 ao excluir contato que estava em lista de espera (FK sem cascade)

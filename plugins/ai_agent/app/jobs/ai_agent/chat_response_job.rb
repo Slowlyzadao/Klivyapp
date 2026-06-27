@@ -85,42 +85,57 @@ class AiAgent::ChatResponseJob < ApplicationJob
       return
     end
 
+    # Gate de LANÇAMENTO (modo voucher): a Bea SÓ responde quem chegou por
+    # voucher — a FOTO do voucher OU um dos textos-gatilho do QR. Quem chega de
+    # outro jeito fica sem resposta nenhuma (nem "digitando"). Conversa já
+    # ativada por voucher continua sendo atendida nos próximos turnos.
+    voucher_gate = AiAgent::Voucher::Gate.new(account: account, conversation: conversation, message: message)
+    if voucher_gate.enabled? && !voucher_gate.allowed?
+      Rails.logger.info("[AiAgent::ChatResponseJob] msg #{message.id} ignorada: modo voucher, sem voucher/gatilho")
+      return
+    end
+
     typing_on(conversation)
 
-    # Sprint F2: imagem/vídeo. Antes de tudo, se a mensagem é
-    # primariamente uma mídia visual, classifica e escala humano —
-    # CFM proíbe Bea interpretar conteúdo médico de imagem.
+    # Imagem/vídeo. FORA do modo voucher (ou vídeo): classifica e escala humano
+    # (CFM proíbe Bea interpretar conteúdo clínico de imagem). NO modo voucher,
+    # uma IMAGEM é o voucher → lê o texto (OCR) e segue o fluxo, sem handoff.
     if (visual = first_visual_attachment(message))
-      handle_visual(conversation, message.inbox, visual)
-      return
-    end
-
-    # Sprint F MVP: voice notes. Se a mensagem chega como áudio
-    # (WhatsApp PTT), transcreve via Whisper antes de mandar pro
-    # ChatService. Texto da transcrição é "como se" o paciente
-    # tivesse digitado — fluxo normal de Bea (state machine,
-    # emergency, tools, sentinel) roda igual.
-    effective_content = resolve_message_content(message, conversation)
-
-    # Race condition: blob ainda não chegou ao storage. Reenfileira
-    # com delay até MAX_BLOB_RETRY antes de cair no fallback.
-    if effective_content == :file_not_ready
-      if attempt < MAX_BLOB_RETRY
-        Rails.logger.info("[AiAgent::ChatResponseJob] msg #{message.id} blob não pronto, reenfileirando (tentativa #{attempt + 1}/#{MAX_BLOB_RETRY})")
-        # Propaga account_id pro reenqueue manter a defesa cross-tenant.
-        self.class.set(wait: BLOB_RETRY_DELAY).perform_later(
-          message_id, attempt: attempt + 1, account_id: account_id || message.account_id
-        )
+      if voucher_gate.enabled? && visual.file_type.to_s == 'image'
+        effective_content = handle_voucher_image(message, conversation, visual, attempt, account_id, voucher_gate)
+        # nil = já tratado (reenfileirado ou já pedimos pra reenviar) → encerra.
+        return if effective_content.blank?
+      else
+        handle_visual(conversation, message.inbox, visual)
         return
       end
-      Rails.logger.warn("[AiAgent::ChatResponseJob] msg #{message.id} blob ainda não pronto após #{MAX_BLOB_RETRY} tentativas — fallback")
-      post_audio_fallback(conversation, message.inbox)
-      return
-    end
+    else
+      # Voice notes: transcreve via Whisper; texto vira "como se" digitado.
+      effective_content = resolve_message_content(message, conversation)
 
-    if effective_content.blank?
-      post_audio_fallback(conversation, message.inbox)
-      return
+      # Race condition: blob ainda não chegou ao storage. Reenfileira com
+      # delay até MAX_BLOB_RETRY antes de cair no fallback.
+      if effective_content == :file_not_ready
+        if attempt < MAX_BLOB_RETRY
+          Rails.logger.info("[AiAgent::ChatResponseJob] msg #{message.id} blob não pronto, reenfileirando (tentativa #{attempt + 1}/#{MAX_BLOB_RETRY})")
+          self.class.set(wait: BLOB_RETRY_DELAY).perform_later(
+            message_id, attempt: attempt + 1, account_id: account_id || message.account_id
+          )
+          return
+        end
+        Rails.logger.warn("[AiAgent::ChatResponseJob] msg #{message.id} blob ainda não pronto após #{MAX_BLOB_RETRY} tentativas — fallback")
+        post_audio_fallback(conversation, message.inbox)
+        return
+      end
+
+      if effective_content.blank?
+        post_audio_fallback(conversation, message.inbox)
+        return
+      end
+
+      # Modo voucher ativado por TEXTO-gatilho: marca a conversa pra seguir
+      # respondendo nos próximos turnos (a imagem marca dentro do OCR).
+      voucher_gate.mark_activated! if voucher_gate.enabled? && !voucher_gate.activated?
     end
 
     history = build_history(conversation, message)
@@ -282,6 +297,46 @@ class AiAgent::ChatResponseJob < ApplicationJob
       inbox_id: inbox.id,
       sender: AiAgent::AgentBotIdentity.ensure!,
       content: 'Recebi seu áudio mas não consegui ouvi-lo bem por aqui. Você pode me mandar a mensagem por escrito? 🎙️'
+    )
+    promote_to_open(conversation) if conversation.pending?
+  end
+
+  # Modo voucher: lê a FOTO do voucher (OCR via Gemini) e devolve uma "mensagem
+  # do paciente" sintetizada com o texto do voucher, pra Bea comemorar e
+  # agendar. Retorna nil quando já tratou sozinho (reenfileirou o blob, ou
+  # pediu pra reenviar) — aí o caller encerra. Marca a conversa como ativada.
+  def handle_voucher_image(message, conversation, attachment, attempt, account_id, gate)
+    result = AiAgent::Multimodal::VoucherTextExtractor.new(attachment: attachment).call
+
+    if result == AiAgent::Multimodal::VoucherTextExtractor::FILE_NOT_READY
+      if attempt < MAX_BLOB_RETRY
+        Rails.logger.info("[AiAgent::ChatResponseJob] msg #{message.id} voucher blob não pronto, reenfileirando (#{attempt + 1}/#{MAX_BLOB_RETRY})")
+        self.class.set(wait: BLOB_RETRY_DELAY).perform_later(message.id, attempt: attempt + 1, account_id: account_id || message.account_id)
+        return nil
+      end
+      result = nil
+    end
+
+    # Marca ativada de qualquer jeito: mandar foto = intenção de voucher, então
+    # ela segue podendo conversar por texto mesmo que o OCR falhe.
+    gate.mark_activated!(voucher_text: result&.text)
+
+    if result.nil? || !result.has_voucher
+      post_voucher_help(conversation, message.inbox)
+      return nil
+    end
+
+    Rails.logger.info("[AiAgent::ChatResponseJob] voucher lido conv=#{conversation.id}: #{result.text[0, 120].inspect}")
+    "Oi! Acabei de enviar a foto do meu voucher. Nele está escrito: \"#{result.text}\""
+  end
+
+  def post_voucher_help(conversation, inbox)
+    conversation.messages.create!(
+      message_type: :outgoing,
+      account_id: conversation.account_id,
+      inbox_id: inbox.id,
+      sender: AiAgent::AgentBotIdentity.ensure!,
+      content: 'Aii, não consegui ler direitinho o seu voucher na foto 🙈 Me conta: qual desconto e qual procedimento está escrito nele?'
     )
     promote_to_open(conversation) if conversation.pending?
   end

@@ -1,0 +1,57 @@
+show:
+  get:
+    tags:
+      - Bea — System Message
+    summary: Ler o system message da conta (+ default do super admin)
+    description: |
+      Retorna o system message PRÓPRIO da conta (`content`), o `default` global
+      do super admin (InstallationConfig 'CAPTAIN_BEA_SYSTEM_PROMPT', editável em
+      /super_admin/bea) e `using_default` (true quando a conta ainda não tem o
+      seu e herda o default em runtime). O `default` é o que o botão "Restaurar
+      padrão" preenche no editor.
+
+      Autorização: admin OR Klivy `captain.view`.
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+    responses:
+      '200':
+        description: System message da conta + default
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content: { type: string, description: System message próprio da conta (vazio = herda o default) }
+                default: { type: string, description: Default global do super admin (fonte do "Restaurar padrão") }
+                using_default: { type: boolean, description: true quando a conta não tem o seu e usa o default }
+      '401':
+        description: Sem permissão (`captain.view`) — Pundit renderiza 401
+  patch:
+    tags:
+      - Bea — System Message
+    summary: Gravar o system message da conta
+    description: |
+      Grava o `content` como system message da conta. A partir daí a Bea segue
+      100% esse texto (congelado) — melhorias futuras no default global do super
+      admin NÃO o alteram. Salvar vazio reverte pro default em runtime.
+
+      Autorização: admin OR Klivy `captain.manage_settings`.
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [system_prompt]
+            properties:
+              system_prompt:
+                type: object
+                properties:
+                  content: { type: string }
+    responses:
+      '200':
+        description: System message da conta atualizado
+      '401':
+        description: Sem permissão (`captain.manage_settings`) — Pundit renderiza 401

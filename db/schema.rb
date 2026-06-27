@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_06_13_000001) do
+ActiveRecord::Schema[7.1].define(version: 2026_06_27_000001) do
   # These extensions should be enabled to support this database
   enable_extension "btree_gist"
   enable_extension "pg_stat_statements"
@@ -341,6 +341,10 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_13_000001) do
     t.bigint "responsible_physician_id"
     t.string "responsible_physician_crm"
     t.string "responsible_physician_council"
+    t.jsonb "style_profile", default: {}, null: false
+    t.jsonb "style_profile_draft", default: {}, null: false
+    t.text "system_prompt"
+    t.jsonb "voucher_config", default: {}, null: false
     t.index ["account_id"], name: "index_ai_agent_account_settings_on_account_id", unique: true
     t.index ["persona_id"], name: "index_ai_agent_account_settings_on_persona_id"
     t.index ["responsible_physician_id"], name: "index_ai_agent_account_settings_on_responsible_physician_id"
@@ -1701,9 +1705,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_13_000001) do
     t.index ["account_id"], name: "index_financial_agent_profiles_on_account_id"
     t.check_constraint "agent_category::text <> 'administrador'::text OR commissionable = false", name: "chk_agent_profiles_admin_not_commissionable"
     t.check_constraint "agent_category::text <> 'profissional'::text OR cro IS NOT NULL", name: "chk_agent_profiles_profissional_has_cro"
-    t.check_constraint "agent_category::text = ANY (ARRAY['profissional'::character varying::text, 'operacional'::character varying::text, 'comercial'::character varying::text, 'administrador'::character varying::text])", name: "chk_agent_profiles_category"
-    t.check_constraint "bond_type::text = ANY (ARRAY['PJ'::character varying::text, 'CLT'::character varying::text, 'Socio'::character varying::text])", name: "chk_agent_profiles_bond_type"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'inactive'::character varying::text])", name: "chk_agent_profiles_status"
+    t.check_constraint "agent_category::text = ANY (ARRAY['profissional'::character varying, 'operacional'::character varying, 'comercial'::character varying, 'administrador'::character varying]::text[])", name: "chk_agent_profiles_category"
+    t.check_constraint "bond_type::text = ANY (ARRAY['PJ'::character varying, 'CLT'::character varying, 'Socio'::character varying]::text[])", name: "chk_agent_profiles_bond_type"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]::text[])", name: "chk_agent_profiles_status"
   end
 
   create_table "financial_audit_logs", force: :cascade do |t|
@@ -1957,10 +1961,10 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_13_000001) do
     t.index ["account_id"], name: "index_financial_commission_rules_on_account_id"
     t.index ["deleted_at"], name: "index_financial_commission_rules_on_deleted_at"
     t.index ["professional_id", "valid_from", "valid_until"], name: "idx_commission_rules_validity"
-    t.check_constraint "pay_when::text = ANY (ARRAY['fechamento_mes'::character varying::text, 'imediato'::character varying::text, 'no_recebimento'::character varying::text])", name: "chk_commission_rules_pay_when"
-    t.check_constraint "role IS NULL OR (role::text = ANY (ARRAY['DR'::character varying::text, 'SDR'::character varying::text, 'Comercial'::character varying::text]))", name: "chk_commission_rules_role"
-    t.check_constraint "scope::text = ANY (ARRAY['todos'::character varying::text, 'por_procedimento'::character varying::text, 'por_especialidade'::character varying::text])", name: "chk_commission_rules_scope"
-    t.check_constraint "trigger_event::text = ANY (ARRAY['paciente_comparece'::character varying::text, 'orcamento_aceito'::character varying::text, 'profissional_realizou'::character varying::text, 'pagamento_confirmado'::character varying::text])", name: "chk_commission_rules_trigger"
+    t.check_constraint "pay_when::text = ANY (ARRAY['fechamento_mes'::character varying, 'imediato'::character varying, 'no_recebimento'::character varying]::text[])", name: "chk_commission_rules_pay_when"
+    t.check_constraint "role IS NULL OR (role::text = ANY (ARRAY['DR'::character varying, 'SDR'::character varying, 'Comercial'::character varying]::text[]))", name: "chk_commission_rules_role"
+    t.check_constraint "scope::text = ANY (ARRAY['todos'::character varying, 'por_procedimento'::character varying, 'por_especialidade'::character varying]::text[])", name: "chk_commission_rules_scope"
+    t.check_constraint "trigger_event::text = ANY (ARRAY['paciente_comparece'::character varying, 'orcamento_aceito'::character varying, 'profissional_realizou'::character varying, 'pagamento_confirmado'::character varying]::text[])", name: "chk_commission_rules_trigger"
   end
 
   create_table "financial_dre_categories", force: :cascade do |t|
@@ -2097,13 +2101,13 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_13_000001) do
     t.index ["payment_method_id"], name: "index_financial_expenses_on_payment_method_id"
     t.check_constraint "amount_cents >= 0", name: "chk_expense_amount_nonneg"
     t.check_constraint "discount_amount_cents >= 0", name: "chk_expense_discount_cents_nn"
-    t.check_constraint "discount_type::text = ANY (ARRAY['fixed'::character varying::text, 'percent'::character varying::text])", name: "chk_expense_discount_type"
+    t.check_constraint "discount_type::text = ANY (ARRAY['fixed'::character varying, 'percent'::character varying]::text[])", name: "chk_expense_discount_type"
     t.check_constraint "discount_value >= 0::numeric AND (discount_type::text <> 'percent'::text OR discount_value < 100::numeric)", name: "chk_expense_discount_value_range"
     t.check_constraint "fine_amount_cents >= 0", name: "chk_expense_fine_cents_nn"
-    t.check_constraint "fine_type::text = ANY (ARRAY['fixed'::character varying::text, 'percent'::character varying::text])", name: "chk_expense_fine_type"
+    t.check_constraint "fine_type::text = ANY (ARRAY['fixed'::character varying, 'percent'::character varying]::text[])", name: "chk_expense_fine_type"
     t.check_constraint "fine_value >= 0::numeric AND (fine_type::text <> 'percent'::text OR fine_value < 100::numeric)", name: "chk_expense_fine_value_range"
     t.check_constraint "interest_amount_cents >= 0", name: "chk_expense_interest_cents_nn"
-    t.check_constraint "interest_type::text = ANY (ARRAY['fixed'::character varying::text, 'percent'::character varying::text])", name: "chk_expense_interest_type"
+    t.check_constraint "interest_type::text = ANY (ARRAY['fixed'::character varying, 'percent'::character varying]::text[])", name: "chk_expense_interest_type"
     t.check_constraint "interest_value >= 0::numeric AND (interest_type::text <> 'percent'::text OR interest_value < 100::numeric)", name: "chk_expense_interest_value_range"
     t.check_constraint "paid_amount_cents >= 0", name: "chk_expense_paid_nonneg"
   end
@@ -2305,7 +2309,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_13_000001) do
     t.check_constraint "fee_percent_basis_points >= 0 AND fee_percent_basis_points <= 10000", name: "chk_fees_percent_range"
     t.check_constraint "installments_count >= 1 AND installments_count <= 24", name: "chk_fees_installments_count"
     t.check_constraint "liquidation_days >= 0", name: "chk_fees_liquidation_nonneg"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'inactive'::character varying::text])", name: "chk_fees_status"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]::text[])", name: "chk_fees_status"
     t.check_constraint "valid_to IS NULL OR valid_to >= valid_from", name: "chk_fees_valid_range"
     t.exclusion_constraint "account_id WITH =, payment_method_id WITH =, installments_count WITH =, daterange(valid_from, COALESCE(valid_to, 'infinity'::date), '[]'::text) WITH &&", where: "(deleted_at IS NULL) AND ((status)::text = 'active'::text)", using: :gist, name: "no_overlapping_payment_method_fees"
   end
@@ -2333,9 +2337,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_13_000001) do
     t.index ["account_id", "provider"], name: "index_financial_payment_methods_on_account_id_and_provider"
     t.index ["account_id", "status"], name: "index_financial_payment_methods_on_account_id_and_status"
     t.index ["account_id"], name: "index_financial_payment_methods_on_account_id"
-    t.check_constraint "kind::text = ANY (ARRAY['dinheiro'::character varying::text, 'pix'::character varying::text, 'debito'::character varying::text, 'credito'::character varying::text, 'boleto'::character varying::text, 'transferencia'::character varying::text, 'convenio'::character varying::text, 'parcelamento_proprio'::character varying::text])", name: "chk_payment_methods_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['dinheiro'::character varying, 'pix'::character varying, 'debito'::character varying, 'credito'::character varying, 'boleto'::character varying, 'transferencia'::character varying, 'convenio'::character varying, 'parcelamento_proprio'::character varying]::text[])", name: "chk_payment_methods_kind"
     t.check_constraint "max_installments >= 1 AND max_installments <= 24", name: "chk_payment_methods_max_installments"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'inactive'::character varying::text])", name: "chk_payment_methods_status"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]::text[])", name: "chk_payment_methods_status"
   end
 
   create_table "financial_payment_receipt_items", force: :cascade do |t|
@@ -2392,11 +2396,11 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_13_000001) do
     t.index ["account_id"], name: "index_financial_payment_receipts_on_account_id"
     t.index ["deleted_at"], name: "index_financial_payment_receipts_on_deleted_at"
     t.index ["financial_entry_id"], name: "index_financial_payment_receipts_on_financial_entry_id"
-    t.check_constraint "discount_type::text = ANY (ARRAY['fixed'::character varying::text, 'percent'::character varying::text])", name: "chk_receipt_discount_type"
+    t.check_constraint "discount_type::text = ANY (ARRAY['fixed'::character varying, 'percent'::character varying]::text[])", name: "chk_receipt_discount_type"
     t.check_constraint "discount_value >= 0::numeric AND (discount_type::text <> 'percent'::text OR discount_value < 100::numeric)", name: "chk_receipt_discount_value_range"
-    t.check_constraint "fine_type::text = ANY (ARRAY['fixed'::character varying::text, 'percent'::character varying::text])", name: "chk_receipt_fine_type"
+    t.check_constraint "fine_type::text = ANY (ARRAY['fixed'::character varying, 'percent'::character varying]::text[])", name: "chk_receipt_fine_type"
     t.check_constraint "fine_value >= 0::numeric AND (fine_type::text <> 'percent'::text OR fine_value < 100::numeric)", name: "chk_receipt_fine_value_range"
-    t.check_constraint "interest_type::text = ANY (ARRAY['fixed'::character varying::text, 'percent'::character varying::text])", name: "chk_receipt_interest_type"
+    t.check_constraint "interest_type::text = ANY (ARRAY['fixed'::character varying, 'percent'::character varying]::text[])", name: "chk_receipt_interest_type"
     t.check_constraint "interest_value >= 0::numeric AND (interest_type::text <> 'percent'::text OR interest_value < 100::numeric)", name: "chk_receipt_interest_value_range"
   end
 
@@ -2420,7 +2424,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_13_000001) do
     t.check_constraint "period_month >= 1 AND period_month <= 12", name: "chk_period_closures_month_range"
     t.check_constraint "period_year >= 2020 AND period_year <= 2100", name: "chk_period_closures_year_range"
     t.check_constraint "status::text <> 'reopened'::text OR reopened_at IS NOT NULL AND reopened_by_id IS NOT NULL AND reopen_reason IS NOT NULL", name: "chk_period_closures_reopen_complete"
-    t.check_constraint "status::text = ANY (ARRAY['closed'::character varying::text, 'reopened'::character varying::text])", name: "chk_period_closures_status"
+    t.check_constraint "status::text = ANY (ARRAY['closed'::character varying, 'reopened'::character varying]::text[])", name: "chk_period_closures_status"
   end
 
   create_table "financial_recurring_billings", force: :cascade do |t|
@@ -2506,7 +2510,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_13_000001) do
     t.index ["reverses_payment_receipt_id"], name: "index_financial_refunds_on_reverses_payment_receipt_id", where: "(reverses_payment_receipt_id IS NOT NULL)"
     t.check_constraint "refund_amount_cents > 0", name: "chk_refunds_amount_pos"
     t.check_constraint "refund_method::text = 'patient_credit'::text OR bank_account_id IS NOT NULL", name: "chk_refunds_bank_required_when_real_refund"
-    t.check_constraint "refund_method::text = ANY (ARRAY['cash'::character varying::text, 'pix'::character varying::text, 'bank_transfer'::character varying::text, 'patient_credit'::character varying::text])", name: "chk_refunds_method"
+    t.check_constraint "refund_method::text = ANY (ARRAY['cash'::character varying, 'pix'::character varying, 'bank_transfer'::character varying, 'patient_credit'::character varying]::text[])", name: "chk_refunds_method"
     t.check_constraint "refund_proportion_bps >= 1 AND refund_proportion_bps <= 10000", name: "chk_refunds_proportion_range"
   end
 
@@ -2536,8 +2540,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_13_000001) do
     t.index ["account_id", "start_date", "end_date"], name: "idx_revenue_goals_period"
     t.index ["account_id"], name: "index_financial_revenue_goals_on_account_id"
     t.check_constraint "end_date >= start_date", name: "chk_revenue_goals_date_range"
-    t.check_constraint "kind::text = ANY (ARRAY['total'::character varying::text, 'por_categoria'::character varying::text, 'por_agente'::character varying::text])", name: "chk_revenue_goals_kind"
-    t.check_constraint "metric::text = ANY (ARRAY['currency'::character varying::text, 'count'::character varying::text])", name: "chk_revenue_goals_metric"
+    t.check_constraint "kind::text = ANY (ARRAY['total'::character varying, 'por_categoria'::character varying, 'por_agente'::character varying]::text[])", name: "chk_revenue_goals_kind"
+    t.check_constraint "metric::text = ANY (ARRAY['currency'::character varying, 'count'::character varying]::text[])", name: "chk_revenue_goals_metric"
     t.check_constraint "target_cents >= 0", name: "chk_revenue_goal_amount_nonneg"
   end
 
@@ -2566,7 +2570,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_13_000001) do
     t.index ["account_id"], name: "index_financial_service_pricings_on_account_id"
     t.check_constraint "convenio_price_cents IS NULL OR convenio_price_cents >= 0", name: "chk_service_pricings_convenio_nonneg"
     t.check_constraint "particular_price_cents >= 0", name: "chk_service_pricings_particular_nonneg"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'inactive'::character varying::text])", name: "chk_service_pricings_status"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]::text[])", name: "chk_service_pricings_status"
   end
 
   create_table "financial_setup_states", force: :cascade do |t|

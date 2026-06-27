@@ -48451,9 +48451,6 @@
                       "id": {
                         "type": "integer"
                       },
-                      "account_id": {
-                        "type": "integer"
-                      },
                       "name": {
                         "type": "string",
                         "maxLength": 120,
@@ -48475,13 +48472,14 @@
                           "no_response",
                           "no_show",
                           "appointment_confirmed",
-                          "custom"
+                          "custom",
+                          "service_recall"
                         ],
                         "description": "Tipo de gatilho:\n- **pre_appointment**: N horas ANTES de `AgendaEvent.starts_at`\n- **post_appointment**: N horas DEPOIS\n- **no_response**: paciente não responde há N horas\n- **no_show**: `AgendaEvent.status='no_show'` há N horas\n- **appointment_confirmed**: event-driven (NÃO usa cron). Dispara via\n  callback do `AgendaEvent` quando o status muda de\n  `pending_confirmation` pra `scheduled`/`confirmed`. O\n  `CandidateFinder` ignora esse trigger; a entrada vem do\n  `AiAgent::FollowUps::DispatchAppointmentConfirmedJob`.\n- **custom**: dispara só via API explícita (sem cron)\n"
                       },
                       "offset_hours": {
                         "type": "integer",
-                        "description": "Offset POSITIVO. Direção (antes/depois) vem do `trigger_type`.\nCombinado com `offset_unit` (default `hours`) e clampado por unidade\n(ver `OFFSET_LIMITS_BY_UNIT` no model).\n",
+                        "description": "Offset POSITIVO. Direção (antes/depois) vem do `trigger_type`.\nCombinado com `offset_unit` (default `hours`) e clampado por unidade\n(ver `OFFSET_LIMITS` no model).\n",
                         "example": 24
                       },
                       "offset_unit": {
@@ -48510,19 +48508,147 @@
                       },
                       "status_filter": {
                         "type": "object",
-                        "description": "Filtros extras por trigger_type. Ex: `pre_appointment` aceita\n`{\"status\":[\"scheduled\",\"confirmed\"]}`. Schema evolui sem migration.\n",
-                        "additionalProperties": true
+                        "description": "Sobrepõe os status default de AgendaEvent do trigger. Só a chave\n`allowed` é aceita (validado): `{\"allowed\":[\"scheduled\",\"confirmed\"]}`\n— máx 10 itens, strings de até 30 chars. `{}` = defaults do trigger.\n",
+                        "properties": {
+                          "allowed": {
+                            "type": "array",
+                            "maxItems": 10,
+                            "items": {
+                              "type": "string",
+                              "maxLength": 30
+                            }
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "action_type": {
+                        "type": "string",
+                        "enum": [
+                          "generative",
+                          "static"
+                        ],
+                        "default": "generative",
+                        "description": "Modo de ação:\n- **generative**: a Bea escreve a mensagem (usa `context_brief`).\n- **static**: mensagem fixa com variáveis (usa `static_body`), sem LLM.\nVariáveis suportadas no `static_body`/steps: `{{nome}}`, `{{data}}`,\n`{{hora}}`, `{{profissional}}`, `{{clinica}}`.\n"
                       },
                       "context_brief": {
                         "type": "string",
                         "maxLength": 4000,
-                        "description": "Cenário em texto livre — Bea usa pra gerar a mensagem em PT-BR."
+                        "description": "Cenário em texto livre — Bea usa pra gerar a mensagem em PT-BR.\nObrigatório quando `action_type=generative`.\n"
+                      },
+                      "static_body": {
+                        "type": "string",
+                        "maxLength": 4000,
+                        "description": "Mensagem fixa do passo 1 (com variáveis). Obrigatória quando\n`action_type=static`.\n"
+                      },
+                      "persona_override": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 2000,
+                        "description": "Tom/persona próprio deste follow-up (por tipo). Anexado ao system\nprompt do gerador quando `action_type=generative` — sobrepõe o tom\npadrão da Bea. Ignorado no modo estático.\n"
+                      },
+                      "agenda_service_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Serviço-alvo da reativação (`trigger_type=service_recall`). Lido do\nplugin agenda por id (sem FK). Obrigatório nesse trigger.\n"
+                      },
+                      "recall_interval_value": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Valor do intervalo da reativação por serviço — dispara esse tanto de\n`recall_interval_unit` após a última sessão assinada. Obrigatório em\nservice_recall, dentro do teto da unidade (days 1..365, weeks 1..52,\nmonths 1..36, minutes 1..43200, hours 1..8760, years 1..10).\n"
+                      },
+                      "recall_interval_unit": {
+                        "type": "string",
+                        "enum": [
+                          "minutes",
+                          "hours",
+                          "days",
+                          "weeks",
+                          "months",
+                          "years"
+                        ],
+                        "default": "months",
+                        "description": "Unidade do intervalo de reativação."
+                      },
+                      "stop_on_reply": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Para os próximos passos da cadência se o paciente respondeu (mandou\nmensagem) depois do último envio dessa regra. Não afeta o passo 1.\n"
+                      },
+                      "stop_on_booking": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Para a sequência se o paciente tem agendamento futuro (scheduled/\nconfirmed). Ignora o próprio evento-alvo. Aplicável a\npost_appointment/no_show/no_response.\n"
+                      },
+                      "cloud_template_name": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Nome do template aprovado na Meta, usado como fallback quando o envio\ncai FORA da janela de 24h no WhatsApp oficial (`conversation.can_reply?`\nfalse). Vazio = sem fallback (a execução é pulada com\n`outside_messaging_window`). Não se aplica a `whatsapp_qr` (sem janela).\n"
+                      },
+                      "cloud_template_lang": {
+                        "type": "string",
+                        "default": "pt_BR",
+                        "description": "Código de idioma do template (ex: pt_BR, en_US)."
+                      },
+                      "cloud_template_params": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Variáveis ORDENADAS que preenchem {{1}}, {{2}}… do template. Ex:\n`[\"nome\",\"data\"]`. `[]` = template sem variável. Strings livres —\nvalores conhecidos (nome, data, hora, profissional, clinica) são\ninterpolados; desconhecidos viram `-` no envio.\n"
                       },
                       "max_per_target": {
                         "type": "integer",
                         "minimum": 0,
                         "default": 1,
                         "description": "0 = ilimitado."
+                      },
+                      "cooldown_minutes": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 10080,
+                        "default": 10,
+                        "description": "Intervalo mínimo (minutos) desde o último follow-up de OUTRA regra pro\nmesmo paciente — trava anti-rajada por regra. 0 = sem cooldown (a rajada\nno mesmo tick ainda é barrada). Default 10.\n"
+                      },
+                      "steps": {
+                        "type": "array",
+                        "description": "Passos ADICIONAIS da cadência (beats 2..N). O passo 1 é a própria\nregra (`offset_*` + corpo: `context_brief` no modo generativo ou\n`static_body` no estático). Cada passo carrega o seu próprio corpo\n(`context_brief` e/ou `static_body`) conforme o `action_type` da\nregra. Só se aplica a triggers cron\n(`pre_appointment`, `post_appointment`, `no_show`, `no_response`);\nignorado em `appointment_confirmed`/`custom`. Cada passo dispara com\nseu próprio `offset` a partir do mesmo ponto de referência do gatilho.\nNo POST/PUT, enviar a lista completa desejada — o backend sincroniza\nin-place por posição (preserva os ids dos passos; excedentes são\nremovidos). Omitir a chave `steps` mantém a cadência intacta.\n",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "readOnly": true
+                            },
+                            "position": {
+                              "type": "integer",
+                              "readOnly": true,
+                              "description": "Ordem do passo (>= 1; o passo 1/regra é 0). Computado no servidor pela ordem do array."
+                            },
+                            "offset_hours": {
+                              "type": "integer"
+                            },
+                            "offset_unit": {
+                              "type": "string",
+                              "enum": [
+                                "seconds",
+                                "minutes",
+                                "hours"
+                              ]
+                            },
+                            "offset_seconds": {
+                              "type": "integer",
+                              "readOnly": true
+                            },
+                            "context_brief": {
+                              "type": "string",
+                              "maxLength": 4000
+                            },
+                            "static_body": {
+                              "type": "string",
+                              "maxLength": 4000
+                            }
+                          }
+                        }
                       },
                       "created_at": {
                         "type": "string",
@@ -48538,8 +48664,8 @@
               }
             }
           },
-          "403": {
-            "description": "Sem permissão (`captain.view`)"
+          "401": {
+            "description": "Sem permissão (`captain.view`) — Pundit renderiza 401"
           }
         }
       },
@@ -48573,8 +48699,7 @@
                     "type": "object",
                     "required": [
                       "name",
-                      "trigger_type",
-                      "context_brief"
+                      "trigger_type"
                     ],
                     "properties": {
                       "name": {
@@ -48589,7 +48714,8 @@
                           "no_response",
                           "no_show",
                           "appointment_confirmed",
-                          "custom"
+                          "custom",
+                          "service_recall"
                         ]
                       },
                       "offset_hours": {
@@ -48611,13 +48737,69 @@
                           "manual"
                         ]
                       },
+                      "action_type": {
+                        "type": "string",
+                        "enum": [
+                          "generative",
+                          "static"
+                        ]
+                      },
                       "context_brief": {
                         "type": "string",
                         "maxLength": 4000
                       },
+                      "static_body": {
+                        "type": "string",
+                        "maxLength": 4000
+                      },
+                      "persona_override": {
+                        "type": "string"
+                      },
+                      "agenda_service_id": {
+                        "type": "integer"
+                      },
+                      "recall_interval_value": {
+                        "type": "integer"
+                      },
+                      "recall_interval_unit": {
+                        "type": "string",
+                        "enum": [
+                          "minutes",
+                          "hours",
+                          "days",
+                          "weeks",
+                          "months",
+                          "years"
+                        ],
+                        "default": "months"
+                      },
+                      "stop_on_reply": {
+                        "type": "boolean"
+                      },
+                      "stop_on_booking": {
+                        "type": "boolean"
+                      },
+                      "cloud_template_name": {
+                        "type": "string"
+                      },
+                      "cloud_template_lang": {
+                        "type": "string"
+                      },
+                      "cloud_template_params": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
                       "max_per_target": {
                         "type": "integer",
                         "minimum": 0
+                      },
+                      "cooldown_minutes": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 10080,
+                        "default": 10
                       },
                       "status_filter": {
                         "type": "object"
@@ -48627,6 +48809,38 @@
                       },
                       "position": {
                         "type": "integer"
+                      },
+                      "steps": {
+                        "type": "array",
+                        "description": "Passos adicionais da cadência (2..N). Lista completa\n(full-replace). Só vale pra triggers cron. Cada item:\noffset_hours + offset_unit + corpo (context_brief no\nmodo generativo, static_body no estático).\n",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "offset_hours",
+                            "offset_unit"
+                          ],
+                          "properties": {
+                            "offset_hours": {
+                              "type": "integer"
+                            },
+                            "offset_unit": {
+                              "type": "string",
+                              "enum": [
+                                "seconds",
+                                "minutes",
+                                "hours"
+                              ]
+                            },
+                            "context_brief": {
+                              "type": "string",
+                              "maxLength": 4000
+                            },
+                            "static_body": {
+                              "type": "string",
+                              "maxLength": 4000
+                            }
+                          }
+                        }
                       }
                     }
                   }
@@ -48645,9 +48859,6 @@
                   "description": "Regra de follow-up configurável da Bea. Cron `AiAgent::FollowUpDispatcherJob`\nroda a cada 1 minuto, varre regras `enabled`, identifica candidatos pelo\n`trigger_type` + `offset` (com `offset_unit`) e enfileira `BeaSendFollowUpJob`\npra cada par (regra, contato/consulta) novo.\n\nAnti-flood via `max_per_target`: 1 = uma vez por consulta/contato;\n0 = ilimitado.\n",
                   "properties": {
                     "id": {
-                      "type": "integer"
-                    },
-                    "account_id": {
                       "type": "integer"
                     },
                     "name": {
@@ -48671,13 +48882,14 @@
                         "no_response",
                         "no_show",
                         "appointment_confirmed",
-                        "custom"
+                        "custom",
+                        "service_recall"
                       ],
                       "description": "Tipo de gatilho:\n- **pre_appointment**: N horas ANTES de `AgendaEvent.starts_at`\n- **post_appointment**: N horas DEPOIS\n- **no_response**: paciente não responde há N horas\n- **no_show**: `AgendaEvent.status='no_show'` há N horas\n- **appointment_confirmed**: event-driven (NÃO usa cron). Dispara via\n  callback do `AgendaEvent` quando o status muda de\n  `pending_confirmation` pra `scheduled`/`confirmed`. O\n  `CandidateFinder` ignora esse trigger; a entrada vem do\n  `AiAgent::FollowUps::DispatchAppointmentConfirmedJob`.\n- **custom**: dispara só via API explícita (sem cron)\n"
                     },
                     "offset_hours": {
                       "type": "integer",
-                      "description": "Offset POSITIVO. Direção (antes/depois) vem do `trigger_type`.\nCombinado com `offset_unit` (default `hours`) e clampado por unidade\n(ver `OFFSET_LIMITS_BY_UNIT` no model).\n",
+                      "description": "Offset POSITIVO. Direção (antes/depois) vem do `trigger_type`.\nCombinado com `offset_unit` (default `hours`) e clampado por unidade\n(ver `OFFSET_LIMITS` no model).\n",
                       "example": 24
                     },
                     "offset_unit": {
@@ -48706,19 +48918,147 @@
                     },
                     "status_filter": {
                       "type": "object",
-                      "description": "Filtros extras por trigger_type. Ex: `pre_appointment` aceita\n`{\"status\":[\"scheduled\",\"confirmed\"]}`. Schema evolui sem migration.\n",
-                      "additionalProperties": true
+                      "description": "Sobrepõe os status default de AgendaEvent do trigger. Só a chave\n`allowed` é aceita (validado): `{\"allowed\":[\"scheduled\",\"confirmed\"]}`\n— máx 10 itens, strings de até 30 chars. `{}` = defaults do trigger.\n",
+                      "properties": {
+                        "allowed": {
+                          "type": "array",
+                          "maxItems": 10,
+                          "items": {
+                            "type": "string",
+                            "maxLength": 30
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "action_type": {
+                      "type": "string",
+                      "enum": [
+                        "generative",
+                        "static"
+                      ],
+                      "default": "generative",
+                      "description": "Modo de ação:\n- **generative**: a Bea escreve a mensagem (usa `context_brief`).\n- **static**: mensagem fixa com variáveis (usa `static_body`), sem LLM.\nVariáveis suportadas no `static_body`/steps: `{{nome}}`, `{{data}}`,\n`{{hora}}`, `{{profissional}}`, `{{clinica}}`.\n"
                     },
                     "context_brief": {
                       "type": "string",
                       "maxLength": 4000,
-                      "description": "Cenário em texto livre — Bea usa pra gerar a mensagem em PT-BR."
+                      "description": "Cenário em texto livre — Bea usa pra gerar a mensagem em PT-BR.\nObrigatório quando `action_type=generative`.\n"
+                    },
+                    "static_body": {
+                      "type": "string",
+                      "maxLength": 4000,
+                      "description": "Mensagem fixa do passo 1 (com variáveis). Obrigatória quando\n`action_type=static`.\n"
+                    },
+                    "persona_override": {
+                      "type": "string",
+                      "nullable": true,
+                      "maxLength": 2000,
+                      "description": "Tom/persona próprio deste follow-up (por tipo). Anexado ao system\nprompt do gerador quando `action_type=generative` — sobrepõe o tom\npadrão da Bea. Ignorado no modo estático.\n"
+                    },
+                    "agenda_service_id": {
+                      "type": "integer",
+                      "nullable": true,
+                      "description": "Serviço-alvo da reativação (`trigger_type=service_recall`). Lido do\nplugin agenda por id (sem FK). Obrigatório nesse trigger.\n"
+                    },
+                    "recall_interval_value": {
+                      "type": "integer",
+                      "nullable": true,
+                      "description": "Valor do intervalo da reativação por serviço — dispara esse tanto de\n`recall_interval_unit` após a última sessão assinada. Obrigatório em\nservice_recall, dentro do teto da unidade (days 1..365, weeks 1..52,\nmonths 1..36, minutes 1..43200, hours 1..8760, years 1..10).\n"
+                    },
+                    "recall_interval_unit": {
+                      "type": "string",
+                      "enum": [
+                        "minutes",
+                        "hours",
+                        "days",
+                        "weeks",
+                        "months",
+                        "years"
+                      ],
+                      "default": "months",
+                      "description": "Unidade do intervalo de reativação."
+                    },
+                    "stop_on_reply": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Para os próximos passos da cadência se o paciente respondeu (mandou\nmensagem) depois do último envio dessa regra. Não afeta o passo 1.\n"
+                    },
+                    "stop_on_booking": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Para a sequência se o paciente tem agendamento futuro (scheduled/\nconfirmed). Ignora o próprio evento-alvo. Aplicável a\npost_appointment/no_show/no_response.\n"
+                    },
+                    "cloud_template_name": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Nome do template aprovado na Meta, usado como fallback quando o envio\ncai FORA da janela de 24h no WhatsApp oficial (`conversation.can_reply?`\nfalse). Vazio = sem fallback (a execução é pulada com\n`outside_messaging_window`). Não se aplica a `whatsapp_qr` (sem janela).\n"
+                    },
+                    "cloud_template_lang": {
+                      "type": "string",
+                      "default": "pt_BR",
+                      "description": "Código de idioma do template (ex: pt_BR, en_US)."
+                    },
+                    "cloud_template_params": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Variáveis ORDENADAS que preenchem {{1}}, {{2}}… do template. Ex:\n`[\"nome\",\"data\"]`. `[]` = template sem variável. Strings livres —\nvalores conhecidos (nome, data, hora, profissional, clinica) são\ninterpolados; desconhecidos viram `-` no envio.\n"
                     },
                     "max_per_target": {
                       "type": "integer",
                       "minimum": 0,
                       "default": 1,
                       "description": "0 = ilimitado."
+                    },
+                    "cooldown_minutes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10080,
+                      "default": 10,
+                      "description": "Intervalo mínimo (minutos) desde o último follow-up de OUTRA regra pro\nmesmo paciente — trava anti-rajada por regra. 0 = sem cooldown (a rajada\nno mesmo tick ainda é barrada). Default 10.\n"
+                    },
+                    "steps": {
+                      "type": "array",
+                      "description": "Passos ADICIONAIS da cadência (beats 2..N). O passo 1 é a própria\nregra (`offset_*` + corpo: `context_brief` no modo generativo ou\n`static_body` no estático). Cada passo carrega o seu próprio corpo\n(`context_brief` e/ou `static_body`) conforme o `action_type` da\nregra. Só se aplica a triggers cron\n(`pre_appointment`, `post_appointment`, `no_show`, `no_response`);\nignorado em `appointment_confirmed`/`custom`. Cada passo dispara com\nseu próprio `offset` a partir do mesmo ponto de referência do gatilho.\nNo POST/PUT, enviar a lista completa desejada — o backend sincroniza\nin-place por posição (preserva os ids dos passos; excedentes são\nremovidos). Omitir a chave `steps` mantém a cadência intacta.\n",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "readOnly": true
+                          },
+                          "position": {
+                            "type": "integer",
+                            "readOnly": true,
+                            "description": "Ordem do passo (>= 1; o passo 1/regra é 0). Computado no servidor pela ordem do array."
+                          },
+                          "offset_hours": {
+                            "type": "integer"
+                          },
+                          "offset_unit": {
+                            "type": "string",
+                            "enum": [
+                              "seconds",
+                              "minutes",
+                              "hours"
+                            ]
+                          },
+                          "offset_seconds": {
+                            "type": "integer",
+                            "readOnly": true
+                          },
+                          "context_brief": {
+                            "type": "string",
+                            "maxLength": 4000
+                          },
+                          "static_body": {
+                            "type": "string",
+                            "maxLength": 4000
+                          }
+                        }
+                      }
                     },
                     "created_at": {
                       "type": "string",
@@ -48733,8 +49073,8 @@
               }
             }
           },
-          "403": {
-            "description": "Sem permissão (`captain.manage_follow_ups`)"
+          "401": {
+            "description": "Sem permissão (`captain.manage_follow_ups`) — Pundit renderiza 401"
           },
           "422": {
             "description": "Validação falhou (limites de offset, trigger inválido, etc.)"
@@ -48779,9 +49119,6 @@
                     "id": {
                       "type": "integer"
                     },
-                    "account_id": {
-                      "type": "integer"
-                    },
                     "name": {
                       "type": "string",
                       "maxLength": 120,
@@ -48803,13 +49140,14 @@
                         "no_response",
                         "no_show",
                         "appointment_confirmed",
-                        "custom"
+                        "custom",
+                        "service_recall"
                       ],
                       "description": "Tipo de gatilho:\n- **pre_appointment**: N horas ANTES de `AgendaEvent.starts_at`\n- **post_appointment**: N horas DEPOIS\n- **no_response**: paciente não responde há N horas\n- **no_show**: `AgendaEvent.status='no_show'` há N horas\n- **appointment_confirmed**: event-driven (NÃO usa cron). Dispara via\n  callback do `AgendaEvent` quando o status muda de\n  `pending_confirmation` pra `scheduled`/`confirmed`. O\n  `CandidateFinder` ignora esse trigger; a entrada vem do\n  `AiAgent::FollowUps::DispatchAppointmentConfirmedJob`.\n- **custom**: dispara só via API explícita (sem cron)\n"
                     },
                     "offset_hours": {
                       "type": "integer",
-                      "description": "Offset POSITIVO. Direção (antes/depois) vem do `trigger_type`.\nCombinado com `offset_unit` (default `hours`) e clampado por unidade\n(ver `OFFSET_LIMITS_BY_UNIT` no model).\n",
+                      "description": "Offset POSITIVO. Direção (antes/depois) vem do `trigger_type`.\nCombinado com `offset_unit` (default `hours`) e clampado por unidade\n(ver `OFFSET_LIMITS` no model).\n",
                       "example": 24
                     },
                     "offset_unit": {
@@ -48838,19 +49176,147 @@
                     },
                     "status_filter": {
                       "type": "object",
-                      "description": "Filtros extras por trigger_type. Ex: `pre_appointment` aceita\n`{\"status\":[\"scheduled\",\"confirmed\"]}`. Schema evolui sem migration.\n",
-                      "additionalProperties": true
+                      "description": "Sobrepõe os status default de AgendaEvent do trigger. Só a chave\n`allowed` é aceita (validado): `{\"allowed\":[\"scheduled\",\"confirmed\"]}`\n— máx 10 itens, strings de até 30 chars. `{}` = defaults do trigger.\n",
+                      "properties": {
+                        "allowed": {
+                          "type": "array",
+                          "maxItems": 10,
+                          "items": {
+                            "type": "string",
+                            "maxLength": 30
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "action_type": {
+                      "type": "string",
+                      "enum": [
+                        "generative",
+                        "static"
+                      ],
+                      "default": "generative",
+                      "description": "Modo de ação:\n- **generative**: a Bea escreve a mensagem (usa `context_brief`).\n- **static**: mensagem fixa com variáveis (usa `static_body`), sem LLM.\nVariáveis suportadas no `static_body`/steps: `{{nome}}`, `{{data}}`,\n`{{hora}}`, `{{profissional}}`, `{{clinica}}`.\n"
                     },
                     "context_brief": {
                       "type": "string",
                       "maxLength": 4000,
-                      "description": "Cenário em texto livre — Bea usa pra gerar a mensagem em PT-BR."
+                      "description": "Cenário em texto livre — Bea usa pra gerar a mensagem em PT-BR.\nObrigatório quando `action_type=generative`.\n"
+                    },
+                    "static_body": {
+                      "type": "string",
+                      "maxLength": 4000,
+                      "description": "Mensagem fixa do passo 1 (com variáveis). Obrigatória quando\n`action_type=static`.\n"
+                    },
+                    "persona_override": {
+                      "type": "string",
+                      "nullable": true,
+                      "maxLength": 2000,
+                      "description": "Tom/persona próprio deste follow-up (por tipo). Anexado ao system\nprompt do gerador quando `action_type=generative` — sobrepõe o tom\npadrão da Bea. Ignorado no modo estático.\n"
+                    },
+                    "agenda_service_id": {
+                      "type": "integer",
+                      "nullable": true,
+                      "description": "Serviço-alvo da reativação (`trigger_type=service_recall`). Lido do\nplugin agenda por id (sem FK). Obrigatório nesse trigger.\n"
+                    },
+                    "recall_interval_value": {
+                      "type": "integer",
+                      "nullable": true,
+                      "description": "Valor do intervalo da reativação por serviço — dispara esse tanto de\n`recall_interval_unit` após a última sessão assinada. Obrigatório em\nservice_recall, dentro do teto da unidade (days 1..365, weeks 1..52,\nmonths 1..36, minutes 1..43200, hours 1..8760, years 1..10).\n"
+                    },
+                    "recall_interval_unit": {
+                      "type": "string",
+                      "enum": [
+                        "minutes",
+                        "hours",
+                        "days",
+                        "weeks",
+                        "months",
+                        "years"
+                      ],
+                      "default": "months",
+                      "description": "Unidade do intervalo de reativação."
+                    },
+                    "stop_on_reply": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Para os próximos passos da cadência se o paciente respondeu (mandou\nmensagem) depois do último envio dessa regra. Não afeta o passo 1.\n"
+                    },
+                    "stop_on_booking": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Para a sequência se o paciente tem agendamento futuro (scheduled/\nconfirmed). Ignora o próprio evento-alvo. Aplicável a\npost_appointment/no_show/no_response.\n"
+                    },
+                    "cloud_template_name": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Nome do template aprovado na Meta, usado como fallback quando o envio\ncai FORA da janela de 24h no WhatsApp oficial (`conversation.can_reply?`\nfalse). Vazio = sem fallback (a execução é pulada com\n`outside_messaging_window`). Não se aplica a `whatsapp_qr` (sem janela).\n"
+                    },
+                    "cloud_template_lang": {
+                      "type": "string",
+                      "default": "pt_BR",
+                      "description": "Código de idioma do template (ex: pt_BR, en_US)."
+                    },
+                    "cloud_template_params": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Variáveis ORDENADAS que preenchem {{1}}, {{2}}… do template. Ex:\n`[\"nome\",\"data\"]`. `[]` = template sem variável. Strings livres —\nvalores conhecidos (nome, data, hora, profissional, clinica) são\ninterpolados; desconhecidos viram `-` no envio.\n"
                     },
                     "max_per_target": {
                       "type": "integer",
                       "minimum": 0,
                       "default": 1,
                       "description": "0 = ilimitado."
+                    },
+                    "cooldown_minutes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10080,
+                      "default": 10,
+                      "description": "Intervalo mínimo (minutos) desde o último follow-up de OUTRA regra pro\nmesmo paciente — trava anti-rajada por regra. 0 = sem cooldown (a rajada\nno mesmo tick ainda é barrada). Default 10.\n"
+                    },
+                    "steps": {
+                      "type": "array",
+                      "description": "Passos ADICIONAIS da cadência (beats 2..N). O passo 1 é a própria\nregra (`offset_*` + corpo: `context_brief` no modo generativo ou\n`static_body` no estático). Cada passo carrega o seu próprio corpo\n(`context_brief` e/ou `static_body`) conforme o `action_type` da\nregra. Só se aplica a triggers cron\n(`pre_appointment`, `post_appointment`, `no_show`, `no_response`);\nignorado em `appointment_confirmed`/`custom`. Cada passo dispara com\nseu próprio `offset` a partir do mesmo ponto de referência do gatilho.\nNo POST/PUT, enviar a lista completa desejada — o backend sincroniza\nin-place por posição (preserva os ids dos passos; excedentes são\nremovidos). Omitir a chave `steps` mantém a cadência intacta.\n",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "readOnly": true
+                          },
+                          "position": {
+                            "type": "integer",
+                            "readOnly": true,
+                            "description": "Ordem do passo (>= 1; o passo 1/regra é 0). Computado no servidor pela ordem do array."
+                          },
+                          "offset_hours": {
+                            "type": "integer"
+                          },
+                          "offset_unit": {
+                            "type": "string",
+                            "enum": [
+                              "seconds",
+                              "minutes",
+                              "hours"
+                            ]
+                          },
+                          "offset_seconds": {
+                            "type": "integer",
+                            "readOnly": true
+                          },
+                          "context_brief": {
+                            "type": "string",
+                            "maxLength": 4000
+                          },
+                          "static_body": {
+                            "type": "string",
+                            "maxLength": 4000
+                          }
+                        }
+                      }
                     },
                     "created_at": {
                       "type": "string",
@@ -48922,9 +49388,6 @@
                     "id": {
                       "type": "integer"
                     },
-                    "account_id": {
-                      "type": "integer"
-                    },
                     "name": {
                       "type": "string",
                       "maxLength": 120,
@@ -48946,13 +49409,14 @@
                         "no_response",
                         "no_show",
                         "appointment_confirmed",
-                        "custom"
+                        "custom",
+                        "service_recall"
                       ],
                       "description": "Tipo de gatilho:\n- **pre_appointment**: N horas ANTES de `AgendaEvent.starts_at`\n- **post_appointment**: N horas DEPOIS\n- **no_response**: paciente não responde há N horas\n- **no_show**: `AgendaEvent.status='no_show'` há N horas\n- **appointment_confirmed**: event-driven (NÃO usa cron). Dispara via\n  callback do `AgendaEvent` quando o status muda de\n  `pending_confirmation` pra `scheduled`/`confirmed`. O\n  `CandidateFinder` ignora esse trigger; a entrada vem do\n  `AiAgent::FollowUps::DispatchAppointmentConfirmedJob`.\n- **custom**: dispara só via API explícita (sem cron)\n"
                     },
                     "offset_hours": {
                       "type": "integer",
-                      "description": "Offset POSITIVO. Direção (antes/depois) vem do `trigger_type`.\nCombinado com `offset_unit` (default `hours`) e clampado por unidade\n(ver `OFFSET_LIMITS_BY_UNIT` no model).\n",
+                      "description": "Offset POSITIVO. Direção (antes/depois) vem do `trigger_type`.\nCombinado com `offset_unit` (default `hours`) e clampado por unidade\n(ver `OFFSET_LIMITS` no model).\n",
                       "example": 24
                     },
                     "offset_unit": {
@@ -48981,19 +49445,147 @@
                     },
                     "status_filter": {
                       "type": "object",
-                      "description": "Filtros extras por trigger_type. Ex: `pre_appointment` aceita\n`{\"status\":[\"scheduled\",\"confirmed\"]}`. Schema evolui sem migration.\n",
-                      "additionalProperties": true
+                      "description": "Sobrepõe os status default de AgendaEvent do trigger. Só a chave\n`allowed` é aceita (validado): `{\"allowed\":[\"scheduled\",\"confirmed\"]}`\n— máx 10 itens, strings de até 30 chars. `{}` = defaults do trigger.\n",
+                      "properties": {
+                        "allowed": {
+                          "type": "array",
+                          "maxItems": 10,
+                          "items": {
+                            "type": "string",
+                            "maxLength": 30
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "action_type": {
+                      "type": "string",
+                      "enum": [
+                        "generative",
+                        "static"
+                      ],
+                      "default": "generative",
+                      "description": "Modo de ação:\n- **generative**: a Bea escreve a mensagem (usa `context_brief`).\n- **static**: mensagem fixa com variáveis (usa `static_body`), sem LLM.\nVariáveis suportadas no `static_body`/steps: `{{nome}}`, `{{data}}`,\n`{{hora}}`, `{{profissional}}`, `{{clinica}}`.\n"
                     },
                     "context_brief": {
                       "type": "string",
                       "maxLength": 4000,
-                      "description": "Cenário em texto livre — Bea usa pra gerar a mensagem em PT-BR."
+                      "description": "Cenário em texto livre — Bea usa pra gerar a mensagem em PT-BR.\nObrigatório quando `action_type=generative`.\n"
+                    },
+                    "static_body": {
+                      "type": "string",
+                      "maxLength": 4000,
+                      "description": "Mensagem fixa do passo 1 (com variáveis). Obrigatória quando\n`action_type=static`.\n"
+                    },
+                    "persona_override": {
+                      "type": "string",
+                      "nullable": true,
+                      "maxLength": 2000,
+                      "description": "Tom/persona próprio deste follow-up (por tipo). Anexado ao system\nprompt do gerador quando `action_type=generative` — sobrepõe o tom\npadrão da Bea. Ignorado no modo estático.\n"
+                    },
+                    "agenda_service_id": {
+                      "type": "integer",
+                      "nullable": true,
+                      "description": "Serviço-alvo da reativação (`trigger_type=service_recall`). Lido do\nplugin agenda por id (sem FK). Obrigatório nesse trigger.\n"
+                    },
+                    "recall_interval_value": {
+                      "type": "integer",
+                      "nullable": true,
+                      "description": "Valor do intervalo da reativação por serviço — dispara esse tanto de\n`recall_interval_unit` após a última sessão assinada. Obrigatório em\nservice_recall, dentro do teto da unidade (days 1..365, weeks 1..52,\nmonths 1..36, minutes 1..43200, hours 1..8760, years 1..10).\n"
+                    },
+                    "recall_interval_unit": {
+                      "type": "string",
+                      "enum": [
+                        "minutes",
+                        "hours",
+                        "days",
+                        "weeks",
+                        "months",
+                        "years"
+                      ],
+                      "default": "months",
+                      "description": "Unidade do intervalo de reativação."
+                    },
+                    "stop_on_reply": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Para os próximos passos da cadência se o paciente respondeu (mandou\nmensagem) depois do último envio dessa regra. Não afeta o passo 1.\n"
+                    },
+                    "stop_on_booking": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Para a sequência se o paciente tem agendamento futuro (scheduled/\nconfirmed). Ignora o próprio evento-alvo. Aplicável a\npost_appointment/no_show/no_response.\n"
+                    },
+                    "cloud_template_name": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Nome do template aprovado na Meta, usado como fallback quando o envio\ncai FORA da janela de 24h no WhatsApp oficial (`conversation.can_reply?`\nfalse). Vazio = sem fallback (a execução é pulada com\n`outside_messaging_window`). Não se aplica a `whatsapp_qr` (sem janela).\n"
+                    },
+                    "cloud_template_lang": {
+                      "type": "string",
+                      "default": "pt_BR",
+                      "description": "Código de idioma do template (ex: pt_BR, en_US)."
+                    },
+                    "cloud_template_params": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Variáveis ORDENADAS que preenchem {{1}}, {{2}}… do template. Ex:\n`[\"nome\",\"data\"]`. `[]` = template sem variável. Strings livres —\nvalores conhecidos (nome, data, hora, profissional, clinica) são\ninterpolados; desconhecidos viram `-` no envio.\n"
                     },
                     "max_per_target": {
                       "type": "integer",
                       "minimum": 0,
                       "default": 1,
                       "description": "0 = ilimitado."
+                    },
+                    "cooldown_minutes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10080,
+                      "default": 10,
+                      "description": "Intervalo mínimo (minutos) desde o último follow-up de OUTRA regra pro\nmesmo paciente — trava anti-rajada por regra. 0 = sem cooldown (a rajada\nno mesmo tick ainda é barrada). Default 10.\n"
+                    },
+                    "steps": {
+                      "type": "array",
+                      "description": "Passos ADICIONAIS da cadência (beats 2..N). O passo 1 é a própria\nregra (`offset_*` + corpo: `context_brief` no modo generativo ou\n`static_body` no estático). Cada passo carrega o seu próprio corpo\n(`context_brief` e/ou `static_body`) conforme o `action_type` da\nregra. Só se aplica a triggers cron\n(`pre_appointment`, `post_appointment`, `no_show`, `no_response`);\nignorado em `appointment_confirmed`/`custom`. Cada passo dispara com\nseu próprio `offset` a partir do mesmo ponto de referência do gatilho.\nNo POST/PUT, enviar a lista completa desejada — o backend sincroniza\nin-place por posição (preserva os ids dos passos; excedentes são\nremovidos). Omitir a chave `steps` mantém a cadência intacta.\n",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "readOnly": true
+                          },
+                          "position": {
+                            "type": "integer",
+                            "readOnly": true,
+                            "description": "Ordem do passo (>= 1; o passo 1/regra é 0). Computado no servidor pela ordem do array."
+                          },
+                          "offset_hours": {
+                            "type": "integer"
+                          },
+                          "offset_unit": {
+                            "type": "string",
+                            "enum": [
+                              "seconds",
+                              "minutes",
+                              "hours"
+                            ]
+                          },
+                          "offset_seconds": {
+                            "type": "integer",
+                            "readOnly": true
+                          },
+                          "context_brief": {
+                            "type": "string",
+                            "maxLength": 4000
+                          },
+                          "static_body": {
+                            "type": "string",
+                            "maxLength": 4000
+                          }
+                        }
+                      }
                     },
                     "created_at": {
                       "type": "string",
@@ -49008,8 +49600,8 @@
               }
             }
           },
-          "403": {
-            "description": "Sem permissão (`captain.manage_follow_ups`)"
+          "401": {
+            "description": "Sem permissão (`captain.manage_follow_ups`) — Pundit renderiza 401"
           },
           "404": {
             "description": "Não encontrada"
@@ -49047,11 +49639,409 @@
           "204": {
             "description": "Deletada"
           },
-          "403": {
+          "401": {
             "description": "Sem permissão"
           },
           "404": {
             "description": "Não encontrada"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/ai_agent/style_profile": {
+      "get": {
+        "tags": [
+          "Bea — Tom de voz"
+        ],
+        "summary": "Ler o tom de voz da clínica (ativo + rascunho)",
+        "description": "Retorna o perfil de estilo ATIVO (aplicado no system prompt da Bea) e o\nRASCUNHO (última geração pendente de aprovação). Camada de superfície —\ndefine só COMO a Bea fala (emoji/saudação/bordões/exemplos), nunca o que\nela pode dizer.\n\nAutorização: admin OR Klivy `captain.view`.\n",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Perfil ativo e rascunho",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active": {
+                      "allOf": [
+                        {
+                          "type": "object",
+                          "description": "Campos de ESTILO (superfície) do tom de voz da clínica — como a Bea fala.\nNão muda O QUE ela pode dizer. `enabled` (só no perfil ATIVO) e os metadados\nde geração (só no RASCUNHO) ficam fora deste schema base.\n",
+                          "properties": {
+                            "summary": {
+                              "type": "string"
+                            },
+                            "greeting": {
+                              "type": "string"
+                            },
+                            "closing": {
+                              "type": "string"
+                            },
+                            "emojis": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "expressions": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "examples": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "paciente": {
+                                    "type": "string"
+                                  },
+                                  "clinica": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "enabled": {
+                              "type": "boolean"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "draft": {
+                      "allOf": [
+                        {
+                          "type": "object",
+                          "description": "Campos de ESTILO (superfície) do tom de voz da clínica — como a Bea fala.\nNão muda O QUE ela pode dizer. `enabled` (só no perfil ATIVO) e os metadados\nde geração (só no RASCUNHO) ficam fora deste schema base.\n",
+                          "properties": {
+                            "summary": {
+                              "type": "string"
+                            },
+                            "greeting": {
+                              "type": "string"
+                            },
+                            "closing": {
+                              "type": "string"
+                            },
+                            "emojis": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "expressions": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "examples": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "paciente": {
+                                    "type": "string"
+                                  },
+                                  "clinica": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "generating",
+                                "ready",
+                                "failed"
+                              ]
+                            },
+                            "error": {
+                              "type": "string"
+                            },
+                            "sample_count": {
+                              "type": "integer"
+                            },
+                            "source_conversation_count": {
+                              "type": "integer"
+                            },
+                            "generated_at": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem permissão (`captain.view`) — Pundit renderiza 401"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Bea — Tom de voz"
+        ],
+        "summary": "Aprovar/ativar o tom de voz (e editar/ligar-desligar)",
+        "description": "Grava os campos no perfil ATIVO. Com `approve: true` promove o rascunho\nrevisado (onde nomes residuais são limpos) e o CONSOME; sem `approve` é só\nedição/toggle do ativo e o rascunho NÃO é tocado (ligar/desligar o tom não\napaga um rascunho pendente). A Bea passa a falar nesse tom com `enabled: true`.\n\nAutorização: admin OR Klivy `captain.manage_faqs`.\n",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "style_profile"
+                ],
+                "properties": {
+                  "approve": {
+                    "type": "boolean",
+                    "description": "Quando true, consome o rascunho (aprovação). Default false (toggle/edição)."
+                  },
+                  "style_profile": {
+                    "allOf": [
+                      {
+                        "type": "object",
+                        "description": "Campos de ESTILO (superfície) do tom de voz da clínica — como a Bea fala.\nNão muda O QUE ela pode dizer. `enabled` (só no perfil ATIVO) e os metadados\nde geração (só no RASCUNHO) ficam fora deste schema base.\n",
+                        "properties": {
+                          "summary": {
+                            "type": "string"
+                          },
+                          "greeting": {
+                            "type": "string"
+                          },
+                          "closing": {
+                            "type": "string"
+                          },
+                          "emojis": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "expressions": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "examples": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "paciente": {
+                                  "type": "string"
+                                },
+                                "clinica": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "enabled": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Perfil ativo atualizado (rascunho consumido)"
+          },
+          "401": {
+            "description": "Sem permissão (`captain.manage_faqs`) — Pundit renderiza 401"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/ai_agent/style_profile/generate": {
+      "post": {
+        "tags": [
+          "Bea — Tom de voz"
+        ],
+        "summary": "Gerar o tom de voz a partir das conversas do Treinamento",
+        "description": "Dispara (async) a destilação do estilo da clínica das conversas concluídas\ndo Treinamento, gravando o resultado no RASCUNHO (`draft`). O perfil ATIVO\nnão é tocado — a aprovação do rascunho é à parte. Responde `202` com o\nrascunho marcado `generating`; se já houver uma geração em andamento, NÃO\nre-enfileira (debounce).\n\nO estado terminal vem por POLLING do `GET`:\n- `draft.status: ready` — perfil gerado, pronto pra revisar/aprovar.\n- `draft.status: failed` + `draft.error` — por falta de conversa é\n  terminal; por rate-limit/crédito da IA o Sidekiq reprocessa sozinho.\n\nAutorização: admin OR Klivy `captain.manage_faqs`.\n",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Geração enfileirada (rascunho em `generating`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "draft": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "example": "generating"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem permissão (`captain.manage_faqs`) — Pundit renderiza 401"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/ai_agent/system_prompt": {
+      "get": {
+        "tags": [
+          "Bea — System Message"
+        ],
+        "summary": "Ler o system message da conta (+ default do super admin)",
+        "description": "Retorna o system message PRÓPRIO da conta (`content`), o `default` global\ndo super admin (InstallationConfig 'CAPTAIN_BEA_SYSTEM_PROMPT', editável em\n/super_admin/bea) e `using_default` (true quando a conta ainda não tem o\nseu e herda o default em runtime). O `default` é o que o botão \"Restaurar\npadrão\" preenche no editor.\n\nAutorização: admin OR Klivy `captain.view`.\n",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "System message da conta + default",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "content": {
+                      "type": "string",
+                      "description": "System message próprio da conta (vazio = herda o default)"
+                    },
+                    "default": {
+                      "type": "string",
+                      "description": "Default global do super admin (fonte do \"Restaurar padrão\")"
+                    },
+                    "using_default": {
+                      "type": "boolean",
+                      "description": "true quando a conta não tem o seu e usa o default"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem permissão (`captain.view`) — Pundit renderiza 401"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Bea — System Message"
+        ],
+        "summary": "Gravar o system message da conta",
+        "description": "Grava o `content` como system message da conta. A partir daí a Bea segue\n100% esse texto (congelado) — melhorias futuras no default global do super\nadmin NÃO o alteram. Salvar vazio reverte pro default em runtime.\n\nAutorização: admin OR Klivy `captain.manage_settings`.\n",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "system_prompt"
+                ],
+                "properties": {
+                  "system_prompt": {
+                    "type": "object",
+                    "properties": {
+                      "content": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "System message da conta atualizado"
+          },
+          "401": {
+            "description": "Sem permissão (`captain.manage_settings`) — Pundit renderiza 401"
           }
         }
       }
@@ -64542,9 +65532,6 @@
           "id": {
             "type": "integer"
           },
-          "account_id": {
-            "type": "integer"
-          },
           "name": {
             "type": "string",
             "maxLength": 120,
@@ -64566,13 +65553,14 @@
               "no_response",
               "no_show",
               "appointment_confirmed",
-              "custom"
+              "custom",
+              "service_recall"
             ],
             "description": "Tipo de gatilho:\n- **pre_appointment**: N horas ANTES de `AgendaEvent.starts_at`\n- **post_appointment**: N horas DEPOIS\n- **no_response**: paciente não responde há N horas\n- **no_show**: `AgendaEvent.status='no_show'` há N horas\n- **appointment_confirmed**: event-driven (NÃO usa cron). Dispara via\n  callback do `AgendaEvent` quando o status muda de\n  `pending_confirmation` pra `scheduled`/`confirmed`. O\n  `CandidateFinder` ignora esse trigger; a entrada vem do\n  `AiAgent::FollowUps::DispatchAppointmentConfirmedJob`.\n- **custom**: dispara só via API explícita (sem cron)\n"
           },
           "offset_hours": {
             "type": "integer",
-            "description": "Offset POSITIVO. Direção (antes/depois) vem do `trigger_type`.\nCombinado com `offset_unit` (default `hours`) e clampado por unidade\n(ver `OFFSET_LIMITS_BY_UNIT` no model).\n",
+            "description": "Offset POSITIVO. Direção (antes/depois) vem do `trigger_type`.\nCombinado com `offset_unit` (default `hours`) e clampado por unidade\n(ver `OFFSET_LIMITS` no model).\n",
             "example": 24
           },
           "offset_unit": {
@@ -64601,19 +65589,147 @@
           },
           "status_filter": {
             "type": "object",
-            "description": "Filtros extras por trigger_type. Ex: `pre_appointment` aceita\n`{\"status\":[\"scheduled\",\"confirmed\"]}`. Schema evolui sem migration.\n",
-            "additionalProperties": true
+            "description": "Sobrepõe os status default de AgendaEvent do trigger. Só a chave\n`allowed` é aceita (validado): `{\"allowed\":[\"scheduled\",\"confirmed\"]}`\n— máx 10 itens, strings de até 30 chars. `{}` = defaults do trigger.\n",
+            "properties": {
+              "allowed": {
+                "type": "array",
+                "maxItems": 10,
+                "items": {
+                  "type": "string",
+                  "maxLength": 30
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "action_type": {
+            "type": "string",
+            "enum": [
+              "generative",
+              "static"
+            ],
+            "default": "generative",
+            "description": "Modo de ação:\n- **generative**: a Bea escreve a mensagem (usa `context_brief`).\n- **static**: mensagem fixa com variáveis (usa `static_body`), sem LLM.\nVariáveis suportadas no `static_body`/steps: `{{nome}}`, `{{data}}`,\n`{{hora}}`, `{{profissional}}`, `{{clinica}}`.\n"
           },
           "context_brief": {
             "type": "string",
             "maxLength": 4000,
-            "description": "Cenário em texto livre — Bea usa pra gerar a mensagem em PT-BR."
+            "description": "Cenário em texto livre — Bea usa pra gerar a mensagem em PT-BR.\nObrigatório quando `action_type=generative`.\n"
+          },
+          "static_body": {
+            "type": "string",
+            "maxLength": 4000,
+            "description": "Mensagem fixa do passo 1 (com variáveis). Obrigatória quando\n`action_type=static`.\n"
+          },
+          "persona_override": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000,
+            "description": "Tom/persona próprio deste follow-up (por tipo). Anexado ao system\nprompt do gerador quando `action_type=generative` — sobrepõe o tom\npadrão da Bea. Ignorado no modo estático.\n"
+          },
+          "agenda_service_id": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Serviço-alvo da reativação (`trigger_type=service_recall`). Lido do\nplugin agenda por id (sem FK). Obrigatório nesse trigger.\n"
+          },
+          "recall_interval_value": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Valor do intervalo da reativação por serviço — dispara esse tanto de\n`recall_interval_unit` após a última sessão assinada. Obrigatório em\nservice_recall, dentro do teto da unidade (days 1..365, weeks 1..52,\nmonths 1..36, minutes 1..43200, hours 1..8760, years 1..10).\n"
+          },
+          "recall_interval_unit": {
+            "type": "string",
+            "enum": [
+              "minutes",
+              "hours",
+              "days",
+              "weeks",
+              "months",
+              "years"
+            ],
+            "default": "months",
+            "description": "Unidade do intervalo de reativação."
+          },
+          "stop_on_reply": {
+            "type": "boolean",
+            "default": false,
+            "description": "Para os próximos passos da cadência se o paciente respondeu (mandou\nmensagem) depois do último envio dessa regra. Não afeta o passo 1.\n"
+          },
+          "stop_on_booking": {
+            "type": "boolean",
+            "default": false,
+            "description": "Para a sequência se o paciente tem agendamento futuro (scheduled/\nconfirmed). Ignora o próprio evento-alvo. Aplicável a\npost_appointment/no_show/no_response.\n"
+          },
+          "cloud_template_name": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nome do template aprovado na Meta, usado como fallback quando o envio\ncai FORA da janela de 24h no WhatsApp oficial (`conversation.can_reply?`\nfalse). Vazio = sem fallback (a execução é pulada com\n`outside_messaging_window`). Não se aplica a `whatsapp_qr` (sem janela).\n"
+          },
+          "cloud_template_lang": {
+            "type": "string",
+            "default": "pt_BR",
+            "description": "Código de idioma do template (ex: pt_BR, en_US)."
+          },
+          "cloud_template_params": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Variáveis ORDENADAS que preenchem {{1}}, {{2}}… do template. Ex:\n`[\"nome\",\"data\"]`. `[]` = template sem variável. Strings livres —\nvalores conhecidos (nome, data, hora, profissional, clinica) são\ninterpolados; desconhecidos viram `-` no envio.\n"
           },
           "max_per_target": {
             "type": "integer",
             "minimum": 0,
             "default": 1,
             "description": "0 = ilimitado."
+          },
+          "cooldown_minutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10080,
+            "default": 10,
+            "description": "Intervalo mínimo (minutos) desde o último follow-up de OUTRA regra pro\nmesmo paciente — trava anti-rajada por regra. 0 = sem cooldown (a rajada\nno mesmo tick ainda é barrada). Default 10.\n"
+          },
+          "steps": {
+            "type": "array",
+            "description": "Passos ADICIONAIS da cadência (beats 2..N). O passo 1 é a própria\nregra (`offset_*` + corpo: `context_brief` no modo generativo ou\n`static_body` no estático). Cada passo carrega o seu próprio corpo\n(`context_brief` e/ou `static_body`) conforme o `action_type` da\nregra. Só se aplica a triggers cron\n(`pre_appointment`, `post_appointment`, `no_show`, `no_response`);\nignorado em `appointment_confirmed`/`custom`. Cada passo dispara com\nseu próprio `offset` a partir do mesmo ponto de referência do gatilho.\nNo POST/PUT, enviar a lista completa desejada — o backend sincroniza\nin-place por posição (preserva os ids dos passos; excedentes são\nremovidos). Omitir a chave `steps` mantém a cadência intacta.\n",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "readOnly": true
+                },
+                "position": {
+                  "type": "integer",
+                  "readOnly": true,
+                  "description": "Ordem do passo (>= 1; o passo 1/regra é 0). Computado no servidor pela ordem do array."
+                },
+                "offset_hours": {
+                  "type": "integer"
+                },
+                "offset_unit": {
+                  "type": "string",
+                  "enum": [
+                    "seconds",
+                    "minutes",
+                    "hours"
+                  ]
+                },
+                "offset_seconds": {
+                  "type": "integer",
+                  "readOnly": true
+                },
+                "context_brief": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "static_body": {
+                  "type": "string",
+                  "maxLength": 4000
+                }
+              }
+            }
           },
           "created_at": {
             "type": "string",

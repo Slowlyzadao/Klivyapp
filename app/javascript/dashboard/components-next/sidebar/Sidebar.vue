@@ -584,6 +584,12 @@ const menuItems = computed(() => {
         // ai_agent plugin — extensões da Bea além do stack Captain legado.
         // Roteiam pra controllers em plugins/ai_agent/app/controllers/.
         {
+          name: 'Bea System Message',
+          label: t('SIDEBAR.AI_AGENT_SYSTEM_PROMPT'),
+          to: accountScopedRoute('ai_agent_system_prompt_index'),
+          activeOn: ['ai_agent_system_prompt_index'],
+        },
+        {
           name: 'Bea Follow Ups',
           label: t('SIDEBAR.AI_AGENT_FOLLOW_UPS'),
           to: accountScopedRoute('ai_agent_follow_ups_index'),
@@ -602,6 +608,12 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.AI_AGENT_TRAINING'),
           to: accountScopedRoute('ai_agent_training_index'),
           activeOn: ['ai_agent_training_index'],
+        },
+        {
+          name: 'Bea Vouchers',
+          label: t('SIDEBAR.AI_AGENT_VOUCHERS'),
+          to: accountScopedRoute('ai_agent_vouchers_index'),
+          activeOn: ['ai_agent_vouchers_index'],
         },
       ],
     },

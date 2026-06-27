@@ -199,6 +199,7 @@ const KLIVY_REQUIRED_ROUTE_RULES = {
     'manage_templates',
   ],
   ai_agent_training_index: ['captain', 'manage_faqs'],
+  ai_agent_system_prompt_index: ['captain', 'manage_settings'],
 };
 
 const klivyHasPermission = (klivyPermissions, [moduleKey, action]) => {

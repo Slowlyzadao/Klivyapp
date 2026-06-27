@@ -701,6 +701,12 @@ paths:
     $ref: '../plugins/ai_agent/swagger/paths/ai_agent_follow_up_rules.yml'
   /api/v1/accounts/{account_id}/ai_agent/follow_up_rules/{id}:
     $ref: '../plugins/ai_agent/swagger/paths/ai_agent_follow_up_rule.yml'
+  /api/v1/accounts/{account_id}/ai_agent/style_profile:
+    $ref: '../plugins/ai_agent/swagger/paths/ai_agent_style_profile.yml#/show'
+  /api/v1/accounts/{account_id}/ai_agent/style_profile/generate:
+    $ref: '../plugins/ai_agent/swagger/paths/ai_agent_style_profile.yml#/generate'
+  /api/v1/accounts/{account_id}/ai_agent/system_prompt:
+    $ref: '../plugins/ai_agent/swagger/paths/ai_agent_system_prompt.yml#/show'
   /api/v1/accounts/{account_id}/ai_agent/internal_notification_templates:
     $ref: '../plugins/ai_agent/swagger/paths/ai_agent_internal_notification_templates.yml'
   /api/v1/accounts/{account_id}/ai_agent/internal_notification_templates/{id}:

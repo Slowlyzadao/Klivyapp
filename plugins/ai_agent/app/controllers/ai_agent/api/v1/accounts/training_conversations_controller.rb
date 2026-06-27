@@ -112,6 +112,25 @@ class AiAgent::Api::V1::Accounts::TrainingConversationsController < Api::V1::Acc
     render json: serialize_summary(@training_conversation)
   end
 
+  # Seleção em massa: aplica a MESMA clínica a todas as conversas em
+  # awaiting_clinic que tenham esse participante (o front auto-detecta pelo nome
+  # mais repetido entre as conversas). As que não têm esse participante ficam
+  # pra seleção manual. Cada uma volta pra :pending e reprocessa.
+  def select_clinic_bulk
+    name = params[:clinic_sender_name].to_s
+    return render_could_not_create_error('Nome da clínica ausente') if name.blank?
+
+    applied = 0
+    @training_conversations.where(status: :awaiting_clinic).find_each do |training|
+      next unless Array(training.participants).any? { |participant| participant['name'] == name }
+
+      training.update!(clinic_sender_name: name, status: :pending)
+      ::AiAgent::ProcessTrainingConversationJob.perform_later(training.id)
+      applied += 1
+    end
+    render json: { applied: applied }
+  end
+
   private
 
   def set_training_conversations

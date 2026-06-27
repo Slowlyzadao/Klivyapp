@@ -6,8 +6,8 @@ class AiAgentTraining extends ApiClient {
     super('ai_agent/training_conversations', { accountScoped: true });
   }
 
-  get() {
-    return axios.get(this.url);
+  get(page = 1) {
+    return axios.get(this.url, { params: { page } });
   }
 
   show(id) {
@@ -35,6 +35,14 @@ class AiAgentTraining extends ApiClient {
   selectClinic(id, clinicSenderName) {
     return axios.post(`${this.url}/${id}/select_clinic`, {
       training_conversation: { clinic_sender_name: clinicSenderName },
+    });
+  }
+
+  // Aplica a mesma clínica a TODAS as conversas em awaiting_clinic que tenham
+  // esse participante (auto-detecção do nome mais comum é feita no front).
+  selectClinicBulk(clinicSenderName) {
+    return axios.post(`${this.url}/select_clinic_bulk`, {
+      clinic_sender_name: clinicSenderName,
     });
   }
 

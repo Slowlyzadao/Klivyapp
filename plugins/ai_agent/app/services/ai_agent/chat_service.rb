@@ -222,6 +222,19 @@ class AiAgent::ChatService
     validation = AiAgent::Guardrail::Validator.new(raw_content, context: context, first_turn: first_turn?).call
     final_message = validation.sanitized_message
 
+    # Anti-invenção de condições de pagamento: ao quebrar objeção de dinheiro
+    # (regra 11 do prompt), o Gemini às vezes carimba um termo específico que
+    # NÃO está no material ("8x sem juros no cartão"). Generaliza o que não vier
+    # da RAG — regra de prompt não segura 100%. Detalhe no PaymentSpecifics.
+    final_message = sanitize_payment_terms(final_message)
+
+    # Cadência de emoji (projeto tom de voz, opção "Equilibrado"): o prompt não
+    # segura a frequência de emoji no Gemini (carimba em ~toda msg, repete o
+    # mesmo). Normaliza DETERMINÍSTICAMENTE — máx 1/msg, sem repetir o mesmo
+    # seguido, ~2 a cada 3. Mexe SÓ no emoji, nunca nas palavras. Estado por
+    # conversa no working_memory; persistido junto no state.update! abaixo.
+    final_message = apply_emoji_cadence(final_message, state)
+
     unless validation.safe?
       state.escalate!(reason: "guardrail:#{validation.violations.join(',')}")
       Rails.logger.warn("[AiAgent::Guardrail] blocked: #{validation.violations.join(',')}")
@@ -245,7 +258,7 @@ class AiAgent::ChatService
     # primeiro pra validar custo×ganho antes de mexer na resposta.
     sentinel_verdict = run_sentinel(user_message, final_message, tool_log)
 
-    state.update!(last_message_at: Time.current)
+    persist_turn_state!(state)
     record_usage(response)
     trace = persist_trace(
       state: state,
@@ -267,6 +280,51 @@ class AiAgent::ChatService
   end
 
   private
+
+  # Aplica a cadência de emoji na fala final (só quando a conta tem tom de voz
+  # ATIVO — sem tom, a persona já usa "emoji raro" e não há spam). Lê o estado
+  # da conversa (último emoji + streak) do working_memory e guarda o novo em
+  # @pending_emoji_state pra ser persistido no state.update! do respond. Em
+  # qualquer erro, devolve a mensagem original (nunca quebra o atendimento).
+  def apply_emoji_cadence(message, state)
+    return message unless style_profile_active?
+
+    mem = state.working_memory.is_a?(Hash) ? state.working_memory : {}
+    result = AiAgent::StyleProfile::EmojiNormalizer.call(text: message, state: mem['emoji_cadence'])
+    @pending_emoji_state = result.state
+    result.text
+  rescue StandardError => e
+    Rails.logger.warn("[AiAgent] apply_emoji_cadence falhou: #{e.message}")
+    message
+  end
+
+  # Generaliza condições de pagamento específicas que a Bea inventou (não vieram
+  # da RAG). Em qualquer erro, devolve a mensagem original (nunca quebra o turno).
+  def sanitize_payment_terms(message)
+    AiAgent::Guardrail::PaymentSpecifics.sanitize(text: message, account: @account)
+  rescue StandardError => e
+    Rails.logger.warn("[AiAgent] sanitize_payment_terms falhou: #{e.message}")
+    message
+  end
+
+  def style_profile_active?
+    return @style_profile_active if defined?(@style_profile_active)
+
+    setting = AiAgent::AccountSetting.find_by(account_id: @account.id)
+    @style_profile_active = setting&.style_profile.is_a?(Hash) && setting.style_profile['enabled'] == true
+  end
+
+  # Persiste o estado do turno: timestamp + (quando há) a cadência de emoji da
+  # conversa no working_memory. Merge defensivo pra não pisar em outras chaves.
+  def persist_turn_state!(state)
+    attrs = { last_message_at: Time.current }
+    if @pending_emoji_state
+      mem = state.working_memory.is_a?(Hash) ? state.working_memory.dup : {}
+      mem['emoji_cadence'] = @pending_emoji_state
+      attrs[:working_memory] = mem
+    end
+    state.update!(attrs)
+  end
 
   def build_chat(context, tool_log, model: nil, user_message: nil)
     resolved_model = (model || model_for_provider).to_s

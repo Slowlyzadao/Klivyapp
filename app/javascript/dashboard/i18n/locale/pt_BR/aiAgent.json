@@ -1,11 +1,45 @@
 {
   "AI_AGENT": {
+    "VOUCHERS": {
+      "TITLE": "Vouchers (lançamento)",
+      "DESCRIPTION": "Modo lançamento: a Bea só atende quem chegou por um voucher — pela FOTO do voucher ou por um dos textos-gatilho abaixo (o que o QR Code manda). Quem chegar de outro jeito não recebe resposta da Bea.",
+      "LOADING": "Carregando…",
+      "TOGGLE_LABEL": "Ativar modo voucher",
+      "TOGGLE_HINT": "Com isto ligado, a Bea SÓ responde quem mandar a foto do voucher ou um dos textos-gatilho. Desligado, ela atende todo mundo normalmente.",
+      "HOW_IT_WORKS": "Como funciona: a aluna tira a foto do voucher e envia (a Bea lê o desconto e comemora), OU escaneia o QR Code, que abre o WhatsApp com um texto pronto. Esse texto pronto é o que você cadastra abaixo.",
+      "TRIGGERS_TITLE": "Textos-gatilho do QR Code",
+      "TRIGGERS_HINT": "Cole aqui os textos que o QR Code envia (um por caixa). Pode adicionar quantos quiser. Não diferencia maiúscula/minúscula nem acento.",
+      "TRIGGER_PLACEHOLDER": "Ex.: Quero resgatar meu voucher",
+      "ADD_TRIGGER": "Adicionar texto",
+      "REMOVE": "Remover",
+      "SAVE": "Salvar",
+      "DISCARD": "Descartar alterações",
+      "SAVED": "Configuração de voucher salva."
+    },
+    "SYSTEM_PROMPT": {
+      "TITLE": "System Message",
+      "DESCRIPTION": "É o comportamento da Bea desta clínica — as regras e o jeito dela atender. Cada clínica tem o seu, independente das outras. Começa com o padrão; edite à vontade e, se quiser voltar atrás, é só restaurar o padrão.",
+      "LOADING": "Carregando…",
+      "USING_DEFAULT": "Esta clínica está usando o System Message padrão. Edite e salve para ter o seu próprio (a partir daí ele fica congelado e não muda quando o padrão for atualizado).",
+      "HAS_OWN": "System Message próprio desta clínica. A Bea segue 100% este texto.",
+      "PLACEHOLDER": "Escreva aqui o System Message da Bea desta clínica…",
+      "CHARS": "{count} caracteres",
+      "SAVE": "Salvar",
+      "DISCARD": "Descartar alterações",
+      "RESTORE": "Restaurar padrão",
+      "SAVED": "System Message salvo. A Bea já passa a seguir este texto.",
+      "RESTORED_INTO_EDITOR": "Padrão carregado no editor. Revise e clique em Salvar para aplicar."
+    },
     "TRAINING": {
       "TITLE": "Treinamento",
       "DESCRIPTION": "Envie conversas reais do WhatsApp da clínica pra Bea aprender. O sistema lê o histórico, separa clínica e paciente, transcreve os áudios e destila tudo em FAQs prontas pra você aprovar.",
       "COUNT": "{count} conversa(s)",
       "NEW_BUTTON": "Enviar conversa",
       "LOADING": "Carregando conversas…",
+      "LOAD_MORE": "Carregar mais ({shown} de {total})",
+      "UPLOAD_PROGRESS": "Enviando conversas… {done} de {total} (em lotes, sem sobrecarregar)",
+      "UPLOAD_FAILED": "{count} arquivo(s) não subiram. Reenviar pra não ficar nenhum de fora?",
+      "UPLOAD_RETRY": "Reenviar os que faltaram",
       "EMPTY_TITLE": "Nenhuma conversa enviada",
       "EMPTY_DESCRIPTION": "Exporte uma conversa do WhatsApp (Conversa → Mais → Exportar conversa → Com mídia) e envie o .zip aqui pra treinar a Bea com o atendimento real da sua clínica.",
       "EMPTY_CTA": "Enviar primeira conversa",
@@ -93,7 +127,40 @@
       },
       "TABS": {
         "CONVERSATIONS": "Conversas",
-        "FAQS": "FAQs aprovadas"
+        "FAQS": "FAQs aprovadas",
+        "VOICE": "Tom de voz"
+      },
+      "BULK_CLINIC": {
+        "DETECTED": "Detectamos que a clínica é \"{name}\" em {count} conversas. Confirma pra todas de uma vez?",
+        "CONFIRM_ALL": "Confirmar pra todas"
+      },
+      "VOICE": {
+        "DESCRIPTION": "A Bea aprende COMO a sua clínica fala (jeito, saudação, emojis) a partir das conversas que você enviou no Treinamento. Gere, revise e ative — ela passa a responder no tom de vocês.",
+        "ACTIVE_TITLE": "Tom ativo",
+        "ACTIVE_ON": "A Bea está falando no tom da clínica",
+        "ACTIVE_OFF": "Tom desativado — a Bea usa o tom padrão",
+        "ACTIVE_EMPTY": "Nenhum tom ativo ainda. Gere um a partir das suas conversas e aprove.",
+        "ENABLE": "Ativar",
+        "DISABLE": "Desativar",
+        "GENERATE": "Gerar tom de voz das conversas",
+        "REGENERATE": "Gerar de novo",
+        "GENERATING": "Analisando suas conversas e destilando o tom…",
+        "FAILED": "Não consegui gerar agora.",
+        "STALLED": "A geração está demorando mais que o normal. Tente de novo.",
+        "RETRY": "Tentar de novo",
+        "DRAFT_TITLE": "Rascunho gerado — revise antes de ativar",
+        "DRAFT_HINT": "Edite o que quiser e REMOVA exemplos que tenham nome de paciente ou algo específico. Só o estilo (jeito de falar) é usado — preço, horário e dados sempre vêm das ferramentas da Bea.",
+        "FIELD_SUMMARY": "Resumo do estilo",
+        "FIELD_GREETING": "Costuma abrir assim",
+        "FIELD_CLOSING": "Costuma encerrar assim",
+        "FIELD_EMOJIS": "Emojis que usa",
+        "FIELD_EXPRESSIONS": "Expressões e bordões",
+        "FIELD_EXAMPLES": "Exemplos reais (copie o tom, não os dados)",
+        "EXAMPLE_PATIENT": "Paciente:",
+        "REMOVE": "Remover",
+        "EMPTY_EXAMPLES": "Nenhum exemplo.",
+        "APPROVE": "Aprovar e ativar a Bea",
+        "META": "{messages} mensagens de {conversations} conversa(s)"
       },
       "FAQS_TAB": {
         "SEARCH": "Buscar FAQs...",

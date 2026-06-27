@@ -27,7 +27,8 @@ class AiAgent::Tools::ClinicInfoTool < AiAgent::Tools::BaseTool
     # N+1 ao listar `professionals` depois.
     services = if defined?(::AgendaService) && defined?(::AgendaServiceUser)
                  linked_ids = ::AgendaServiceUser.where(account_id: account.id).select(:agenda_service_id)
-                 ::AgendaService.where(account_id: account.id, id: linked_ids)
+                 # `.kept`: ignora serviços arquivados (soft-delete).
+                 ::AgendaService.kept.where(account_id: account.id, id: linked_ids)
                                 .includes(:professionals)
                                 .limit(50)
                else

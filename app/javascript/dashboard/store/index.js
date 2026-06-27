@@ -12,6 +12,9 @@ import aiAgentFollowUpRules from '@plugins/ai_agent/frontend/store/aiAgentFollow
 import aiAgentInternalNotificationTemplates from '@plugins/ai_agent/frontend/store/aiAgentInternalNotificationTemplates';
 import aiAgentTraining from '@plugins/ai_agent/frontend/store/aiAgentTraining';
 import aiAgentTrainingFaqs from '@plugins/ai_agent/frontend/store/aiAgentTrainingFaqs';
+import aiAgentStyleProfile from '@plugins/ai_agent/frontend/store/aiAgentStyleProfile';
+import aiAgentSystemPrompt from '@plugins/ai_agent/frontend/store/aiAgentSystemPrompt';
+import aiAgentVoucherConfig from '@plugins/ai_agent/frontend/store/aiAgentVoucherConfig';
 import internalChatRooms from '@plugins/internal_chat/frontend/store/internalChatRooms';
 import internalChatMessages from '@plugins/internal_chat/frontend/store/internalChatMessages';
 import internalChatMentions from '@plugins/internal_chat/frontend/store/internalChatMentions';
@@ -89,6 +92,9 @@ export default createStore({
     aiAgentInternalNotificationTemplates,
     aiAgentTraining,
     aiAgentTrainingFaqs,
+    aiAgentStyleProfile,
+    aiAgentSystemPrompt,
+    aiAgentVoucherConfig,
     internalChatRooms,
     internalChatMessages,
     internalChatMentions,
