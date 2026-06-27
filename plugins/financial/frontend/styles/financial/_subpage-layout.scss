@@ -1,0 +1,60 @@
+/* ── Sub-page shared layout ────────────────────────────────── */
+.financial-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.financial-page__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: rgb(var(--s-900));
+  margin: 0;
+  line-height: 1.3;
+}
+
+body.dark .financial-page__title {
+  color: rgb(var(--s-50));
+}
+
+.financial-page__subtitle {
+  font-size: 0.8125rem;
+  color: rgb(var(--s-500));
+  margin: 0.25rem 0 0;
+}
+
+/* ── Grids for summary cards ───────────────────────────────── */
+.financial-grid {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+}
+
+.financial-grid--2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.financial-grid--3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.financial-grid--4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 768px) {
+  .financial-grid--3,
+  .financial-grid--4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .financial-grid--2,
+  .financial-grid--3,
+  .financial-grid--4 {
+    grid-template-columns: 1fr;
+  }
+}

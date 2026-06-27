@@ -1,0 +1,28 @@
+post:
+  tags:
+    - Serviços da Agenda
+  summary: Hard-delete em massa de serviços sem uso
+  description: |
+    **Operação IRREVERSÍVEL.** Remove fisicamente todos os serviços sem
+    nenhum vínculo (ativos ou arquivados). Como esses registros nunca
+    tiveram uso, AuditLog NÃO é gerado (trade-off deliberado: zero rastro
+    a preservar). Para soft-delete individual com motivo, use
+    `DELETE /agenda_services/:id`.
+
+    Idempotente — rerun é seguro (segunda chamada não acha mais nada).
+    A UI deve confirmar previamente via `GET cleanup_unused_preview`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Serviços removidos
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              cleaned_count: { type: integer, example: 7 }
+              ids:
+                type: array
+                items: { type: integer }
+                example: [12, 18, 23, 31, 42, 55, 60]

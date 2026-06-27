@@ -1,0 +1,30 @@
+patch:
+  tags:
+    - Pacientes
+  summary: Atualizar `patient_status`
+  description: Atualiza só o campo `patient_status` (atalho da UI). Audit log `update`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [patient_status]
+          properties:
+            patient_status:
+              type: string
+              enum: [novo, ativo, inativo, faltoso, alta, arquivado]
+  responses:
+    '200':
+      description: Status atualizado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              patient_status: { type: string }
+    '422':
+      description: Status inválido

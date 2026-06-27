@@ -1,0 +1,138 @@
+put:
+  tags:
+    - Chat Interno — Mensagens
+  summary: Editar mensagem (somente autor)
+  description: |
+    Edita o conteúdo de uma mensagem. **Somente o autor** edita — o
+    administrador da conta NÃO faz bypass de autoria neste endpoint
+    (diferente do delete). Apenas o campo `content` é editável;
+    `content_attributes` **não** pode ser alterado.
+
+    Ao salvar, `edited_at` é preenchido automaticamente.
+
+    Regras (cada uma retorna `422` com `error` humano):
+    - mensagem deletada não pode ser editada (`deleted_cannot_edit`);
+    - janela de edição de **5 minutos** após `created_at`
+      (`edit_window_expired`);
+    - só mensagens de texto (`content_type == 'text'`) são editáveis
+      (`only_text_editable`).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/roomId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [content]
+          properties:
+            content:
+              type: string
+              description: Novo texto da mensagem (único campo editável).
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                $ref: '../definitions/Message.yml'
+    '403':
+      description: Não é o autor da mensagem
+    '404':
+      description: Não encontrada
+    '422':
+      description: |
+        Não pode editar. `error` indica o motivo: `deleted_cannot_edit`,
+        `edit_window_expired` (passou dos 5min) ou `only_text_editable`.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+patch:
+  tags:
+    - Chat Interno — Mensagens
+  summary: Editar mensagem (somente autor)
+  description: |
+    Alias de `PUT` — mesmo comportamento. **Somente o autor** edita (admin
+    não bypassa autoria); só `content` é editável; `edited_at` automático;
+    `422` para `deleted_cannot_edit` / `edit_window_expired` (5min) /
+    `only_text_editable`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/roomId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [content]
+          properties:
+            content:
+              type: string
+              description: Novo texto da mensagem (único campo editável).
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                $ref: '../definitions/Message.yml'
+    '403':
+      description: Não é o autor da mensagem
+    '404':
+      description: Não encontrada
+    '422':
+      description: |
+        Não pode editar. `error`: `deleted_cannot_edit`,
+        `edit_window_expired` ou `only_text_editable`.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+delete:
+  tags:
+    - Chat Interno — Mensagens
+  summary: Deletar mensagem (soft delete)
+  description: |
+    Faz **soft-delete** (`soft_delete!`): preenche `deleted_at`, zera
+    `content` e agenda purge assíncrono dos blobs de anexos (mantém as rows
+    de attachment). A UI exibe placeholder "mensagem removida".
+
+    Diferente do edit, aqui o admin da conta **pode** apagar mensagem de
+    terceiros.
+    Autorização: account administrator OR (author AND member AND Klivy
+    `internal_chat.view`).
+
+    Retorna `200` com a mensagem soft-deletada serializada (NÃO `204`).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/roomId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Removida (soft delete) — devolve a mensagem atualizada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                $ref: '../definitions/Message.yml'
+    '403':
+      description: Não é autor nem administrador
+    '404':
+      description: Não encontrada

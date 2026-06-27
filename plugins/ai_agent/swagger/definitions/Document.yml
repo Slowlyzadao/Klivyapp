@@ -1,0 +1,64 @@
+type: object
+description: |
+  Documento da base de conhecimento da Bea. Substitui o `Captain::Document`
+  legado (mesma tab "Documentos" no menu BEA), mas armazena chunks em
+  pgvector via `ai_agent_documents` + `ai_agent_parent_chunks` +
+  `ai_agent_child_chunks`. Quando `content_type='pdf'`, anexa um arquivo
+  via ActiveStorage; quando `'url'`, baixa de `external_link`.
+
+  Processamento é assíncrono via `AiAgent::IngestDocumentJob` — clínica
+  cria o registro, `status='pending'`, job extrai texto + chunka + embeda
+  via OpenAI, e ao final `status='processed'` (ou `'failed'`).
+properties:
+  id:
+    type: integer
+    example: 1
+  account_id:
+    type: integer
+    example: 1
+  name:
+    type: string
+    example: "Politica de remarcacao"
+  external_link:
+    type: string
+    nullable: true
+    description: Preenchido quando o documento foi criado a partir de uma URL.
+  status:
+    type: string
+    enum: [pending, processing, processed, failed]
+    description: |
+      Estado do processamento (string do enum `AiAgent::Document#status`).
+      `pending` = recém-criado, `processing` = job rodando,
+      `processed` = chunks/embeddings prontos, `failed` = ingestão falhou.
+  content:
+    type: string
+    nullable: true
+    description: Sempre `null` — o serializer nunca expõe o texto bruto.
+  content_type:
+    type: string
+    enum: [pdf, url]
+    description: |
+      Espelha `source_type` do registro. `pdf` quando há arquivo anexado,
+      `url` caso contrário.
+  file_size:
+    type: integer
+    nullable: true
+    description: Tamanho em bytes do PDF anexado; `null` quando não há arquivo.
+  display_url:
+    type: string
+    nullable: true
+    description: Igual a `external_link` (URL para abrir/baixar o documento).
+  assistant:
+    type: object
+    nullable: true
+    description: |
+      Sempre `null` — a Bea não está vinculada a um `Captain::Assistant`
+      específico; o RAG pertence à conta inteira.
+  created_at:
+    type: integer
+    description: Epoch em segundos (`created_at.to_i`).
+    example: 1717027200
+  updated_at:
+    type: integer
+    description: Epoch em segundos (`updated_at.to_i`).
+    example: 1717027200

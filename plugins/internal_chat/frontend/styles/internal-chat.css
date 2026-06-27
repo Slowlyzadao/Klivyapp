@@ -35,3 +35,55 @@
   border-radius: 12px;
   animation: ic-flash 1.4s ease-out;
 }
+
+/* ─── Drawer slide-in (DmUserDrawer + GroupSettingsDrawer) ─────────────
+   Aplicado via `<Transition name="ic-drawer">` no RoomView. Backdrop
+   (root .fixed.bg-black/40) faz fade; aside (.flex.flex-col.max-w-md)
+   desliza da direita. Curve cubic-bezier(0.32, 0.72, 0, 1) é a "iOS
+   ease-out" — chega no destino de forma natural sem overshoot.
+
+   Selectores precisam ser globais (não-scoped) porque o componente
+   `DmUserDrawer`/`GroupSettingsDrawer` aplica `data-v-*` próprio em
+   seus elementos internos, e o > child selector de um scoped style
+   no pai não atravessa essa fronteira. */
+.ic-drawer-enter-from,
+.ic-drawer-leave-to {
+  opacity: 0;
+}
+.ic-drawer-enter-from > aside,
+.ic-drawer-leave-to > aside {
+  transform: translateX(100%);
+}
+.ic-drawer-enter-active,
+.ic-drawer-leave-active {
+  transition: opacity 200ms ease;
+}
+.ic-drawer-enter-active > aside,
+.ic-drawer-leave-active > aside {
+  transition: transform 280ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* ─── Reset margens default — scope .ic-app ────────────────────────────
+   Tailwind preflight já faz `p { margin: 0 }` globalmente, MAS o
+   `_base.scss` do Chatwoot (e estilos legados do Foundation) reintroduzem
+   margens em <p>/<h*> em contextos específicos — visto em RoomListItem,
+   MentionsView, GroupMembersSection (espaço vertical excessivo entre
+   nome e subtítulo "Membro").
+
+   Solução: scope `.ic-app` aplicado na raiz do ChatShell + nos teleports
+   (NewRoomModal, MessageActionsMenu). Zera margem só dentro do módulo,
+   não vaza pra resto do app. Selector é genérico mas específico o
+   suficiente pra ganhar do `_base.scss` sem precisar de `!important`.
+
+   Em vez de repetir `m-0` em cada `<p>` de cada componente (visto antes
+   em MentionsView), centraliza num único reset — DRY + menos chance de
+   regressão quando alguém adiciona um <p> novo. */
+.ic-app p,
+.ic-app h1,
+.ic-app h2,
+.ic-app h3,
+.ic-app h4,
+.ic-app h5,
+.ic-app h6 {
+  margin: 0;
+}

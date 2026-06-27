@@ -32,13 +32,20 @@ export const actions = {
       const response = await ServicesAPI.get();
       commit(types.SET_AGENDA_SERVICES, response.data);
     } catch (error) {
-      // Ignore silently
+      // Loga em vez de engolir silenciosamente — facilita debug quando a
+      // lista vem vazia por erro de rede/autorização em vez de "sem dados".
+      // eslint-disable-next-line no-console
+      console.error('[agendaServices/fetch]', error);
+      throw error;
     } finally {
       commit(types.SET_AGENDA_SERVICE_UI_FLAG, { isFetching: false });
     }
   },
 
-  // Cria um novo serviço
+  // Cria um novo serviço.
+  // Re-lança o erro axios original (NÃO `new Error(error)`, que vira
+  // "Error: [object Object]") pra que o caller acesse `error.response.data.error`
+  // com a mensagem real do backend (ex.: validação de unicidade do nome).
   create: async function createService({ commit }, serviceData) {
     commit(types.SET_AGENDA_SERVICE_UI_FLAG, { isCreating: true });
     try {
@@ -48,7 +55,7 @@ export const actions = {
       commit(types.ADD_AGENDA_SERVICE, response.data);
       return response.data;
     } catch (error) {
-      throw new Error(error);
+      throw error;
     } finally {
       commit(types.SET_AGENDA_SERVICE_UI_FLAG, { isCreating: false });
     }
@@ -64,7 +71,7 @@ export const actions = {
       commit(types.EDIT_AGENDA_SERVICE, response.data);
       return response.data;
     } catch (error) {
-      throw new Error(error);
+      throw error;
     } finally {
       commit(types.SET_AGENDA_SERVICE_UI_FLAG, { isUpdating: false });
     }
@@ -77,7 +84,7 @@ export const actions = {
       await ServicesAPI.delete(id);
       commit(types.DELETE_AGENDA_SERVICE, id);
     } catch (error) {
-      throw new Error(error);
+      throw error;
     } finally {
       commit(types.SET_AGENDA_SERVICE_UI_FLAG, { isDeleting: false });
     }

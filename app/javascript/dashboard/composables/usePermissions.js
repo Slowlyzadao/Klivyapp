@@ -6,20 +6,20 @@ import { useStoreGetters } from 'dashboard/composables/store';
  * Composable principal para verificação de permissões RBAC do BeClinic.
  *
  * Uso:
- *   const { can, scope, isDono, isGerente } = usePermissions();
+ *   const { can, scope, isAdmin } = usePermissions();
  *
  *   can('patients', 'view')          // true | false
  *   can('financial', 'view_cashflow') // true | false
  *   scope('agenda')                  // 'all' | 'own'
  *
  * O `can()` retorna true para admins nativos do Chatwoot (isAdmin),
- * garantindo que a equipe BeClinic tenha bypass total.
+ * garantindo bypass total. Demais usuários consultam a KlivyRole atribuída.
  */
 export function usePermissions() {
   const store = useStore();
   const getters = useStoreGetters();
 
-  // Native Chatwoot admin role — BeClinic super admins use this
+  // Native Chatwoot admin role — bypass total
   const isAdmin = computed(
     () => getters.getCurrentRole.value === 'administrator'
   );
@@ -28,64 +28,42 @@ export function usePermissions() {
     () => store.getters['beclinicPermissions/getPermissions']
   );
 
-  const beclinicRole = computed(
-    () => store.getters['beclinicPermissions/getBeclinicRole']
-  );
-
-  const team = computed(() => store.getters['beclinicPermissions/getTeam']);
-
   const isLoaded = computed(
     () => store.getters['beclinicPermissions/isLoaded']
   );
 
-  const isDono = computed(
-    () => isAdmin.value || store.getters['beclinicPermissions/isDono']
-  );
-
-  const isGerente = computed(
-    () =>
-      isAdmin.value ||
-      isDono.value ||
-      store.getters['beclinicPermissions/isGerente']
-  );
-
-  const isEspecialista = computed(
-    () => store.getters['beclinicPermissions/isEspecialista']
-  );
-
   /**
    * Check if current user can perform action on module.
-   * Admins and donos always return true.
+   * Admins always return true.
    * @param {string} moduleName - e.g. 'patients', 'agenda', 'financial'
    * @param {string} action - e.g. 'view', 'create', 'delete'
    * @returns {boolean}
    */
   const can = (moduleName, action) => {
     if (isAdmin.value) return true;
-    if (isDono.value) return true;
     return store.getters['beclinicPermissions/can'](moduleName, action);
   };
 
   /**
    * Get the scope for a module.
-   * Admins and donos always get 'all'.
+   * Admins always get 'all'.
    * @param {string} moduleName - e.g. 'patients', 'agenda'
    * @returns {'all' | 'own'}
    */
   const scope = moduleName => {
-    if (isAdmin.value || isDono.value) return 'all';
+    if (isAdmin.value) return 'all';
     return store.getters['beclinicPermissions/scope'](moduleName);
   };
 
   /**
    * Returns true if the given module has at least one sub-permission active.
-   * Admins/donos always pass. If the module is not present in the hash,
+   * Admins always pass. If the module is not present in the hash,
    * fail-open so unmapped modules stay visible.
    * @param {string} moduleName
    * @returns {boolean}
    */
   const moduleEnabled = moduleName => {
-    if (isAdmin.value || isDono.value) return true;
+    if (isAdmin.value) return true;
     const all = permissions.value || {};
     const mod = all[moduleName];
     if (!mod) return true;
@@ -107,13 +85,8 @@ export function usePermissions() {
 
   return {
     permissions,
-    beclinicRole,
-    team,
     isLoaded,
     isAdmin,
-    isDono,
-    isGerente,
-    isEspecialista,
     can,
     scope,
     moduleEnabled,

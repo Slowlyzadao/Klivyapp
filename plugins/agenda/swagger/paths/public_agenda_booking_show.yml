@@ -1,0 +1,28 @@
+get:
+  tags:
+    - Agenda Pública
+  summary: Detalhes de uma reserva via token assinado
+  description: |
+    Resolve o `AgendaEvent` a partir do `cancel_token` retornado em `book`.
+    O token é HMAC-assinado (não-falsificável sem `secret_key_base`) e
+    carrega `event_id + account_id`. **Não revela dados sensíveis** —
+    devolve só o que o paciente já conhece.
+  parameters:
+    - name: token
+      in: path
+      required: true
+      description: Token retornado por `POST /agenda/:public_id/book`.
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Detalhes do agendamento
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              event:
+                $ref: '../definitions/PublicBooking.yml'
+    '404':
+      description: Token inválido, expirado ou evento não encontrado

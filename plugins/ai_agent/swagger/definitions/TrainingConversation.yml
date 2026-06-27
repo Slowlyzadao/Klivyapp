@@ -1,0 +1,91 @@
+type: object
+description: |
+  Conversa de WhatsApp (.zip) enviada na aba "Treinamento" da Bea. O pipeline
+  (AiAgent::ProcessTrainingConversationJob) destila o histórico em FAQs. O
+  conteúdo bruto (texto + áudio) é efêmero — processado no job e descartado ao
+  final (LGPD); aqui ficam só metadados, progresso e, no `show`, as mensagens
+  parseadas (com PII já mascarada).
+
+  Fase 1: estágios 0-1 (ingestão + parser determinístico). Estágios 2-5
+  (transcrição, blocagem, extração e consolidação de FAQ) entram nas próximas
+  fases.
+properties:
+  id:
+    type: integer
+    example: 1
+  name:
+    type: string
+    example: "Conversa com Maria"
+    description: Nome do envio. Default = nome-base do .zip.
+  clinic_sender_name:
+    type: string
+    example: "Clínica OdontoVida"
+    description: Nome do remetente que é a CLÍNICA na conversa (separa clínica × paciente).
+  status:
+    type: string
+    enum: [pending, extracting, transcribing, extracting_faq, completed, failed]
+    description: |
+      Estágio do pipeline (enum `AiAgent::TrainingConversation#status`).
+      `pending` = na fila; `extracting` = descompactando + parser;
+      `transcribing` = transcrevendo áudios; `extracting_faq` = gerando FAQs;
+      `completed` = pronto; `failed` = erro (ver `error_message`).
+  error_message:
+    type: string
+    nullable: true
+    description: Mensagem de erro quando `status='failed'`.
+  message_count:
+    type: integer
+    description: Total de mensagens parseadas.
+  clinic_message_count:
+    type: integer
+    description: Mensagens atribuídas à clínica.
+  patient_message_count:
+    type: integer
+    description: Mensagens atribuídas ao paciente.
+  audio_total:
+    type: integer
+    description: Áudios (.opus) detectados.
+  audio_transcribed:
+    type: integer
+    description: Áudios transcritos (preenchido na Fase 2).
+  faq_count:
+    type: integer
+    description: FAQs geradas (preenchido na Fase 3).
+  created_at:
+    type: integer
+    description: Epoch em segundos (`created_at.to_i`).
+    example: 1717027200
+  processed_at:
+    type: integer
+    nullable: true
+    description: Epoch em segundos do fim do processamento; `null` enquanto não concluído.
+  parsed_messages:
+    type: array
+    description: |
+      **Só no `show`.** Mensagens parseadas (PII mascarada), para revisão.
+      Temporário — purgado quando o ciclo completo (Fase 4) estiver pronto.
+    items:
+      type: object
+      properties:
+        idx:
+          type: integer
+        date:
+          type: string
+          example: "01/06/2026"
+        time:
+          type: string
+          example: "09:01:00"
+        sender:
+          type: string
+        role:
+          type: string
+          enum: [CLINICA, PACIENTE]
+        text:
+          type: string
+        type:
+          type: string
+          enum: [texto, audio, anexo_ignorado]
+        attachment:
+          type: string
+          nullable: true
+          description: Nome do arquivo de mídia, quando `type` é `audio`/`anexo_ignorado`.

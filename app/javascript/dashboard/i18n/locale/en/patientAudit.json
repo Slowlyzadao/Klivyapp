@@ -1,0 +1,82 @@
+{
+  "PATIENT_AUDIT": {
+    "HEADER": {
+      "TITLE": "Audit and Security",
+      "SUBTITLE": "Legal traceability of all accesses, edits and signatures in the medical record.",
+      "EXPORT_PDF": "Export Medical Record PDF",
+      "EXPORTING": "Generating PDF..."
+    },
+    "FILTERS": {
+      "ACTION_LABEL": "Action Type",
+      "ACTION_PLACEHOLDER": "All actions",
+      "DATE_FROM": "From Date",
+      "DATE_TO": "To Date",
+      "DATE_PLACEHOLDER": "Select",
+      "APPLY": "Filter",
+      "CLEAR_TITLE": "Clear filters",
+      "ALL_ACTIONS": "All actions"
+    },
+    "ACTION_OPTIONS": {
+      "VIEW": "View",
+      "CREATE": "Create",
+      "UPDATE": "Edit",
+      "DELETE": "Delete",
+      "SIGN": "Sign",
+      "EXPORT": "Export",
+      "FINALIZE": "Finalize",
+      "APPROVE": "Approve",
+      "PAY": "Pay",
+      "PRINT": "Print",
+      "CLINICAL_OVERRIDE": "Clinical override"
+    },
+    "TABLE": {
+      "LOADING": "Loading audit logs...",
+      "EMPTY": "No audit log found for this patient.",
+      "EMPTY_HINT": "Try adjusting filters or check your permissions.",
+      "COL_DATE": "Date / Time",
+      "COL_ACTION": "Action",
+      "COL_USER": "User / Profile",
+      "COL_MODULE": "Module & Details",
+      "COL_IP": "IP",
+      "COL_INFO": "Info",
+      "DEFAULT_USER": "System",
+      "DEFAULT_MODULE": "Record",
+      "EMPTY_VALUE": "empty",
+      "EXPAND_TITLE": "View full details",
+      "COLLAPSE_TITLE": "Collapse details"
+    },
+    "EXPANDED": {
+      "TITLE": "Detailed Action Record",
+      "DIFF_TITLE": "Change History (From → To)",
+      "NULL_VALUE": "null"
+    },
+    "ACTION_TEXT": {
+      "ACTOR_PREFIX_USER": "User {actor}",
+      "ACTOR_PREFIX_SYSTEM": "The system",
+      "VIEW": "{actor} accessed and viewed data from {resource}.",
+      "CREATE": "{actor} created a new record in {resource}.",
+      "UPDATE": "{actor} edited and changed information in {resource}.",
+      "DELETE": "{actor} deleted the record of {resource}.",
+      "SIGN": "{actor} signed the {resource}.",
+      "FINALIZE": "{actor} signed and finalized the record of {resource}. The document became immutable.",
+      "APPROVE": "{actor} approved the {resource}.",
+      "EXPORT": "{actor} exported the PDF of {resource}.",
+      "PAY": "{actor} registered payment in {resource}.",
+      "PRINT": "{actor} issued print/receipt for {resource}.",
+      "CLINICAL_OVERRIDE": "{actor} executed {resource} despite a clinical conflict detected by the anamnesis — justification recorded.",
+      "DEFAULT": "{actor} executed action: {action} on {resource}."
+    },
+    "FOOTER": {
+      "IMMUTABLE_NOTE": "Immutable records — permanently stored in the database.",
+      "TOTAL": "Total: {count} events",
+      "PAGE_INFO": "Page {current} of {total}",
+      "PREV": "Previous",
+      "NEXT": "Next"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Error loading audit logs.",
+      "EXPORT_SUCCESS": "Medical record exported successfully!",
+      "EXPORT_ERROR": "Error exporting medical record. Check your permissions."
+    }
+  }
+}

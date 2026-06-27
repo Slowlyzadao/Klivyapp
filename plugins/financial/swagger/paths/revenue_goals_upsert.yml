@@ -1,0 +1,35 @@
+post:
+  tags:
+    - Financeiro · Metas de Receita
+  summary: Upsert por (period, year, month, quarter)
+  description: |
+    Cria ou atualiza a meta para o período identificado pela tupla
+    `(period, year, month, quarter)`. Requer GERENTE/ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [revenue_goal]
+          properties:
+            revenue_goal:
+              type: object
+              required: [period, year, amount_cents]
+              properties:
+                period: { type: string, enum: [month, quarter, year] }
+                year: { type: integer }
+                month: { type: integer, minimum: 1, maximum: 12 }
+                quarter: { type: integer, minimum: 1, maximum: 4 }
+                amount_cents: { type: integer }
+  responses:
+    '200':
+      description: Salvo
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/RevenueGoal.yml'
+    '422':
+      description: Erro de validação

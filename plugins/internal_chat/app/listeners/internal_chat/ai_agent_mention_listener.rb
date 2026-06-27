@@ -23,7 +23,9 @@ module InternalChat
 
       return unless defined?(::AiAgent::InternalChat::RespondJob)
 
-      ::AiAgent::InternalChat::RespondJob.perform_later(message.id)
+      # Passa account_id pro job validar tenant — defesa cross-tenant contra
+      # jobs forjados com message_id de outra conta.
+      ::AiAgent::InternalChat::RespondJob.perform_later(message.id, account_id: message.room.account_id)
     rescue StandardError => e
       Rails.logger.warn("[InternalChat] AiAgentMentionListener falhou: #{e.class}: #{e.message}")
     end

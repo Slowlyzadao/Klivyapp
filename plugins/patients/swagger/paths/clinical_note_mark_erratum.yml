@@ -1,0 +1,27 @@
+patch:
+  tags:
+    - Evoluções Clínicas
+  summary: Marcar errata
+  description: Registra errata sem editar conteúdo. `reason` obrigatório.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [reason]
+          properties:
+            reason: { type: string }
+  responses:
+    '200':
+      description: Errata marcada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/ClinicalNote.yml'
+    '422':
+      description: Justificativa ausente ou já tem errata

@@ -1,0 +1,50 @@
+post:
+  tags:
+    - Financeiro · Formas de Pagamento
+  summary: Renomear provedor (alias coletivo)
+  description: |
+    Propaga `provider_alias` em TODOS os métodos vivos do mesmo
+    `(account_id, provider)`. O `provider` cru (e portanto o agrupamento)
+    permanece intacto — o alias é só display. `provider_alias` vazio/null limpa
+    o alias (volta a exibir o raw).
+
+    **ATENÇÃO — sem RBAC:** ao contrário de create/update/destroy/destroy_provider,
+    esta ação **NÃO** chama `authorize_write!`. Qualquer usuário autenticado pode
+    renomear o provedor (não há gate de role ADMIN/GERENTE). Idempotência opcional
+    via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [provider]
+          properties:
+            provider: { type: string, example: "Cielo", description: "Provedor cru a renomear (match exato após strip)." }
+            provider_alias: { type: string, nullable: true, example: "Cielo - Loja Centro", description: "Apelido de display. Vazio/null limpa o alias." }
+  responses:
+    '200':
+      description: Alias propagado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              ok: { type: boolean, example: true }
+              updated_count: { type: integer, description: "Quantos métodos foram atualizados." }
+              provider: { type: string }
+              provider_alias: { type: string, nullable: true }
+    '404':
+      description: "Provedor não encontrado (`error: provider_not_found`)"
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'
+    '422':
+      description: "`provider` ausente (`error: provider_required`)"
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'

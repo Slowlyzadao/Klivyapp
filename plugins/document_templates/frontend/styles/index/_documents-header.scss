@@ -1,0 +1,83 @@
+// Header da DocumentsIndex — matches mockup M3 Klivy.
+
+.docs-header {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  // Alinhado à página de Pacientes (.pt-page): 28px topo / 32px laterais.
+  padding: 28px var(--kl-container-padding) 24px;
+  background: var(--kl-bg);
+
+  // ── Row 1: título + CTA primário ─────────────────────────────────────
+  &__hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  &__hero-text {
+    min-width: 0;
+  }
+
+  // Título alinhado à página de Pacientes (.pt-title): 22px / 600.
+  &__title {
+    margin: 0;
+    font-family: inherit;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    color: var(--kl-on-surface);
+  }
+
+  &__subtitle {
+    margin: 3px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--kl-secondary);
+  }
+
+  // CTA "Novo modelo" = <BeclinicButton color="blue"> (design system).
+
+  // ── Row 2: tabs + filtros ────────────────────────────────────────────
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  &__filters {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  // Busca = <SearchInput> (beclinic_core); filtro de tipo = <FormSelect>.
+  // Ambos trazem o próprio visual (slate tokens) — aqui só o sizing.
+  &__type-select {
+    width: 240px;
+    flex-shrink: 0;
+  }
+}
+
+// ── Responsivo ─────────────────────────────────────────────────────────
+@media (max-width: 900px) {
+  .docs-header {
+    padding: 24px 20px 16px;
+    gap: 24px;
+
+    &__filters {
+      width: 100%;
+      justify-content: flex-start;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .docs-header__type-select { width: 100%; }
+}

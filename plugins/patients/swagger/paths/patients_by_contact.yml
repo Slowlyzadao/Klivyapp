@@ -1,0 +1,31 @@
+get:
+  tags:
+    - Pacientes
+  summary: Buscar paciente pelo `contact_id` (com fallback por telefone)
+  description: |
+    Primeiro tenta `find_by(contact_id: X)`. Se não achar, faz fallback por
+    telefone do contato (compara dígitos do `phone_number`, tirando `+55` se
+    presente) e auto-vincula `patient.contact_id` quando estava nulo —
+    self-heal de cadastros desincronizados. Não sobrescreve link existente
+    (caso intencional: família/twin compartilhando telefone).
+
+    Resposta é igual ao [summary endpoint](#tag/Pacientes/operation/summary).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: contact_id
+      in: query
+      required: true
+      schema:
+        type: integer
+  responses:
+    '200':
+      description: Resumo do prontuário
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              payload:
+                $ref: '../definitions/PatientSummary.yml'
+    '404':
+      description: Paciente não encontrado (nem por id, nem por telefone)

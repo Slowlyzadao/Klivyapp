@@ -1,0 +1,152 @@
+// Menu de inserção de variável — popover (tippy) e sidebar.
+// Tokens M3 Klivy. Ícones soltos.
+
+@use '../variables' as *;
+
+.variable-picker {
+  display: flex;
+  flex-direction: column;
+  max-height: 360px;
+  width: 320px;
+  overflow: hidden;
+  border-radius: var(--kl-radius-xl);
+  background: var(--kl-surface-white);
+  box-shadow: var(--kl-shadow-popover);
+  border: 1px solid var(--kl-border-subtle);
+  font-family: var(--kl-font-family);
+
+  // Wrapper da busca — o campo em si é o <SearchInput> (beclinic_core).
+  &__search {
+    padding: 10px;
+    border-bottom: 1px solid var(--kl-border-subtle);
+  }
+
+  &__empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--kl-secondary);
+    font-size: var(--kl-font-body-md);
+  }
+
+  &__group {
+    overflow-y: auto;
+  }
+
+  &__group-title {
+    position: sticky;
+    top: 0;
+    margin: 0;
+    padding: 8px 12px;
+    background: var(--kl-surface-low);
+    color: var(--kl-secondary);
+    font-family: inherit;
+    font-size: var(--kl-font-label-md);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  // Header de acordeão (só na sidebar; o popover "/" usa __group-title).
+  &__accordion-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: var(--kl-surface-low);
+    color: var(--kl-secondary);
+    font-family: inherit;
+    font-size: var(--kl-font-label-md);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: left;
+    cursor: pointer;
+    transition: color var(--kl-transition), background var(--kl-transition);
+
+    &:hover { color: var(--kl-on-surface); }
+  }
+
+  &__accordion-chevron {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    transition: transform 180ms ease;
+
+    &.is-open { transform: rotate(90deg); }
+  }
+
+  &__accordion-label { flex: 1; }
+
+  &__accordion-count {
+    flex-shrink: 0;
+    color: var(--kl-text-muted);
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+
+  &__list {
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: var(--kl-radius-md);
+    background: transparent;
+    color: var(--kl-on-surface);
+    font-family: inherit;
+    font-size: var(--kl-font-body-md);
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--kl-transition), color var(--kl-transition);
+
+    &:hover {
+      background: var(--kl-surface-low);
+    }
+
+    &--active {
+      background: var(--kl-primary-fixed);
+      color: var(--kl-on-primary-fixed-variant);
+    }
+  }
+
+  &__item-label {
+    flex-shrink: 0;
+  }
+
+  &__item-example {
+    flex: 1;
+    text-align: right;
+    color: var(--kl-text-muted);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Valor REAL resolvido do paciente (cor de texto normal, não muted, pra
+  // diferenciar da dica/example). Truncado à direita com ellipsis + title.
+  &__item-value {
+    flex: 1;
+    min-width: 0;
+    text-align: right;
+    color: var(--kl-on-surface);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

@@ -1,20 +1,26 @@
 type: object
+description: |
+  Conta bancária do canon v2 (`Financial::BankAccount`). Saldo inicial só
+  editável na criação (canon §4.2). Soft-delete bloqueia se `current_balance_cents != 0`
+  (operador precisa transferir o saldo antes via `/transfer`).
 properties:
-  id:
+  id: { type: integer }
+  name: { type: string, example: "Itaú - Conta Principal" }
+  kind:
+    type: string
+    description: "Tipo de conta (ex.: corrente, poupanca, caixa, cofre, gateway, cartao)"
+  bank_name: { type: string, nullable: true, example: "Itaú Unibanco" }
+  bank_code: { type: string, nullable: true }
+  agency: { type: string, nullable: true }
+  account_number: { type: string, nullable: true }
+  initial_balance_cents:
     type: integer
-  name:
-    type: string
-    example: "Itaú - Conta Principal"
-  bank_name:
-    type: string
-    example: "Itaú Unibanco"
-  account_type:
-    type: string
-    example: "corrente"
-  current_balance:
-    type: number
-    format: float
-    example: 15450.50
-  active:
-    type: boolean
-    example: true
+    description: BIGINT centavos. Imutável após criação.
+  current_balance_cents:
+    type: integer
+    description: BIGINT centavos. Calculado a partir das entries.
+  active: { type: boolean }
+  card_settlement_days:
+    type: integer
+    nullable: true
+    description: Prazo de liquidação de cartão (D+N), quando aplicável.

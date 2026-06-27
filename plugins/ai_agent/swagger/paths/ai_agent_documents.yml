@@ -1,0 +1,88 @@
+get:
+  tags:
+    - Bea — Base de Conhecimento
+  summary: Listar documentos da Bea
+  description: |
+    Lista documentos da knowledge base da Bea, paginados (25 por página).
+    Autorização (`AiAgent::DocumentPolicy`): admin OR Klivy `captain.view`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 1
+  responses:
+    '200':
+      description: Lista paginada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              payload:
+                type: array
+                items:
+                  $ref: '../definitions/Document.yml'
+              meta:
+                type: object
+                properties:
+                  total_count:
+                    type: integer
+                  page:
+                    type: integer
+    '403':
+      description: Sem permissão (`captain.view`)
+post:
+  tags:
+    - Bea — Base de Conhecimento
+  summary: Criar documento
+  description: |
+    Cria um documento e enfileira `AiAgent::IngestDocumentJob` pra processar
+    em background. Autorização: admin OR Klivy `captain.manage_documents`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    description: |
+      Params aceitos (`document.permit`): `name`, `external_link`, `pdf_file`,
+      `assistant_id`. **Não** existe `source_type` nem `content` na API:
+
+      - O tipo (`content_type` na resposta) é **inferido** pelo backend —
+        `pdf` quando há `pdf_file`, senão `url`. Documento de texto puro
+        não é criável via API.
+      - `name` é **opcional**: sem ele, o backend usa o nome-base do PDF
+        (sem `.pdf`) ou, na falta de arquivo, o próprio `external_link`.
+      - Envie `pdf_file` (upload) **ou** `external_link` (URL). A validação
+        do model exige um payload: PDF anexado, ou `external_link` presente.
+    content:
+      multipart/form-data:
+        schema:
+          type: object
+          required: []
+          properties:
+            name:
+              type: string
+              description: Opcional. Default = nome-base do PDF, senão `external_link`.
+            external_link:
+              type: string
+              description: URL de origem. Use isto quando não enviar `pdf_file`.
+            pdf_file:
+              type: string
+              format: binary
+              description: Arquivo PDF (≤ 20 MB, `application/pdf`). Define `content_type=pdf`.
+            assistant_id:
+              type: integer
+              description: Aceito pelo `permit`, mas não usado (a Bea é por conta).
+  responses:
+    '201':
+      description: Criado, processamento em background
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Document.yml'
+    '403':
+      description: Sem permissão (`captain.manage_documents`)
+    '422':
+      description: Payload inválido (sem PDF anexado nem `external_link`)

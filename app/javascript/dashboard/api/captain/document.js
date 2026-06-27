@@ -1,14 +1,13 @@
 /* global axios */
 import ApiClient from '../ApiClient';
 
-// Talks to the AiAgent plugin endpoint (/api/v1/accounts/:id/ai_agent/documents),
-// not the legacy Captain::Document table. The Bea RAG (search_knowledge tool)
-// reads from AiAgent::Document → ParentChunk/ChildChunk + pgvector. The class
-// name is kept as `CaptainDocument` (and the store stays `captainDocuments`)
-// to avoid a churny rename across DocumentForm/Index/DocumentCard — the path
-// is what defines the contract, not the JS class name.
 class CaptainDocument extends ApiClient {
   constructor() {
+    // A aba "Documentos" da Bea precisa gravar na base de conhecimento que o
+    // agente realmente lê (AiAgent::Document → pgvector, consultada pela tool
+    // search_knowledge). O endpoint legado `captain/documents` grava em
+    // Captain::Document, que a Bea NUNCA consulta — por isso aponta aqui para
+    // `ai_agent/documents`, cujo JSON espelha o do Captain (só troca de URL).
     super('ai_agent/documents', { accountScoped: true });
   }
 

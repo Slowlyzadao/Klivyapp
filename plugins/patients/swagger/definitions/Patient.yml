@@ -1,38 +1,221 @@
 type: object
+description: |
+  Paciente do prontuário (`Patient`). Soft-delete via `deleted_at`; arquivados
+  ficam fora de `index`/`show` padrão (acessíveis via `GET /patients/archived`
+  e `PATCH /patients/:id/restore`). Avatar resolve `ActiveStorage` quando
+  anexado, com fallback para `avatar_url` (string).
 properties:
   id:
     type: integer
+    example: 1
+  account_id:
+    type: integer
+    example: 1
   name:
     type: string
-    example: "João Silva"
-  email:
+    minLength: 2
+    maxLength: 255
+    example: "Maria Silva"
+  social_name:
     type: string
-    example: "joao@email.com"
+    nullable: true
+    description: Nome social (LGPD/dignidade).
   phone:
     type: string
-    example: "11999999999"
+    nullable: true
+    description: Apenas dígitos no banco (`gsub(/\D/, '')` no `before_validation`).
+    example: "11923652248"
+  email:
+    type: string
+    nullable: true
+    format: email
   cpf:
     type: string
+    nullable: true
+    description: 11 dígitos. Validado por regex `\d{11}`.
     example: "12345678901"
-  patient_status:
+  rg:
     type: string
-    enum: [novo, ativo, inativo, faltoso, alta, arquivado]
-    example: "ativo"
-  sex:
-    type: string
-    enum: [masculino, feminino, outro, nao_informado]
+    nullable: true
   birthdate:
     type: string
     format: date
+    nullable: true
+  age:
+    type: integer
+    nullable: true
+    description: Computado a partir de `birthdate` (read-only).
+  sex:
+    type: string
+    nullable: true
+    enum: [masculino, feminino, outro, nao_informado]
+  marital_status:
+    type: string
+    nullable: true
+    enum: [solteiro, casado, divorciado, viuvo]
+  patient_status:
+    type: string
+    enum: [novo, ativo, inativo, faltoso, alta, arquivado]
+    default: novo
+  pinned_note:
+    type: string
+    nullable: true
+    description: Nota fixada no topo do prontuário.
+  notes:
+    type: string
+    nullable: true
+  origin:
+    type: string
+    nullable: true
+    description: Origem do paciente (indicação, busca, redes, etc).
+  unit:
+    type: string
+    nullable: true
+    description: Unidade/filial.
+  contact_id:
+    type: integer
+    nullable: true
+    description: |
+      FK para `Contact` (ponte com Chatwoot). Pode ser auto-vinculado por
+      telefone via `by_contact` quando estiver nulo.
+  responsible_professional_id:
+    type: integer
+    nullable: true
+    description: Profissional responsável (`User`).
+  avatar_url:
+    type: string
+    nullable: true
+    description: |
+      Quando ActiveStorage `avatar` está anexado, devolve a URL do blob;
+      senão devolve o campo livre `avatar_url`.
+  no_show_count:
+    type: integer
+    minimum: 0
+    description: |
+      Quantidade acumulada de faltas. Quando ≥ 3, `quick_action(mark_no_show)`
+      promove `patient_status` para `faltoso`.
+  needs_recall:
+    type: boolean
+    description: |
+      Computado em `before_save`: `true` quando existe consulta passada
+      concluída e nenhuma futura agendada (e status ≠ `alta`/`arquivado`).
+  recall_dismissed_at:
+    type: string
+    format: date-time
+    nullable: true
+  has_guardian:
+    type: boolean
+    default: false
+  guardian:
+    type: object
+    description: |
+      Responsável legal (preenchido quando `has_guardian=true`). Os campos
+      `name`, `cpf`, `phone`, `relationship` são todos obrigatórios nesse caso.
+    properties:
+      name: { type: string }
+      cpf: { type: string, description: "11 dígitos" }
+      phone: { type: string }
+      relationship: { type: string, example: "Mãe" }
   address:
     type: object
+    description: Endereço (JSONB).
     properties:
-      street:
-        type: string
-      city:
-        type: string
-      state:
-        type: string
+      street: { type: string }
+      number: { type: string }
+      complement: { type: string }
+      neighborhood: { type: string }
+      city: { type: string }
+      state: { type: string }
+      zip_code: { type: string }
+      country: { type: string }
+  emergency_contact:
+    type: object
+    properties:
+      name: { type: string }
+      phone: { type: string }
+      relationship: { type: string }
+  insurance:
+    type: object
+    description: Convênio.
+    properties:
+      name: { type: string }
+      number: { type: string }
+      plan: { type: string }
+      validity: { type: string, format: date }
+  billing_info:
+    type: object
+    description: Dados de faturamento (JSONB livre).
+    additionalProperties: true
+  contact_preferences:
+    type: object
+    description: Preferências de contato (canal preferido, melhor horário, etc).
+    additionalProperties: true
+  communication_opt_ins:
+    type: object
+    description: Opt-ins por canal (whatsapp, sms, email, marketing).
+    additionalProperties: true
+  lgpd_consent:
+    type: object
+    description: Snapshot do aceite LGPD.
+    properties:
+      accepted: { type: boolean }
+      accepted_at: { type: string, format: date-time }
+      version: { type: string }
+      ip_address: { type: string }
+      image_use_accepted: { type: boolean }
+  contacts:
+    type: array
+    description: Telefones/emails adicionais.
+    items:
+      type: object
+      additionalProperties: true
+  external_ids:
+    type: object
+    description: IDs em sistemas externos (importadores, integrações).
+    additionalProperties: true
+  anonymized_at:
+    type: string
+    format: date-time
+    nullable: true
+    description: Preenchido quando o paciente foi anonimizado (LGPD).
+  deleted_at:
+    type: string
+    format: date-time
+    nullable: true
+    description: Preenchido em soft-delete.
   created_at:
     type: string
     format: date-time
+  updated_at:
+    type: string
+    format: date-time
+  # ─── Campos agregados (só no index) ───────────────────────────────────────
+  last_visit:
+    type: string
+    format: date-time
+    nullable: true
+    description: |
+      `MAX(starts_at)` de `AgendaEvent` passados do contact_id. Pre-computado
+      em 1 query agregada no `index` (ausente em `show`/`summary`).
+  procedures_count:
+    type: integer
+    description: |
+      Total de `SessionLog` vivos do paciente. Pre-computado no `index`.
+  balance_due_cents:
+    type: integer
+    description: |
+      Saldo em aberto (centavos) = soma de `(amount − received)` das
+      parcelas `pendente|vencido|parcial` em `Financial::Installment v2`.
+      Pre-computado no `index`.
+  critical_alerts:
+    type: array
+    description: Alertas críticos ativos do paciente (ordenados por severidade).
+    items:
+      type: object
+      properties:
+        id: { type: integer }
+        category: { type: string }
+        severity: { type: string }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        active: { type: boolean }

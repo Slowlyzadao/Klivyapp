@@ -1,0 +1,67 @@
+type: object
+description: |
+  Parcela (`Financial::Installment`). Status canônico:
+  `pendente`/`parcial`/`recebido`/`vencido`/`cancelado`/`renegociado`/`estornado`.
+  `effective_status` é derivado em runtime (`pendente`/`parcial` + `due_date < hoje`
+  → `vencido` na UI). Suporta baixa parcial (BUG-01) via `keep_installment_open`.
+properties:
+  id: { type: integer }
+  budget_id: { type: integer, nullable: true, description: "Alias de `financial_budget_id`" }
+  patient:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      avatar_url: { type: string, nullable: true }
+  professional_id: { type: integer, nullable: true }
+  number: { type: integer }
+  total_in_series: { type: integer }
+  amount_cents: { type: integer }
+  received_amount_cents: { type: integer }
+  remaining_cents: { type: integer }
+  status:
+    type: string
+    enum: [pendente, parcial, recebido, vencido, cancelado, renegociado, estornado]
+  effective_status:
+    type: string
+    description: |
+      Status com derivação em runtime para a UI: `pendente`/`parcial` com
+      `due_date` no passado vira `vencido`.
+  payment_method: { type: string, nullable: true }
+  due_date: { type: string, format: date, nullable: true }
+  competence_date: { type: string, format: date, nullable: true }
+  received_at: { type: string, format: date-time, nullable: true }
+  gateway: { type: string, nullable: true }
+  gateway_id: { type: string, nullable: true }
+  gateway_status: { type: string, nullable: true }
+  payment_link: { type: string, nullable: true }
+  barcode_line: { type: string, nullable: true }
+  pix_qr_code: { type: string, nullable: true }
+  replaces_installment_id:
+    type: integer
+    nullable: true
+    description: "Quando esta parcela foi gerada por baixa parcial com `keep_installment_open=true`."
+  budget:
+    type: object
+    nullable: true
+    description: "Embedded em `include_budget=true`."
+    properties:
+      id: { type: integer }
+      display_id: { type: integer, description: "ID visível (preserva legacy_id de migração)" }
+      status: { type: string }
+      total_cents: { type: integer }
+      origin: { type: string }
+      treatment_plan_id: { type: integer, nullable: true }
+      label: { type: string }
+      description: { type: string, nullable: true }
+  receipts:
+    type: array
+    description: "Embedded em `include_receipts=true`."
+    items:
+      type: object
+      properties:
+        id: { type: integer }
+        receipt_number: { type: string }
+        gross_amount_cents: { type: integer }
+        received_at: { type: string, format: date-time }

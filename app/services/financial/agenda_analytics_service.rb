@@ -80,7 +80,7 @@ class Financial::AgendaAnalyticsService
       ocupacao_pct: opts[:pct],
       agendamentos: opts[:total],
       comparecidos: opts[:row].comparecidos.to_i,
-      receita_media: 0.0  # AgendaEvent não possui campo de valor — futuro: vincular AccountTransaction
+      receita_media: 0.0  # AgendaEvent não possui campo de valor — futuro: vincular Financial::Entry
     }
   end
 

@@ -1,0 +1,33 @@
+type: object
+description: |
+  Despesa recorrente (canon §4.4). `destroy` apenas inativa (`active=false`)
+  para preservar as despesas geradas. Gera `Expense` no `due_day` de cada
+  competência via job.
+properties:
+  id: { type: integer }
+  name: { type: string }
+  category_id: { type: integer, nullable: true, description: "FK `financial_dre_category_id`" }
+  bank_account_id: { type: integer, nullable: true, description: "FK `financial_bank_account_id`" }
+  amount_cents:
+    type: integer
+    description: Valor padrão em centavos. Pode ser substituído por `variable_amount=true`.
+  variable_amount:
+    type: boolean
+    description: Quando true, o operador define o valor a cada geração.
+  frequency:
+    type: string
+    description: "Ex.: monthly, quarterly, annual"
+  due_day:
+    type: integer
+    minimum: 1
+    maximum: 31
+    description: Dia do mês para o vencimento.
+  competence_rule:
+    type: string
+    description: "Regra de competência (ex.: mes_corrente, mes_anterior)"
+  start_date: { type: string, format: date }
+  end_date: { type: string, format: date, nullable: true }
+  auto_pay:
+    type: boolean
+    description: Quando true, marca a despesa como paga automaticamente na geração.
+  active: { type: boolean }

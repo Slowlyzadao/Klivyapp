@@ -1,0 +1,21 @@
+get:
+  tags:
+    - Financeiro · Formas de Pagamento
+  summary: Detalhar taxa
+  description: "Read-only, sem gate de RBAC — qualquer usuário autenticado."
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: payment_method_id
+      in: path
+      required: true
+      schema: { type: integer }
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Taxa
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PaymentMethodFee.yml'
+    '404':
+      description: Não encontrada (ou soft-deletada)

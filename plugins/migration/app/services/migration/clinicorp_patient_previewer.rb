@@ -102,18 +102,28 @@ module Migration
 
     # Mirrors `decide_merge` in the importer but returns ('create'|'update'|'skip', reason)
     # instead of mutating counters.
+    #
+    # MUST stay in sync com `ClinicorpPatientImporter#decide_merge` — caso
+    # contrário o preview mente sobre o que vai acontecer (visto em [1.5.2.8]
+    # onde a condição `missing_external_id` foi adicionada no importer mas
+    # esquecida aqui, levando o preview a mostrar "skip 2554" quando o
+    # importer faria 2554 updates).
     def decide_action(existing, mapped)
       return ['create', nil] if existing.nil?
 
       existing_score = importer_call(:score_existing, existing)
       incoming_score = importer_call(:score_mapped, mapped)
       legacy_cleanup = importer_call(:legacy_pinned_to_migrate?, existing)
+      missing_external_id = mapped[:clinicorp_id].present? &&
+                            existing.external_ids.to_h['clinicorp'].to_s != mapped[:clinicorp_id].to_s
 
       if legacy_cleanup
         ['update', "Já existe paciente '#{existing.name}' (id=#{existing.id}). Vai mover pinned_note legado pra Observações."]
       elsif incoming_score > existing_score
         diff = describe_merge_diff(existing, mapped)
         ['update', "Já existe paciente '#{existing.name}' (id=#{existing.id}). #{diff}"]
+      elsif missing_external_id
+        ['update', "Já existe paciente '#{existing.name}' (id=#{existing.id}). Vai popular external_ids['clinicorp']."]
       else
         ['skip', "Já existe paciente '#{existing.name}' (id=#{existing.id}) com mais ou igual informação."]
       end

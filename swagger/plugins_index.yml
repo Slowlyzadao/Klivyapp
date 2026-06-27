@@ -5,47 +5,859 @@ info:
   description: Documentação consolidada dos plugins do Klivy.
 servers:
   - url: /
+tags:
+  # ─── Agenda ──────────────────────────────────────────────────────────────────
+  - { name: Agendamentos, description: "CRUD e operações de eventos da agenda interna." }
+  - { name: Serviços da Agenda, description: "Catálogo de serviços/procedimentos (com soft-delete e cleanup)." }
+  - { name: Categorias da Agenda, description: "Categorias coloridas para classificar eventos." }
+  - { name: Atributos Customizados, description: "Definições de campos customizados para AgendaEvent." }
+  - { name: Regras de Notificação, description: "Regras automáticas de lembretes/confirmações." }
+  - { name: Logs de Notificação, description: "Histórico de envios das regras de notificação." }
+  - { name: Configurações da Agenda, description: "Preferências do calendário interno e do mini-site público." }
+  - { name: Relatórios da Agenda, description: "KPIs, breakdown por status e previsão de ocupação." }
+  - { name: Fila de Espera, description: "Lista de espera por contato." }
+  - { name: Agenda Pública, description: "Endpoints sem autenticação do mini-site `/agenda/:public_id`." }
+  # ─── Pacientes ───────────────────────────────────────────────────────────────
+  - { name: Pacientes, description: "CRUD do prontuário + ações operacionais." }
+  - { name: Anamneses, description: "Anamneses clínicas versionadas (com finalização imutável)." }
+  - { name: Evoluções Clínicas, description: "ClinicalNote (modelo legado em migração para SessionLog)." }
+  - { name: Sessões Clínicas, description: "Registros de procedimentos realizados (com assinatura clínica + paciente)." }
+  - { name: Planos de Tratamento, description: "Planos clínicos + aprovação que dispara Budget v2 em rascunho." }
+  - { name: Itens do Plano, description: "Procedimentos planejados dentro de cada plano." }
+  - { name: Alertas Críticos, description: "Alertas exibidos em destaque no prontuário." }
+  - { name: Consentimentos (LGPD), description: "Consentimentos informados com assinatura digital." }
+  - { name: Documentos, description: "PDFs gerados/anexados." }
+  - { name: Exames e Mídias, description: "Imagens, RX, fotos clínicas — Active Storage assinado." }
+  - { name: Pastas de Exames, description: "Organização hierárquica de mídias clínicas." }
+  - { name: Agenda do Paciente, description: "Visão dos agendamentos exibida na aba do prontuário." }
+  - { name: Recall, description: "Preparação de payload de recall via WhatsApp." }
+  - { name: Timeline do Paciente, description: "Feed agregado de eventos clínicos e operacionais." }
+  - { name: Audit Logs, description: "Logs de auditoria LGPD por paciente + export do prontuário em PDF." }
+  # ─── Financeiro v2 (canon Financial::*) ──────────────────────────────────────
+  - { name: "Financeiro · Setup", description: "Wizard de configuração inicial (canon F-04)." }
+  - { name: "Financeiro · Categorias DRE", description: "Hierarquia da DRE (Demonstrativo de Resultado)." }
+  - { name: "Financeiro · Contas Bancárias", description: "Contas + transferências entre contas." }
+  - { name: "Financeiro · Regras de Comissão", description: "Cálculo de comissão por profissional." }
+  - { name: "Financeiro · Despesas Recorrentes", description: "Despesas que se repetem (canon §4.4)." }
+  - { name: "Financeiro · Metas de Receita", description: "Metas mensais/trimestrais/anuais." }
+  - { name: "Financeiro · Gateway", description: "Configuração do gateway (Asaas/manual)." }
+  - { name: "Financeiro · Orçamentos", description: "Orçamentos + aprovação (gera installments)." }
+  - { name: "Financeiro · Parcelas", description: "Tela A Receber + ações (pay, refund, charge, proof)." }
+  - { name: "Financeiro · Recibos", description: "Recibos de pagamento (BUG-01 multi-parcela + refund)." }
+  - { name: "Financeiro · Lançamentos", description: "Fluxo de Caixa (manual + automático)." }
+  - { name: "Financeiro · Despesas", description: "Tela A Pagar + pay/reverse." }
+  - { name: "Financeiro · Caixa", description: "Sessões de caixa + sangria/suprimento." }
+  - { name: "Financeiro · Crédito do Paciente", description: "Ledger de saldo a favor do paciente." }
+  - { name: "Financeiro · Comissões", description: "Ações sobre lançamentos de comissão (canon F-29)." }
+  - { name: "Financeiro · Auditoria", description: "Logs de auditoria financeira + export CSV." }
+  - { name: "Financeiro · Backups", description: "Backups do banco (local + R2)." }
+  - { name: "Financeiro · LGPD", description: "Solicitações de anonimização de paciente (F-33)." }
+  - { name: "Financeiro · Relatórios", description: "DRE, Fluxo, Dashboard, Comissões, ticket médio, etc." }
+  - { name: "Financeiro · Relatórios · Charts", description: "Mini-charts e séries temporais do Dashboard v2." }
+  - { name: "Financeiro · Paciente", description: "Summary + Timeline financeira do paciente (aba do prontuário)." }
+  - { name: "Financeiro · Webhooks", description: "Webhooks de gateway (Asaas)." }
+  - { name: "Financeiro · Mensalidades", description: "Mensalidades fixas (Financial::RecurringBilling) — motor recorrente que gera Budget+Installment por período. CRUD + pause/resume/cancel." }
+  - { name: "Financeiro · Formas de Pagamento", description: "Meios de pagamento (PaymentMethod) + taxas/MDR versionadas (PaymentMethodFee). settlement_mode controla a baixa automática." }
+  - { name: "Financeiro · Precificação", description: "Preço/categoria DRE/comissão por serviço da Agenda (ServicePricing). :id na URL é o agenda_service_id." }
+  - { name: "Financeiro · Comissionados", description: "Perfil financeiro/bancário do profissional (AgentProfile, ADMIN-only). :id na URL é o user_id." }
+  - { name: "Financeiro · Fechamento", description: "Fechamento contábil append-only por período (PeriodClosure) — bloqueia edição retroativa (423 Locked)." }
+  # ─── RBAC ────────────────────────────────────────────────────────────────────
+  - { name: "Permissões e Funções", description: "KlivyRole — único sistema de permissões ativo (desde 2026-04-30)." }
+  - { name: "Permissões (boot)", description: "Snapshot das permissões do usuário corrente — chamado no boot do app." }
+  # ─── Core e Busca ────────────────────────────────────────────────────────────
+  - { name: "Busca Global", description: "Busca unificada (⌘K) sobre Conversas + Contatos." }
+  # ─── Billing (assinatura Klivy) ──────────────────────────────────────────────
+  - { name: "Billing · Onboarding", description: "Cadastro inicial da clínica + integração Asaas + Turnstile." }
+  - { name: "Billing · Webhooks", description: "Webhooks da cobrança da assinatura Klivy (Asaas billing)." }
+  # ─── Bea (AiAgent — plugin ai_agent) ─────────────────────────────────────────
+  - { name: "Bea — Base de Conhecimento", description: "Documentos da Bea (substitui Captain::Document legado, pgvector)." }
+  - { name: "Bea — Follow-ups", description: "Regras de follow-up automático configuráveis pela clínica." }
+  - { name: "Bea — Notificações Internas", description: "Templates pré-definidos que a Bea dispara no Chat Interno (zero token)." }
+  - { name: "Bea — Público", description: "Endpoints sem autenticação — health (uptime checker) + feedback (HMAC token)." }
+  # ─── Chat Interno (plugin internal_chat) ─────────────────────────────────────
+  - { name: "Chat Interno — Salas", description: "CRUD de salas (direct/group), avatar, archive, mute." }
+  - { name: "Chat Interno — Mensagens", description: "CRUD de mensagens aninhadas em sala + favorites, reactions, mark_read." }
+  - { name: "Chat Interno — Menções", description: "Lista e contadores de @menções dirigidas ao usuário." }
+  - { name: "Chat Interno — Stickers", description: "Stickers default da plataforma + custom da conta." }
+  - { name: "Chat Interno — Membros", description: "Gestão de membros da sala (Membership). RBAC por room role (owner/admin); manage_memberships ainda não é enforced." }
+  - { name: "Chat Interno — Anexos", description: "Galeria de anexos da sala + download (conversão WebP→JPG/PNG para image/webp)." }
+
+x-tagGroups:
+  - name: Agenda
+    tags:
+      - Agendamentos
+      - Serviços da Agenda
+      - Categorias da Agenda
+      - Atributos Customizados
+      - Regras de Notificação
+      - Logs de Notificação
+      - Configurações da Agenda
+      - Relatórios da Agenda
+      - Fila de Espera
+      - Agenda Pública
+  - name: Pacientes
+    tags:
+      - Pacientes
+      - Anamneses
+      - Evoluções Clínicas
+      - Sessões Clínicas
+      - Planos de Tratamento
+      - Itens do Plano
+      - Alertas Críticos
+      - Consentimentos (LGPD)
+      - Documentos
+      - Exames e Mídias
+      - Pastas de Exames
+      - Agenda do Paciente
+      - Recall
+      - Timeline do Paciente
+      - Audit Logs
+  - name: Financeiro
+    tags:
+      - "Financeiro · Setup"
+      - "Financeiro · Categorias DRE"
+      - "Financeiro · Contas Bancárias"
+      - "Financeiro · Regras de Comissão"
+      - "Financeiro · Despesas Recorrentes"
+      - "Financeiro · Metas de Receita"
+      - "Financeiro · Gateway"
+      - "Financeiro · Orçamentos"
+      - "Financeiro · Parcelas"
+      - "Financeiro · Recibos"
+      - "Financeiro · Lançamentos"
+      - "Financeiro · Despesas"
+      - "Financeiro · Caixa"
+      - "Financeiro · Crédito do Paciente"
+      - "Financeiro · Comissões"
+      - "Financeiro · Auditoria"
+      - "Financeiro · Backups"
+      - "Financeiro · LGPD"
+      - "Financeiro · Relatórios"
+      - "Financeiro · Relatórios · Charts"
+      - "Financeiro · Paciente"
+      - "Financeiro · Webhooks"
+      - "Financeiro · Mensalidades"
+      - "Financeiro · Formas de Pagamento"
+      - "Financeiro · Precificação"
+      - "Financeiro · Comissionados"
+      - "Financeiro · Fechamento"
+  - name: RBAC
+    tags:
+      - "Permissões e Funções"
+      - "Permissões (boot)"
+  - name: Core
+    tags:
+      - "Busca Global"
+  - name: Billing
+    tags:
+      - "Billing · Onboarding"
+      - "Billing · Webhooks"
+  - name: Bea (AiAgent)
+    tags:
+      - "Bea — Base de Conhecimento"
+      - "Bea — Follow-ups"
+      - "Bea — Notificações Internas"
+      - "Bea — Público"
+  - name: Chat Interno
+    tags:
+      - "Chat Interno — Salas"
+      - "Chat Interno — Mensagens"
+      - "Chat Interno — Menções"
+      - "Chat Interno — Stickers"
+      - "Chat Interno — Membros"
+      - "Chat Interno — Anexos"
+
 paths:
-  # Agenda
+  # ═══ Agenda — Eventos ════════════════════════════════════════════════════════
   /api/v1/accounts/{account_id}/agenda_events:
     $ref: '../plugins/agenda/swagger/paths/agenda_events.yml'
+  /api/v1/accounts/{account_id}/agenda_events/year_stats:
+    $ref: '../plugins/agenda/swagger/paths/agenda_events_year_stats.yml'
   /api/v1/accounts/{account_id}/agenda_events/{id}:
     $ref: '../plugins/agenda/swagger/paths/agenda_event.yml'
+
+  # ═══ Agenda — Serviços ═══════════════════════════════════════════════════════
   /api/v1/accounts/{account_id}/agenda_services:
     $ref: '../plugins/agenda/swagger/paths/agenda_services.yml'
+  /api/v1/accounts/{account_id}/agenda_services/reorder:
+    $ref: '../plugins/agenda/swagger/paths/agenda_services_reorder.yml'
+  /api/v1/accounts/{account_id}/agenda_services/cleanup_unused_preview:
+    $ref: '../plugins/agenda/swagger/paths/agenda_services_cleanup_unused_preview.yml'
+  /api/v1/accounts/{account_id}/agenda_services/cleanup_unused:
+    $ref: '../plugins/agenda/swagger/paths/agenda_services_cleanup_unused.yml'
   /api/v1/accounts/{account_id}/agenda_services/{id}:
     $ref: '../plugins/agenda/swagger/paths/agenda_service.yml'
+  /api/v1/accounts/{account_id}/agenda_services/{id}/usage_stats:
+    $ref: '../plugins/agenda/swagger/paths/agenda_service_usage_stats.yml'
+  /api/v1/accounts/{account_id}/agenda_services/{id}/restore:
+    $ref: '../plugins/agenda/swagger/paths/agenda_service_restore.yml'
+  /api/v1/accounts/{account_id}/agenda_services/{id}/destroy_permanently:
+    $ref: '../plugins/agenda/swagger/paths/agenda_service_destroy_permanently.yml'
+
+  # ═══ Agenda — Categorias ═════════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/agenda_categories:
+    $ref: '../plugins/agenda/swagger/paths/agenda_categories.yml'
+  /api/v1/accounts/{account_id}/agenda_categories/reorder:
+    $ref: '../plugins/agenda/swagger/paths/agenda_categories_reorder.yml'
+  /api/v1/accounts/{account_id}/agenda_categories/{id}:
+    $ref: '../plugins/agenda/swagger/paths/agenda_category.yml'
+
+  # ═══ Agenda — Atributos Customizados ═════════════════════════════════════════
+  /api/v1/accounts/{account_id}/agenda_custom_attributes:
+    $ref: '../plugins/agenda/swagger/paths/agenda_custom_attributes.yml'
+  /api/v1/accounts/{account_id}/agenda_custom_attributes/reorder:
+    $ref: '../plugins/agenda/swagger/paths/agenda_custom_attributes_reorder.yml'
+  /api/v1/accounts/{account_id}/agenda_custom_attributes/{id}:
+    $ref: '../plugins/agenda/swagger/paths/agenda_custom_attribute.yml'
+
+  # ═══ Agenda — Notificações ═══════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/agenda_notification_rules:
+    $ref: '../plugins/agenda/swagger/paths/agenda_notification_rules.yml'
+  /api/v1/accounts/{account_id}/agenda_notification_rules/{id}:
+    $ref: '../plugins/agenda/swagger/paths/agenda_notification_rule.yml'
+  /api/v1/accounts/{account_id}/agenda_notification_rules/{id}/toggle:
+    $ref: '../plugins/agenda/swagger/paths/agenda_notification_rule_toggle.yml'
+  /api/v1/accounts/{account_id}/agenda_notification_logs:
+    $ref: '../plugins/agenda/swagger/paths/agenda_notification_logs.yml'
+
+  # ═══ Agenda — Configurações ══════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/agenda_online_config:
+    $ref: '../plugins/agenda/swagger/paths/agenda_online_config.yml'
+  /api/v1/accounts/{account_id}/agenda_setting:
+    $ref: '../plugins/agenda/swagger/paths/agenda_setting.yml'
+
+  # ═══ Agenda — Relatórios ═════════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/agenda_reports/summary:
+    $ref: '../plugins/agenda/swagger/paths/agenda_reports_summary.yml'
+  /api/v1/accounts/{account_id}/agenda_reports/forecast:
+    $ref: '../plugins/agenda/swagger/paths/agenda_reports_forecast.yml'
+
+  # ═══ Fila de Espera ══════════════════════════════════════════════════════════
   /api/v1/accounts/{account_id}/waiting_list_entries:
     $ref: '../plugins/agenda/swagger/paths/waiting_list_entries.yml'
+  /api/v1/accounts/{account_id}/waiting_list_entries/{id}:
+    $ref: '../plugins/agenda/swagger/paths/waiting_list_entry.yml'
 
-  # Patients
+  # ═══ Agenda Pública (sem auth) ═══════════════════════════════════════════════
+  /public/api/v1/agenda/{public_id}:
+    $ref: '../plugins/agenda/swagger/paths/public_agenda_show.yml'
+  /public/api/v1/agenda/{public_id}/services:
+    $ref: '../plugins/agenda/swagger/paths/public_agenda_services.yml'
+  /public/api/v1/agenda/{public_id}/slots:
+    $ref: '../plugins/agenda/swagger/paths/public_agenda_slots.yml'
+  /public/api/v1/agenda/{public_id}/slots_range:
+    $ref: '../plugins/agenda/swagger/paths/public_agenda_slots_range.yml'
+  /public/api/v1/agenda/{public_id}/book:
+    $ref: '../plugins/agenda/swagger/paths/public_agenda_book.yml'
+  /public/api/v1/agenda/booking/{token}:
+    $ref: '../plugins/agenda/swagger/paths/public_agenda_booking_show.yml'
+  /public/api/v1/agenda/booking/{token}/cancel:
+    $ref: '../plugins/agenda/swagger/paths/public_agenda_booking_cancel.yml'
+
+  # ═══ Pacientes — CRUD + ações ════════════════════════════════════════════════
   /api/v1/accounts/{account_id}/patients:
     $ref: '../plugins/patients/swagger/paths/patients.yml'
+  /api/v1/accounts/{account_id}/patients/archived:
+    $ref: '../plugins/patients/swagger/paths/patients_archived.yml'
+  /api/v1/accounts/{account_id}/patients/by_contact:
+    $ref: '../plugins/patients/swagger/paths/patients_by_contact.yml'
+  /api/v1/accounts/{account_id}/patients/{id}:
+    $ref: '../plugins/patients/swagger/paths/patient.yml'
   /api/v1/accounts/{account_id}/patients/{id}/summary:
     $ref: '../plugins/patients/swagger/paths/patient_summary.yml'
+  /api/v1/accounts/{account_id}/patients/{id}/status:
+    $ref: '../plugins/patients/swagger/paths/patient_status.yml'
+  /api/v1/accounts/{account_id}/patients/{id}/restore:
+    $ref: '../plugins/patients/swagger/paths/patient_restore.yml'
+  /api/v1/accounts/{account_id}/patients/{id}/quick_action:
+    $ref: '../plugins/patients/swagger/paths/patient_quick_action.yml'
+  /api/v1/accounts/{account_id}/patients/{id}/change_history:
+    $ref: '../plugins/patients/swagger/paths/patient_change_history.yml'
 
-  # Financial
-  /api/v1/accounts/{account_id}/financial/transactions:
-    $ref: '../plugins/financial/swagger/paths/transactions.yml'
-  /api/v1/accounts/{account_id}/financial/bank_accounts:
-    $ref: '../plugins/financial/swagger/paths/bank_accounts.yml'
+  # ═══ Pacientes — Anamneses ═══════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/patients/{patient_id}/anamneses:
+    $ref: '../plugins/patients/swagger/paths/anamneses.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/anamneses/{id}:
+    $ref: '../plugins/patients/swagger/paths/anamnesis.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/anamneses/{id}/finalize:
+    $ref: '../plugins/patients/swagger/paths/anamnesis_finalize.yml'
+
+  # ═══ Pacientes — Evoluções Clínicas ══════════════════════════════════════════
+  /api/v1/accounts/{account_id}/patients/{patient_id}/clinical_notes:
+    $ref: '../plugins/patients/swagger/paths/clinical_notes.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/clinical_notes/{id}:
+    $ref: '../plugins/patients/swagger/paths/clinical_note.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/clinical_notes/{id}/sign:
+    $ref: '../plugins/patients/swagger/paths/clinical_note_sign.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/clinical_notes/{id}/mark_erratum:
+    $ref: '../plugins/patients/swagger/paths/clinical_note_mark_erratum.yml'
+
+  # ═══ Pacientes — Sessões Clínicas ════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/patients/{patient_id}/session_logs:
+    $ref: '../plugins/patients/swagger/paths/session_logs.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/session_logs/{id}:
+    $ref: '../plugins/patients/swagger/paths/session_log.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/session_logs/{id}/sign:
+    $ref: '../plugins/patients/swagger/paths/session_log_sign.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/session_logs/{id}/mark_erratum:
+    $ref: '../plugins/patients/swagger/paths/session_log_mark_erratum.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/session_logs/{id}/sign_patient_locally:
+    $ref: '../plugins/patients/swagger/paths/session_log_sign_patient_locally.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/session_logs/{id}/send_patient_remote_signature_link:
+    $ref: '../plugins/patients/swagger/paths/session_log_send_patient_remote_signature_link.yml'
+
+  # ═══ Pacientes — Planos de Tratamento ════════════════════════════════════════
+  /api/v1/accounts/{account_id}/patients/{patient_id}/treatment_plans:
+    $ref: '../plugins/patients/swagger/paths/treatment_plans.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/treatment_plans/{id}:
+    $ref: '../plugins/patients/swagger/paths/treatment_plan.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/treatment_plans/{id}/approve:
+    $ref: '../plugins/patients/swagger/paths/treatment_plan_approve.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/treatment_plans/{id}/cancel:
+    $ref: '../plugins/patients/swagger/paths/treatment_plan_cancel.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/treatment_plans/{id}/pdf:
+    $ref: '../plugins/patients/swagger/paths/treatment_plan_pdf.yml'
+
+  # ═══ Pacientes — Itens do Plano ══════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/patients/{patient_id}/treatment_plans/{treatment_plan_id}/treatment_items:
+    $ref: '../plugins/patients/swagger/paths/treatment_items.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/treatment_plans/{treatment_plan_id}/treatment_items/{id}:
+    $ref: '../plugins/patients/swagger/paths/treatment_item.yml'
+
+  # ═══ Pacientes — Alertas Críticos ════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/patients/{patient_id}/critical_alerts:
+    $ref: '../plugins/patients/swagger/paths/critical_alerts.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/critical_alerts/{id}:
+    $ref: '../plugins/patients/swagger/paths/critical_alert.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/critical_alerts/{id}/deactivate:
+    $ref: '../plugins/patients/swagger/paths/critical_alert_deactivate.yml'
+
+  # ═══ Pacientes — Consentimentos (LGPD) ═══════════════════════════════════════
+  /api/v1/accounts/{account_id}/patients/{patient_id}/consents:
+    $ref: '../plugins/patients/swagger/paths/consent_records.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/consents/pending:
+    $ref: '../plugins/patients/swagger/paths/consent_records_pending.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/consents/{id}:
+    $ref: '../plugins/patients/swagger/paths/consent_record.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/consents/{id}/sign:
+    $ref: '../plugins/patients/swagger/paths/consent_record_sign.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/consents/{id}/send_remote:
+    $ref: '../plugins/patients/swagger/paths/consent_record_send_remote.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/consents/{id}/revoke:
+    $ref: '../plugins/patients/swagger/paths/consent_record_revoke.yml'
+
+  # ═══ Pacientes — Documentos ══════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/patients/{patient_id}/documents:
+    $ref: '../plugins/patients/swagger/paths/documents.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/documents/generate:
+    $ref: '../plugins/patients/swagger/paths/documents_generate.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/documents/attach:
+    $ref: '../plugins/patients/swagger/paths/documents_attach.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/documents/{id}:
+    $ref: '../plugins/patients/swagger/paths/document.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/documents/{id}/download:
+    $ref: '../plugins/patients/swagger/paths/document_download.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/documents/{id}/send_whatsapp:
+    $ref: '../plugins/patients/swagger/paths/document_send_whatsapp.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/documents/{id}/status:
+    $ref: '../plugins/patients/swagger/paths/document_status.yml'
+
+  # ═══ Pacientes — Exames e Mídias ═════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/patients/{patient_id}/exams:
+    $ref: '../plugins/patients/swagger/paths/exam_medias.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/exams/compare:
+    $ref: '../plugins/patients/swagger/paths/exam_medias_compare.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/exams/{id}:
+    $ref: '../plugins/patients/swagger/paths/exam_media.yml'
+
+  # ═══ Pacientes — Pastas de Exames ════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/patients/{patient_id}/exam_folders:
+    $ref: '../plugins/patients/swagger/paths/exam_folders.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/exam_folders/reorder:
+    $ref: '../plugins/patients/swagger/paths/exam_folders_reorder.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/exam_folders/{id}:
+    $ref: '../plugins/patients/swagger/paths/exam_folder.yml'
+
+  # ═══ Pacientes — Agenda + Recall + Timeline ══════════════════════════════════
+  /api/v1/accounts/{account_id}/patients/{patient_id}/appointments:
+    $ref: '../plugins/patients/swagger/paths/patient_appointments.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/appointments/{id}:
+    $ref: '../plugins/patients/swagger/paths/patient_appointment.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/recall:
+    $ref: '../plugins/patients/swagger/paths/recall.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/timeline:
+    $ref: '../plugins/patients/swagger/paths/timeline.yml'
+
+  # ═══ Pacientes — Audit Logs ══════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/patients/{patient_id}/audit_logs:
+    $ref: '../plugins/patients/swagger/paths/audit_logs.yml'
+  /api/v1/accounts/{account_id}/patients/{patient_id}/audit_logs/export:
+    $ref: '../plugins/patients/swagger/paths/audit_logs_export.yml'
+
+  # ═══ Financeiro v2 — Setup ═══════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/setup:
+    $ref: '../plugins/financial/swagger/paths/setup.yml'
+  /api/v1/accounts/{account_id}/financial/v2/setup/complete_step:
+    $ref: '../plugins/financial/swagger/paths/setup_complete_step.yml'
+
+  # ═══ Financeiro v2 — Categorias DRE ══════════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/categories:
+    $ref: '../plugins/financial/swagger/paths/dre_categories.yml'
+  /api/v1/accounts/{account_id}/financial/v2/categories/{id}:
+    $ref: '../plugins/financial/swagger/paths/dre_category.yml'
+
+  # ═══ Financeiro v2 — Contas Bancárias ════════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/bank_accounts:
+    $ref: '../plugins/financial/swagger/paths/bank_accounts_v2.yml'
+  /api/v1/accounts/{account_id}/financial/v2/bank_accounts/{id}:
+    $ref: '../plugins/financial/swagger/paths/bank_account_v2.yml'
+  /api/v1/accounts/{account_id}/financial/v2/bank_accounts/{id}/transfer:
+    $ref: '../plugins/financial/swagger/paths/bank_account_transfer.yml'
+
+  # ═══ Financeiro v2 — Regras de Comissão ══════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/commission_rules:
+    $ref: '../plugins/financial/swagger/paths/commission_rules.yml'
+  /api/v1/accounts/{account_id}/financial/v2/commission_rules/{id}:
+    $ref: '../plugins/financial/swagger/paths/commission_rule.yml'
+
+  # ═══ Financeiro v2 — Despesas Recorrentes ════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/recurring_expenses:
+    $ref: '../plugins/financial/swagger/paths/recurring_expenses.yml'
+  /api/v1/accounts/{account_id}/financial/v2/recurring_expenses/{id}:
+    $ref: '../plugins/financial/swagger/paths/recurring_expense.yml'
+
+  # ═══ Financeiro v2 — Metas de Receita ════════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/revenue_goals:
+    $ref: '../plugins/financial/swagger/paths/revenue_goals.yml'
+  /api/v1/accounts/{account_id}/financial/v2/revenue_goals/upsert:
+    $ref: '../plugins/financial/swagger/paths/revenue_goals_upsert.yml'
+  /api/v1/accounts/{account_id}/financial/v2/revenue_goals/{id}:
+    $ref: '../plugins/financial/swagger/paths/revenue_goal.yml'
+
+  # ═══ Financeiro v2 — Gateway ═════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/gateway_setting:
+    $ref: '../plugins/financial/swagger/paths/gateway_setting.yml'
+
+  # ═══ Financeiro v2 — Orçamentos ══════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/budgets:
+    $ref: '../plugins/financial/swagger/paths/budgets.yml'
+  /api/v1/accounts/{account_id}/financial/v2/budgets/{id}:
+    $ref: '../plugins/financial/swagger/paths/budget.yml'
+  /api/v1/accounts/{account_id}/financial/v2/budgets/{id}/approve:
+    $ref: '../plugins/financial/swagger/paths/budget_approve.yml'
+  /api/v1/accounts/{account_id}/financial/v2/budgets/{id}/cancel:
+    $ref: '../plugins/financial/swagger/paths/budget_cancel.yml'
+  /api/v1/accounts/{account_id}/financial/v2/budgets/{id}/update_installments:
+    $ref: '../plugins/financial/swagger/paths/budget_update_installments.yml'
+
+  # ═══ Financeiro v2 — Parcelas ════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/installments:
+    $ref: '../plugins/financial/swagger/paths/installments.yml'
+  /api/v1/accounts/{account_id}/financial/v2/installments/by_patient:
+    $ref: '../plugins/financial/swagger/paths/installments_by_patient.yml'
+  /api/v1/accounts/{account_id}/financial/v2/installments/{id}:
+    $ref: '../plugins/financial/swagger/paths/installment.yml'
+  /api/v1/accounts/{account_id}/financial/v2/installments/{id}/pay:
+    $ref: '../plugins/financial/swagger/paths/installment_pay.yml'
+  /api/v1/accounts/{account_id}/financial/v2/installments/{id}/refund:
+    $ref: '../plugins/financial/swagger/paths/installment_refund.yml'
+  /api/v1/accounts/{account_id}/financial/v2/installments/{id}/charge_whatsapp:
+    $ref: '../plugins/financial/swagger/paths/installment_charge_whatsapp.yml'
+  /api/v1/accounts/{account_id}/financial/v2/installments/{id}/upload_proof:
+    $ref: '../plugins/financial/swagger/paths/installment_upload_proof.yml'
+  /api/v1/accounts/{account_id}/financial/v2/installments/{id}/proof_url:
+    $ref: '../plugins/financial/swagger/paths/installment_proof_url.yml'
+
+  # ═══ Financeiro v2 — Recibos ═════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/payment_receipts:
+    $ref: '../plugins/financial/swagger/paths/payment_receipts.yml'
+  /api/v1/accounts/{account_id}/financial/v2/payment_receipts/{id}:
+    $ref: '../plugins/financial/swagger/paths/payment_receipt.yml'
+  /api/v1/accounts/{account_id}/financial/v2/payment_receipts/{id}/refund:
+    $ref: '../plugins/financial/swagger/paths/payment_receipt_refund.yml'
+
+  # ═══ Financeiro v2 — Lançamentos (Entries) ═══════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/entries:
+    $ref: '../plugins/financial/swagger/paths/entries.yml'
+  /api/v1/accounts/{account_id}/financial/v2/entries/bulk_reclassify:
+    $ref: '../plugins/financial/swagger/paths/entries_bulk_reclassify.yml'
+  /api/v1/accounts/{account_id}/financial/v2/entries/{id}:
+    $ref: '../plugins/financial/swagger/paths/entry.yml'
+
+  # ═══ Financeiro v2 — Despesas ════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/expenses:
+    $ref: '../plugins/financial/swagger/paths/expenses.yml'
+  /api/v1/accounts/{account_id}/financial/v2/expenses/{id}:
+    $ref: '../plugins/financial/swagger/paths/expense.yml'
+  /api/v1/accounts/{account_id}/financial/v2/expenses/{id}/pay:
+    $ref: '../plugins/financial/swagger/paths/expense_pay.yml'
+  /api/v1/accounts/{account_id}/financial/v2/expenses/{id}/reverse:
+    $ref: '../plugins/financial/swagger/paths/expense_reverse.yml'
+
+  # ═══ Financeiro v2 — Caixa ═══════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/cash_registers:
+    $ref: '../plugins/financial/swagger/paths/cash_registers.yml'
+  /api/v1/accounts/{account_id}/financial/v2/cash_registers/open:
+    $ref: '../plugins/financial/swagger/paths/cash_register_open.yml'
+  /api/v1/accounts/{account_id}/financial/v2/cash_registers/{id}:
+    $ref: '../plugins/financial/swagger/paths/cash_register.yml'
+  /api/v1/accounts/{account_id}/financial/v2/cash_registers/{id}/close:
+    $ref: '../plugins/financial/swagger/paths/cash_register_close.yml'
+  /api/v1/accounts/{account_id}/financial/v2/cash_registers/{id}/reopen:
+    $ref: '../plugins/financial/swagger/paths/cash_register_reopen.yml'
+  /api/v1/accounts/{account_id}/financial/v2/cash_registers/{id}/withdraw:
+    $ref: '../plugins/financial/swagger/paths/cash_register_withdraw.yml'
+  /api/v1/accounts/{account_id}/financial/v2/cash_registers/{id}/supplement:
+    $ref: '../plugins/financial/swagger/paths/cash_register_supplement.yml'
+
+  # ═══ Financeiro v2 — Crédito do Paciente ═════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/patient_credits:
+    $ref: '../plugins/financial/swagger/paths/patient_credits.yml'
+
+  # ═══ Financeiro v2 — Comissões ═══════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/commission_entries/bulk_pay:
+    $ref: '../plugins/financial/swagger/paths/commission_entries_bulk_pay.yml'
+  /api/v1/accounts/{account_id}/financial/v2/commission_entries/{id}/pay:
+    $ref: '../plugins/financial/swagger/paths/commission_entry_pay.yml'
+
+  # ═══ Financeiro v2 — Auditoria ═══════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/audit_logs:
+    $ref: '../plugins/financial/swagger/paths/audit_logs.yml'
+  /api/v1/accounts/{account_id}/financial/v2/audit_logs/export_csv:
+    $ref: '../plugins/financial/swagger/paths/audit_logs_export.yml'
+
+  # ═══ Financeiro v2 — Backups ═════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/backups:
+    $ref: '../plugins/financial/swagger/paths/backups.yml'
+  /api/v1/accounts/{account_id}/financial/v2/backups/run:
+    $ref: '../plugins/financial/swagger/paths/backups_run.yml'
+  /api/v1/accounts/{account_id}/financial/v2/backups/destroy:
+    $ref: '../plugins/financial/swagger/paths/backups_destroy.yml'
+
+  # ═══ Financeiro v2 — LGPD ════════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/lgpd_requests:
+    $ref: '../plugins/financial/swagger/paths/lgpd_requests.yml'
+  /api/v1/accounts/{account_id}/financial/v2/lgpd_requests/{id}:
+    $ref: '../plugins/financial/swagger/paths/lgpd_request.yml'
+  /api/v1/accounts/{account_id}/financial/v2/lgpd_requests/{id}/approve:
+    $ref: '../plugins/financial/swagger/paths/lgpd_request_approve.yml'
+  /api/v1/accounts/{account_id}/financial/v2/lgpd_requests/{id}/reject:
+    $ref: '../plugins/financial/swagger/paths/lgpd_request_reject.yml'
+  /api/v1/accounts/{account_id}/financial/v2/lgpd_requests/{id}/execute:
+    $ref: '../plugins/financial/swagger/paths/lgpd_request_execute.yml'
+  /api/v1/accounts/{account_id}/financial/v2/lgpd_requests/{id}/cancel:
+    $ref: '../plugins/financial/swagger/paths/lgpd_request_cancel.yml'
+
+  # ═══ Financeiro v2 — Relatórios ══════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/reports/dre:
+    $ref: '../plugins/financial/swagger/paths/reports_dre.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/dre/category/{category_id}:
+    $ref: '../plugins/financial/swagger/paths/reports_dre_category.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/cash_flow:
+    $ref: '../plugins/financial/swagger/paths/reports_cash_flow.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/dashboard:
+    $ref: '../plugins/financial/swagger/paths/reports_dashboard.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/commissions:
+    $ref: '../plugins/financial/swagger/paths/reports_commissions.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/cash_flow_chart:
+    $ref: '../plugins/financial/swagger/paths/reports_cash_flow_chart.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/revenue_composition:
+    $ref: '../plugins/financial/swagger/paths/reports_revenue_composition.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/delinquency_aging:
+    $ref: '../plugins/financial/swagger/paths/reports_delinquency_aging.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/revenue_by_professional:
+    $ref: '../plugins/financial/swagger/paths/reports_revenue_by_professional.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/cash_flow_projection:
+    $ref: '../plugins/financial/swagger/paths/reports_cash_flow_projection.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/delinquency_trend:
+    $ref: '../plugins/financial/swagger/paths/reports_delinquency_trend.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/kpi_sparklines:
+    $ref: '../plugins/financial/swagger/paths/reports_kpi_sparklines.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/expenses_by_category:
+    $ref: '../plugins/financial/swagger/paths/reports_expenses_by_category.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/expenses_by_category/category/{category_id}:
+    $ref: '../plugins/financial/swagger/paths/reports_expenses_by_category_drilldown.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/ticket_medio:
+    $ref: '../plugins/financial/swagger/paths/reports_ticket_medio.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/convenio:
+    $ref: '../plugins/financial/swagger/paths/reports_convenio.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/accountant_export/preview:
+    $ref: '../plugins/financial/swagger/paths/reports_accountant_export_preview.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/accountant_export:
+    $ref: '../plugins/financial/swagger/paths/reports_accountant_export.yml'
+
+  # ═══ Financeiro v2 — Paciente ════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/patients/{patient_id}/summary:
+    $ref: '../plugins/financial/swagger/paths/patient_summary.yml'
+  /api/v1/accounts/{account_id}/financial/v2/patients/{patient_id}/timeline:
+    $ref: '../plugins/financial/swagger/paths/patient_timeline.yml'
+
+  # ═══ Financeiro v2 — Webhooks (público) ══════════════════════════════════════
+  /webhooks/financial/asaas:
+    $ref: '../plugins/financial/swagger/paths/webhook_asaas.yml'
+
+  # ═══ Financeiro v2 — Mensalidades (RecurringBilling) ═════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/recurring_billings:
+    $ref: '../plugins/financial/swagger/paths/recurring_billings.yml'
+  /api/v1/accounts/{account_id}/financial/v2/recurring_billings/{id}:
+    $ref: '../plugins/financial/swagger/paths/recurring_billing.yml'
+  /api/v1/accounts/{account_id}/financial/v2/recurring_billings/{id}/pause:
+    $ref: '../plugins/financial/swagger/paths/recurring_billing_pause.yml'
+  /api/v1/accounts/{account_id}/financial/v2/recurring_billings/{id}/resume:
+    $ref: '../plugins/financial/swagger/paths/recurring_billing_resume.yml'
+  /api/v1/accounts/{account_id}/financial/v2/recurring_billings/{id}/cancel:
+    $ref: '../plugins/financial/swagger/paths/recurring_billing_cancel.yml'
+
+  # ═══ Financeiro v2 — Formas de Pagamento (PaymentMethod + Fees) ══════════════
+  /api/v1/accounts/{account_id}/financial/v2/payment_methods:
+    $ref: '../plugins/financial/swagger/paths/payment_methods.yml'
+  /api/v1/accounts/{account_id}/financial/v2/payment_methods/rename_provider:
+    $ref: '../plugins/financial/swagger/paths/payment_methods_rename_provider.yml'
+  /api/v1/accounts/{account_id}/financial/v2/payment_methods/destroy_provider:
+    $ref: '../plugins/financial/swagger/paths/payment_methods_destroy_provider.yml'
+  /api/v1/accounts/{account_id}/financial/v2/payment_methods/{id}:
+    $ref: '../plugins/financial/swagger/paths/payment_method.yml'
+  /api/v1/accounts/{account_id}/financial/v2/payment_methods/{id}/simulate_fee:
+    $ref: '../plugins/financial/swagger/paths/payment_method_simulate_fee.yml'
+  /api/v1/accounts/{account_id}/financial/v2/payment_methods/{payment_method_id}/fees:
+    $ref: '../plugins/financial/swagger/paths/payment_method_fees.yml'
+  /api/v1/accounts/{account_id}/financial/v2/payment_methods/{payment_method_id}/fees/{id}:
+    $ref: '../plugins/financial/swagger/paths/payment_method_fee.yml'
+  /api/v1/accounts/{account_id}/financial/v2/payment_methods/{payment_method_id}/fees/{id}/deactivate:
+    $ref: '../plugins/financial/swagger/paths/payment_method_fee_deactivate.yml'
+
+  # ═══ Financeiro v2 — Precificação de Serviços (ServicePricing) ═══════════════
+  /api/v1/accounts/{account_id}/financial/v2/service_pricings:
+    $ref: '../plugins/financial/swagger/paths/service_pricings.yml'
+  /api/v1/accounts/{account_id}/financial/v2/service_pricings/{id}:
+    $ref: '../plugins/financial/swagger/paths/service_pricing.yml'
+
+  # ═══ Financeiro v2 — Comissionados (AgentProfile) ════════════════════════════
+  /api/v1/accounts/{account_id}/financial/v2/agent_profiles:
+    $ref: '../plugins/financial/swagger/paths/agent_profiles.yml'
+  /api/v1/accounts/{account_id}/financial/v2/agent_profiles/{id}:
+    $ref: '../plugins/financial/swagger/paths/agent_profile.yml'
+
+  # ═══ Financeiro v2 — Fechamento de Período (PeriodClosure) ═══════════════════
+  /api/v1/accounts/{account_id}/financial/v2/period_closures:
+    $ref: '../plugins/financial/swagger/paths/period_closures.yml'
+  /api/v1/accounts/{account_id}/financial/v2/period_closures/{id}:
+    $ref: '../plugins/financial/swagger/paths/period_closure.yml'
+  /api/v1/accounts/{account_id}/financial/v2/period_closures/{id}/reopen:
+    $ref: '../plugins/financial/swagger/paths/period_closure_reopen.yml'
+
+  # ═══ Financeiro v2 — Relatórios (complemento auditoria 2026-05-30) ═══════════
+  /api/v1/accounts/{account_id}/financial/v2/reports/top_procedures:
+    $ref: '../plugins/financial/swagger/paths/reports_top_procedures.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/revenue_vs_goal:
+    $ref: '../plugins/financial/swagger/paths/reports_revenue_vs_goal.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/revenue_by_procedure:
+    $ref: '../plugins/financial/swagger/paths/reports_revenue_by_procedure.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/revenue_by_payment_method:
+    $ref: '../plugins/financial/swagger/paths/reports_revenue_by_payment_method.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/revenue_by_professional_table:
+    $ref: '../plugins/financial/swagger/paths/reports_revenue_by_professional_table.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/account_statement:
+    $ref: '../plugins/financial/swagger/paths/reports_account_statement.yml'
+  /api/v1/accounts/{account_id}/financial/v2/reports/goals_vs_actual:
+    $ref: '../plugins/financial/swagger/paths/reports_goals_vs_actual.yml'
+
+  # ═══ Financeiro v2 — Orçamento (simulação) + Categorias (restore) ════════════
+  /api/v1/accounts/{account_id}/financial/v2/budgets/{id}/simulate_plan:
+    $ref: '../plugins/financial/swagger/paths/budget_simulate_plan.yml'
+  /api/v1/accounts/{account_id}/financial/v2/categories/restore_defaults:
+    $ref: '../plugins/financial/swagger/paths/dre_categories_restore_defaults.yml'
+
+  # ═══ RBAC — Funções e Permissões (KlivyRole) ═════════════════════════════════
+  /api/v1/accounts/{account_id}/klivy_roles:
+    $ref: '../plugins/custom_roles/swagger/paths/klivy_roles.yml'
+  /api/v1/accounts/{account_id}/klivy_roles/{id}:
+    $ref: '../plugins/custom_roles/swagger/paths/klivy_role.yml'
+  /api/v1/accounts/{account_id}/klivy_roles/{id}/assign:
+    $ref: '../plugins/custom_roles/swagger/paths/klivy_role_assign.yml'
+
+  # ═══ Beclinic Core (Permissões boot + Busca global) ══════════════════════════
+  /api/v1/accounts/{account_id}/beclinic_permissions:
+    $ref: '../plugins/beclinic_core/swagger/paths/beclinic_permissions.yml'
+  /api/v1/accounts/{account_id}/beclinic_unified_search:
+    $ref: '../plugins/beclinic_core/swagger/paths/beclinic_unified_search.yml'
+
+  # ═══ Billing — Onboarding + Webhooks (público) ═══════════════════════════════
+  /api/v1/billing/onboarding:
+    $ref: '../plugins/billing/swagger/paths/onboarding.yml'
+  /api/v1/billing/onboarding/finalize:
+    $ref: '../plugins/billing/swagger/paths/onboarding_finalize.yml'
+  /api/v1/billing/onboarding/check_email:
+    $ref: '../plugins/billing/swagger/paths/onboarding_check_email.yml'
+  /api/v1/billing/webhooks/asaas:
+    $ref: '../plugins/billing/swagger/paths/webhooks_asaas.yml'
+
+  # ═══ Bea (AiAgent) ═══════════════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/ai_agent/documents:
+    $ref: '../plugins/ai_agent/swagger/paths/ai_agent_documents.yml'
+  /api/v1/accounts/{account_id}/ai_agent/documents/{id}:
+    $ref: '../plugins/ai_agent/swagger/paths/ai_agent_document.yml'
+  /api/v1/accounts/{account_id}/ai_agent/follow_up_rules:
+    $ref: '../plugins/ai_agent/swagger/paths/ai_agent_follow_up_rules.yml'
+  /api/v1/accounts/{account_id}/ai_agent/follow_up_rules/{id}:
+    $ref: '../plugins/ai_agent/swagger/paths/ai_agent_follow_up_rule.yml'
+  /api/v1/accounts/{account_id}/ai_agent/style_profile:
+    $ref: '../plugins/ai_agent/swagger/paths/ai_agent_style_profile.yml#/show'
+  /api/v1/accounts/{account_id}/ai_agent/style_profile/generate:
+    $ref: '../plugins/ai_agent/swagger/paths/ai_agent_style_profile.yml#/generate'
+  /api/v1/accounts/{account_id}/ai_agent/system_prompt:
+    $ref: '../plugins/ai_agent/swagger/paths/ai_agent_system_prompt.yml#/show'
+  /api/v1/accounts/{account_id}/ai_agent/internal_notification_templates:
+    $ref: '../plugins/ai_agent/swagger/paths/ai_agent_internal_notification_templates.yml'
+  /api/v1/accounts/{account_id}/ai_agent/internal_notification_templates/{id}:
+    $ref: '../plugins/ai_agent/swagger/paths/ai_agent_internal_notification_template.yml'
+  /api/v1/accounts/{account_id}/ai_agent/internal_notification_templates/catalog:
+    $ref: '../plugins/ai_agent/swagger/paths/ai_agent_internal_notification_template_actions.yml#/get'
+  /api/v1/accounts/{account_id}/ai_agent/internal_notification_templates/{id}/reset:
+    $ref: '../plugins/ai_agent/swagger/paths/ai_agent_internal_notification_template_reset.yml'
+  # Bea endpoints públicos (fora do scope :accounts)
+  /api/v1/ai_agent/health:
+    $ref: '../plugins/ai_agent/swagger/paths/ai_agent_public.yml#/health'
+  /api/v1/ai_agent/feedback:
+    $ref: '../plugins/ai_agent/swagger/paths/ai_agent_public.yml#/feedback'
+
+  # ═══ Chat Interno ════════════════════════════════════════════════════════════
+  /api/v1/accounts/{account_id}/internal_chat/rooms:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_rooms.yml'
+  /api/v1/accounts/{account_id}/internal_chat/rooms/{id}:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_room.yml'
+  /api/v1/accounts/{account_id}/internal_chat/rooms/unread_summary:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_room_actions.yml#/unread_summary'
+  /api/v1/accounts/{account_id}/internal_chat/rooms/{id}/archive:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_room_actions.yml#/archive'
+  /api/v1/accounts/{account_id}/internal_chat/rooms/{id}/mute:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_room_actions.yml#/mute'
+  /api/v1/accounts/{account_id}/internal_chat/rooms/{id}/avatar:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_room_actions.yml#/avatar'
+  /api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/messages:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_messages.yml'
+  /api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/messages/{id}:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_message.yml'
+  /api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/messages/mark_read:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_message_actions.yml#/mark_read'
+  /api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/messages/favorites:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_message_actions.yml#/favorites'
+  /api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/messages/{id}/favorite:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_message_actions.yml#/favorite'
+  /api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/messages/{id}/react:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_message_actions.yml#/react'
+  /api/v1/accounts/{account_id}/internal_chat/mentions:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_mentions.yml'
+  /api/v1/accounts/{account_id}/internal_chat/mentions/mark_read:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_mentions.yml#/mark_read'
+  /api/v1/accounts/{account_id}/internal_chat/mentions/unread_count:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_mentions.yml#/unread_count'
+  /api/v1/accounts/{account_id}/internal_chat/stickers:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_stickers.yml'
+  /api/v1/accounts/{account_id}/internal_chat/stickers/{id}:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_sticker.yml'
+  /api/v1/accounts/{account_id}/internal_chat/stickers/{id}/favorite:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_sticker.yml#/favorite'
+  # Salas — unarchive (complemento auditoria 2026-05-30)
+  /api/v1/accounts/{account_id}/internal_chat/rooms/{id}/unarchive:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_room_actions.yml#/unarchive'
+  # Membros da sala (Membership)
+  /api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/memberships:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_memberships.yml'
+  /api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/memberships/{id}:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_membership.yml'
+  # Typing (indicador "digitando")
+  /api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/typing:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_typing.yml'
+  # Anexos da sala (galeria + download)
+  /api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/attachments:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_attachments.yml'
+  /api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/attachments/{id}/download:
+    $ref: '../plugins/internal_chat/swagger/paths/internal_chat_attachment_download.yml'
 
 components:
   schemas:
-    AgendaEvent:
-      $ref: '../plugins/agenda/swagger/definitions/AgendaEvent.yml'
-    AgendaService:
-      $ref: '../plugins/agenda/swagger/definitions/AgendaService.yml'
-    WaitingListEntry:
-      $ref: '../plugins/agenda/swagger/definitions/WaitingListEntry.yml'
-    Patient:
-      $ref: '../plugins/patients/swagger/definitions/Patient.yml'
-    AccountTransaction:
-      $ref: '../plugins/financial/swagger/definitions/AccountTransaction.yml'
-    BankAccount:
-      $ref: '../plugins/financial/swagger/definitions/BankAccount.yml'
+    # Agenda
+    AgendaEvent:                  { $ref: '../plugins/agenda/swagger/definitions/AgendaEvent.yml' }
+    AgendaService:                { $ref: '../plugins/agenda/swagger/definitions/AgendaService.yml' }
+    AgendaCategory:               { $ref: '../plugins/agenda/swagger/definitions/AgendaCategory.yml' }
+    AgendaCustomAttribute:        { $ref: '../plugins/agenda/swagger/definitions/AgendaCustomAttribute.yml' }
+    AgendaNotificationRule:       { $ref: '../plugins/agenda/swagger/definitions/AgendaNotificationRule.yml' }
+    AgendaNotificationLog:        { $ref: '../plugins/agenda/swagger/definitions/AgendaNotificationLog.yml' }
+    AgendaOnlineConfig:           { $ref: '../plugins/agenda/swagger/definitions/AgendaOnlineConfig.yml' }
+    AgendaSetting:                { $ref: '../plugins/agenda/swagger/definitions/AgendaSetting.yml' }
+    AgendaReportMetrics:          { $ref: '../plugins/agenda/swagger/definitions/AgendaReportMetrics.yml' }
+    WaitingListEntry:             { $ref: '../plugins/agenda/swagger/definitions/WaitingListEntry.yml' }
+    Slot:                         { $ref: '../plugins/agenda/swagger/definitions/Slot.yml' }
+    PublicBooking:                { $ref: '../plugins/agenda/swagger/definitions/PublicBooking.yml' }
+    # Patients
+    Patient:                      { $ref: '../plugins/patients/swagger/definitions/Patient.yml' }
+    PatientSummary:               { $ref: '../plugins/patients/swagger/definitions/PatientSummary.yml' }
+    Anamnesis:                    { $ref: '../plugins/patients/swagger/definitions/Anamnesis.yml' }
+    ClinicalNote:                 { $ref: '../plugins/patients/swagger/definitions/ClinicalNote.yml' }
+    SessionLog:                   { $ref: '../plugins/patients/swagger/definitions/SessionLog.yml' }
+    TreatmentPlan:                { $ref: '../plugins/patients/swagger/definitions/TreatmentPlan.yml' }
+    TreatmentItem:                { $ref: '../plugins/patients/swagger/definitions/TreatmentItem.yml' }
+    CriticalAlert:                { $ref: '../plugins/patients/swagger/definitions/CriticalAlert.yml' }
+    ConsentRecord:                { $ref: '../plugins/patients/swagger/definitions/ConsentRecord.yml' }
+    Document:                     { $ref: '../plugins/patients/swagger/definitions/Document.yml' }
+    ExamMedia:                    { $ref: '../plugins/patients/swagger/definitions/ExamMedia.yml' }
+    ExamFolder:                   { $ref: '../plugins/patients/swagger/definitions/ExamFolder.yml' }
+    PatientAppointment:           { $ref: '../plugins/patients/swagger/definitions/PatientAppointment.yml' }
+    PatientTimelineEvent:         { $ref: '../plugins/patients/swagger/definitions/PatientTimelineEvent.yml' }
+    PatientAuditLog:              { $ref: '../plugins/patients/swagger/definitions/PatientAuditLog.yml' }
+    # Financial v2
+    FinancialSetupState:          { $ref: '../plugins/financial/swagger/definitions/SetupState.yml' }
+    FinancialDreCategory:         { $ref: '../plugins/financial/swagger/definitions/DreCategory.yml' }
+    FinancialBankAccount:         { $ref: '../plugins/financial/swagger/definitions/BankAccount.yml' }
+    FinancialCommissionRule:      { $ref: '../plugins/financial/swagger/definitions/CommissionRule.yml' }
+    FinancialRecurringExpense:    { $ref: '../plugins/financial/swagger/definitions/RecurringExpense.yml' }
+    FinancialRevenueGoal:         { $ref: '../plugins/financial/swagger/definitions/RevenueGoal.yml' }
+    FinancialGatewaySetting:      { $ref: '../plugins/financial/swagger/definitions/GatewaySetting.yml' }
+    FinancialBudget:              { $ref: '../plugins/financial/swagger/definitions/Budget.yml' }
+    FinancialBudgetItem:          { $ref: '../plugins/financial/swagger/definitions/BudgetItem.yml' }
+    FinancialInstallment:         { $ref: '../plugins/financial/swagger/definitions/Installment.yml' }
+    FinancialPaymentReceipt:      { $ref: '../plugins/financial/swagger/definitions/PaymentReceipt.yml' }
+    FinancialEntry:               { $ref: '../plugins/financial/swagger/definitions/Entry.yml' }
+    FinancialExpense:             { $ref: '../plugins/financial/swagger/definitions/Expense.yml' }
+    FinancialCashRegister:        { $ref: '../plugins/financial/swagger/definitions/CashRegister.yml' }
+    FinancialCashMovement:        { $ref: '../plugins/financial/swagger/definitions/CashMovement.yml' }
+    FinancialPatientCredit:       { $ref: '../plugins/financial/swagger/definitions/PatientCredit.yml' }
+    FinancialCommissionEntry:     { $ref: '../plugins/financial/swagger/definitions/CommissionEntry.yml' }
+    FinancialAuditLog:            { $ref: '../plugins/financial/swagger/definitions/AuditLog.yml' }
+    FinancialLgpdRequest:         { $ref: '../plugins/financial/swagger/definitions/LgpdRequest.yml' }
+    FinancialBackupFile:          { $ref: '../plugins/financial/swagger/definitions/BackupFile.yml' }
+    PatientFinancialSummary:      { $ref: '../plugins/financial/swagger/definitions/PatientFinancialSummary.yml' }
+    PatientFinancialTimeline:     { $ref: '../plugins/financial/swagger/definitions/PatientFinancialTimeline.yml' }
+    PatientFinancialTimelineEntry: { $ref: '../plugins/financial/swagger/definitions/PatientFinancialTimelineEntry.yml' }
+    FinancialError:               { $ref: '../plugins/financial/swagger/definitions/Error.yml' }
+    FinancialRecurringBilling:    { $ref: '../plugins/financial/swagger/definitions/RecurringBilling.yml' }
+    FinancialPaymentMethod:       { $ref: '../plugins/financial/swagger/definitions/PaymentMethod.yml' }
+    FinancialPaymentMethodFee:    { $ref: '../plugins/financial/swagger/definitions/PaymentMethodFee.yml' }
+    FinancialServicePricing:      { $ref: '../plugins/financial/swagger/definitions/ServicePricing.yml' }
+    FinancialAgentProfile:        { $ref: '../plugins/financial/swagger/definitions/AgentProfile.yml' }
+    FinancialPeriodClosure:       { $ref: '../plugins/financial/swagger/definitions/PeriodClosure.yml' }
+    # RBAC
+    KlivyRole:                    { $ref: '../plugins/custom_roles/swagger/definitions/KlivyRole.yml' }
+    # Beclinic Core
+    BeclinicPermissions:          { $ref: '../plugins/beclinic_core/swagger/definitions/BeclinicPermissions.yml' }
+    UnifiedSearchResults:         { $ref: '../plugins/beclinic_core/swagger/definitions/UnifiedSearchResults.yml' }
+    # Billing
+    OnboardingResponse:           { $ref: '../plugins/billing/swagger/definitions/OnboardingResponse.yml' }
+    # Bea (AiAgent)
+    AiAgentDocument:              { $ref: '../plugins/ai_agent/swagger/definitions/Document.yml' }
+    AiAgentFollowUpRule:          { $ref: '../plugins/ai_agent/swagger/definitions/FollowUpRule.yml' }
+    AiAgentInternalNotificationTemplate:
+                                  { $ref: '../plugins/ai_agent/swagger/definitions/InternalNotificationTemplate.yml' }
+    # Chat Interno
+    InternalChatRoom:             { $ref: '../plugins/internal_chat/swagger/definitions/Room.yml' }
+    InternalChatMessage:          { $ref: '../plugins/internal_chat/swagger/definitions/Message.yml' }
+    InternalChatMembership:       { $ref: '../plugins/internal_chat/swagger/definitions/Membership.yml' }
+    InternalChatAttachment:       { $ref: '../plugins/internal_chat/swagger/definitions/Attachment.yml' }
+    InternalChatSticker:          { $ref: '../plugins/internal_chat/swagger/definitions/Sticker.yml' }
   parameters:
-    accountId:
-      $ref: '../plugins/agenda/swagger/common.yml#/components/parameters/accountId'
-    id:
-      $ref: '../plugins/agenda/swagger/common.yml#/components/parameters/id'
+    accountId:                    { $ref: '../plugins/agenda/swagger/common.yml#/components/parameters/accountId' }
+    id:                           { $ref: '../plugins/agenda/swagger/common.yml#/components/parameters/id' }
+    patientId:                    { $ref: '../plugins/patients/swagger/common.yml#/components/parameters/patientId' }
+    categoryId:                   { $ref: '../plugins/financial/swagger/common.yml#/components/parameters/categoryId' }
+    treatmentPlanId:              { $ref: '../plugins/financial/swagger/common.yml#/components/parameters/treatmentPlanId' }

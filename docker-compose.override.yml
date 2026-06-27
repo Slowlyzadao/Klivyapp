@@ -1,0 +1,22 @@
+# Extensões LOCAIS do stack beclinic. O `docker compose` carrega este arquivo
+# AUTOMATICAMENTE junto com docker-compose.yaml — não precisa de flag.
+#
+# Sobe o LiveKit no MESMO stack/rede do beclinic, então:
+#   - rails (em container) alcança via  ws://livekit:7880    (LIVEKIT_URL)
+#   - browser (no host)    alcança via  ws://localhost:7880  (LIVEKIT_PUBLIC_URL)
+#
+# Antes de subir, remova o LiveKit avulso pra liberar a porta 7880:
+#   docker rm -f klivy-livekit
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --dev --config /etc/livekit/livekit.yaml --bind 0.0.0.0
+    volumes:
+      - ./dev-tools/livekit-server/config.compose.yaml:/etc/livekit/livekit.yaml:ro
+    ports:
+      - "7880:7880"      # signal/WS (browser + rails)
+      - "7881:7881"      # TCP fallback de mídia
+      - "7882:7882/udp"  # mídia UDP
+    depends_on:
+      - redis
+    restart: unless-stopped

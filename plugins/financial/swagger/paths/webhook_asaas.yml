@@ -1,0 +1,59 @@
+post:
+  tags:
+    - Financeiro · Webhooks
+  summary: Receber webhook do Asaas
+  description: |
+    Endpoint **público** (sem autenticação Klivy) verificado por
+    `asaas-access-token` header contra `GatewaySetting.webhook_secret`
+    da conta. Processamento real é assíncrono via
+    `Financial::Webhooks::ProcessAsaasEventJob` — responde 200 OK rápido.
+
+    Idempotência por `event_id` — webhook duplicado retorna
+    `{ ok: true, status: "duplicate" }` com status **200**.
+
+    **CRIT-SEC-02 (anti-enumeração):** TODA pré-condição que falha
+    (`account_id` ausente/zero, conta inexistente, `GatewaySetting.asaas`
+    ausente, `webhook_secret` vazio, ou HMAC `asaas-access-token` inválido)
+    retorna **403 constante e indistinguível** via `head :forbidden`.
+    O atacante não consegue diferenciar "conta não existe" de "conta existe
+    mas assinatura errada" — não há 401 nem 404 neste endpoint por design.
+  parameters:
+    - name: account_id
+      in: query
+      required: true
+      schema: { type: integer }
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          description: "Payload arbitrário do Asaas (varia por `event_type`)."
+          additionalProperties: true
+  responses:
+    '200':
+      description: |
+        Recebido. Evento novo → `{ ok: true, event_id: "<id>" }`.
+        Evento já visto antes (replay) → `{ ok: true, status: "duplicate" }`.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              ok: { type: boolean, example: true }
+              event_id:
+                type: string
+                description: "Presente apenas quando o evento é novo (não duplicado)."
+              status:
+                type: string
+                enum: [duplicate]
+                description: "Presente apenas quando o evento já foi recebido antes (idempotência)."
+    '403':
+      description: |
+        **403 constante e indistinguível por design — CRIT-SEC-02; não há
+        401/404.** Retornado por `head :forbidden` em qualquer pré-condição
+        que falhe: `account_id` ausente/zero, conta inexistente,
+        `GatewaySetting.asaas` ausente, `webhook_secret` vazio ou
+        `asaas-access-token` (HMAC) inválido. Corpo vazio em todos os casos.
+    '500':
+      description: "Erro interno (`head :internal_server_error`, sem corpo — não vaza mensagem)."

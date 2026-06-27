@@ -1,0 +1,143 @@
+get:
+  tags:
+    - Financeiro · Mensalidades
+  summary: Detalhar mensalidade fixa
+  description: |
+    Retorna um contrato de mensalidade fixa. Sem gate de RBAC (leitura
+    liberada). Só encontra registros vivos (`deleted_at IS NULL`).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Mensalidade
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/RecurringBilling.yml'
+    '404':
+      description: Não encontrada.
+    '412':
+      description: Setup financeiro incompleto (wizard pendente).
+patch:
+  tags:
+    - Financeiro · Mensalidades
+  summary: Atualizar mensalidade fixa
+  description: |
+    Atualiza campos do contrato. Billings com `status` `canceled` ou
+    `completed` são **imutáveis** (retorna 422 `billing_immutable`).
+
+    Requer RECEPCAO/GERENTE/ADMIN. Idempotência opcional via header
+    `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [recurring_billing]
+          properties:
+            recurring_billing:
+              type: object
+              properties:
+                patient_id: { type: integer }
+                professional_id: { type: integer }
+                financial_dre_category_id: { type: integer }
+                financial_bank_account_id: { type: integer }
+                payment_method_id: { type: integer }
+                description: { type: string, maxLength: 200 }
+                amount_cents: { type: integer }
+                frequency: { type: string, enum: [monthly, bimonthly, quarterly, semiannual, annual] }
+                start_date: { type: string, format: date }
+                end_date: { type: string, format: date }
+                next_generation_at: { type: string, format: date }
+                notes: { type: string }
+  responses:
+    '200':
+      description: Mensalidade atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/RecurringBilling.yml'
+    '403':
+      description: Sem permissão (requer RECEPCAO/GERENTE/ADMIN).
+    '404':
+      description: Não encontrada.
+    '412':
+      description: Setup financeiro incompleto (wizard pendente).
+    '422':
+      description: |
+        Erro de validação ou billing encerrado/cancelado
+        (`billing_immutable`).
+put:
+  tags:
+    - Financeiro · Mensalidades
+  summary: Atualizar mensalidade fixa (alias de PATCH)
+  description: |
+    Idêntico ao PATCH. Billings `canceled`/`completed` são imutáveis (422
+    `billing_immutable`). Requer RECEPCAO/GERENTE/ADMIN. Idempotência opcional
+    via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [recurring_billing]
+          properties:
+            recurring_billing:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Mensalidade atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/RecurringBilling.yml'
+    '403':
+      description: Sem permissão (requer RECEPCAO/GERENTE/ADMIN).
+    '404':
+      description: Não encontrada.
+    '412':
+      description: Setup financeiro incompleto (wizard pendente).
+    '422':
+      description: Erro de validação ou billing imutável (`billing_immutable`).
+delete:
+  tags:
+    - Financeiro · Mensalidades
+  summary: Excluir mensalidade fixa (soft delete)
+  description: |
+    Soft delete (`deleted_at` + `status='canceled'`). **Só** permitido se a
+    mensalidade nunca gerou cobrança (`last_generated_at` nulo); caso
+    contrário retorna 422 `billing_in_use` orientando usar `POST /cancel`
+    (preserva o histórico contábil).
+
+    Requer RECEPCAO/GERENTE/ADMIN. Idempotência opcional via header
+    `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Excluída
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              ok: { type: boolean, example: true }
+    '403':
+      description: Sem permissão (requer RECEPCAO/GERENTE/ADMIN).
+    '404':
+      description: Não encontrada.
+    '412':
+      description: Setup financeiro incompleto (wizard pendente).
+    '422':
+      description: Mensalidade já gerou cobranças (`billing_in_use`) — use Cancelar.

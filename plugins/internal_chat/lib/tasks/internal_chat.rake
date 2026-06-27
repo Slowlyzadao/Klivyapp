@@ -87,3 +87,15 @@ namespace :internal_chat do
     basename.tr('_-', ' ').squish.presence
   end
 end
+
+# ARCH-15 (audit 2026-05-19): a task acima é executada em todo deploy
+# via `docker/Dockerfile` (CMD `bundle exec rails db:chatwoot_prepare &&
+# bundle exec rails internal_chat:seed_default_stickers && ...`). Sem
+# isso, deploys novos sobem com lista vazia até alguém invocar a task
+# manualmente (BUG já observado em staging em 2026-05).
+#
+# A task é idempotente: `find_or_initialize_by(kind: 'default', account_id: nil, ...)`
+# + skip se `file_size` bater. Custo típico: ~2s sem mudanças, ~10s com
+# arquivos novos. Use `|| true` no final do comando se quiser que falha
+# no seed NÃO derrube o deploy (atualmente, falha PARA o boot — comportamento
+# desejado pra detectar drift do blob storage cedo).

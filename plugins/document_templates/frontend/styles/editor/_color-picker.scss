@@ -1,0 +1,92 @@
+// Color picker da toolbar (texto + realce). Gatilho = ícone solto com faixa
+// de cor embaixo; popover = grade de swatches + opção "automático".
+
+.color-picker {
+  position: relative;
+  display: inline-flex;
+
+  // Gatilho: ícone sem padding/background (regra de ícones).
+  &__trigger {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    width: 30px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--kl-secondary);
+    cursor: pointer;
+    transition: color var(--kl-transition);
+
+    &:hover { color: var(--kl-on-surface); }
+    &:focus-visible { outline: none; color: var(--kl-primary); }
+  }
+
+  &__icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  &__bar {
+    width: 16px;
+    height: 3px;
+    border-radius: 1px;
+    border: 1px solid var(--kl-border-subtle);
+  }
+
+  // Popover
+  &__pop {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 60;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    width: 168px;
+    padding: 10px;
+    border: 1px solid var(--kl-border-subtle);
+    border-radius: var(--kl-radius-lg);
+    background: var(--kl-surface-white);
+    box-shadow: var(--kl-shadow-popover);
+  }
+
+  &__swatch {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--kl-border-subtle);
+    border-radius: var(--kl-radius-md);
+    cursor: pointer;
+    transition: transform var(--kl-transition);
+
+    &:hover { transform: scale(1.08); }
+    &:focus-visible { outline: none; box-shadow: var(--kl-ring); }
+  }
+
+  &__none {
+    grid-column: 1 / -1;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border: none;
+    border-radius: var(--kl-radius-md);
+    background: transparent;
+    color: var(--kl-secondary);
+    font-family: var(--kl-font-family);
+    font-size: var(--kl-font-label-md);
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover { background: var(--kl-surface-low); color: var(--kl-on-surface); }
+  }
+
+  &__none-icon {
+    width: 14px;
+    height: 14px;
+  }
+}

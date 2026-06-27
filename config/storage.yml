@@ -1,3 +1,22 @@
+# BE-18 (auditoria 2026-05-18): encryption-at-rest pra blobs sensíveis
+# (áudio WhatsApp paciente, imagens médicas, stickers customizados).
+# Active Storage delega 100% pro service backend — não há código aqui.
+# Pra ativar em cada provider:
+#
+#   amazon (S3):         configure SSE no bucket (Default encryption →
+#                        AES-256 ou aws:kms). Pode forçar via header
+#                        `upload.server_side_encryption: AES256` abaixo.
+#   google (GCS):        encryption-at-rest é DEFAULT (AES-256). Nada
+#                        a fazer.
+#   microsoft (Azure):   encryption-at-rest é DEFAULT (256-bit AES).
+#                        Nada a fazer.
+#   s3_compatible:       depende do provider (R2/DO/Minio têm SSE).
+#                        Para R2: ativa via Cloudflare dashboard.
+#   local/Disk:          NÃO tem encryption. Aceitável só pra dev/test
+#                        — produção DEVE usar provider cloud.
+#
+# Recomendação Klivy (clínica médica + LGPD): produção SEMPRE usa
+# `amazon`, `google`, `microsoft` ou `s3_compatible` com SSE ativado.
 test:
   service: Disk
   root: <%= Rails.root.join("tmp/storage") %>
@@ -7,12 +26,16 @@ local:
   root: <%= Rails.root.join("storage") %>
 
 # Use rails credentials:edit to set the AWS secrets (as aws:access_key_id|secret_access_key)
+# BE-18: pra forçar SSE-S3 no upload (em vez de só confiar em "Default
+# encryption" do bucket), descomente upload.server_side_encryption abaixo.
 amazon:
   service: S3
   access_key_id: <%= ENV.fetch('AWS_ACCESS_KEY_ID', '') %>
   secret_access_key: <%= ENV.fetch('AWS_SECRET_ACCESS_KEY', '') %>
   region: <%= ENV.fetch('AWS_REGION', '') %>
   bucket: <%= ENV.fetch('S3_BUCKET_NAME', '') %>
+  # upload:
+  #   server_side_encryption: AES256  # ou 'aws:kms' com kms_key_id setado
 
 # Remember not to checkin your GCS keyfile to a repository
 google:

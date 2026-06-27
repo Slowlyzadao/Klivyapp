@@ -1,0 +1,88 @@
+get:
+  tags:
+    - Pacientes
+  summary: Detalhar paciente
+  description: Registra audit log `view` automaticamente.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Paciente
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              payload:
+                $ref: '../definitions/Patient.yml'
+    '404':
+      description: Paciente não encontrado nesta conta
+patch:
+  tags:
+    - Pacientes
+  summary: Atualizar paciente
+  description: |
+    Atualiza qualquer campo permitido em `patient_params`. Se o `avatar`
+    vier no payload e já houver um anexo, o anterior é purgado primeiro.
+    Audit log `update` registra diff via `previous_changes`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [patient]
+          properties:
+            patient:
+              allOf:
+                - $ref: '../definitions/Patient.yml'
+  responses:
+    '200':
+      description: Paciente atualizado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              payload:
+                $ref: '../definitions/Patient.yml'
+    '422':
+      description: Erros de validação
+put:
+  tags:
+    - Pacientes
+  summary: Atualizar paciente (alias PUT)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            patient:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizado
+delete:
+  tags:
+    - Pacientes
+  summary: Arquivar paciente (soft-delete)
+  description: |
+    Marca `deleted_at`. Paciente some de `index`/`show` mas continua no banco
+    para auditoria. Restauração via `PATCH /patients/:id/restore`. Audit log
+    `delete` é registrado.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Arquivado

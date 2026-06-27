@@ -1,0 +1,37 @@
+get:
+  tags:
+    - Agenda Pública
+  summary: Página pública do profissional (`/agenda/:public_id`)
+  description: |
+    Retorna dados do profissional + configuração de booking online. **NÃO
+    requer autenticação.** O `public_id` é resolvido em
+    `BeclinicCore::UserProfile.agenda_public_id` (único por par user/conta).
+
+    Bloqueia (403) quando `agenda_online_config.enabled = false`.
+  parameters:
+    - name: public_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: ID público do profissional (slug ou UUID).
+  responses:
+    '200':
+      description: Profissional + configuração
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              user:
+                type: object
+                properties:
+                  name: { type: string }
+                  display_name: { type: string }
+                  avatar_url: { type: string, nullable: true }
+              config:
+                $ref: '../definitions/AgendaOnlineConfig.yml'
+    '403':
+      description: Agendamento online desativado para esta conta
+    '404':
+      description: Profissional não encontrado

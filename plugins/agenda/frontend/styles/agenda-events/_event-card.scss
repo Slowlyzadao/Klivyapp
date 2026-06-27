@@ -1,0 +1,137 @@
+@use "../variables" as *;
+
+/* ── Timeline Event Card ────────────────────────── */
+.timeline-evt {
+  position: absolute;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 4px 10px 4px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 4px solid transparent;
+  overflow: hidden;
+  transition: box-shadow 0.15s ease-in-out, opacity 0.15s ease-in-out, transform 0.15s ease-in-out;
+  pointer-events: auto;
+  user-select: none;
+  z-index: 5;
+  /* Pastel cards: subtle outer outline + minimal shadow */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  /* Estabelece container query — usado abaixo pra esconder a hora em cards
+     muito estreitos (overlap de 2-3 eventos no mesmo horário) e priorizar
+     o título do paciente. */
+  container-type: inline-size;
+}
+
+/* Em cards muito estreitos (~90px ou menos) o título compete por espaço com
+   a hora nos tiers pill/small e perde a queda-de-braço (a hora tem
+   flex-shrink: 0). Esconde a hora completamente abaixo desse threshold —
+   o título fica em foco; a hora ainda é visível pelo tooltip nativo do
+   card e/ou abrindo o popup de detalhes. */
+@container (max-width: 90px) {
+  .timeline-evt .evt-pill-time,
+  .timeline-evt .evt-pill-sep,
+  .timeline-evt .evt-small-time {
+    display: none;
+  }
+}
+
+/* Mobile (< 768px): mesmo padrão. Em viewport estreita, mesmo um card
+   "single-column" tem largura limitada e nomes em pt-BR (sobrenome
+   composto comum) cortam pra "Je...", "Br..." quando a hora ocupa
+   ~70px do espaço. Prioriza o título escondendo hora/separador no
+   pill e a hora no small em qualquer largura de card. Hora segue
+   acessível pelo popup de detalhes. */
+@media (max-width: 767px) {
+  .timeline-evt .evt-pill-time,
+  .timeline-evt .evt-pill-sep,
+  .timeline-evt .evt-small-time {
+    display: none;
+  }
+}
+
+.timeline-evt:hover {
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+  z-index: 10 !important;
+}
+
+.timeline-evt.is-dragging {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.timeline-evt.is-resizing {
+  opacity: 0.8;
+}
+
+
+
+.timeline-evt.evt-no-show {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+/* Auditoria 2026-05-15: cancelled diferenciado visualmente.
+   Mesmo padrão de `.evt-no-show` (strikethrough + opacity) para que clínica
+   identifique cancelado de longe sem precisar abrir o card. Cor de base é
+   preservada (vem do tratamento/categoria) — só title fica riscado e card
+   opaco. Hover restaura opacidade ligeira pra facilitar leitura do texto. */
+.timeline-evt.evt-cancelled {
+  opacity: 0.55;
+  text-decoration: line-through;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+/* ── Drag Ghost ──────────────────────────────────── */
+.drag-ghost {
+  background: rgba(99, 102, 241, 0.15) !important;
+  border: 2px dashed rgba(99, 102, 241, 0.5) !important;
+  border-left: 3px solid rgba(99, 102, 241, 0.7) !important;
+  border-radius: 8px;
+  opacity: 0.85;
+  pointer-events: none;
+  /* Override --evt-text-color so descendant text (.evt-sbs-*, etc.) is readable
+     against the translucent purple/red bg */
+  --evt-text-color: rgba(67, 56, 202, 0.95);
+  box-shadow: none;
+}
+
+.drag-ghost-title {
+  color: var(--evt-text-color);
+}
+
+/* Blocked state: red ghost when proposed slot is invalid */
+.drag-ghost.drag-ghost--blocked {
+  background: rgba($brand-danger-bright, 0.12) !important;
+  border-color: rgba($brand-danger-bright, 0.55) !important;
+  border-left-color: rgba($brand-danger-bright, 0.85) !important;
+  cursor: not-allowed;
+  --evt-text-color: rgba(185, 28, 28, 0.95);
+}
+
+.drag-ghost.drag-ghost--blocked .drag-ghost-title {
+  text-decoration: line-through;
+}
+
+.drag-ghost-blocked-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: $brand-danger-bright;
+  background: rgba($brand-danger-bright, 0.12);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-top: 2px;
+  align-self: flex-start;
+}
+
+.drag-ghost-blocked-label i {
+  width: 12px;
+  height: 12px;
+}

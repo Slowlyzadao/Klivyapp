@@ -1,0 +1,109 @@
+get:
+  tags:
+    - Chat Interno — Salas
+  summary: Listar salas
+  description: |
+    Lista salas onde o usuário é membro (admin vê TODAS da conta). Retorna
+    SEMPRE apenas salas não-arquivadas (`.not_archived`) — não há filtro de
+    arquivadas neste endpoint. Paginação opt-in: sem `?page=`, retorna a
+    primeira página com até 200 salas. `meta` informa página/total.
+    Autorização: admin OR Klivy `internal_chat.view`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: page
+      in: query
+      required: false
+      description: Página (clamp 1..10000). Default 1.
+      schema:
+        type: integer
+        default: 1
+    - name: per_page
+      in: query
+      required: false
+      description: Itens por página (clamp 1..200). Default 200.
+      schema:
+        type: integer
+        default: 200
+        maximum: 200
+        minimum: 1
+  responses:
+    '200':
+      description: Lista paginada de salas
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/Room.yml'
+              meta:
+                type: object
+                properties:
+                  page: { type: integer }
+                  per_page: { type: integer }
+                  total: { type: integer }
+    '403':
+      description: Sem permissão (`internal_chat.view`)
+post:
+  tags:
+    - Chat Interno — Salas
+  summary: Criar sala (DM ou grupo)
+  description: |
+    Cria DM (`kind='direct'`) ou grupo (`kind='group'`) via
+    `InternalChat::RoomCreator`. DM é idempotente: se já existir a sala 1-1
+    entre os participantes, retorna a sala existente com status `200` (em vez
+    de `201`). Params chegam aninhados em `room`.
+    Autorização: admin OR Klivy `internal_chat.create_room`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [room]
+          properties:
+            room:
+              type: object
+              properties:
+                kind:
+                  type: string
+                  enum: [direct, group]
+                  default: direct
+                name:
+                  type: string
+                  description: Obrigatório quando `kind='group'`.
+                description: { type: string }
+                member_user_ids:
+                  type: array
+                  items: { type: integer }
+                add_bea:
+                  type: boolean
+                  description: Adiciona a Beatriz (Bea) como membro da sala.
+  responses:
+    '201':
+      description: Sala criada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                $ref: '../definitions/Room.yml'
+    '200':
+      description: |
+        DM já existente retornada (idempotência — `result.created` false).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                $ref: '../definitions/Room.yml'
+    '403':
+      description: Sem permissão (`internal_chat.create_room`)
+    '422':
+      description: Validação falhou (kind inválido, name vazio em group, etc.)

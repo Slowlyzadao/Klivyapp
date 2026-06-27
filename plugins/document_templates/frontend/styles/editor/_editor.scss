@@ -1,0 +1,112 @@
+// Conteúdo editável do TipTap. Aplica margens internas, tipografia padrão.
+
+@use '../variables' as *;
+
+.tiptap-editor {
+  min-height: 600px;
+
+  // O elemento `.ProseMirror` é renderizado pelo TipTap dentro deste wrapper.
+  //
+  // Cores FIXAS aqui (não usar custom props slate-*) porque o conteúdo
+  // visualiza o que será impresso no PDF — sempre fundo branco com texto
+  // escuro, INDEPENDENTE do tema dark/light da clínica. O canvas A4 dentro
+  // do PaperContainer sempre é branco.
+  :deep(.ProseMirror) {
+    min-height: 600px;
+    outline: none;
+    color: #1a1a1a;
+    font-size: 14px;
+    line-height: 1.6;
+
+    p { margin: 0 0 12px; }
+
+    h1 { font-size: 1.75rem; font-weight: 700; margin: 1.4em 0 0.6em; color: #0f0f0f; }
+    h2 { font-size: 1.4rem;  font-weight: 700; margin: 1.2em 0 0.4em; color: #0f0f0f; }
+    h3 { font-size: 1.15rem; font-weight: 600; margin: 1em 0 0.3em;   color: #0f0f0f; }
+    h4 { font-size: 1.05rem; font-weight: 600; margin: 0.9em 0 0.3em; color: #0f0f0f; }
+
+    ul, ol { margin: 0 0 12px 1.5em; padding: 0; }
+    // Listas aninhadas: recuo + respiro pra deixar a hierarquia clara.
+    ul ul, ul ol, ol ul, ol ol { margin: 6px 0 0 1.5em; }
+
+    // Sublinhado (toggleUnderline) — escopado pra renderizar igual no PDF.
+    u { text-decoration: underline; }
+
+    blockquote {
+      margin: 0 0 12px;
+      padding: 8px 14px;
+      border-left: 3px solid #888;
+      color: #444;
+    }
+
+    // Linha horizontal (setHorizontalRule) — divisor sólido visível no papel.
+    hr {
+      border: none;
+      border-top: 1px solid #c8c8c8;
+      margin: 18px 0;
+    }
+
+    // Imagem inserida (setImage) — não estourar a largura do papel.
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    a {
+      color: #0066cc;
+      text-decoration: underline;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+
+      td, th {
+        padding: 6px 10px;
+        border: 1px solid #999;
+      }
+      th {
+        background: #eee;
+        font-weight: 600;
+      }
+    }
+
+    p.is-editor-empty:first-child::before {
+      content: attr(data-placeholder);
+      color: #999;
+      float: left;
+      height: 0;
+      pointer-events: none;
+    }
+
+    // Realce (highlight) — mark com cor de fundo.
+    mark {
+      background-color: #fff176;
+      border-radius: 2px;
+      padding: 0 1px;
+    }
+
+    // Quebra de página — divisor tracejado na tela; no PDF vira page-break.
+    .page-break {
+      display: block;
+      height: 0;
+      margin: 16px 0;
+      border: none;
+      border-top: 2px dashed #b0b0b0;
+      page-break-after: always;
+      break-after: page;
+      position: relative;
+    }
+    .page-break::after {
+      content: '⤓ quebra de página';
+      position: absolute;
+      right: 0;
+      top: -9px;
+      padding: 0 6px;
+      background: #fff;
+      color: #999;
+      font-size: 10px;
+    }
+  }
+}

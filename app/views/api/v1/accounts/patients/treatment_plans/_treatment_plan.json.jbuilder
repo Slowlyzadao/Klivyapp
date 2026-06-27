@@ -10,12 +10,19 @@ json.extract! treatment_plan,
               :cancellation_reason,
               :created_at,
               :updated_at,
-              :estimated_duration
+              :estimated_duration,
+              :lock_version
 
-json.professional_name treatment_plan.professional&.name
-json.approved_by_name  treatment_plan.approved_by&.name
+json.professional_name       treatment_plan.professional&.name
+json.professional_avatar_url treatment_plan.professional&.avatar_url
+json.approved_by_name        treatment_plan.approved_by&.name
 
-json.pdf_url rails_blob_url(treatment_plan.pdf, only_path: true) if treatment_plan.pdf.attached?
+json.pdf_url pdf_api_v1_account_patient_treatment_plan_url(
+  account_id: treatment_plan.account_id,
+  patient_id: treatment_plan.patient_id,
+  id: treatment_plan.id,
+  only_path: true
+) if treatment_plan.pdf.attached?
 
 json.summary do
   json.total_items treatment_plan.treatment_items.where(deleted_at: nil).count

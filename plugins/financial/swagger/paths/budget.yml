@@ -1,0 +1,62 @@
+get:
+  tags:
+    - Financeiro · Orçamentos
+  summary: Detalhar orçamento (com items + installments inline)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Orçamento
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Budget.yml'
+patch:
+  tags:
+    - Financeiro · Orçamentos
+  summary: Atualizar orçamento
+  description: |
+    Bloqueia se `status=concluido`. Se `aprovado` e já tem parcela paga,
+    só permite editar campos não-financeiros — para mudar parcelas, use
+    `PATCH /:id/update_installments`. Requer GERENTE/ADMIN (ou RECEPCAO/DENTIST
+    quando ainda é rascunho).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [budget]
+          properties:
+            budget:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Budget.yml'
+    '422':
+      description: "Orçamento concluído ou tentativa de editar parcela paga"
+    '403':
+      description: Sem permissão
+delete:
+  tags:
+    - Financeiro · Orçamentos
+  summary: Soft-delete do orçamento
+  description: |
+    Bloqueia se há parcela paga (`deletable=false`) — use
+    `POST /:id/cancel` em vez disso. Requer ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204': { description: "Removido" }
+    '422': { description: "Tem parcela paga — use cancel" }
+    '403': { description: "Sem permissão (ADMIN)" }

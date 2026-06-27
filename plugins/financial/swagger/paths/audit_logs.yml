@@ -1,0 +1,82 @@
+get:
+  tags:
+    - Financeiro · Auditoria
+  summary: Listar logs de auditoria financeira
+  description: |
+    Inclui `changed_keys` computado server-side + `facets` (entity_types,
+    actions, users) dos últimos 90 dias para popular dropdowns sem chamada
+    extra. Requer ADMIN/AUDITOR/GERENTE.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: entity_type
+      in: query
+      schema: { type: string }
+    - name: entity_id
+      in: query
+      schema: { type: integer }
+    - name: action
+      in: query
+      schema: { type: string, enum: [create, update, destroy, restore, denied] }
+    - name: user_id
+      in: query
+      schema: { type: integer }
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+    - name: q
+      in: query
+      description: "Busca em entity_type, entity_id ou ip"
+      schema: { type: string }
+    - name: page
+      in: query
+      schema: { type: integer, default: 1 }
+    - name: per_page
+      in: query
+      schema: { type: integer, default: 50, maximum: 200 }
+  responses:
+    '200':
+      description: Logs paginados + facets
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/AuditLog.yml'
+              meta:
+                type: object
+                properties:
+                  page: { type: integer }
+                  per_page: { type: integer }
+                  total: { type: integer }
+                  facets:
+                    type: object
+                    properties:
+                      entity_types:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            value: { type: string }
+                            label: { type: string }
+                      actions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            value: { type: string }
+                            label: { type: string }
+                      users:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: integer }
+                            name: { type: string }
+    '403':
+      description: Sem permissão (ADMIN/AUDITOR/GERENTE)

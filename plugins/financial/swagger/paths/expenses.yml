@@ -1,0 +1,90 @@
+get:
+  tags:
+    - Financeiro · Despesas
+  summary: Listar despesas (Tela A Pagar)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: status
+      in: query
+      schema: { type: string, enum: [pendente, vencido, pago, cancelado] }
+    - name: category_id
+      in: query
+      schema: { type: integer }
+    - name: bank_account_id
+      in: query
+      schema: { type: integer }
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+    - name: q
+      in: query
+      schema: { type: string }
+    - name: overdue_only
+      in: query
+      schema: { type: boolean }
+    - name: sort
+      in: query
+      schema: { type: string, default: due_date }
+    - name: direction
+      in: query
+      schema: { type: string, enum: [asc, desc], default: asc }
+  responses:
+    '200':
+      description: Lista (limit 100) com meta de totais
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/Expense.yml'
+              meta:
+                type: object
+                properties:
+                  total_to_pay_cents: { type: integer }
+                  total_recurring_cents: { type: integer }
+                  total_due_soon_cents: { type: integer, description: "Vence nos próximos 3 dias" }
+                  total_count: { type: integer }
+post:
+  tags:
+    - Financeiro · Despesas
+  summary: Criar despesa
+  description: Requer RECEPCAO/GERENTE/ADMIN. Idempotência via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [expense]
+          properties:
+            expense:
+              type: object
+              required: [description, amount_cents, due_date]
+              properties:
+                description: { type: string }
+                financial_dre_category_id: { type: integer }
+                financial_bank_account_id: { type: integer }
+                supplier_name: { type: string }
+                amount_cents: { type: integer }
+                status: { type: string }
+                payment_method: { type: string }
+                competence_date: { type: string, format: date }
+                due_date: { type: string, format: date }
+                installments_count: { type: integer }
+                installment_number: { type: integer }
+                notes: { type: string }
+  responses:
+    '201':
+      description: Criada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Expense.yml'

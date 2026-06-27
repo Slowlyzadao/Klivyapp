@@ -1,0 +1,50 @@
+type: object
+description: |
+  Evolução clínica (modelo legado, sendo gradualmente substituído por
+  `SessionLog` via migration). Imutável após `sign`. `mark_erratum` registra
+  errata sem editar o conteúdo original.
+properties:
+  id: { type: integer }
+  patient_id: { type: integer }
+  account_id: { type: integer }
+  professional_id: { type: integer, nullable: true }
+  appointment_id: { type: integer, nullable: true }
+  form_template_id: { type: integer, nullable: true }
+  note_date: { type: string, format: date }
+  status: { type: string }
+  lock_version:
+    type: integer
+    description: Optimistic locking — passar valor atual ao atualizar.
+  signed_at: { type: string, format: date-time, nullable: true }
+  signed_by_id: { type: integer, nullable: true }
+  within_draft_window:
+    type: boolean
+    description: True enquanto está na janela de edição (48h padrão).
+  complaint_of_day: { type: string, nullable: true }
+  assessment: { type: string, nullable: true }
+  conduct: { type: string, nullable: true }
+  complications: { type: string, nullable: true }
+  guidance_given: { type: string, nullable: true }
+  return_recommended: { type: string, format: date, nullable: true }
+  professional:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+  signed_by:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+  erratum_at: { type: string, format: date-time, nullable: true }
+  erratum_reason: { type: string, nullable: true }
+  erratum_by:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+  created_at: { type: string, format: date-time }
+  updated_at: { type: string, format: date-time }

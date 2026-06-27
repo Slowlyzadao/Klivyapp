@@ -1,0 +1,84 @@
+get:
+  tags:
+    - Financeiro · Mensalidades
+  summary: Listar mensalidades fixas
+  description: |
+    Lista os contratos de mensalidade fixa (`Financial::RecurringBilling`) da
+    conta, excluindo soft-deletados (`deleted_at IS NULL`), em ordem
+    `created_at DESC`. Sem gate de RBAC (leitura liberada). Sujeito ao 412
+    quando o setup financeiro está incompleto.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: patient_id
+      in: query
+      schema: { type: integer }
+      description: Filtra por paciente.
+    - name: status
+      in: query
+      schema: { type: string, enum: [active, paused, completed, canceled] }
+      description: Filtra por status.
+  responses:
+    '200':
+      description: Lista de mensalidades
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/RecurringBilling.yml'
+    '412':
+      description: Setup financeiro incompleto (wizard pendente).
+post:
+  tags:
+    - Financeiro · Mensalidades
+  summary: Criar mensalidade fixa
+  description: |
+    Cria um contrato de mensalidade fixa com `status='active'`. O
+    `next_generation_at` é definido pelo body ou, quando omitido, cai para
+    `start_date`. A primeira geração de Budget+Installment fica a cargo do
+    `Financial::GenerateRecurringBillingsJob`.
+
+    Requer RECEPCAO/GERENTE/ADMIN. Idempotência via header `Idempotency-Key`
+    (obrigatório).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [recurring_billing]
+          properties:
+            recurring_billing:
+              type: object
+              required: [patient_id, payment_method_id, description, amount_cents, frequency, start_date]
+              properties:
+                patient_id: { type: integer }
+                professional_id: { type: integer }
+                financial_dre_category_id: { type: integer }
+                financial_bank_account_id: { type: integer }
+                payment_method_id: { type: integer }
+                description: { type: string, maxLength: 200 }
+                amount_cents: { type: integer, description: "Centavos, > 0." }
+                frequency: { type: string, enum: [monthly, bimonthly, quarterly, semiannual, annual] }
+                start_date: { type: string, format: date }
+                end_date: { type: string, format: date, description: "Opcional; ≥ start_date." }
+                next_generation_at: { type: string, format: date, description: "Default = start_date; ≥ start_date." }
+                notes: { type: string }
+  responses:
+    '201':
+      description: Mensalidade criada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/RecurringBilling.yml'
+    '403':
+      description: Sem permissão (requer RECEPCAO/GERENTE/ADMIN).
+    '412':
+      description: Setup financeiro incompleto (wizard pendente).
+    '422':
+      description: Erro de validação (campos `errors`).

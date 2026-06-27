@@ -2,10 +2,13 @@
 // do ActionCable atualiza o store, e timers de 5s removem entradas paradas.
 
 const SET_TYPING = 'internalChatTyping/SET_TYPING';
+const RESET = 'internalChatTyping/RESET';
 
-export const state = {
+const initialState = () => ({
   byRoom: {}, // { [roomId]: { [userId]: { name, expiresAt } } }
-};
+});
+
+export const state = initialState();
 
 export const getters = {
   getTypersForRoom: _state => roomId => {
@@ -43,11 +46,23 @@ export const actions = {
       commit(SET_TYPING, { room_id, map: cur });
     }
   },
+  // MT-15 — limpa TIMERS module-scope + state. Sem isso, o setTimeout fica
+  // pendente mesmo após o user sair da conta; quando dispara, tenta commit
+  // num state que já não pertence à conta corrente. Cobre o memory leak
+  // identificado na auditoria.
+  reset: ({ commit }) => {
+    TIMERS.forEach(tid => clearTimeout(tid));
+    TIMERS.clear();
+    commit(RESET);
+  },
 };
 
 export const mutations = {
   [SET_TYPING](_state, { room_id, map }) {
     _state.byRoom = { ..._state.byRoom, [room_id]: map };
+  },
+  [RESET](_state) {
+    Object.assign(_state, initialState());
   },
 };
 

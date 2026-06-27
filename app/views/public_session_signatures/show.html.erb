@@ -1,0 +1,268 @@
+<%
+  # Token vem do controller, embutido em data-attr na div raiz pra o JS pegar.
+  # Endpoint JSON é o já existente em Public::Api::V1::SessionLogSignaturesController.
+  api_url = "/public/api/v1/session_log_signatures/#{@token}"
+%>
+<div id="sig-app"
+     data-token="<%= @token %>"
+     data-api-url="<%= api_url %>"
+     data-csrf-token="<%= form_authenticity_token %>">
+  <!-- Estado inicial: loading -->
+  <div class="sig-card sig-state-loading" id="sig-loading">
+    <div class="sig-loading">
+      <div class="sig-spinner"></div>
+      <div>Carregando solicitação…</div>
+    </div>
+  </div>
+
+  <!-- Estado: token inválido / expirado / erro -->
+  <div class="sig-card sig-state-error" id="sig-error" style="display: none;">
+    <div class="sig-state">
+      <div class="sig-state-icon error">⚠️</div>
+      <div class="sig-state-title" id="sig-error-title">Link inválido</div>
+      <div class="sig-state-sub" id="sig-error-sub">
+        Este link de assinatura é inválido, expirou ou já foi utilizado.
+        Solicite um novo link ao seu profissional.
+      </div>
+    </div>
+  </div>
+
+  <!-- Estado: já assinada -->
+  <div class="sig-card sig-state-already" id="sig-already" style="display: none;">
+    <div class="sig-state">
+      <div class="sig-state-icon success">✓</div>
+      <div class="sig-state-title">Já foi assinada</div>
+      <div class="sig-state-sub">
+        Esta sessão já foi assinada anteriormente. Não é necessário assinar novamente.
+      </div>
+    </div>
+  </div>
+
+  <!-- Estado principal: formulário -->
+  <div class="sig-card sig-state-form" id="sig-form" style="display: none;">
+    <div class="sig-card-header">
+      <div class="sig-card-title">Assinatura do paciente</div>
+      <div class="sig-card-sub">Confirme os dados e desenhe sua assinatura abaixo.</div>
+    </div>
+    <div class="sig-card-body">
+      <div class="sig-meta">
+        <div class="sig-meta-item">
+          <div class="sig-meta-label">Paciente</div>
+          <div class="sig-meta-value" id="sig-meta-patient">—</div>
+        </div>
+        <div class="sig-meta-item">
+          <div class="sig-meta-label">Procedimento</div>
+          <div class="sig-meta-value" id="sig-meta-procedure">—</div>
+        </div>
+        <div class="sig-meta-item">
+          <div class="sig-meta-label">Data</div>
+          <div class="sig-meta-value" id="sig-meta-performed-at">—</div>
+        </div>
+        <div class="sig-meta-item">
+          <div class="sig-meta-label">Link válido até</div>
+          <div class="sig-meta-value" id="sig-meta-expires-at">—</div>
+        </div>
+      </div>
+
+      <div class="sig-canvas-wrap" id="sig-canvas-wrap">
+        <canvas id="sig-canvas" width="800" height="220"></canvas>
+        <div class="sig-canvas-hint">Desenhe sua assinatura aqui</div>
+      </div>
+
+      <div class="sig-actions">
+        <button type="button" class="sig-btn sig-btn-ghost" id="sig-btn-clear">Limpar</button>
+        <button type="button" class="sig-btn sig-btn-primary" id="sig-btn-submit" disabled>Confirmar assinatura</button>
+      </div>
+
+      <div class="sig-notice">
+        Ao confirmar, você atesta que executou esta assinatura voluntariamente, com validade
+        legal nos termos da Medida Provisória nº 2.200-2/2001 (assinatura digital).
+        IP e user-agent são registrados como prova de autenticidade.
+      </div>
+    </div>
+  </div>
+
+  <!-- Estado: assinatura recebida com sucesso -->
+  <div class="sig-card sig-state-success" id="sig-success" style="display: none;">
+    <div class="sig-state">
+      <div class="sig-state-icon success">✓</div>
+      <div class="sig-state-title">Assinatura recebida</div>
+      <div class="sig-state-sub">
+        Obrigado! Sua assinatura foi registrada. Você já pode fechar esta página.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    'use strict';
+
+    var root = document.getElementById('sig-app');
+    var apiUrl = root.dataset.apiUrl;
+    var csrfToken = root.dataset.csrfToken;
+
+    var $loading = document.getElementById('sig-loading');
+    var $error = document.getElementById('sig-error');
+    var $already = document.getElementById('sig-already');
+    var $form = document.getElementById('sig-form');
+    var $success = document.getElementById('sig-success');
+
+    function show(node) {
+      [$loading, $error, $already, $form, $success].forEach(function (n) {
+        n.style.display = (n === node) ? '' : 'none';
+      });
+    }
+
+    function showError(title, sub) {
+      if (title) document.getElementById('sig-error-title').textContent = title;
+      if (sub) document.getElementById('sig-error-sub').textContent = sub;
+      show($error);
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      try {
+        var d = new Date(iso);
+        return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      } catch (e) { return iso; }
+    }
+
+    // ── Carrega metadata do endpoint público ─────────────────────────────
+    fetch(apiUrl, { headers: { Accept: 'application/json' } })
+      .then(function (res) {
+        return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
+      })
+      .then(function (r) {
+        if (!r.ok) {
+          if (r.status === 410) {
+            showError('Link expirado', 'Este link de assinatura expirou. Solicite um novo ao seu profissional.');
+          } else if (r.status === 404) {
+            showError('Link inválido', 'Este link é inválido ou já foi utilizado. Solicite um novo ao seu profissional.');
+          } else {
+            showError('Erro', (r.data && r.data.error) || 'Falha ao carregar a solicitação.');
+          }
+          return;
+        }
+        if (r.data.already_signed) {
+          show($already);
+          return;
+        }
+        document.getElementById('sig-meta-patient').textContent = r.data.patient_name || '—';
+        document.getElementById('sig-meta-procedure').textContent = r.data.procedure_name || '—';
+        document.getElementById('sig-meta-performed-at').textContent = fmtDate(r.data.performed_at);
+        document.getElementById('sig-meta-expires-at').textContent = fmtDate(r.data.expires_at);
+        show($form);
+        initCanvas();
+      })
+      .catch(function (err) {
+        showError('Sem conexão', 'Não foi possível carregar a solicitação. Verifique sua internet e tente novamente.');
+      });
+
+    // ── Canvas de assinatura ─────────────────────────────────────────────
+    function initCanvas() {
+      var canvas = document.getElementById('sig-canvas');
+      var wrap = document.getElementById('sig-canvas-wrap');
+      var btnClear = document.getElementById('sig-btn-clear');
+      var btnSubmit = document.getElementById('sig-btn-submit');
+      var ctx = canvas.getContext('2d');
+      var drawing = false;
+      var hasSig = false;
+      var lastX = 0, lastY = 0;
+
+      function getCoords(e) {
+        var rect = canvas.getBoundingClientRect();
+        var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+          x: (clientX - rect.left) * (canvas.width / rect.width),
+          y: (clientY - rect.top) * (canvas.height / rect.height)
+        };
+      }
+
+      function start(e) {
+        e.preventDefault();
+        drawing = true;
+        var c = getCoords(e);
+        lastX = c.x; lastY = c.y;
+      }
+      function move(e) {
+        if (!drawing) return;
+        e.preventDefault();
+        var c = getCoords(e);
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(c.x, c.y);
+        ctx.strokeStyle = '#1f6cf2';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+        lastX = c.x; lastY = c.y;
+        if (!hasSig) {
+          hasSig = true;
+          wrap.classList.add('has-signature');
+          btnSubmit.disabled = false;
+        }
+      }
+      function end() { drawing = false; }
+
+      canvas.addEventListener('mousedown', start);
+      canvas.addEventListener('mousemove', move);
+      canvas.addEventListener('mouseup', end);
+      canvas.addEventListener('mouseleave', end);
+      canvas.addEventListener('touchstart', start, { passive: false });
+      canvas.addEventListener('touchmove', move, { passive: false });
+      canvas.addEventListener('touchend', end);
+
+      btnClear.addEventListener('click', function () {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        hasSig = false;
+        wrap.classList.remove('has-signature');
+        btnSubmit.disabled = true;
+      });
+
+      btnSubmit.addEventListener('click', function () {
+        if (!hasSig) return;
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = 'Enviando…';
+
+        var blob = canvas.toDataURL('image/webp', 0.85);
+        // Fallback pra browsers antigos que cospem 'data:,' quando não suportam webp
+        if (blob.length < 30) blob = canvas.toDataURL('image/png');
+
+        fetch(apiUrl, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'X-CSRF-Token': csrfToken
+          },
+          body: JSON.stringify({
+            signature: blob,
+            device_info: navigator.userAgent
+          })
+        })
+          .then(function (res) {
+            return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
+          })
+          .then(function (r) {
+            if (r.ok) {
+              show($success);
+            } else if (r.status === 410) {
+              showError('Link expirado', 'Este link expirou enquanto você assinava. Solicite um novo ao seu profissional.');
+            } else {
+              showError('Não foi possível confirmar', (r.data && r.data.error) || 'Tente novamente em alguns minutos.');
+              btnSubmit.disabled = false;
+              btnSubmit.textContent = 'Confirmar assinatura';
+            }
+          })
+          .catch(function () {
+            showError('Sem conexão', 'Verifique sua internet e tente novamente.');
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = 'Confirmar assinatura';
+          });
+      });
+    }
+  })();
+</script>

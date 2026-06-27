@@ -1,0 +1,48 @@
+get:
+  tags:
+    - Financeiro · Regras de Comissão
+  summary: Detalhar regra
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Regra
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/CommissionRule.yml'
+patch:
+  tags:
+    - Financeiro · Regras de Comissão
+  summary: Atualizar regra
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [commission_rule]
+          properties:
+            commission_rule:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/CommissionRule.yml'
+delete:
+  tags:
+    - Financeiro · Regras de Comissão
+  summary: Soft-delete da regra
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204': { description: "Removida" }

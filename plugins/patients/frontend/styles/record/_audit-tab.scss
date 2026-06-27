@@ -1,0 +1,173 @@
+@use "../variables" as *;
+
+/* ============================================================
+   ABA: AUDITORIA — aud-* system
+   ============================================================ */
+
+.aud-filter-bar {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+.aud-filter-label { color: rgb(var(--slate-9)) !important; }
+
+.aud-table-wrap {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+.aud-loading { color: rgb(var(--slate-9)) !important; }
+
+.aud-thead-row {
+  background: rgb(var(--slate-3)) !important;
+  border-bottom: 1px solid rgb(var(--slate-4)) !important;
+}
+.aud-th { color: rgb(var(--slate-9)) !important; }
+
+.aud-row { border-bottom: 1px solid rgb(var(--slate-3)) !important; }
+.aud-row:hover { background: rgb(var(--slate-3)) !important; }
+
+.aud-td--mono { color: rgb(var(--slate-11)) !important; }
+.aud-td--dim  { color: rgb(var(--slate-9)) !important; }
+
+.aud-user-name { color: rgb(var(--slate-12)) !important; }
+.aud-user-role { color: rgb(var(--slate-9)) !important; }
+.aud-avatar {
+  background: rgba($brand-info-bright, 0.10) !important;
+  border: 1px solid rgba($brand-info-bright, 0.18) !important;
+  color: $brand-info !important;
+}
+
+.aud-module-name { color: rgb(var(--slate-12)) !important; }
+.aud-module-id   { color: rgb(var(--slate-9)) !important; }
+
+.aud-diff-field { color: rgb(var(--slate-9)) !important; }
+.aud-diff-old   { color: rgb(var(--slate-8)) !important; }
+.aud-diff-new   { color: $brand-success !important; }
+.aud-diff-f     { color: rgb(var(--slate-9)) !important; }
+.aud-diff-o     { color: rgb(var(--slate-8)) !important; }
+.aud-diff-n     { color: $brand-success !important; }
+.aud-snapshot   { color: rgb(var(--slate-8)) !important; }
+
+.aud-expanded-row  { background: rgba($brand-info-bright, 0.03) !important; }
+.aud-expanded-cell { border-left: 2px solid rgba($brand-info-bright, 0.22) !important; }
+.aud-expanded-icon { color: $brand-info !important; }
+.aud-expanded-title { color: rgb(var(--slate-12)) !important; }
+.aud-expanded-text  { color: rgb(var(--slate-10)) !important; }
+.aud-expanded-diff {
+  background: rgb(var(--slate-3)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+.aud-expanded-diff-title { color: rgb(var(--slate-9)) !important; }
+
+.aud-empty-state { color: rgb(var(--slate-9)) !important; }
+.aud-empty-hint  { color: rgb(var(--slate-8)) !important; }
+
+.aud-footer-note  { color: rgb(var(--slate-9)) !important; }
+.aud-footer-total { color: rgb(var(--slate-11)) !important; }
+.aud-page-info    { color: rgb(var(--slate-9)) !important; }
+
+/* ── AuditTab — badges com mais contraste ─────────────── */
+.aud-action-badge {
+  border-width: 1px !important;
+}
+/* "VISUALIZAÇÃO" usa classes Tailwind hardcoded; reforçamos contraste */
+.aud-action-badge.bg-slate-700\/50 {
+  background: rgb(var(--slate-3)) !important;
+  color: rgb(var(--slate-11)) !important;
+  border-color: rgb(var(--slate-5)) !important;
+}
+.dark .aud-action-badge.bg-slate-700\/50 {
+  background: rgba(71, 85, 105, 0.35) !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(71, 85, 105, 0.55) !important;
+}
+.aud-action-badge[class*="bg-emerald-500"] {
+  background: rgba($brand-success, 0.12) !important;
+  color: $brand-success-strong !important;
+  border-color: rgba($brand-success, 0.30) !important;
+}
+.dark .aud-action-badge[class*="bg-emerald-500"] {
+  background: rgba($brand-success, 0.18) !important;
+  color: #86efac !important;
+  border-color: rgba($brand-success, 0.35) !important;
+}
+.aud-action-badge[class*="bg-blue-500"] {
+  background: rgba($brand-info-bright, 0.12) !important;
+  color: #1d4ed8 !important;
+  border-color: rgba($brand-info-bright, 0.30) !important;
+}
+.dark .aud-action-badge[class*="bg-blue-500"] {
+  background: rgba($brand-info-bright, 0.18) !important;
+  color: #93c5fd !important;
+  border-color: rgba($brand-info-bright, 0.35) !important;
+}
+.aud-action-badge[class*="bg-red-500"] {
+  background: rgba($brand-danger, 0.10) !important;
+  color: $brand-danger-strong !important;
+  border-color: rgba($brand-danger, 0.30) !important;
+}
+.dark .aud-action-badge[class*="bg-red-500"] {
+  background: rgba($brand-danger-bright, 0.18) !important;
+  color: #fca5a5 !important;
+  border-color: rgba($brand-danger-bright, 0.35) !important;
+}
+.aud-action-badge[class*="bg-violet-500"] {
+  background: rgba($brand-purple, 0.10) !important;
+  color: #6d28d9 !important;
+  border-color: rgba($brand-purple, 0.30) !important;
+}
+.dark .aud-action-badge[class*="bg-violet-500"] {
+  background: rgba($brand-purple, 0.18) !important;
+  color: #c4b5fd !important;
+  border-color: rgba($brand-purple, 0.35) !important;
+}
+.aud-action-badge[class*="bg-amber-500"] {
+  background: rgba($brand-amber, 0.12) !important;
+  color: #b45309 !important;
+  border-color: rgba($brand-amber, 0.30) !important;
+}
+.dark .aud-action-badge[class*="bg-amber-500"] {
+  background: rgba($brand-amber-bright, 0.18) !important;
+  color: #fcd34d !important;
+  border-color: rgba($brand-amber-bright, 0.35) !important;
+}
+.aud-action-badge[class*="bg-indigo-500"] {
+  background: rgba(79, 70, 229, 0.10) !important;
+  color: #4338ca !important;
+  border-color: rgba(79, 70, 229, 0.30) !important;
+}
+.dark .aud-action-badge[class*="bg-indigo-500"] {
+  background: rgba(99, 102, 241, 0.18) !important;
+  color: #a5b4fc !important;
+  border-color: rgba(99, 102, 241, 0.35) !important;
+}
+.aud-action-badge[class*="bg-teal-500"] {
+  background: rgba(20, 184, 166, 0.10) !important;
+  color: #0f766e !important;
+  border-color: rgba(20, 184, 166, 0.30) !important;
+}
+.dark .aud-action-badge[class*="bg-teal-500"] {
+  background: rgba(20, 184, 166, 0.18) !important;
+  color: #5eead4 !important;
+  border-color: rgba(20, 184, 166, 0.35) !important;
+}
+.aud-action-badge[class*="bg-green-500"] {
+  background: rgba($brand-success, 0.10) !important;
+  color: $brand-success-strong !important;
+  border-color: rgba($brand-success, 0.30) !important;
+}
+.dark .aud-action-badge[class*="bg-green-500"] {
+  background: rgba($brand-success, 0.18) !important;
+  color: #86efac !important;
+  border-color: rgba($brand-success, 0.35) !important;
+}
+.aud-action-badge[class*="bg-cyan-500"] {
+  background: rgba(8, 145, 178, 0.10) !important;
+  color: #0e7490 !important;
+  border-color: rgba(8, 145, 178, 0.30) !important;
+}
+.dark .aud-action-badge[class*="bg-cyan-500"] {
+  background: rgba(6, 182, 212, 0.18) !important;
+  color: #67e8f9 !important;
+  border-color: rgba(6, 182, 212, 0.35) !important;
+}
+

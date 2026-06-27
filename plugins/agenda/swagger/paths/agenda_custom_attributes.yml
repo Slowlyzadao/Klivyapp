@@ -1,0 +1,50 @@
+get:
+  tags:
+    - Atributos Customizados
+  summary: Listar definições de campos customizados
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Lista ordenada por `position`
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/AgendaCustomAttribute.yml'
+post:
+  tags:
+    - Atributos Customizados
+  summary: Criar definição de campo customizado
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [agenda_custom_attribute]
+          properties:
+            agenda_custom_attribute:
+              type: object
+              required: [name, field_type]
+              properties:
+                name: { type: string }
+                field_type:
+                  type: string
+                  enum: [text, textarea, select, date, phone, cpf, rg]
+                required: { type: boolean }
+                validate_cpf: { type: boolean }
+                options:
+                  type: string
+                  description: Conteúdo livre — usado em `field_type=select`.
+                position: { type: integer }
+  responses:
+    '201':
+      description: Atributo criado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaCustomAttribute.yml'

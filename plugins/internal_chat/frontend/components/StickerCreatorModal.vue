@@ -5,6 +5,9 @@ import {
   processStickerFile,
   STICKER_INPUT_ACCEPT,
 } from '@plugins/internal_chat/frontend/composables/stickerImageProcessor';
+// FE-8: BeclinicButton no footer (Cancelar/Salvar). Close X do header
+// permanece nativo (icon-only contextual).
+import BeclinicButton from '@plugins/beclinic_core/frontend/components/Button.vue';
 
 const emit = defineEmits(['close', 'created']);
 const store = useStore();
@@ -170,21 +173,20 @@ const close = () => {
       </div>
 
       <footer class="flex justify-end gap-2 px-5 py-3 border-t border-n-weak">
-        <button
-          type="button"
-          class="px-4 py-2 text-sm font-medium rounded-md text-n-slate-11 hover:bg-n-alpha-1 hover:text-n-slate-12"
+        <BeclinicButton
+          label="Cancelar"
+          variant="outline"
+          color="slate"
+          size="sm"
           @click="close"
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          class="px-4 py-2 text-sm font-medium text-white rounded-md bg-n-brand hover:brightness-110 disabled:opacity-50"
+        />
+        <BeclinicButton
+          :label="isUploading ? 'Enviando…' : 'Salvar figurinha'"
+          :is-loading="isUploading"
           :disabled="!canSave"
+          size="sm"
           @click="save"
-        >
-          {{ isUploading ? 'Enviando…' : 'Salvar figurinha' }}
-        </button>
+        />
       </footer>
     </div>
   </div>

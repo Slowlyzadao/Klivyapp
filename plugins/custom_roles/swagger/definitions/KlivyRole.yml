@@ -1,0 +1,67 @@
+type: object
+description: |
+  Função personalizada do Klivy (`KlivyRole`). **Único sistema de permissões
+  ativo** desde 2026-04-30 (canon: `dono`/`Time`/`TeamProfile`/`/beclinic_admin/owners`
+  foram removidos). Cada conta tem suas próprias roles; `KlivyRole`s podem
+  ser criadas do zero ou derivadas de um `preset_key` built-in.
+
+  `permissions` é um JSONB no formato `{ módulo: { ação: bool, scope: 'all'|'own'|... } }`
+  consumido pelo helper `User#beclinic_can?(account, module, action)`.
+properties:
+  id:
+    type: integer
+  name:
+    type: string
+    maxLength: 80
+    description: "Único por conta (case-insensitive)."
+    example: "Recepcionista"
+  description:
+    type: string
+    nullable: true
+    maxLength: 240
+  preset_key:
+    type: string
+    nullable: true
+    description: |
+      Chave do preset built-in que originou a role. Valores possíveis hoje:
+      `recepcionista`, `especialista`, `gerente`, `sdr` (definidos em
+      `plugins/custom_roles/frontend/shared/presets.js`). Quando preenchido,
+      indica que a role veio de um template — pode ter sido editada depois.
+    example: "recepcionista"
+  permissions:
+    type: object
+    description: |
+      Mapa `módulo → { ação → bool, scope? }`. Default `{}`. Exemplos de
+      módulos: `agenda`, `patients`, `financial`, `settings`, `chat`.
+      Exemplos de ações: `view`, `create`, `edit`, `delete`, `manage_exams`,
+      `roles_view`, `roles_create`, `users_edit`. `scope` ∈ `{all, own}`
+      controla visibilidade (`all` = tudo da conta, `own` = só do próprio user).
+
+      **Sanitizado server-side** (`before_validation` no model, desde 1.6.1.19 —
+      auditoria C-2):
+
+      - Keys (módulo OU permissão) que não estão no catálogo
+        (`KlivyRole::PermissionsCatalog::CATALOG`) são **silenciosamente DROPADAS**.
+      - Keys legacy (`settings.manage_users`, `settings.manage_roles`, etc.) são
+        **automaticamente expandidas** para suas equivalentes novas (`users_view/_invite/_edit/_remove`).
+      - `scope` aceita apenas `'all'` ou `'own'` (outros valores dropados).
+      - Catálogo canônico vive em `plugins/custom_roles/frontend/shared/modules.js`
+        e `plugins/custom_roles/app/models/klivy_role/permissions_catalog.rb` (mantidos
+        em sync via `spec/plugins/custom_roles/catalog_sync_spec.rb`).
+    additionalProperties:
+      type: object
+      additionalProperties: true
+    example:
+      agenda: { view: true, create: true, edit: true, delete: false, scope: own }
+      patients: { view: true, create: true, edit: false, scope: own }
+      financial: { view: false }
+      settings: { users_edit: true, roles_view: true }
+  member_count:
+    type: integer
+    description: "Total de `AccountUser`s atualmente com esta role."
+  created_at:
+    type: string
+    format: date-time
+  updated_at:
+    type: string
+    format: date-time

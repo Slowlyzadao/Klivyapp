@@ -1,0 +1,61 @@
+get:
+  tags:
+    - Exames e Mídias
+  summary: Listar exames/mídias
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - name: category
+      in: query
+      schema: { type: string, description: "Ex.: rx, foto_clinica, atestado, outro" }
+    - name: page
+      in: query
+      schema: { type: integer, default: 1 }
+    - name: per_page
+      in: query
+      schema: { type: integer, default: 20 }
+  responses:
+    '200':
+      description: Lista paginada
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/ExamMedia.yml'
+post:
+  tags:
+    - Exames e Mídias
+  summary: Upload de exame/mídia
+  description: |
+    Upload multipart com `file` + metadados. `category` default `outro`.
+    Cria timeline event `exam_uploaded` + audit log.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  requestBody:
+    required: true
+    content:
+      multipart/form-data:
+        schema:
+          type: object
+          required: [file]
+          properties:
+            file: { type: string, format: binary }
+            category: { type: string }
+            description: { type: string }
+            session_log_id: { type: integer }
+            appointment_id: { type: integer }
+            exam_folder_id: { type: integer }
+            tags:
+              type: array
+              items: { type: string }
+  responses:
+    '201':
+      description: Upload concluído
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/ExamMedia.yml'
+    '422':
+      description: Erro de validação

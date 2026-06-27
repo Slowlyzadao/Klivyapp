@@ -17,6 +17,13 @@ class DeviseOverrides::SessionsController < DeviseTokenAuth::SessionsController
 
     # Only proceed with standard authentication if no MFA is required
     super
+
+    # Roadmap #17.1 — devise_token_auth chama sign_in com `store: false`
+    # (linha 63 do parent), mantendo apenas o token header. Re-assinamos com
+    # `store: true` para também setar o cookie `_chatwoot_session`. Sem isso
+    # o SecureBlobsController não consegue validar GETs de `<img src>`/
+    # `<iframe src>` que só enviam cookie (não o access-token header).
+    ensure_session_cookie
   end
 
   def render_create_success
@@ -60,7 +67,9 @@ class DeviseOverrides::SessionsController < DeviseTokenAuth::SessionsController
     @token = @resource.create_token
     @resource.save!
 
-    sign_in(:user, @resource, store: false, bypass: false)
+    # Roadmap #17.1 — `store: true` seta cookie de sessão alongside do token,
+    # necessário pro SecureBlobsController autenticar GETs de blobs.
+    sign_in(:user, @resource, store: true, bypass: false)
     # invalidate the token after the user is signed in
     @resource.invalidate_sso_auth_token(params[:sso_auth_token])
   end
@@ -99,8 +108,20 @@ class DeviseOverrides::SessionsController < DeviseTokenAuth::SessionsController
     @token = @resource.create_token
     @resource.save!
 
-    sign_in(:user, @resource, store: false, bypass: false)
+    # Roadmap #17.1 — `store: true` seta cookie de sessão pós-MFA, necessário
+    # pro SecureBlobsController.
+    sign_in(:user, @resource, store: true, bypass: false)
     render_create_success
+  end
+
+  # Roadmap #17.1 — adiciona cookie de sessão DEPOIS do `super` do flow
+  # padrão (que assinou com store: false). `bypass: true` evita re-acionar
+  # callbacks como `trackable` (super já incrementou sign_in_count).
+  def ensure_session_cookie
+    return unless @resource.present?
+    return unless warden.user(:user) == @resource
+
+    sign_in(:user, @resource, store: true, bypass: true)
   end
 
   def render_mfa_error(message_key, status = :bad_request)

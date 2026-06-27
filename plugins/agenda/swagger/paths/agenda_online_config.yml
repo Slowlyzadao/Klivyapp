@@ -1,0 +1,58 @@
+get:
+  tags:
+    - Configurações da Agenda
+  summary: Ler configuração do agendamento online
+  description: |
+    Recurso singleton — sempre devolve a config da conta (cria com defaults
+    se ainda não existir).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Configuração
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaOnlineConfig.yml'
+patch:
+  tags:
+    - Configurações da Agenda
+  summary: Atualizar configuração do agendamento online
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [agenda_online_config]
+          properties:
+            agenda_online_config:
+              type: object
+              properties:
+                enabled: { type: boolean }
+                allow_new_patients: { type: boolean }
+                require_whatsapp_verification: { type: boolean }
+                require_email_verification: { type: boolean }
+                min_lead_time_minutes: { type: integer, minimum: 0 }
+                future_limit_days: { type: integer, minimum: 1 }
+                form_fields:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      label: { type: string }
+                      type: { type: string }
+                      required: { type: boolean }
+                      system: { type: boolean }
+  responses:
+    '200':
+      description: Configuração atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaOnlineConfig.yml'
+    '422':
+      description: Erro de validação

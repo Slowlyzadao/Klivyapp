@@ -116,8 +116,11 @@ jobs:
       - name: Run backend tests (parallelized)
         run: |
           # Get all spec files and split them using round-robin distribution
-          # This ensures slow tests are distributed evenly across all nodes
-          SPEC_FILES=($(find spec -name '*_spec.rb' | sort))
+          # This ensures slow tests are distributed evenly across all nodes.
+          # Inclui também specs dos plugins locais (plugins/*/spec/**) — sem
+          # isso, CI verde mascara falha em policies / tenant isolation /
+          # drift de catálogo dos plugins (ai_agent, internal_chat, etc.).
+          SPEC_FILES=($(find spec plugins/*/spec -name '*_spec.rb' 2>/dev/null | sort))
           TESTS=""
 
           for i in "${!SPEC_FILES[@]}"; do

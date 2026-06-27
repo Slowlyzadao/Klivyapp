@@ -41,8 +41,8 @@ class Api::V1::Accounts::InternalChat::MessagesController < Api::V1::Accounts::B
       attachments: webp_converted_attachments,
       sticker_id: resolved_sticker_id,
     )
-    # Marca como lida pelo próprio sender
-    membership_for_current_user&.update(last_read_message_id: message.id)
+    # RT-7: mark-read-by-sender agora vive no MessageDispatcher (single
+    # source of truth). Controller não duplica mais a atualização.
     render json: { data: InternalChat::MessageSerializer.new(message, current_user: Current.user).as_json }, status: :created
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages.join(', ') }, status: :unprocessable_entity
@@ -52,9 +52,12 @@ class Api::V1::Accounts::InternalChat::MessagesController < Api::V1::Accounts::B
 
   def update
     return head :forbidden unless @message.sender_user_id == Current.user.id
-    return render json: { error: 'mensagem apagada não pode ser editada' }, status: :unprocessable_entity if @message.deleted_at?
-    return render json: { error: 'janela de 5 minutos para edição expirou' }, status: :unprocessable_entity if @message.created_at < EDIT_WINDOW.ago
-    return render json: { error: 'apenas mensagens de texto podem ser editadas' }, status: :unprocessable_entity if @message.content_type != 'text'
+    # FE-16/17 (auditoria 2026-05-18): strings PT-BR migradas pra
+    # `config/locales/pt_BR.yml`. Pattern incremental — controller é o
+    # primeiro vertical migrado.
+    return render(json: { error: I18n.t('internal_chat.controllers.messages.deleted_cannot_edit') }, status: :unprocessable_entity) if @message.deleted_at?
+    return render(json: { error: I18n.t('internal_chat.controllers.messages.edit_window_expired') }, status: :unprocessable_entity) if @message.created_at < EDIT_WINDOW.ago
+    return render(json: { error: I18n.t('internal_chat.controllers.messages.only_text_editable') }, status: :unprocessable_entity) if @message.content_type != 'text'
 
     @message.update!(
       content: message_params[:content],
@@ -99,8 +102,8 @@ class Api::V1::Accounts::InternalChat::MessagesController < Api::V1::Accounts::B
     return head :forbidden if @message.deleted_at?
 
     emoji = params[:emoji].to_s.strip
-    return render(json: { error: 'emoji obrigatório' }, status: :unprocessable_entity) if emoji.blank?
-    return render(json: { error: 'emoji muito grande' }, status: :unprocessable_entity) if emoji.length > 16
+    return render(json: { error: I18n.t('internal_chat.controllers.messages.emoji_required') }, status: :unprocessable_entity) if emoji.blank?
+    return render(json: { error: I18n.t('internal_chat.controllers.messages.emoji_too_long') }, status: :unprocessable_entity) if emoji.length > 16
 
     reaction = InternalChat::MessageReaction.find_or_initialize_by(
       user_id: Current.user.id,
@@ -125,13 +128,29 @@ class Api::V1::Accounts::InternalChat::MessagesController < Api::V1::Accounts::B
   end
 
   # Lista mensagens favoritadas pelo usuário nesta sala, mais recentes primeiro.
+  #
+  # PERF-16 (auditoria 2026-05-18): paginação opt-in. Antes era limit fixo
+  # 200 sem como acessar favoritos antigos. Agora `?page=N&per_page=M` —
+  # default mantém 200 (backwards-compatible com chamadas existentes).
+  FAVORITES_PER_PAGE_DEFAULT = 200
+  FAVORITES_PER_PAGE_MAX = 200
+
   def favorites
-    fav_scope = InternalChat::MessageFavorite
-                .where(user_id: Current.user.id, room_id: @room.id)
-                .order(created_at: :desc)
-                .limit(200)
+    page = (params[:page].presence || 1).to_i.clamp(1, 10_000)
+    per_page = (params[:per_page].presence || FAVORITES_PER_PAGE_DEFAULT)
+               .to_i.clamp(1, FAVORITES_PER_PAGE_MAX)
+    offset = (page - 1) * per_page
+
+    base = InternalChat::MessageFavorite
+           .where(user_id: Current.user.id, room_id: @room.id)
+    total = base.count
+    fav_scope = base.order(created_at: :desc)
+                    .offset(offset)
+                    .limit(per_page)
     message_ids = fav_scope.pluck(:message_id)
-    return render(json: { data: [] }) if message_ids.empty?
+    if message_ids.empty?
+      return render(json: { data: [], meta: { page: page, per_page: per_page, total: total } })
+    end
 
     messages = @room.messages
                     .where(id: message_ids)
@@ -147,6 +166,7 @@ class Api::V1::Accounts::InternalChat::MessagesController < Api::V1::Accounts::B
           favorited_ids: message_ids,
         ).as_json
       end,
+      meta: { page: page, per_page: per_page, total: total },
     }
   end
 
@@ -205,11 +225,30 @@ class Api::V1::Accounts::InternalChat::MessagesController < Api::V1::Accounts::B
   # - FormData (com anexos): chega como JSON string serializado pelo cliente
   # Sem isso, replies com anexo perdiam o `in_reply_to` (e agora perderiam
   # também o `quoted_message` do "responder no particular").
+  #
+  # SEC-21 (auditoria 2026-05-18): allowlist de keys após parse — antes
+  # `to_unsafe_h` passava qualquer hash do cliente direto pra
+  # MessageDispatcher (que persistia em `content_attributes` jsonb).
+  # Cliente podia injetar keys arbitrárias (ex: forjar `account_id`,
+  # `room_id`, `system_notifier_key`) que outros listeners interpretam.
+  ALLOWED_CONTENT_ATTRIBUTES = %w[
+    in_reply_to
+    quoted_message
+    mentioned_user_ids
+    mentioned_ai_agent_ids
+    mentioned_all
+  ].freeze
+
   def parsed_content_attributes
     raw = params.dig(:message, :content_attributes)
+    parsed = parse_raw_attributes(raw)
+    parsed.slice(*ALLOWED_CONTENT_ATTRIBUTES)
+  end
+
+  def parse_raw_attributes(raw)
     return {} if raw.blank?
-    return raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
-    return raw.to_h if raw.is_a?(Hash)
+    return raw.to_unsafe_h.stringify_keys if raw.respond_to?(:to_unsafe_h)
+    return raw.to_h.stringify_keys if raw.is_a?(Hash)
     return JSON.parse(raw) if raw.is_a?(String)
 
     {}
@@ -236,12 +275,14 @@ class Api::V1::Accounts::InternalChat::MessagesController < Api::V1::Accounts::B
   # mudou — handlers do frontend reagem com `internal_chat.message.updated`.
   # Cada membro recebe um payload com `is_favorited` calculado para ele mesmo
   # (favorito é estado por usuário).
+  #
+  # ARCH-21 (audit 2026-05-19): block API porque cada user precisa de
+  # MessageSerializer próprio (current_user: user pra computar `is_favorited`).
   def broadcast_message_change(message)
     reloaded = message.reload
-    @room.memberships.active.where.not(user_id: nil).pluck(:user_id).uniq.each do |uid|
-      user = User.find_by(id: uid)
-      next unless user
+    user_ids = @room.memberships.active.where.not(user_id: nil).pluck(:user_id).uniq
 
+    InternalChat::UserBroadcaster.each(user_ids: user_ids) do |user|
       payload = {
         event: 'internal_chat.message.updated',
         data: InternalChat::MessageSerializer.new(reloaded, current_user: user).as_json,
@@ -259,7 +300,17 @@ class Api::V1::Accounts::InternalChat::MessagesController < Api::V1::Accounts::B
       .pluck(:message_id)
   end
 
+  # PERF-11 (auditoria 2026-05-18): debounce leading-edge. Sem isso, abrir
+  # uma sala com 200 mensagens marcava cada uma como lida → 200 broadcasts
+  # pra cada outro membro. Agora: 1ª call dispara, próximas dentro da janela
+  # de DEBOUNCE_INTERVAL só atualizam DB (last_read_message_id já é canônico).
+  # Próxima call APÓS a janela dispara de novo com o id mais recente.
+  # UX: outros membros veem read receipt "atrasado em até 2s" — aceitável.
+  READ_RECEIPT_DEBOUNCE_INTERVAL = 2.seconds
+
   def broadcast_read_receipt(message_id)
+    return if recently_broadcasted_read_receipt?
+
     payload = {
       event: 'internal_chat.read_receipt.updated',
       data: {
@@ -269,11 +320,29 @@ class Api::V1::Accounts::InternalChat::MessagesController < Api::V1::Accounts::B
         last_read_message_id: message_id,
       },
     }
-    @room.memberships.active.where.not(user_id: nil).pluck(:user_id).each do |uid|
-      next if uid == Current.user.id
+    broadcast_to_room_members(payload, exclude_self: true)
 
-      user = User.find_by(id: uid)
-      ActionCable.server.broadcast(user.pubsub_token, payload) if user
-    end
+    Rails.cache.write(read_receipt_debounce_key, true, expires_in: READ_RECEIPT_DEBOUNCE_INTERVAL)
+  rescue StandardError => e
+    Rails.logger.warn("[InternalChat::Messages] broadcast_read_receipt cache write skipped: #{e.message}")
+  end
+
+  def recently_broadcasted_read_receipt?
+    Rails.cache.exist?(read_receipt_debounce_key)
+  rescue StandardError
+    false # Se Redis cair, melhor broadcastar (sem rate limit) do que silenciar
+  end
+
+  def read_receipt_debounce_key
+    "internal_chat:read_receipt_debounce:#{@room.id}:#{Current.user.id}"
+  end
+
+  # ARCH-21 (audit 2026-05-19): wrapper fino sobre UserBroadcaster.call
+  # mantendo a semântica `exclude_self` (uso interno do controller).
+  def broadcast_to_room_members(payload, exclude_self: false)
+    user_ids = @room.memberships.active.where.not(user_id: nil).pluck(:user_id).uniq
+    user_ids.delete(Current.user.id) if exclude_self
+
+    InternalChat::UserBroadcaster.call(user_ids: user_ids, payload: payload)
   end
 end

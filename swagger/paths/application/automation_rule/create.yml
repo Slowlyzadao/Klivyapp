@@ -2,7 +2,13 @@ tags:
   - Automation Rule
 operationId: add-new-automation-rule-to-account
 summary: Add a new automation rule
-description: Add a new automation rule to account
+description: |
+  Add a new automation rule to account.
+
+  **Authorization** (`AutomationRulePolicy#create?`, desde 1.6.1.21 — auditoria A-5):
+  `administrator` OR Klivy `settings.automation_create`. Mesmo padrão pra
+  `update` (`automation_edit`), `clone` (`automation_create`), `delete`
+  (`automation_delete`), `index`/`show` (`automation_view`).
 security:
   - userApiKey: []
 requestBody:

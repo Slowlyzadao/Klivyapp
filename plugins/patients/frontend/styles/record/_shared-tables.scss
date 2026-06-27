@@ -1,0 +1,99 @@
+@use "../variables" as *;
+
+/* ════════════════════════════════════════════════════════════════
+   PROC + DOCS — tabela compartilhada entre tabs/ProceduresTab,
+   tabs/DocumentsTab e tabs/TreatmentPlanTab.
+   ════════════════════════════════════════════════════════════════ */
+.proc-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 20px;
+  padding: 0 6px;
+  background: rgba(100, 116, 139, 0.2);
+  color: $brand-slate-light;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 10px;
+}
+.proc-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+.proc-empty-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(100, 116, 139, 0.12);
+  color: $brand-slate-mid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.proc-empty-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0;
+}
+.proc-empty-hint {
+  font-size: 12px;
+  color: $brand-slate-mid;
+  margin: 6px 0 0;
+}
+.proc-table-wrap {
+  overflow-x: auto;
+  border-radius: 0 0 14px 14px;
+}
+.proc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.proc-table-cell {
+  padding: 14px 16px;
+  vertical-align: top;
+}
+.proc-product-item + .proc-product-item {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+.proc-cell-resultado {
+  max-width: 260px;
+}
+.proc-result-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-bottom: 5px;
+}
+.proc-result-row:last-child {
+  margin-bottom: 0;
+}
+.proc-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: $brand-slate-mid;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.proc-action-btn:hover {
+  background: rgba($brand-danger-bright, 0.12);
+  color: $brand-danger-light;
+}
+

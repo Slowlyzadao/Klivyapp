@@ -1,0 +1,314 @@
+@use "../variables" as *;
+
+/* ============================================================
+   REFINAMENTO VISUAL — Light/Dark contraste WCAG AA
+   ============================================================ */
+
+/* ── Tags Clínicas / Badges ───────────────────────────── */
+.clinical-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  background: rgb(var(--slate-3)) !important;
+  border: 1px solid rgb(var(--slate-5)) !important;
+  color: rgb(var(--slate-12)) !important;
+}
+.clinical-tag.tag-danger {
+  background: rgba($brand-danger, 0.10) !important;
+  color: $brand-danger-strong !important;
+  border-color: rgba($brand-danger, 0.30) !important;
+}
+.clinical-tag.tag-warning {
+  background: rgba($brand-amber-bright, 0.14) !important;
+  color: #92400e !important;
+  border-color: rgba($brand-amber-bright, 0.40) !important;
+}
+.clinical-tag.tag-info {
+  background: rgba($brand-info-bright, 0.10) !important;
+  color: #1d4ed8 !important;
+  border-color: rgba($brand-info-bright, 0.30) !important;
+}
+.clinical-tag.tag-success {
+  background: rgba($brand-success, 0.10) !important;
+  color: $brand-success-strong !important;
+  border-color: rgba($brand-success, 0.30) !important;
+}
+.dark .clinical-tag.tag-danger {
+  background: rgba($brand-danger-bright, 0.16) !important;
+  color: #fca5a5 !important;
+  border-color: rgba($brand-danger-bright, 0.35) !important;
+}
+.dark .clinical-tag.tag-warning {
+  background: rgba($brand-amber-bright, 0.18) !important;
+  color: #fcd34d !important;
+  border-color: rgba($brand-amber-bright, 0.35) !important;
+}
+.dark .clinical-tag.tag-info {
+  background: rgba($brand-info-bright, 0.18) !important;
+  color: #93c5fd !important;
+  border-color: rgba($brand-info-bright, 0.35) !important;
+}
+.dark .clinical-tag.tag-success {
+  background: rgba($brand-success, 0.18) !important;
+  color: #86efac !important;
+  border-color: rgba($brand-success, 0.35) !important;
+}
+
+/* ── Aba Geral — texto e divisórias ───────────────────── */
+.geral-plan-title { color: rgb(var(--slate-12)) !important; }
+.geral-divider { background: rgb(var(--slate-4)) !important; }
+
+/* Card do Profissional Responsável */
+.geral-prof-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 10px;
+}
+.dark .geral-prof-card {
+  background: rgba(255, 255, 255, 0.02);
+}
+.geral-prof-row {
+  display: flex;
+  align-items: center !important;
+  gap: 12px !important;
+  min-width: 0;
+}
+
+/* Empty state: paciente sem profissional atribuído (típico de importados
+   Clinicorp). Visual neutro, sem avatar, com ícone de alerta sutil. */
+.geral-prof-empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+.geral-prof-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-9));
+  border-radius: 50%;
+}
+.dark .geral-prof-empty-icon {
+  background: rgba(255, 255, 255, 0.04);
+}
+.geral-prof-empty-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.geral-prof-empty-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: rgb(var(--slate-11));
+  margin: 0;
+}
+.geral-prof-empty-hint {
+  font-size: 11.5px;
+  color: rgb(var(--slate-9));
+  margin: 0;
+  line-height: 1.4;
+}
+.geral-prof-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.geral-prof-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.geral-prof-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.geral-prof-help-icon {
+  width: 14px;
+  height: 14px;
+  color: rgb(var(--slate-9));
+  cursor: help;
+  flex-shrink: 0;
+  &:hover { color: rgb(var(--slate-11)); }
+}
+.geral-prof-change-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgb(var(--slate-11));
+  background: rgb(var(--slate-3));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  &:hover {
+    color: rgb(var(--slate-12));
+    background: rgb(var(--slate-4));
+    border-color: rgb(var(--slate-5));
+  }
+}
+.dark .geral-prof-change-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  &:hover { background: rgba(255, 255, 255, 0.08); }
+}
+.geral-prof-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgb(var(--slate-9)) !important;
+  display: block;
+}
+.geral-prof-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(var(--slate-12)) !important;
+  line-height: 1.3;
+  word-break: break-word;
+  margin: 0; /* reset margin-block-end default do browser em <p> */
+}
+.geral-prof-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  width: fit-content;
+  /* Fallback se slug não bater em nenhuma variant — neutro */
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-11));
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+/* Cores por role real (Klivy + Chatwoot bypass) — mesmo palette do
+   ChangeResponsibleModal pra consistência visual. Tom semântico:
+   admin violet (alto poder), gerente teal (gestão), especialista azul
+   (clínico), recepcionista amber (operacional), proprietário rose. */
+.geral-prof-badge--administrador {
+  background: rgba(168, 85, 247, 0.14);
+  color: #7c3aed;
+  border-color: rgba(168, 85, 247, 0.25);
+}
+.geral-prof-badge--gerente {
+  background: rgba(20, 184, 166, 0.14);
+  color: #0d9488;
+  border-color: rgba(20, 184, 166, 0.25);
+}
+.geral-prof-badge--especialista {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, 0.25);
+}
+.geral-prof-badge--recepcionista {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.25);
+}
+.geral-prof-badge--proprietario,
+.geral-prof-badge--super_admin {
+  background: rgba(244, 63, 94, 0.14);
+  color: #be123c;
+  border-color: rgba(244, 63, 94, 0.25);
+}
+.geral-prof-badge--profissional {
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  border-color: rgba(34, 197, 94, 0.25);
+}
+.dark .geral-prof-badge {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgb(var(--slate-11));
+  border-color: rgba(255, 255, 255, 0.06);
+}
+.dark .geral-prof-badge--administrador {
+  background: rgba(168, 85, 247, 0.18);
+  color: #c4b5fd;
+  border-color: rgba(168, 85, 247, 0.35);
+}
+.dark .geral-prof-badge--gerente {
+  background: rgba(20, 184, 166, 0.18);
+  color: #5eead4;
+  border-color: rgba(20, 184, 166, 0.35);
+}
+.dark .geral-prof-badge--especialista {
+  background: rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.35);
+}
+.dark .geral-prof-badge--recepcionista {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+.dark .geral-prof-badge--proprietario,
+.dark .geral-prof-badge--super_admin {
+  background: rgba(244, 63, 94, 0.18);
+  color: #fda4af;
+  border-color: rgba(244, 63, 94, 0.35);
+}
+.dark .geral-prof-badge--profissional {
+  background: rgba(34, 197, 94, 0.18);
+  color: #86efac;
+  border-color: rgba(34, 197, 94, 0.35);
+}
+/* Manter compat com versão antiga (caso outras telas ainda usem) */
+.geral-prof-avatar {
+  background: rgba($brand-info-bright, 0.10) !important;
+  color: $brand-info !important;
+}
+.dark .geral-prof-avatar {
+  background: rgba($brand-info-bright, 0.18) !important;
+  color: $brand-info-light !important;
+}
+.geral-meta-label { color: rgb(var(--slate-9)) !important; }
+.geral-meta-value { color: rgb(var(--slate-12)) !important; }
+/* Regras de .geral-visit-* movidas pra _documents-tab.scss
+   (que define o card completo: bg, borda, ícone, variantes --past/--next) */
+
+/* status-badge no Tratamento Ativo */
+.status-badge.badge-blue {
+  background: rgba($brand-info-bright, 0.12) !important;
+  color: #1d4ed8 !important;
+  border: 1px solid rgba($brand-info-bright, 0.28) !important;
+}
+.status-badge.badge-green {
+  background: rgba($brand-success, 0.12) !important;
+  color: $brand-success-strong !important;
+  border: 1px solid rgba($brand-success, 0.28) !important;
+}
+.dark .status-badge.badge-blue {
+  background: rgba($brand-info-bright, 0.18) !important;
+  color: #93c5fd !important;
+  border-color: rgba($brand-info-bright, 0.35) !important;
+}
+.dark .status-badge.badge-green {
+  background: rgba($brand-success, 0.18) !important;
+  color: #86efac !important;
+  border-color: rgba($brand-success, 0.35) !important;
+}
+

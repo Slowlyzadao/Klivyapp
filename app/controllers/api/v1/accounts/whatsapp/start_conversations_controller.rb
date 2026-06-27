@@ -105,8 +105,10 @@ class Api::V1::Accounts::Whatsapp::StartConversationsController < Api::V1::Accou
   def find_or_create_conversation(inbox, phone_number)
     e164 = "+#{phone_number}"
 
-    # Reusa contact_inbox se já existe (mesmo source_id)
-    contact_inbox = inbox.contact_inboxes.find_by(source_id: phone_number)
+    # Reusa contact_inbox se já existe — testa o source_id exato e também
+    # variantes brasileiras (com/sem o "9" inicial). Sem isso, agente que
+    # digita o número no formato alternativo cria contato duplicado.
+    contact_inbox = find_existing_contact_inbox_by_variants(inbox, phone_number)
     contact_inbox ||= ::ContactInboxWithContactBuilder.new(
       source_id: phone_number,
       inbox: inbox,
@@ -133,5 +135,25 @@ class Api::V1::Accounts::Whatsapp::StartConversationsController < Api::V1::Accou
       contact_inbox_id: contact_inbox.id,
       additional_attributes: { initiated_by: 'agent' }
     )
+  end
+
+  # Procura contact_inbox existente testando o source_id exato + variantes
+  # digit-only (com/sem "9" inicial). Também tenta achar via Contact pelo
+  # phone_number/identifier — cobre o caso em que o contato existe mas o
+  # contact_inbox foi criado com source_id em formato diferente (legado QR).
+  def find_existing_contact_inbox_by_variants(inbox, phone_number)
+    candidates = [phone_number, *Whatsapp::PhoneSearchVariants.digit_variants(phone_number)].uniq
+
+    by_source = inbox.contact_inboxes.where(source_id: candidates).first
+    return by_source if by_source
+
+    # Fallback: procura por Contact (phone_number E.164 ou identifier JID) e
+    # devolve o contact_inbox dessa inbox, se houver.
+    e164_candidates  = candidates.map { |d| "+#{d}" }
+    jid_candidates   = candidates.map { |d| "#{d}@s.whatsapp.net" }
+    contact = inbox.account.contacts
+                   .where('phone_number IN (?) OR identifier IN (?)', e164_candidates, jid_candidates)
+                   .first
+    contact&.contact_inboxes&.find_by(inbox_id: inbox.id)
   end
 end

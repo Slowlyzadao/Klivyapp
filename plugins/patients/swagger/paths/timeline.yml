@@ -1,0 +1,39 @@
+get:
+  tags:
+    - Timeline do Paciente
+  summary: Listar eventos da timeline do paciente
+  description: |
+    Feed agregado de eventos clínicos e operacionais. Filtros opcionais
+    por `type` (CSV), `from`/`to` (datas) e paginação.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - name: type
+      in: query
+      description: |
+        CSV de `event_type` para filtrar. Ex.: `appointment_done,payment`.
+      schema:
+        type: string
+    - name: from
+      in: query
+      description: Data inicial (`YYYY-MM-DD`).
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      description: Data final (`YYYY-MM-DD`).
+      schema: { type: string, format: date }
+    - name: page
+      in: query
+      schema: { type: integer, default: 1 }
+    - name: per_page
+      in: query
+      schema: { type: integer, default: 50 }
+  responses:
+    '200':
+      description: Lista paginada (ordem cronológica)
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/PatientTimelineEvent.yml'

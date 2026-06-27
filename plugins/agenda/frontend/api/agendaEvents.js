@@ -20,6 +20,23 @@ class AgendaEventsAPI extends ApiClient {
 
     return axios.get(this.url, { params });
   }
+
+  // Agregação por dia para a Year View. Backend retorna breakdown por status
+  // pra permitir filtros client-side sem novo round-trip.
+  yearStats({ year, userId } = {}) {
+    const params = { year };
+    if (userId) params.user_id = userId;
+    return axios.get(`${this.url}/year_stats`, { params });
+  }
+
+  // Soft-delete com motivo + nota. Backend exige `reason` e (se reason='outro')
+  // `note` não-vazio. Evento permanece visível no prontuário do paciente
+  // (Agenda e Histórico + Timeline) com badge de status correspondente.
+  softDelete(id, { reason, note } = {}) {
+    return axios.delete(`${this.url}/${id}`, {
+      data: { reason, note: note || '' },
+    });
+  }
 }
 
 export default new AgendaEventsAPI();

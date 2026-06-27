@@ -1,0 +1,39 @@
+get:
+  tags:
+    - Agenda Pública
+  summary: Catálogo de serviços oferecidos no link público
+  description: |
+    Lista serviços `kept` ofertados pelo profissional do `public_id`.
+    Aplica filtro `agenda_service_users`: se um serviço tem vínculos
+    explícitos, só aparece para os profissionais vinculados; serviços
+    sem nenhum vínculo aparecem para todos (compat pré-auditoria 9.7).
+
+    Bloqueia (403) quando `agenda_online_config.enabled = false` —
+    evita vazar `duration` quando booking está desativado.
+  parameters:
+    - name: public_id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Serviços
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              services:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    name: { type: string }
+                    duration_minutes: { type: integer }
+                    color: { type: string }
+    '403':
+      description: Agendamento online desativado
+    '404':
+      description: Profissional não encontrado

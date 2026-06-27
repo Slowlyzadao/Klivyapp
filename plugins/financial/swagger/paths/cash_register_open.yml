@@ -1,0 +1,29 @@
+post:
+  tags:
+    - Financeiro · Caixa
+  summary: Abrir sessão de caixa
+  description: |
+    `Financial::CashRegisterService.open`. Requer RECEPCAO/GERENTE/ADMIN.
+    Idempotência via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [bank_account_id, opening_balance_cents]
+          properties:
+            bank_account_id: { type: integer }
+            opening_balance_cents: { type: integer }
+            session_date: { type: string, format: date, description: "Default = hoje" }
+            note: { type: string }
+  responses:
+    '201':
+      description: Aberta
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/CashRegister.yml'
+    '422': { description: "Erro (já aberta no dia, etc)" }

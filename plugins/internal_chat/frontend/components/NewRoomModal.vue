@@ -1,8 +1,19 @@
 <script setup>
+// FE-16/17 (auditoria 2026-05-19): strings PT-BR migradas pra
+// `INTERNAL_CHAT.NEW_ROOM.*` via i18n. Comportamento, classes Tailwind,
+// props e emits preservados 1:1.
 import { computed, onMounted, ref } from 'vue';
 import { useStore } from 'vuex';
 import { useRoute, useRouter } from 'vue-router';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
+// FE-8: BeclinicButton no footer (Cancelar/Criar) e Checkbox para "adicionar Bea".
+// Tabs no header e list-items com avatar+toggle permanecem nativos.
+import BeclinicButton from '@plugins/beclinic_core/frontend/components/Button.vue';
+import Checkbox from '@plugins/beclinic_core/frontend/components/Checkbox.vue';
+// FE-X: SearchInput padrão do beclinic_core — substitui input cru + ícone
+// absoluto (que tinha overlap visual quando text digitado encostava no
+// ícone à esquerda). Componente compartilhado já trata posicionamento.
+import SearchInput from '@plugins/beclinic_core/frontend/components/SearchInput.vue';
 
 const emit = defineEmits(['close']);
 
@@ -77,18 +88,27 @@ const submit = async () => {
 </script>
 
 <template>
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
-    @click.self="emit('close')"
-  >
+  <!-- Teleport pra <body>: garante que o overlay cubra TODA a viewport
+       (inclusive a sidebar global "Mamedes"). Sem teleport o `fixed inset-0`
+       fica preso a algum ancestral com `transform`/`filter` e o backdrop
+       não aparece sobre o app inteiro.
+       Backdrop NÃO fecha o modal (memória `feedback_modal_no_backdrop_close`)
+       — só os botões Cancelar/Criar/X. Evita perder dados em formulário longo. -->
+  <Teleport to="body">
+    <!-- `ic-app` re-aplicado: Teleport tira o modal do DOM do ChatShell,
+         então o scope do reset de margens não chega via herança. -->
+    <div
+      class="ic-app fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50"
+    >
     <div
       class="w-full max-w-lg rounded-xl bg-n-solid-1 border border-n-weak shadow-2xl flex flex-col max-h-[85vh] overflow-hidden"
     >
       <header class="flex items-center justify-between px-5 py-4 border-b border-n-weak">
-        <h3 class="text-base font-semibold text-n-slate-12">Nova conversa</h3>
+        <h3 class="text-base font-semibold text-n-slate-12">{{ $t('INTERNAL_CHAT.NEW_ROOM.TITLE') }}</h3>
         <button
           type="button"
           class="text-n-slate-11 hover:text-n-slate-12"
+          :aria-label="$t('INTERNAL_CHAT.NEW_ROOM.CLOSE_TOOLTIP')"
           @click="emit('close')"
         >
           <span class="i-lucide-x text-xl" />
@@ -97,18 +117,18 @@ const submit = async () => {
 
       <div class="flex border-b border-n-weak">
         <button
-          v-for="t in ['direct', 'group']"
-          :key="t"
+          v-for="tabKey in ['direct', 'group']"
+          :key="tabKey"
           type="button"
           class="flex-1 px-4 py-2.5 text-sm font-medium transition"
           :class="
-            tab === t
+            tab === tabKey
               ? 'text-n-brand border-b-2 border-n-brand'
               : 'text-n-slate-11 hover:text-n-slate-12'
           "
-          @click="tab = t; selected = new Set(); addBea = false"
+          @click="tab = tabKey; selected = new Set(); addBea = false"
         >
-          {{ t === 'direct' ? 'Direta (1:1)' : 'Grupo' }}
+          {{ tabKey === 'direct' ? $t('INTERNAL_CHAT.NEW_ROOM.TAB_DIRECT') : $t('INTERNAL_CHAT.NEW_ROOM.TAB_GROUP') }}
         </button>
       </div>
 
@@ -116,39 +136,30 @@ const submit = async () => {
         <input
           v-model="groupName"
           type="text"
-          placeholder="Nome do grupo"
+          :placeholder="$t('INTERNAL_CHAT.NEW_ROOM.GROUP_NAME_PLACEHOLDER')"
           class="w-full px-3 py-2 text-sm rounded-md bg-n-alpha-1 text-n-slate-12 placeholder:text-n-slate-10 focus:outline-none focus:ring-2 focus:ring-n-brand"
         >
-        <label class="flex items-start gap-2.5 mt-3 px-1 cursor-pointer select-none">
-          <input
-            v-model="addBea"
-            type="checkbox"
-            class="mt-0.5 w-4 h-4 rounded border-n-slate-7 text-n-brand focus:ring-n-brand"
-          >
+        <Checkbox v-model="addBea" class="mt-3 px-1 items-start">
           <span class="text-sm text-n-slate-12 leading-tight">
-            Adicionar Beatriz · IA ao grupo
+            {{ $t('INTERNAL_CHAT.NEW_ROOM.ADD_BEA_LABEL') }}
             <span class="block text-xs text-n-slate-10 mt-0.5 font-normal">
-              Permite mencionar @beatriz e usar este grupo como destino de avisos automáticos.
+              {{ $t('INTERNAL_CHAT.NEW_ROOM.ADD_BEA_HINT') }}
             </span>
           </span>
-        </label>
+        </Checkbox>
       </div>
 
       <div class="px-5 py-3">
-        <div class="relative">
-          <span class="absolute -translate-y-1/2 i-lucide-search left-3 top-1/2 text-n-slate-10" />
-          <input
-            v-model="search"
-            type="text"
-            placeholder="Buscar profissional..."
-            class="w-full py-2 pl-9 pr-3 text-sm rounded-md bg-n-alpha-1 text-n-slate-12 placeholder:text-n-slate-10 focus:outline-none focus:ring-2 focus:ring-n-brand"
-          >
-        </div>
+        <SearchInput
+          v-model="search"
+          class="ic-newroom-search"
+          :placeholder="$t('INTERNAL_CHAT.NEW_ROOM.SEARCH_PLACEHOLDER')"
+        />
       </div>
 
       <ul class="flex-1 px-2 pb-2 overflow-y-auto ic-thread-scroll">
         <li v-if="filtered.length === 0" class="px-3 py-6 text-sm text-center text-n-slate-11">
-          Nenhum profissional encontrado
+          {{ $t('INTERNAL_CHAT.NEW_ROOM.EMPTY') }}
         </li>
         <li
           v-for="agent in filtered"
@@ -160,7 +171,10 @@ const submit = async () => {
             :class="selected.has(agent.id) ? 'bg-n-alpha-2' : ''"
             @click="toggle(agent.id)"
           >
-            <Avatar :name="agent.name" :src="agent.avatar_url || ''" :size="36" rounded-full />
+            <!-- Chatwoot agent serializer (`_agent.json.jbuilder`) expõe
+                 avatar como `thumbnail`, NÃO `avatar_url`. Mantém fallback
+                 pra `avatar_url` caso o backend mude no futuro. -->
+            <Avatar :name="agent.name" :src="agent.thumbnail || agent.avatar_url || ''" :size="36" rounded-full />
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium truncate text-n-slate-12">{{ agent.name }}</p>
               <p class="text-xs truncate text-n-slate-11">{{ agent.email }}</p>
@@ -176,22 +190,32 @@ const submit = async () => {
       </ul>
 
       <footer class="flex items-center justify-end gap-2 px-5 py-3 border-t border-n-weak">
-        <button
-          type="button"
-          class="px-4 py-2 text-sm rounded-md text-n-slate-12 hover:bg-n-alpha-1"
+        <BeclinicButton
+          :label="$t('INTERNAL_CHAT.NEW_ROOM.CANCEL')"
+          variant="outline"
+          color="slate"
+          size="sm"
           @click="emit('close')"
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          class="px-4 py-2 text-sm rounded-md bg-n-brand text-white disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110"
+        />
+        <BeclinicButton
+          :label="isSubmitting ? $t('INTERNAL_CHAT.NEW_ROOM.SUBMIT_CREATING') : $t('INTERNAL_CHAT.NEW_ROOM.SUBMIT_CREATE')"
+          :is-loading="isSubmitting"
           :disabled="!canSubmit"
+          size="sm"
           @click="submit"
-        >
-          {{ isSubmitting ? 'Criando…' : 'Criar conversa' }}
-        </button>
+        />
       </footer>
     </div>
-  </div>
+    </div>
+  </Teleport>
 </template>
+
+<style scoped lang="scss">
+/* SearchInput por padrão clamp 220-380px — aqui dentro do modal de ~512px
+   queremos full width pra casar com a lista de agentes abaixo. */
+.ic-newroom-search {
+  min-width: 0;
+  max-width: none;
+  width: 100%;
+}
+</style>

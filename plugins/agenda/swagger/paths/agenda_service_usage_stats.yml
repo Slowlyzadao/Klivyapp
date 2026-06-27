@@ -1,0 +1,23 @@
+get:
+  tags:
+    - Serviços da Agenda
+  summary: Contadores de uso (pré-delete)
+  description: |
+    Retorna quantos `agenda_events` vivos e `treatment_items` vivos ficarão
+    com FK nullificada se este serviço for excluído. Usado pelo
+    `ConfirmDangerModal` da UI para decisão consciente.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Contadores
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id: { type: integer }
+              name: { type: string }
+              agenda_events_count: { type: integer }
+              treatment_items_count: { type: integer }

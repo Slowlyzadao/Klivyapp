@@ -1,0 +1,285 @@
+{
+  "INTERNAL_CHAT": {
+    "SIDEBAR": {
+      "TITLE": "Chat interno",
+      "MENTIONS_TOOLTIP": "Menções",
+      "NEW_ROOM_TOOLTIP": "Nova conversa",
+      "SEARCH_PLACEHOLDER": "Buscar conversa...",
+      "LOADING": "Carregando…",
+      "EMPTY": "Nenhuma conversa ainda",
+      "EMPTY_HINT": "Clique no ícone acima para iniciar",
+      "TAB_ACTIVE": "Conversas",
+      "TAB_ARCHIVED": "Arquivadas",
+      "EMPTY_ARCHIVED": "Nenhuma conversa arquivada"
+    },
+    "ROOM": {
+      "DEFAULT_TITLE": "Conversa",
+      "GROUP_OPEN_DETAILS": "Abrir detalhes do grupo",
+      "DM_OPEN_DETAILS": "Abrir dados do contato",
+      "MEMBERS_COUNT": "{total} membros",
+      "MEMBERS_COUNT_WITH_ONLINE": "{total} membros · {online} online",
+      "STATUS_ONLINE": "Online agora",
+      "STATUS_BUSY": "Ocupado",
+      "STATUS_OFFLINE": "Offline",
+      "FAVORITES_TOOLTIP": "Mensagens favoritas",
+      "SETTINGS_TOOLTIP": "Configurações do grupo",
+      "LOADING_CONVERSATION": "Carregando conversa…"
+    },
+    "DM_DRAWER": {
+      "MAIN_TITLE": "Dados do contato",
+      "FILES_TITLE": "Arquivos",
+      "FAVORITES_TITLE": "Mensagens favoritas",
+      "CLOSE_TOOLTIP": "Fechar",
+      "BACK_TOOLTIP": "Voltar",
+      "SECTION_INFO": "Informações",
+      "EMAIL_LABEL": "E-mail",
+      "ROLE_LABEL": "Cargo",
+      "EMAIL_EMPTY": "—",
+      "ROLE_ADMIN": "Administrador",
+      "ROLE_AGENT": "Agente",
+      "SECTION_QUICK_LINKS": "Conteúdo",
+      "OPEN_FILES": "Arquivos compartilhados",
+      "OPEN_FAVORITES": "Mensagens favoritas",
+      "SECTION_ACTIONS": "Ações",
+      "MUTE": "Silenciar conversa por 8 horas",
+      "UNMUTE": "Reativar notificações",
+      "MUTED_HINT": "Silenciada até {time}",
+      "ARCHIVE": "Arquivar conversa",
+      "UNARCHIVE": "Desarquivar conversa",
+      "ARCHIVED_HINT": "Esta conversa está arquivada.",
+      "ACTION_ERROR": "Não foi possível concluir a ação. Tente novamente."
+    },
+    "MESSAGE": {
+      "DELETED": "Mensagem apagada pelo usuário",
+      "EDIT_SAVE": "Salvar",
+      "EDIT_CANCEL": "Cancelar",
+      "EDIT_SAVING": "Salvando…",
+      "EDIT_WINDOW_REMAINING": "Janela de edição: {time}",
+      "EDIT_WINDOW_EXPIRED": "⚠️ Janela de edição expirou. O texto será mantido se você cancelar.",
+      "COMPOSER_PLACEHOLDER": "Escreva uma mensagem... (use {'@'} para mencionar)",
+      "ATTACHMENT_FAILED_TO_SEND": "Falha ao enviar mensagem",
+      "STICKER_FAILED_TO_SEND": "Falha ao enviar figurinha",
+      "STICKER_SAVED": "Figurinha salva nas suas favoritas.",
+      "STICKER_REMOVED": "Figurinha removida.",
+      "FAVORITED_TOAST": "Mensagem favoritada.",
+      "UNFAVORITED_TOAST": "Mensagem removida dos favoritos.",
+      "STICKER_SAVE_FAILED": "Falha ao salvar.",
+      "STICKER_REMOVE_FAILED": "Falha ao remover.",
+      "STICKER_REMOVE_CONFIRM": "Remover esta figurinha das suas favoritas?",
+      "DELETE_CONFIRM": "Apagar esta mensagem para todos? Não dá pra desfazer.",
+      "TICK_READ": "Lida",
+      "TICK_SENT": "Enviada"
+    },
+    "ATTACHMENT": {
+      "MAX_FILES_LIMIT": "Máximo {max} arquivos por mensagem",
+      "FILE_TOO_LARGE": "{name} excede {maxMb} MB",
+      "DOWNLOAD_TOOLTIP": "Baixar",
+      "CLOSE_TOOLTIP": "Fechar"
+    },
+    "FAVORITES": {
+      "TITLE": "Favoritos",
+      "DESCRIPTION": "Mensagens que você marcou como favoritas. Esta lista é individual.",
+      "LIMIT_WARNING": "Mostrando {perPage} de {total} favoritos. Os mais antigos não aparecem nesta lista.",
+      "EMPTY": "Você ainda não favoritou nenhuma mensagem aqui.",
+      "EMPTY_HINT": "Clique no chevron de uma mensagem e escolha \"Favoritar\".",
+      "REMOVE_TOOLTIP": "Remover dos favoritos"
+    },
+    "GROUP_SETTINGS": {
+      "HEADER": {
+        "CLOSE_TOOLTIP": "Fechar",
+        "BACK_TOOLTIP": "Voltar"
+      },
+      "HERO": {
+        "GROUP_FALLBACK_NAME": "Grupo",
+        "CHANGE_AVATAR_TOOLTIP": "Trocar imagem",
+        "REMOVE_AVATAR": "Remover imagem",
+        "EDIT_NAME_TOOLTIP": "Editar nome",
+        "SAVE_TOOLTIP": "Salvar",
+        "CANCEL_TOOLTIP": "Cancelar",
+        "MEMBERS_COUNT_ONE": "Grupo · {count} membro",
+        "MEMBERS_COUNT_OTHER": "Grupo · {count} membros"
+      },
+      "DESCRIPTION": {
+        "TITLE": "Descrição",
+        "EDIT": "Editar",
+        "PLACEHOLDER": "Adicione uma descrição ao grupo",
+        "SAVE": "Salvar",
+        "SAVING": "Salvando…",
+        "CANCEL": "Cancelar",
+        "EMPTY": "Sem descrição"
+      },
+      "QUICK_LINKS": {
+        "FILES": "Arquivos",
+        "FAVORITES": "Mensagens favoritas"
+      },
+      "MEMBERS": {
+        "COUNT_ONE": "{count} membro",
+        "COUNT_OTHER": "{count} membros",
+        "ADD_MEMBER": "Adicionar membro",
+        "ADD_BEA": "Adicionar Beatriz (IA)",
+        "SEARCH_PLACEHOLDER": "Buscar profissional...",
+        "NO_CANDIDATES": "Sem candidatos",
+        "USER_FALLBACK_NAME": "Usuário",
+        "YOU_LABEL": "(você)",
+        "AI_BADGE": "IA",
+        "ROLE_AI": "IA agêntica",
+        "ROLE_OWNER": "Criador do grupo",
+        "ROLE_ADMIN": "Admin do grupo",
+        "ROLE_MEMBER": "Membro",
+        "BADGE_OWNER": "Criador",
+        "BADGE_ADMIN": "Admin",
+        "PROMOTE_TOOLTIP": "Promover a admin",
+        "DEMOTE_TOOLTIP": "Rebaixar a membro",
+        "REMOVE_TOOLTIP": "Remover do grupo",
+        "REMOVE_BEA_TOOLTIP": "Remover Beatriz do grupo"
+      },
+      "DANGER_ZONE": {
+        "LEAVE": "Sair do grupo",
+        "DELETE": "Excluir grupo",
+        "DELETING": "Excluindo grupo…"
+      }
+    },
+    "NEW_ROOM": {
+      "TITLE": "Nova conversa",
+      "CLOSE_TOOLTIP": "Fechar",
+      "TAB_DIRECT": "Direta (1:1)",
+      "TAB_GROUP": "Grupo",
+      "GROUP_NAME_PLACEHOLDER": "Nome do grupo",
+      "ADD_BEA_LABEL": "Adicionar Beatriz · IA ao grupo",
+      "ADD_BEA_HINT": "Permite mencionar {'@'}beatriz e usar este grupo como destino de avisos automáticos.",
+      "SEARCH_PLACEHOLDER": "Buscar profissional...",
+      "EMPTY": "Nenhum profissional encontrado",
+      "CANCEL": "Cancelar",
+      "SUBMIT_CREATING": "Criando…",
+      "SUBMIT_CREATE": "Criar conversa"
+    },
+    "FILES": {
+      "SUBTAB_MEDIA": "Imagens e vídeos",
+      "SUBTAB_DOCUMENTS": "Documentos",
+      "LOADING": "Carregando…",
+      "ERROR_LOAD": "Falha ao carregar arquivos",
+      "RETRY": "Tentar de novo",
+      "EMPTY_MEDIA": "Nenhuma imagem ou vídeo enviado ainda.",
+      "EMPTY_DOCUMENTS": "Nenhum documento enviado ainda.",
+      "USER_FALLBACK_NAME": "Usuário",
+      "DOWNLOAD_TOOLTIP": "Baixar",
+      "CLOSE_TOOLTIP": "Fechar",
+      "DATE_TODAY": "Hoje às {time}",
+      "DATE_YESTERDAY": "Ontem às {time}",
+      "DATE_DEFAULT": "{date} às {time}"
+    },
+    "STICKER_PICKER": {
+      "TAB_RECENT": "Recentes",
+      "TAB_ALL": "Salvas",
+      "TAB_DENTIST": "Dentista",
+      "TAB_WELLNESS": "Bem-estar",
+      "TAB_AESTHETICS": "Estética",
+      "TAB_MINE": "Minhas",
+      "CLOSE_TOOLTIP": "Fechar",
+      "BACK_TOOLTIP": "Voltar",
+      "BACK_LABEL": "Voltar",
+      "SEARCH_PLACEHOLDER": "Pesquisar por nome...",
+      "LOADING": "Carregando…",
+      "CREATE_TOOLTIP": "Criar nova figurinha",
+      "CREATE_LABEL": "Criar",
+      "STICKER_FALLBACK_NAME": "figurinha",
+      "DEFAULT_BADGE_TITLE": "Figurinha padrão da Klivy",
+      "DEFAULT_FOOTER_HINT": "Figurinha padrão da Klivy",
+      "EMPTY_RECENT": "Suas figurinhas mais usadas aparecem aqui. Envie algumas pra começar.",
+      "EMPTY_MINE": "Você ainda não criou figurinhas. Clique em + Criar.",
+      "EMPTY_ALL": "Nenhuma figurinha salva. Crie uma ou pegue das categorias da Klivy.",
+      "EMPTY_CATEGORY": "A Klivy ainda não tem figurinhas em {label}.",
+      "SEND": "Enviar",
+      "REMOVE_FAVORITE_TOOLTIP": "Remover das favoritas"
+    },
+    "AUDIO_RECORDER": {
+      "RECORD_TOOLTIP": "Gravar áudio",
+      "RECORDING_LABEL": "Gravando {time}",
+      "CANCEL_TOOLTIP": "Cancelar",
+      "STOP_TOOLTIP": "Parar",
+      "DISCARD_TOOLTIP": "Descartar",
+      "SEND_TOOLTIP": "Enviar áudio"
+    },
+    "THREAD": {
+      "EMPTY": "Nenhuma mensagem ainda. Envie a primeira!"
+    },
+    "ROOM_LIST_ITEM": {
+      "ROOM_FALLBACK_NAME": "Conversa",
+      "PREVIEW_IMAGE": "📷 Imagem",
+      "PREVIEW_AUDIO": "🎵 Áudio",
+      "PREVIEW_VIDEO": "🎬 Vídeo",
+      "PREVIEW_FILE": "📎 Arquivo",
+      "PREVIEW_ATTACHMENT": "📎 Anexo",
+      "PREVIEW_EMPTY": "Sem mensagens ainda",
+      "PREVIEW_DELETED": "Mensagem apagada",
+      "MENTIONED_TOOLTIP": "Você foi mencionado",
+      "MORE_ACTIONS_TOOLTIP": "Mais ações",
+      "ACTION_UNMUTE": "Reativar notificações",
+      "ACTION_MUTE": "Silenciar",
+      "ACTION_ARCHIVE": "Arquivar",
+      "ACTION_UNARCHIVE": "Desarquivar",
+      "ACTION_ERROR": "Não foi possível concluir a ação. Tente novamente."
+    },
+    "MENTIONS_VIEW": {
+      "TITLE": "Menções",
+      "SUBTITLE": "Mensagens que mencionaram você",
+      "MARK_ALL_READ": "Marcar todas como lidas",
+      "FILTER_UNREAD": "Não lidas",
+      "FILTER_ALL": "Todas",
+      "LOADING": "Carregando…",
+      "EMPTY_UNREAD": "Sem menções não lidas",
+      "EMPTY_ALL": "Nenhuma menção ainda",
+      "USER_FALLBACK_NAME": "Usuário",
+      "IN_ROOM_LABEL": "em {room}",
+      "ROOM_FALLBACK_NAME": "conversa",
+      "PREVIEW_EMPTY": "(sem prévia)"
+    },
+    "TYPING": {
+      "SINGULAR": "{name} está digitando…",
+      "DUAL": "{name1} e {name2} estão digitando…",
+      "PLURAL": "{name} e mais {count} estão digitando…"
+    },
+    "AUDIO_MESSAGE": {
+      "PAUSE_TOOLTIP": "Pausar",
+      "PLAY_TOOLTIP": "Tocar",
+      "SENDER_FALLBACK_NAME": "Áudio"
+    },
+    "REPLY_PREVIEW": {
+      "PREVIEW_IMAGE": "📷 Imagem",
+      "PREVIEW_AUDIO": "🎵 Áudio",
+      "PREVIEW_VIDEO": "🎬 Vídeo",
+      "PREVIEW_FILE": "📎 Arquivo",
+      "PREVIEW_ATTACHMENT": "📎 Anexo",
+      "PREVIEW_DELETED": "Mensagem apagada",
+      "PREVIEW_SYSTEM": "Mensagem do sistema",
+      "PREVIEW_STICKER": "🎨 Figurinha",
+      "SENDER_FALLBACK_NAME": "Usuário",
+      "REPLYING_TO": "Respondendo a {sender}",
+      "CANCEL_TOOLTIP": "Cancelar resposta"
+    },
+    "ATTACHMENT_BUBBLE": {
+      "USER_FALLBACK_NAME": "Usuário",
+      "DOWNLOAD_TOOLTIP": "Baixar",
+      "CLOSE_TOOLTIP": "Fechar",
+      "DATE_TODAY": "Hoje às {time}",
+      "DATE_YESTERDAY": "Ontem às {time}",
+      "DATE_DEFAULT": "{date} às {time}"
+    },
+    "MESSAGE_BUBBLE_PARTS": {
+      "REACTIONS": {
+        "REMOVE_MINE_TOOLTIP": "Remover minha reação",
+        "REACT_WITH_TOOLTIP": "Reagir com {emoji}"
+      },
+      "ACTIONS_MENU": {
+        "REACT_WITH_TOOLTIP": "Reagir com {emoji}",
+        "REPLY": "Responder",
+        "REPLY_PRIVATELY": "Responder no particular",
+        "CONVERSE_WITH_SENDER": "Conversar com {name}",
+        "FAVORITE": "Favoritar",
+        "UNFAVORITE": "Remover dos favoritos",
+        "EDIT": "Editar",
+        "DELETE": "Apagar pra todos"
+      }
+    }
+  }
+}

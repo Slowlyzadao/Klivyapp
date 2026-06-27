@@ -1,0 +1,33 @@
+put:
+  tags:
+    - Pastas de Exames
+  summary: Reordenar/mover pastas em lote
+  description: |
+    Aplica `position` e `parent_id` em lote (transação). IDs que não
+    pertencem ao paciente são ignorados (defesa cross-tenant). `parent_id`
+    aceita `"root"`/`null`/`""` para significar raiz.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                required: [id]
+                properties:
+                  id: { type: integer }
+                  parent_id: { type: integer, nullable: true }
+                  position: { type: integer }
+  responses:
+    '200':
+      description: Aplicado
+    '422':
+      description: Erro de validação

@@ -1,0 +1,58 @@
+/* ── Slot Button (Time slot grid in event modal) ─────── */
+.slot-btn {
+  padding: 0.5rem 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(var(--slate-5));
+  background: rgb(var(--slate-1));
+  color: rgb(var(--slate-12));
+  cursor: pointer;
+  transition: all 150ms ease;
+  outline: none;
+}
+.slot-btn:hover {
+  border-color: rgb(var(--blue-9));
+  background: rgb(var(--blue-2));
+  color: rgb(var(--blue-11));
+}
+.slot-btn:focus-visible {
+  box-shadow: 0 0 0 2px rgba(var(--blue-9), 0.4);
+}
+.slot-btn--in-range {
+  background: rgb(var(--blue-3));
+  border-color: rgb(var(--blue-7));
+  color: rgb(var(--blue-12));
+}
+.slot-btn--in-range:hover {
+  background: rgb(var(--blue-4));
+  border-color: rgb(var(--blue-8));
+  color: rgb(var(--blue-12));
+}
+.slot-btn--start {
+  background: rgb(var(--blue-9));
+  border-color: rgb(var(--blue-9));
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+.slot-btn--start:hover {
+  background: rgb(var(--blue-10));
+  border-color: rgb(var(--blue-10));
+  color: #fff;
+}
+.slot-btn--blocked,
+.slot-btn--blocked:hover {
+  background: repeating-linear-gradient(
+    -45deg,
+    rgb(var(--slate-2)),
+    rgb(var(--slate-2)) 4px,
+    rgb(var(--slate-3)) 4px,
+    rgb(var(--slate-3)) 8px
+  );
+  border-color: rgb(var(--slate-4));
+  color: rgb(var(--slate-9));
+  cursor: not-allowed;
+  text-decoration: line-through;
+  text-decoration-color: rgba(var(--slate-9), 0.5);
+}

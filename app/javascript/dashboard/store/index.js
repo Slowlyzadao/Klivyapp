@@ -6,15 +6,20 @@ import agentCapacityPolicies from './modules/agentCapacityPolicies';
 import agents from './modules/agents';
 import agendaEvents from '@plugins/agenda/frontend/store/agendaEvents';
 import agendaNotificationRules from '@plugins/agenda/frontend/store/agendaNotificationRules';
-import aiAgentFollowUpRules from '@plugins/ai_agent/frontend/store/aiAgentFollowUpRules';
-import aiAgentInternalNotificationTemplates from '@plugins/ai_agent/frontend/store/aiAgentInternalNotificationTemplates';
 import agendaServices from '@plugins/agenda/frontend/store/agendaServices';
 import agendaCategories from '@plugins/agenda/frontend/store/agendaCategories';
+import aiAgentFollowUpRules from '@plugins/ai_agent/frontend/store/aiAgentFollowUpRules';
+import aiAgentInternalNotificationTemplates from '@plugins/ai_agent/frontend/store/aiAgentInternalNotificationTemplates';
+import aiAgentTraining from '@plugins/ai_agent/frontend/store/aiAgentTraining';
+import aiAgentTrainingFaqs from '@plugins/ai_agent/frontend/store/aiAgentTrainingFaqs';
+import aiAgentStyleProfile from '@plugins/ai_agent/frontend/store/aiAgentStyleProfile';
+import aiAgentSystemPrompt from '@plugins/ai_agent/frontend/store/aiAgentSystemPrompt';
+import aiAgentVoucherConfig from '@plugins/ai_agent/frontend/store/aiAgentVoucherConfig';
 import internalChatRooms from '@plugins/internal_chat/frontend/store/internalChatRooms';
 import internalChatMessages from '@plugins/internal_chat/frontend/store/internalChatMessages';
 import internalChatMentions from '@plugins/internal_chat/frontend/store/internalChatMentions';
-import internalChatTyping from '@plugins/internal_chat/frontend/store/internalChatTyping';
 import internalChatStickers from '@plugins/internal_chat/frontend/store/internalChatStickers';
+import internalChatTyping from '@plugins/internal_chat/frontend/store/internalChatTyping';
 import assignmentPolicies from './modules/assignmentPolicies';
 import articles from './modules/helpCenterArticles';
 import attributes from './modules/attributes';
@@ -81,15 +86,20 @@ export default createStore({
     agents,
     agendaEvents,
     agendaNotificationRules,
-    aiAgentFollowUpRules,
-    aiAgentInternalNotificationTemplates,
     agendaServices,
     agendaCategories,
+    aiAgentFollowUpRules,
+    aiAgentInternalNotificationTemplates,
+    aiAgentTraining,
+    aiAgentTrainingFaqs,
+    aiAgentStyleProfile,
+    aiAgentSystemPrompt,
+    aiAgentVoucherConfig,
     internalChatRooms,
     internalChatMessages,
     internalChatMentions,
-    internalChatTyping,
     internalChatStickers,
+    internalChatTyping,
     assignmentPolicies,
     articles,
     attributes,

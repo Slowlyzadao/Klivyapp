@@ -14,9 +14,7 @@ export const actions = {
     try {
       const { data } = await BeClinicPermissionsAPI.fetchPermissions();
       commit(SET_PERMISSIONS, {
-        beclinicRole: data.beclinic_role,
         permissions: data.permissions || {},
-        team: data.team || null,
       });
     } catch {
       // On error, keep empty permissions (deny all non-admin access)

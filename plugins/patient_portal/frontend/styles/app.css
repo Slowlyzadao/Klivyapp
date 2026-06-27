@@ -1,0 +1,78 @@
+/* Estilo base do Portal do Paciente.
+   Reaproveita Tailwind do projeto (configurado em tailwind.config.js) +
+   tokens do core (`n-slate-*`, `woot-*`). Mantemos esse arquivo enxuto —
+   estilos componentizados ficam nos próprios .vue. */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --pp-color-primary: #2563eb;
+  --pp-color-primary-hover: #1d4ed8;
+  --pp-color-text: #0f172a;
+  --pp-color-text-muted: #64748b;
+  --pp-color-border: #e2e8f0;
+  --pp-color-surface: #ffffff;
+  --pp-color-bg: #f8fafc;
+
+  /* Layout — escala com o viewport.
+     Mobile: shell ocupa 100% até 640px.
+     Tablet: shell ganha respiro lateral (max 720px).
+     Desktop: sidebar de 240px + content até 1080px (total ~1320px). */
+  --pp-sidenav-width: 240px;
+  --pp-content-max: 1080px;
+  --pp-content-pad-x: 16px;
+}
+
+@media (min-width: 768px) {
+  :root { --pp-content-pad-x: 24px; }
+}
+
+@media (min-width: 1024px) {
+  :root { --pp-content-pad-x: 32px; }
+}
+
+/* ── Design tokens Radix (mesmos do dashboard) ───────────────────────────
+   O portal é um build separado e NÃO importa o _next-colors.scss do
+   dashboard. Sem estes, os componentes do beclinic_core (Checkbox, Badge,
+   FormSelect…) que usam rgb(var(--slate/--blue-*)) renderizam transparentes
+   /invisíveis — foi por isso que o checkbox LGPD do preflight sumiu no portal.
+   Portal é light-only → só os valores claros. Fonte de verdade:
+   app/javascript/dashboard/assets/scss/_next-colors.scss */
+:root {
+  --slate-1: 252 252 253;  --slate-2: 249 249 251;  --slate-3: 240 240 243;
+  --slate-4: 232 232 236;  --slate-5: 224 225 230;  --slate-6: 217 217 224;
+  --slate-7: 205 206 214;  --slate-8: 185 187 198;  --slate-9: 139 141 152;
+  --slate-10: 128 131 141; --slate-11: 96 100 108;  --slate-12: 28 32 36;
+
+  --blue-1: 251 253 255;   --blue-2: 245 249 255;   --blue-3: 233 243 255;
+  --blue-4: 218 236 255;   --blue-5: 201 226 255;   --blue-6: 181 213 255;
+  --blue-7: 155 195 252;   --blue-8: 117 171 247;   --blue-9: 39 129 246;
+  --blue-10: 16 115 233;   --blue-11: 8 109 224;    --blue-12: 11 50 101;
+
+  --teal-1: 250 254 253;   --teal-2: 243 251 249;   --teal-3: 224 248 243;
+  --teal-4: 204 243 234;   --teal-5: 184 234 224;   --teal-6: 161 222 210;
+  --teal-7: 131 205 193;   --teal-8: 83 185 171;    --teal-9: 18 165 148;
+  --teal-10: 13 155 138;   --teal-11: 0 133 115;    --teal-12: 13 61 56;
+
+  --amber-1: 254 253 251;  --amber-2: 254 251 233;  --amber-3: 255 247 194;
+  --amber-4: 255 238 156;  --amber-5: 251 229 119;  --amber-6: 243 214 115;
+  --amber-7: 233 193 98;   --amber-8: 226 163 54;   --amber-9: 255 197 61;
+  --amber-10: 255 186 24;  --amber-11: 171 100 0;   --amber-12: 79 52 34;
+
+  --ruby-1: 255 252 253;   --ruby-2: 255 247 248;   --ruby-3: 254 234 237;
+  --ruby-4: 255 220 225;   --ruby-5: 255 206 214;   --ruby-6: 248 191 200;
+  --ruby-7: 239 172 184;   --ruby-8: 229 146 163;   --ruby-9: 229 70 102;
+  --ruby-10: 220 59 93;    --ruby-11: 202 36 77;    --ruby-12: 100 23 43;
+
+  --violet-9: 110 86 207;  --violet-11: 101 85 183;
+}
+
+html, body, #patient-portal-app {
+  height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+}

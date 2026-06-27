@@ -1,0 +1,72 @@
+type: object
+description: |
+  Consentimento informado do paciente (LGPD/clínico). Status canônico:
+  `pendente`/`signed`/`vencido`/`revogado`. Canal de assinatura vive em
+  `mode` (`local_tablet`/`remote_link`), exposto como `signature_method`
+  (`local`/`remote`). `integrity_hash` é SHA256(patient_id, id, blob,
+  signed_at) — garante que blob/timestamp não foram adulterados.
+properties:
+  id: { type: integer }
+  account_id: { type: integer }
+  patient_id: { type: integer }
+  form_template_id: { type: integer, nullable: true }
+  title: { type: string, minLength: 2, maxLength: 255 }
+  document_type: { type: string, description: "Categoria do consentimento (ex.: clinico, imagem, financeiro)." }
+  body:
+    type: string
+    nullable: true
+    maxLength: 100000
+    description: Conteúdo do termo (livre).
+  observations: { type: string, nullable: true, maxLength: 50000 }
+  status:
+    type: string
+    enum: [pendente, signed, vencido, revogado]
+    description: "`computed_status` — devolve `vencido` em tempo real se `expires_at` venceu mesmo com status armazenado `signed`."
+  mode:
+    type: string
+    nullable: true
+    enum: [local_tablet, remote_link]
+  signature_method:
+    type: string
+    nullable: true
+    enum: [local, remote]
+    description: Derivado de `mode`.
+  signature_image_url:
+    type: string
+    nullable: true
+    description: |
+      URL **assinada** (15 min) servida pelo `SecureBlobsController`
+      (Roadmap #17.1). Aponta para o blob da assinatura via token HMAC
+      validando `account_id`. `nil` se não há assinatura anexada.
+  ip_address:
+    type: string
+    nullable: true
+    description: IP capturado no momento da assinatura.
+  signed_ip:
+    type: string
+    nullable: true
+    description: Alias de `ip_address` (compat frontend).
+  device_info:
+    type: string
+    nullable: true
+    description: User agent do dispositivo que assinou.
+  expires_after_days:
+    type: integer
+    nullable: true
+    description: |
+      Quando preenchido, `expires_at` é calculado em `signed_at + N.days`
+      no `before_save`.
+  expires_at: { type: string, format: date-time, nullable: true }
+  signed_at: { type: string, format: date-time, nullable: true }
+  integrity_hash:
+    type: string
+    nullable: true
+    description: SHA256 que blinda o par (blob, signed_at) contra adulteração.
+  created_at: { type: string, format: date-time }
+  updated_at: { type: string, format: date-time }
+  created_by:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }

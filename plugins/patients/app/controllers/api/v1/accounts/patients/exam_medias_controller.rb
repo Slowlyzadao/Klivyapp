@@ -3,6 +3,8 @@ module Api
     module Accounts
       module Patients
         class ExamMediasController < Api::V1::Accounts::BaseController
+          include BeclinicErrorResponse
+
           before_action :set_patient
           before_action :set_exam_media, only: [:show, :update, :destroy]
 
@@ -106,7 +108,7 @@ module Api
             @right = @patient.exam_medias.active.find(params[:right_id])
             render :compare
           rescue ActiveRecord::RecordNotFound
-            render json: { error: 'Uma ou mais imagens não foram encontradas' }, status: :not_found
+            render_error('Uma ou mais imagens não foram encontradas', status: :not_found)
           end
 
           private
@@ -114,13 +116,13 @@ module Api
           def set_patient
             @patient = Current.account.patients.find(params[:patient_id])
           rescue ActiveRecord::RecordNotFound
-            render json: { error: 'Paciente não encontrado' }, status: :not_found
+            render_error('Paciente não encontrado', status: :not_found)
           end
 
           def set_exam_media
             @exam = @patient.exam_medias.active.find(params[:id])
           rescue ActiveRecord::RecordNotFound
-            render json: { error: 'Arquivo não encontrado' }, status: :not_found
+            render_error('Arquivo não encontrado', status: :not_found)
           end
 
           def exam_params

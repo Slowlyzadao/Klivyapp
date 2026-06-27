@@ -1,0 +1,52 @@
+type: object
+description: |
+  Regra de cálculo de comissão por profissional. Pode ser por percentual
+  (`percent_basis_points`) ou valor fixo (`fixed_amount_cents`). Vigência
+  por janela (`valid_from`/`valid_until`).
+properties:
+  id: { type: integer }
+  professional_id: { type: integer }
+  professional:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      avatar_url: { type: string, nullable: true }
+  professional_name: { type: string, nullable: true, description: "Compat retrocompat" }
+  financial_dre_category_id: { type: integer, nullable: true }
+  category_id: { type: integer, nullable: true, description: "Alias de `financial_dre_category_id`" }
+  category:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      kind: { type: string }
+  kind:
+    type: string
+    description: "Tipo de regra (ex.: percentual, fixo)"
+  base:
+    type: string
+    description: "Base de cálculo (ex.: bruto, liquido, recebido)"
+  percent:
+    type: number
+    format: float
+    description: "Conveniência derivada de `percent_basis_points / 100.0`"
+  percent_basis_points:
+    type: integer
+    description: Percentual em basis points (1% = 100)
+  fixed_amount_cents:
+    type: integer
+    nullable: true
+  procedure_name: { type: string, nullable: true, description: "Filtro opcional por nome do procedimento" }
+  specialty: { type: string, nullable: true }
+  deduct_mdr:
+    type: boolean
+    description: Deduz MDR (taxa do gateway) da base de cálculo.
+  deduct_lab:
+    type: boolean
+    description: Deduz custo de laboratório.
+  valid_from: { type: string, format: date }
+  valid_until: { type: string, format: date, nullable: true }
+  active: { type: boolean }

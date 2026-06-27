@@ -25,15 +25,22 @@ class Api::V1::Accounts::BeclinicUnifiedSearchController < Api::V1::Accounts::Ba
     @query ||= params[:q].to_s.strip
   end
 
-  # Match contra `name` OU `phone_number` (digits-only do lado do banco vs query).
-  # Mantemos ILIKE pra continuar pegando matches por nome; a tabela `contacts`
-  # já tem índice em `lower(name)` e `phone_number` é curto o bastante pra ILIKE
-  # ser rápido na escala atual. Pra dataset grande, considerar pg_trgm + GIN.
+  # Match contra `name` OU `phone_number/identifier` (digits-only do lado do
+  # banco vs query). Mantemos ILIKE pra continuar pegando matches por nome; a
+  # tabela `contacts` já tem índice em `lower(name)` e `phone_number` é curto
+  # o bastante pra ILIKE ser rápido na escala atual. Pra dataset grande,
+  # considerar pg_trgm + GIN.
+  #
+  # Quando a query parecer telefone, `phone_search_clause` adiciona variantes
+  # com/sem o "9" inicial brasileiro pra recuperar contatos guardados na
+  # forma alternativa (legado de 12 dígitos vs novo de 13).
   def fetch_conversations
+    sql, binds = build_search_clause('contacts')
+
     conversations_query = Current.account.conversations
                                  .where(inbox_id: accessible_inbox_ids)
                                  .joins(:contact)
-                                 .where('contacts.name ILIKE :q OR contacts.phone_number ILIKE :q', q: "%#{query}%")
+                                 .where(sql, binds)
                                  .includes(:contact, :inbox, :assignee, :messages)
                                  .order('conversations.last_activity_at DESC NULLS LAST')
                                  .limit(RESULTS_LIMIT)
@@ -42,8 +49,9 @@ class Api::V1::Accounts::BeclinicUnifiedSearchController < Api::V1::Accounts::Ba
   end
 
   def fetch_contacts_without_conversation
-    matched_contacts = Current.account.contacts
-                              .where('name ILIKE :q OR phone_number ILIKE :q', q: "%#{query}%")
+    sql, binds = build_search_clause('contacts')
+
+    matched_contacts = Current.account.contacts.where(sql, binds)
 
     # NUNCA retornar contatos que já aparecem no bloco "Conversas" — evita
     # duplicação visual (regra crítica do design da feature).
@@ -54,6 +62,27 @@ class Api::V1::Accounts::BeclinicUnifiedSearchController < Api::V1::Accounts::Ba
                     .order(last_activity_at: :desc)
                     .limit(RESULTS_LIMIT)
                     .to_a
+  end
+
+  # Constrói cláusula WHERE (sql + binds) que faz match por nome literal e por
+  # qualquer variante digit-only do telefone. `table_alias` permite reuso entre
+  # JOIN (qualifica `contacts.*`) e query direta na tabela contacts.
+  def build_search_clause(table_alias)
+    name_col       = "#{table_alias}.name"
+    phone_col      = "#{table_alias}.phone_number"
+    identifier_col = "#{table_alias}.identifier"
+
+    parts = ["#{name_col} ILIKE :q", "#{phone_col} ILIKE :q"]
+    binds = { q: "%#{query}%" }
+
+    Whatsapp::PhoneSearchVariants.digit_variants(query).each_with_index do |variant, idx|
+      key = "phone_v#{idx}".to_sym
+      parts << "#{phone_col} ILIKE :#{key}"
+      parts << "#{identifier_col} ILIKE :#{key}"
+      binds[key] = "%#{variant}%"
+    end
+
+    [parts.join(' OR '), binds]
   end
 
   def accessible_inbox_ids

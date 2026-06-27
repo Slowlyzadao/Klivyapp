@@ -1,0 +1,50 @@
+type: object
+description: |
+  Figurinha do Chat Interno, conforme `StickerSerializer`. `kind='default'`
+  são figurinhas da Klivy (`account_id=NULL`, com `category`); `kind='account'`
+  são figurinhas criadas por uma clínica (sem `category`). `is_favorite`,
+  `is_mine` e `is_default` são relativos ao requester.
+properties:
+  id: { type: integer }
+  account_id:
+    type: integer
+    nullable: true
+    description: '`NULL` para defaults da Klivy.'
+  name:
+    type: string
+    nullable: true
+  kind:
+    type: string
+    enum: [account, default]
+  category:
+    type: string
+    nullable: true
+    enum: [dentista, bem_estar, estetica]
+    description: Preenchida apenas em defaults da Klivy.
+  image_url:
+    type: string
+    nullable: true
+  width:
+    type: integer
+    nullable: true
+  height:
+    type: integer
+    nullable: true
+  file_size:
+    type: integer
+    nullable: true
+  created_by_user_id:
+    type: integer
+    nullable: true
+  created_at:
+    type: string
+    format: date-time
+  is_favorite:
+    type: boolean
+    description: True se está na coleção do requester (defaults contam como sempre visíveis).
+  is_mine:
+    type: boolean
+    description: True se o requester criou esta figurinha.
+  is_default:
+    type: boolean
+    description: '`kind == ''default''`.'

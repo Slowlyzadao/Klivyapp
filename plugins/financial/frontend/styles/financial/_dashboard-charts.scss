@@ -1,0 +1,237 @@
+@use "../variables" as *;
+
+/* ── Custom Chart Bars for Dashboard ────────────────────────── */
+.financial-chart-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--s-100);
+  border-radius: 9999px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.financial-chart-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.financial-chart-fill--primary {
+  background-color: var(--color-woot-500);
+}
+
+body.dark .financial-chart-bar {
+  background: rgb(var(--s-700));
+}
+
+/* ── Progress bar ───────────────────────────────────────────── */
+.financial-progress {
+  height: 6px;
+  background: rgb(var(--s-100));
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+body.dark .financial-progress {
+  background: rgb(var(--s-700));
+}
+
+.financial-progress__fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+.financial-progress__fill--income {
+  background: linear-gradient(90deg, $brand-success-bright, $brand-success);
+}
+
+.financial-progress__fill--expense {
+  background: linear-gradient(90deg, #f97316, $brand-danger);
+}
+
+/* ── Gráfico container ──────────────────────────────────────── */
+.financial-chart-block {
+  background: #ffffff;
+  border: 1px solid rgb(var(--s-100));
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+}
+
+body.dark .financial-chart-block {
+  background: rgb(var(--s-800));
+  border-color: rgb(var(--s-700));
+}
+
+.financial-chart-block__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(var(--s-700));
+  margin-bottom: 1rem;
+}
+
+body.dark .financial-chart-block__title {
+  color: rgb(var(--s-200));
+}
+
+/* ── Contas bancárias ───────────────────────────────────────── */
+.financial-bank-accounts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ── Despesas por Categoria ─────────────────────────────────── */
+.financial-cat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.financial-cat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.financial-cat-item__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.financial-cat-item__label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: rgb(var(--s-600));
+  font-weight: 500;
+}
+
+body.dark .financial-cat-item__label {
+  color: rgb(var(--s-300));
+}
+
+.financial-cat-item__value {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: rgb(var(--s-800));
+}
+
+body.dark .financial-cat-item__value {
+  color: rgb(var(--s-100));
+}
+
+/* ── Faturamento por Convênio ───────────────────────────────── */
+.financial-insurance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.financial-insurance-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.financial-insurance-item__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.financial-insurance-item__name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: rgb(var(--s-700));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.dark .financial-insurance-item__name {
+  color: rgb(var(--s-200));
+}
+
+.financial-insurance-item__badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-woot-100);
+  color: var(--color-woot-700);
+  border-radius: 9999px;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 1.4rem;
+}
+
+body.dark .financial-insurance-item__badge {
+  background: rgba(var(--color-woot-rgb), 0.2);
+  color: var(--color-woot-300);
+}
+
+.financial-insurance-item__values {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.financial-insurance-item__ticket {
+  font-size: 0.7rem;
+  color: rgb(var(--s-500));
+  white-space: nowrap;
+}
+
+.financial-insurance-item__total {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: rgb(var(--s-800));
+  white-space: nowrap;
+}
+
+body.dark .financial-insurance-item__total {
+  color: rgb(var(--s-100));
+}
+
+.financial-bank-account-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: rgb(var(--s-50));
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+body.dark .financial-bank-account-item {
+  background: rgb(var(--s-750));
+}
+
+.financial-bank-account-item__name {
+  color: rgb(var(--s-600));
+  font-weight: 500;
+}
+
+body.dark .financial-bank-account-item__name {
+  color: rgb(var(--s-300));
+}
+
+.financial-bank-account-item__balance {
+  font-weight: 700;
+  color: rgb(var(--s-800));
+}
+
+body.dark .financial-bank-account-item__balance {
+  color: rgb(var(--s-100));
+}

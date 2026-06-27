@@ -1,39 +1,23 @@
 <template>
 
     <div class="notif-root" @click="openDropdownIndex = null; dropdownPos = null;">
-      <!-- Dropdown flutuante (INBOXES SELECT) -->
+      <!-- Dropdown flutuante (INBOXES SELECT) — classes com tokens de tema
+           (claro/escuro). Teleportado pro body, mas mantém o data-v do escopo,
+           então o CSS scoped abaixo alcança. Posição vem inline (dinâmica). -->
       <teleport to="body">
         <div
           v-if="(showNewInboxDropdown || showEditInboxDropdown) && dropdownPos"
+          class="inbox-dropdown"
           :style="{
-            position: 'fixed',
             top: dropdownPos.top + 'px',
             left: dropdownPos.left + 'px',
             width: dropdownPos.width + 'px',
-            maxHeight: '220px',
-            overflowY: 'auto',
-            zIndex: 99999,
-            background: '#1c2333',
-            border: '1px solid rgba(100,116,139,0.4)',
-            borderRadius: '8px',
-            padding: '6px',
-            boxShadow: '0 12px 40px rgba(0,0,0,0.75)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '2px',
           }"
           @click.stop
         >
           <div
             v-if="!availableInboxes || availableInboxes.length === 0"
-            style="
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              padding: 10px 8px;
-              @apply text-sm;
-              color: #94a3b8;
-            "
+            class="inbox-dropdown-empty"
           >
             Nenhuma inbox disponível
           </div>
@@ -41,31 +25,11 @@
           <div
             v-for="inbox in availableInboxes"
             :key="'dd-' + inbox.id"
-            :style="{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 10px',
-              fontSize: '13px',
-              fontWeight: '500',
-              color: (
-                showNewInboxDropdown
-                  ? isNewInboxSelected(inbox)
-                  : isEditInboxSelected(inbox)
-              )
-                ? '#60a5fa'
-                : '#e2e8f0',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              background: (
-                showNewInboxDropdown
-                  ? isNewInboxSelected(inbox)
-                  : isEditInboxSelected(inbox)
-              )
-                ? 'rgba(59,130,246,0.18)'
-                : 'transparent',
-              userSelect: 'none',
-              transition: 'background 0.1s',
+            class="inbox-dropdown-item"
+            :class="{
+              selected: showNewInboxDropdown
+                ? isNewInboxSelected(inbox)
+                : isEditInboxSelected(inbox),
             }"
             @click.stop="
               showNewInboxDropdown
@@ -74,6 +38,7 @@
             "
           >
             <i
+              class="inbox-dropdown-check"
               :class="
                 (
                   showNewInboxDropdown
@@ -83,21 +48,9 @@
                   ? 'i-lucide-check-square'
                   : 'i-lucide-square'
               "
-              :style="{
-                color: (
-                  showNewInboxDropdown
-                    ? isNewInboxSelected(inbox)
-                    : isEditInboxSelected(inbox)
-                )
-                  ? '#60a5fa'
-                  : '#64748b',
-                flexShrink: 0,
-                width: '14px',
-                height: '14px',
-              }"
             />
-            <span :style="{ flex: 1 }">{{ inbox.name || 'Inbox' }}</span>
-            <span style="@apply text-sm; color: #64748b">{{
+            <span class="inbox-dropdown-name">{{ inbox.name || 'Inbox' }}</span>
+            <span class="inbox-dropdown-type">{{
               String(inbox.channel_type || '').replace('Channel::', '')
             }}</span>
           </div>
@@ -170,7 +123,7 @@
                       class="notif-badge-time"
                     >
                       <i class="i-lucide-clock-4 size-3" />
-                      {{ formatOffset(rule.trigger_offset_hours) }}
+                      {{ formatOffset(rule) }}
                     </span>
                     <span
                       v-else-if="
@@ -260,7 +213,10 @@
           class="modal-overlay"
           @click.self="closeEditModal"
         >
-          <div class="modal-box" @click.stop>
+          <div
+            class="modal-box"
+            @click.stop="openDropdownIndex = null; dropdownPos = null;"
+          >
             <div class="modal-header">
               <span class="modal-title">Editar mensagem automática</span>
               <button class="modal-close" @click="closeEditModal">
@@ -276,13 +232,10 @@
               />
 
               <!-- Tipo de regra -->
-              <label class="modal-label"
-style="margin-top: 14px"
-                >Tipo de disparo</label>
-              <ModernSelect
+              <label class="modal-label">Tipo de disparo</label>
+              <FormSelect
                 v-model="notifEditTarget.rule_type"
                 :options="notifRuleTypes"
-                class="modal-input"
               />
 
               <!-- Offset de tempo (só para lembretes e followup) -->
@@ -367,12 +320,8 @@ style="margin-top: 14px"
               </div>
 
               <!-- Inbox multi-select (Editar Regra) -->
-              <!-- Inbox multi-select (Editar Regra) -->
-              <label class="modal-label" style="margin-top: 14px">
-                <i
-                  class="i-lucide-inbox"
-                  style="vertical-align: -2px; margin-right: 4px"
-                />
+              <label class="modal-label">
+                <i class="i-lucide-inbox" />
                 Inboxes (caixas de entrada)
               </label>
               <div
@@ -401,64 +350,33 @@ style="margin-top: 14px"
 
               <!-- Dropdown Trigger Selector (Editar) -->
               <div
-                :style="{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 12px',
-                  background: showEditInboxDropdown
-                    ? 'rgba(59,130,246,0.1)'
-                    : 'rgba(30,35,51,0.8)',
-                  border: showEditInboxDropdown
-                    ? '1px solid #3b82f6'
-                    : '1px solid rgba(100,116,139,0.35)',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  color: '#c8d3e0',
-                  cursor: 'pointer',
-                  minHeight: '38px',
-                  boxShadow: showEditInboxDropdown
-                    ? '0 0 0 2px rgba(59,130,246,0.15)'
-                    : 'none',
-                  transition: 'all 0.15s',
-                }"
+                class="inbox-add-trigger"
+                :class="{ open: showEditInboxDropdown }"
                 @click.stop="toggleDropdown('edit_inbox', $event)"
               >
-                <i
-                  class="i-lucide-inbox"
-                  style="
-                    color: #64748b;
-                    width: 14px;
-                    height: 14px;
-                    flex-shrink: 0;
-                  "
+                <i class="i-lucide-inbox inbox-add-icon" />
+                <span class="inbox-add-label">Adicionar Inbox</span>
+                <i class="i-lucide-chevron-down inbox-add-icon" />
+              </div>
+
+              <label class="modal-label">Mensagem</label>
+              <div class="msg-editor">
+                <div
+                  ref="editHighlight"
+                  class="msg-editor-backdrop"
+                  aria-hidden="true"
+                  v-html="renderMessageHighlight(notifEditTarget.message)"
                 />
-                <span style="flex: 1">Adicionar Inbox</span>
-                <i
-                  class="i-lucide-chevron-down"
-                  style="
-                    color: #64748b;
-                    width: 14px;
-                    height: 14px;
-                    flex-shrink: 0;
-                  "
+                <textarea
+                  ref="editTextarea"
+                  v-model="notifEditTarget.message"
+                  class="msg-editor-input"
+                  placeholder="Digite a mensagem..."
+                  @scroll="syncScroll('edit')"
                 />
               </div>
 
-              <label class="modal-label"
-style="margin-top: 14px"
-                >Mensagem</label>
-              <textarea
-                ref="editTextarea"
-                v-model="notifEditTarget.message"
-                class="modal-textarea modal-textarea-tall"
-                placeholder="Digite a mensagem..."
-              />
-
-              <label class="modal-label"
-style="margin-top: 10px"
-                >Inserir variável</label>
+              <label class="modal-label">Inserir variável</label>
               <div class="modal-vars">
                 <button
                   v-for="v in notifVars"
@@ -583,17 +501,29 @@ style="margin-top: 10px"
         <div v-if="logsOpen" class="logs-body">
           <!-- Header com filtros -->
           <div class="logs-filters">
-            <ModernSelect
+            <FormSelect
               v-model="logsFilter"
-              :options="[
-                { value: '', label: 'Todos os status' },
-                { value: 'sent', label: '✅ Enviados' },
-                { value: 'failed', label: '❌ Falhas' },
-                { value: 'skipped', label: '⏭ Pulados' }
-              ]"
+              :options="logsStatusOptions"
               class="logs-filter-select"
-              @change="fetchLogs"
-            />
+              @change="fetchLogs(1)"
+            >
+              <template #selected="{ option }">
+                <i
+                  :class="(option || logsStatusOptions[0]).icon"
+                  class="size-3.5 shrink-0"
+                  :style="{ color: (option || logsStatusOptions[0]).iconColor }"
+                />
+                <span>{{ (option || logsStatusOptions[0]).label }}</span>
+              </template>
+              <template #option="{ option }">
+                <i
+                  :class="option.icon"
+                  class="size-3.5 shrink-0"
+                  :style="{ color: option.iconColor }"
+                />
+                <span>{{ option.label }}</span>
+              </template>
+            </FormSelect>
             <button
               class="logs-refresh-btn"
               :disabled="logsLoading"
@@ -699,7 +629,10 @@ style="margin-top: 10px"
           class="modal-overlay"
           @click.self="closeNewModal"
         >
-          <div class="modal-box modal-box-new" @click.stop>
+          <div
+            class="modal-box modal-box-new"
+            @click.stop="openDropdownIndex = null; dropdownPos = null;"
+          >
             <div class="modal-header">
               <span class="modal-title">Nova regra de notificação</span>
               <button class="modal-close" @click="closeNewModal">
@@ -715,13 +648,10 @@ style="margin-top: 10px"
               />
 
               <!-- Tipo de disparo -->
-              <label class="modal-label"
-style="margin-top: 14px"
-                >Tipo de disparo *</label>
-              <ModernSelect
+              <label class="modal-label">Tipo de disparo *</label>
+              <FormSelect
                 v-model="notifNewDraft.rule_type"
                 :options="notifRuleTypes"
-                class="modal-input"
                 @change="
                   if (
                     notifNewDraft.rule_type !== 'reminder' &&
@@ -809,28 +739,35 @@ style="margin-top: 14px"
                 </p>
               </div>
 
-              <div class="svc-row-fields" style="margin-top: 14px">
+              <div class="svc-row-fields">
                 <div>
                   <label class="modal-label">Ícone</label>
-                  <ModernSelect
+                  <FormSelect
                     v-model="notifNewDraft.icon"
                     :options="notifIconOptions"
-                    class="modal-input"
-                  />
+                  >
+                    <template #selected="{ option }">
+                      <i v-if="option" :class="option.icon" class="size-4" />
+                      <span>{{ option ? option.label : 'Selecione' }}</span>
+                    </template>
+                    <template #option="{ option }">
+                      <i :class="option.icon" class="size-4" />
+                      <span>{{ option.label }}</span>
+                    </template>
+                  </FormSelect>
                 </div>
                 <div>
                   <label class="modal-label">Cor do ícone</label>
-                  <ModernSelect
+                  <FormSelect
                     v-model="notifNewDraft.iconColor"
                     :options="notifIconColors"
-                    class="modal-input"
                   />
                 </div>
               </div>
 
               <!-- Inbox multi-select (Nova Regra) -->
-              <label class="modal-label" style="margin-top: 16px">
-                <i class="i-lucide-inbox" style="margin-right: 4px" />
+              <label class="modal-label">
+                <i class="i-lucide-inbox" />
                 Inboxes (caixas de entrada)
               </label>
               <!-- Tags das selecionadas -->
@@ -860,64 +797,33 @@ style="margin-top: 14px"
 
               <!-- Dropdown Trigger Selector (Nova Regra) -->
               <div
-                :style="{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 12px',
-                  background: showNewInboxDropdown
-                    ? 'rgba(59,130,246,0.1)'
-                    : 'rgba(30,35,51,0.8)',
-                  border: showNewInboxDropdown
-                    ? '1px solid #3b82f6'
-                    : '1px solid rgba(100,116,139,0.35)',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  color: '#c8d3e0',
-                  cursor: 'pointer',
-                  minHeight: '38px',
-                  boxShadow: showNewInboxDropdown
-                    ? '0 0 0 2px rgba(59,130,246,0.15)'
-                    : 'none',
-                  transition: 'all 0.15s',
-                }"
+                class="inbox-add-trigger"
+                :class="{ open: showNewInboxDropdown }"
                 @click.stop="toggleDropdown('new_inbox', $event)"
               >
-                <i
-                  class="i-lucide-inbox"
-                  style="
-                    color: #64748b;
-                    width: 14px;
-                    height: 14px;
-                    flex-shrink: 0;
-                  "
+                <i class="i-lucide-inbox inbox-add-icon" />
+                <span class="inbox-add-label">Adicionar Inbox</span>
+                <i class="i-lucide-chevron-down inbox-add-icon" />
+              </div>
+
+              <label class="modal-label">Mensagem *</label>
+              <div class="msg-editor">
+                <div
+                  ref="newHighlight"
+                  class="msg-editor-backdrop"
+                  aria-hidden="true"
+                  v-html="renderMessageHighlight(notifNewDraft.message)"
                 />
-                <span style="flex: 1">Adicionar Inbox</span>
-                <i
-                  class="i-lucide-chevron-down"
-                  style="
-                    color: #64748b;
-                    width: 14px;
-                    height: 14px;
-                    flex-shrink: 0;
-                  "
+                <textarea
+                  ref="newTextarea"
+                  v-model="notifNewDraft.message"
+                  class="msg-editor-input"
+                  placeholder="Digite a mensagem automática..."
+                  @scroll="syncScroll('new')"
                 />
               </div>
 
-              <label class="modal-label"
-style="margin-top: 14px"
-                >Mensagem *</label>
-              <textarea
-                ref="newTextarea"
-                v-model="notifNewDraft.message"
-                class="modal-textarea modal-textarea-tall"
-                placeholder="Digite a mensagem automática..."
-              />
-
-              <label class="modal-label"
-style="margin-top: 10px"
-                >Inserir variável</label>
+              <label class="modal-label">Inserir variável</label>
               <div class="modal-vars">
                 <button
                   v-for="v in notifVars"
@@ -949,7 +855,7 @@ style="margin-top: 10px"
 import { ref } from 'vue';
 import { useStore } from 'vuex';
 import { useSettingsNotifications } from '../composables/useSettingsNotifications';
-import ModernSelect from '../../../components/ModernSelect.vue';
+import FormSelect from '@plugins/beclinic_core/frontend/components/FormSelect.vue';
 
 
 const store = useStore();
@@ -973,6 +879,45 @@ const {
 
 const editTextarea = ref(null);
 const newTextarea = ref(null);
+// Backdrops do editor de mensagem (camada que colore as variáveis).
+const editHighlight = ref(null);
+const newHighlight = ref(null);
+
+// Mantém o backdrop alinhado ao scroll do textarea (texto transparente em
+// cima, destaque colorido atrás — precisam rolar juntos).
+const syncScroll = which => {
+  const ta = which === 'new' ? newTextarea.value : editTextarea.value;
+  const bd = which === 'new' ? newHighlight.value : editHighlight.value;
+  if (ta && bd) {
+    bd.scrollTop = ta.scrollTop;
+    bd.scrollLeft = ta.scrollLeft;
+  }
+};
+
+// Renderiza a mensagem escapada com os {placeholders} envoltos em <span msg-var>
+// pra colorir igual aos chips de variáveis abaixo. O '\n' final faz o backdrop
+// acompanhar a última linha do textarea (truque clássico de highlight overlay).
+const renderMessageHighlight = text => {
+  if (!text) return '';
+  const escaped = String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  return (
+    escaped.replace(
+      /\{[a-zA-Z_]+\}/g,
+      m => `<span class="msg-var">${m}</span>`
+    ) + '\n'
+  );
+};
+
+// Opções do filtro de status do histórico — ícones premium (sem emoji).
+const logsStatusOptions = [
+  { value: '', label: 'Todos os status', icon: 'i-lucide-list-filter', iconColor: 'rgb(var(--slate-10))' },
+  { value: 'sent', label: 'Enviados', icon: 'i-lucide-circle-check', iconColor: '#16a34a' },
+  { value: 'failed', label: 'Falhas', icon: 'i-lucide-circle-x', iconColor: '#dc2626' },
+  { value: 'skipped', label: 'Pulados', icon: 'i-lucide-circle-minus', iconColor: 'rgb(var(--slate-9))' },
+];
 
 const insertVarEditHandler = (k) => insertVarInEdit(k, editTextarea.value);
 const insertVarNewHandler = (k) => insertVarInNew(k, newTextarea.value);
@@ -1178,6 +1123,9 @@ const insertVarNewHandler = (k) => insertVarInNew(k, newTextarea.value);
   border-radius: 12px;
   overflow: hidden;
   background: rgb(var(--slate-2));
+  /* Não deixa o flex-column do .notif-root comprimir o painel (o empty-state
+     usa flex:1 e antes "comia" a altura, cortando o conteúdo do histórico). */
+  flex-shrink: 0;
 }
 
 .logs-toggle-clean {
@@ -1212,27 +1160,13 @@ const insertVarNewHandler = (k) => insertVarInNew(k, newTextarea.value);
   padding: 12px 0;
 }
 
+/* O filtro de status É um FormSelect (não um <select> nativo). A classe só
+   controla a largura no flex — qualquer border/background/chevron aqui
+   desenharia uma caixa POR CIMA da que o FormSelect já tem ("input duplicado").
+   Ver [[feedback-form-select-padrao]]. */
 .logs-filter-select {
-  background: rgb(var(--slate-3));
-  border: 1px solid rgb(var(--slate-5));
-  border-radius: 8px;
-  padding: 6px 32px 6px 12px;
-  color: rgb(var(--slate-12));
-  @apply text-sm;
-  font-weight: 500;
-  outline: none;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  transition: all 0.2s;
-}
-
-.logs-filter-select:hover {
-  border-color: rgb(var(--slate-7));
-  background-color: rgb(var(--slate-4));
+  flex: 1;
+  min-width: 0;
 }
 
 .logs-refresh-btn {
@@ -1465,12 +1399,34 @@ const insertVarNewHandler = (k) => insertVarInNew(k, newTextarea.value);
   min-height: 28px;
 }
 
-/* Inbox chip com botão de remover */
-.inbox-chip-removable {
+/* Chip da inbox selecionada — badge colorido sutil (mesmo padrão do
+   .channel-wa dos cards). Antes dependia de .nc-inbox-tag/.nc-inbox-wa que
+   nunca existiram aqui → ficava só texto + um × cinza invisível no claro. */
+.nc-inbox-tag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding-right: 4px !important;
+  gap: 6px;
+  padding: 3px 6px 3px 10px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.nc-inbox-wa {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+:root.dark .nc-inbox-wa {
+  background: rgba(34, 197, 94, 0.16);
+  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+/* Botão × dentro do chip — herda a cor do badge, hover sutil. Ícone no mesmo
+   tamanho da fonte do texto (12px) pra ficar proporcional. */
+.inbox-chip-removable {
+  padding-right: 4px;
 }
 .inbox-chip-remove {
   display: inline-flex;
@@ -1478,22 +1434,145 @@ const insertVarNewHandler = (k) => insertVarInNew(k, newTextarea.value);
   justify-content: center;
   width: 16px;
   height: 16px;
-  background: rgba(255, 255, 255, 0.15);
+  background: transparent;
   border: none;
   border-radius: 50%;
   cursor: pointer;
   color: inherit;
+  opacity: 0.65;
   padding: 0;
   line-height: 1;
   flex-shrink: 0;
-  transition: background 0.15s;
+  transition: opacity 0.15s, background 0.15s;
 }
 .inbox-chip-remove:hover {
-  background: rgba(255, 255, 255, 0.3);
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.08);
+}
+:root.dark .inbox-chip-remove:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 .inbox-chip-remove i {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
+}
+
+/* ─── Mobile: modais em tela cheia (largura + altura) ───
+   Scoped vence o global .modal-box (0,2,0 > 0,1,0), então cobre também as
+   variantes -new/-ai. 100dvh acompanha a barra do navegador no mobile. */
+@media (max-width: 640px) {
+  .modal-box {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+  .modal-overlay {
+    backdrop-filter: none;
+  }
+}
+
+/* ─── Seletor de Inbox (trigger + dropdown) — tokens de tema ───
+   Antes era tudo inline com hex dark hardcoded (#1c2333, #e2e8f0…), o que
+   renderizava preto no modo claro. Agora usa rgb(var(--slate-*)) e adapta. */
+.inbox-add-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-5));
+  border-radius: 8px;
+  font-size: 13px;
+  color: rgb(var(--slate-11));
+  cursor: pointer;
+  min-height: 40px;
+  transition: all 0.15s;
+}
+.inbox-add-trigger:hover {
+  border-color: rgb(var(--slate-6));
+  background: rgb(var(--slate-1));
+}
+.inbox-add-trigger.open {
+  border-color: rgb(var(--blue-8));
+  background: rgb(var(--slate-1));
+  box-shadow: 0 0 0 3px rgba(var(--blue-9), 0.12);
+}
+.inbox-add-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: rgb(var(--slate-8));
+}
+.inbox-add-label {
+  flex: 1;
+}
+
+/* Teleportado pro body — mantém o data-v do escopo, então o scoped alcança.
+   Só top/left/width vêm inline (posição dinâmica calculada no toggleDropdown). */
+.inbox-dropdown {
+  position: fixed;
+  z-index: 100000;
+  max-height: 220px;
+  overflow-y: auto;
+  background: rgb(var(--slate-1));
+  border: 1px solid rgb(var(--border-strong));
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.inbox-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--slate-11));
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s, color 0.1s;
+}
+.inbox-dropdown-item:hover {
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-12));
+}
+.inbox-dropdown-item.selected {
+  color: rgb(var(--blue-9));
+  background: rgba(var(--blue-9), 0.08);
+}
+.inbox-dropdown-check {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: rgb(var(--slate-8));
+}
+.inbox-dropdown-item.selected .inbox-dropdown-check {
+  color: rgb(var(--blue-9));
+}
+.inbox-dropdown-name {
+  flex: 1;
+}
+.inbox-dropdown-type {
+  font-size: 11px;
+  color: rgb(var(--slate-8));
+}
+.inbox-dropdown-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 8px;
+  font-size: 13px;
+  color: rgb(var(--slate-9));
 }
 
 /* Inbox selector (lista clicável de opções) */
@@ -1558,10 +1637,115 @@ const insertVarNewHandler = (k) => insertVarInNew(k, newTextarea.value);
   gap: 8px;
 }
 
-/* Textarea maior (300px) */
-.modal-textarea-tall {
-  min-height: 300px;
+/* ─── Padronização do form do modal (igual ao "Nova consulta" / _form.scss) ─── */
+/* Label caixa-normal, peso 500, slate-12, ícone alinhado por gap (antes era
+   UPPERCASE/bold/slate-9 e destoava do resto do app). Scoped vence o global. */
+.modal-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  color: rgb(var(--slate-12));
+  margin-bottom: 6px;
+}
+.modal-label i {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: rgb(var(--slate-9));
+}
+
+/* Espaçamento vertical uniforme entre campos (≈ gap 16px do _form.scss). */
+.modal-body > .modal-label {
+  margin-top: 16px;
+}
+.modal-body > .modal-label:first-child {
+  margin-top: 0;
+}
+.modal-body > .offset-field,
+.modal-body > .svc-row-fields {
+  margin-top: 16px;
+}
+
+/* Ícone + Cor lado a lado. A classe original vive (escopada) no
+   SettingsTabServices, então aqui não existia → os dois campos empilhavam
+   colados verticalmente. */
+.svc-row-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.svc-row-fields .modal-label {
+  margin-top: 0;
+}
+
+/* ─── Editor de mensagem com destaque de variáveis ───
+   O textarea fica com texto transparente + caret visível; atrás, um backdrop
+   de MESMA métrica renderiza o texto e colore os {placeholders} igual aos
+   chips de variáveis. Altura menor (140px) que os 300px anteriores. */
+.msg-editor {
+  position: relative;
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-5));
+  border-radius: 8px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.msg-editor:focus-within {
+  border-color: rgb(var(--blue-9));
+  background: rgb(var(--slate-1));
+}
+.msg-editor-backdrop,
+.msg-editor-input {
+  margin: 0;
+  border: 0;
+  padding: 10px 12px;
+  width: 100%;
+  min-height: 140px;
+  max-height: 320px;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.6;
+  letter-spacing: normal;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  tab-size: 4;
+}
+.msg-editor-backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  color: rgb(var(--slate-12));
+}
+.msg-editor-input {
+  position: relative;
+  display: block;
+  background: transparent;
+  color: transparent;
+  caret-color: rgb(var(--slate-12));
   resize: vertical;
+  outline: none;
+}
+.msg-editor-input::placeholder {
+  color: rgb(var(--slate-8));
+}
+/* v-html não recebe o data-v do scoped → :deep alcança o span. Só color/bg
+   (não altera métrica) pra não desalinhar o caret com o texto transparente. */
+.msg-editor-backdrop :deep(.msg-var) {
+  color: #4338ca;
+  background: rgba(99, 102, 241, 0.14);
+  border-radius: 3px;
+}
+:root.dark .msg-editor-backdrop :deep(.msg-var) {
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.22);
 }
 
 /* ───────── LOCK PANEL ───────── */
@@ -1731,23 +1915,11 @@ const insertVarNewHandler = (k) => insertVarInNew(k, newTextarea.value);
   gap: 8px;
   margin-bottom: 12px;
 }
+/* Definição duplicada legada — neutralizada (ver bloco acima). Mantém só o
+   flex pra não reintroduzir a caixa em cima do FormSelect. */
 .logs-filter-select {
   flex: 1;
-  padding: 6px 10px;
-  border: 1px solid rgb(var(--slate-5));
-  border-radius: 8px;
-  background: rgb(var(--slate-1));
-  color: rgb(var(--slate-12));
-  @apply text-sm;
-}
-.logs-refresh-btn {
-  padding: 6px 10px;
-  border: 1px solid rgb(var(--slate-5));
-  border-radius: 8px;
-  background: rgb(var(--slate-1));
-  cursor: pointer;
-  color: rgb(var(--slate-10));
-  transition: background 0.15s;
+  min-width: 0;
 }
 .logs-refresh-btn:hover {
   background: rgb(var(--slate-3));

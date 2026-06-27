@@ -1,0 +1,53 @@
+type: object
+description: |
+  Perfil financeiro 1-to-1 com `User` (`Financial::AgentProfile`). O `User`
+  core do Klivy permanece source of truth de identidade (gerenciado em
+  `/settings/agents/list`); aqui ficam apenas campos do financeiro: vínculo
+  trabalhista, categoria canon, CRO/especialidades e **dados bancários
+  sensíveis (LGPD)** usados para pagamento de comissão.
+
+  Importante: nas rotas REST o `:id` da URL é o **`user_id`**, NÃO o
+  `profile.id`. O campo `id` deste objeto é o id real do `AgentProfile`.
+properties:
+  id:
+    type: integer
+    description: ID real do `AgentProfile` (não confundir com o `:id` da URL, que é o `user_id`).
+  user_id: { type: integer }
+  cpf:
+    type: string
+    nullable: true
+    description: "CPF (só dígitos, normalizado). Criptografado em repouso (LGPD)."
+  agent_category:
+    type: string
+    enum: [profissional, operacional, comercial, administrador]
+    description: "Categoria canon §1. `administrador` nunca é comissionável."
+  bond_type:
+    type: string
+    enum: [PJ, CLT, Socio, PF]
+    description: Tipo de vínculo trabalhista.
+  entry_date:
+    type: string
+    format: date
+    description: Data de entrada (obrigatória).
+  commissionable:
+    type: boolean
+    description: "Se recebe comissão. Forçado a false para `administrador`."
+  cro:
+    type: string
+    nullable: true
+    description: "Obrigatório quando `agent_category = profissional`."
+  specialties:
+    type: array
+    items: { type: string }
+    description: Lista de especialidades.
+  bank_name: { type: string, nullable: true, description: "Dado bancário sensível (LGPD)." }
+  bank_agency: { type: string, nullable: true, description: "Dado bancário sensível (LGPD)." }
+  bank_account_number: { type: string, nullable: true, description: "Dado bancário sensível (LGPD)." }
+  pix_key: { type: string, nullable: true, description: "Dado bancário sensível (LGPD)." }
+  status:
+    type: string
+    enum: [active, inactive]
+    description: "`inactive` após deactivate (soft-delete) — o `User` base permanece intacto."
+  notes: { type: string, nullable: true }
+  created_at: { type: string, format: date-time }
+  updated_at: { type: string, format: date-time }

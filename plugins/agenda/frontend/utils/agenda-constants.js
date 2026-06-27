@@ -48,10 +48,57 @@ export const TREATMENTS = [
 ];
 
 export const EVENT_TYPES = [
-  { value: 'consultation', label: 'Consulta', color: '#3b82f6' },
-  { value: 'agenda_block', label: 'Bloqueio de Agenda', color: '#ef4444' },
-  { value: 'appointment', label: 'Compromisso', color: '#10b981' },
+  {
+    value: 'consultation',
+    label: 'Consulta',
+    color: '#3b82f6',
+    icon: 'i-lucide-stethoscope',
+    contextLabel: 'Detalhes do Agendamento',
+  },
+  {
+    value: 'agenda_block',
+    label: 'Bloqueio de Agenda',
+    color: '#ef4444',
+    icon: 'i-lucide-lock',
+    contextLabel: 'Detalhes do Bloqueio',
+  },
+  {
+    value: 'appointment',
+    label: 'Compromisso',
+    color: '#10b981',
+    icon: 'i-lucide-calendar-check',
+    contextLabel: 'Detalhes do Compromisso',
+  },
 ];
+
+export function getEventTypeMeta(value) {
+  return (
+    EVENT_TYPES.find(t => t.value === value) || EVENT_TYPES[0]
+  );
+}
+
+/**
+ * Formata telefone brasileiro pro padrão amigável, sem código do país.
+ *   "+5547996835065" → "(47) 99683-5065"
+ *   "+554732221234"  → "(47) 3222-1234"
+ *   "47996835065"    → "(47) 99683-5065"
+ * Strings curtas/inválidas voltam como vieram (sem quebrar).
+ */
+export function formatPhoneBR(raw) {
+  if (!raw) return '';
+  const digits = String(raw).replace(/\D/g, '');
+  // Remove DDI 55 do começo se presente
+  const local = digits.startsWith('55') && digits.length >= 12 ? digits.slice(2) : digits;
+  if (local.length === 11) {
+    // celular: (DD) 9XXXX-XXXX
+    return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+  }
+  if (local.length === 10) {
+    // fixo: (DD) XXXX-XXXX
+    return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
+  }
+  return raw;
+}
 
 export const PRIORITIES = [
   { value: 'urgent', label: 'Urgente' },
@@ -60,33 +107,40 @@ export const PRIORITIES = [
   { value: 'low', label: 'Baixa' },
 ];
 
+// Auditoria 2026-05-15 (PR-H): paleta realinhada com referência externa
+// para evitar confusão visual.
+//   - confirmed mudou de verde para AMARELO — verde fica reservado para
+//     completed (fluxo "concluído").
+//   - arrived mudou de amarelo para LARANJA — diferencia da confirmação.
+//   - in_progress mudou de azul para TEAL — verde-água do paciente "ativo
+//     no atendimento agora", contrastando com o verde-escuro de "finalizado".
+//   - completed, no_show, cancelled, scheduled mantidos.
+// `border` segue 1 tom mais escuro que `color`.
 export const STATUS_CONFIGS = {
-  pending_confirmation: {
-    label: 'Aguardando confirmação',
-    color: '#f59e0b',
-    border: '#d97706',
-  },
   scheduled: { label: 'Agendado', color: '#9ca3af', border: '#6b7280' },
-  confirmed: { label: 'Confirmado', color: '#22c55e', border: '#16a34a' },
-  arrived: { label: 'Chegou', color: '#eab308', border: '#ca8a04' },
+  confirmed: { label: 'Confirmado', color: '#f59e0b', border: '#d97706' },
+  arrived: { label: 'Chegou', color: '#f97316', border: '#ea580c' },
   in_progress: {
     label: 'Em atendimento',
-    color: '#3b82f6',
-    border: '#2563eb',
+    color: '#14b8a6',
+    border: '#0d9488',
   },
-  completed: { label: 'Atendido', color: '#22c55e', border: '#16a34a' },
+  completed: { label: 'Atendido', color: '#16a34a', border: '#15803d' },
   no_show: { label: 'Faltou', color: '#ef4444', border: '#dc2626' },
   cancelled: { label: 'Cancelado', color: '#6b7280', border: '#4b5563' },
 };
 
 export const STATUS_OPTIONS = [
-  { key: 'pending_confirmation', label: 'Aguardando confirmação' },
   { key: 'scheduled', label: 'Agendado' },
   { key: 'confirmed', label: 'Confirmado' },
   { key: 'arrived', label: 'Chegou' },
   { key: 'in_progress', label: 'Em atendimento' },
   { key: 'completed', label: 'Atendido' },
   { key: 'no_show', label: 'Faltou' },
+  // Auditoria 2026-05-15: cancelled estava fora do filtro porque a clínica
+  // não tinha cancelados antes da reconciliação Clinicorp (PR-D). Agora
+  // tem 320+ — precisa ficar visível no filtro lateral.
+  { key: 'cancelled', label: 'Cancelado' },
 ];
 
 export const DELETE_REASONS = [

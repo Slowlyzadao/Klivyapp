@@ -1,0 +1,46 @@
+type: object
+description: |
+  Taxa versionada por (meio de pagamento × quantidade de parcelas × vigência)
+  (`Financial::PaymentMethodFee`, canon `mapa-financeiro.json` §3).
+
+  Imutabilidade total após criação (canon): `payment_method_id`,
+  `installments_count`, `fee_percent_basis_points`, `fee_fixed_cents`,
+  `liquidation_days` e `valid_from` são congelados. NÃO existe `update` —
+  para "alterar taxa", inative a vigente (`POST /deactivate`) e crie uma nova
+  com novos valores e `valid_from` futuro. Lançamentos passados ficam vinculados
+  à fee vigente naquele momento via snapshot congelado.
+properties:
+  id: { type: integer }
+  payment_method_id: { type: integer }
+  installments_count:
+    type: integer
+    description: "Entre 1 e 24."
+    minimum: 1
+    maximum: 24
+  fee_percent_basis_points:
+    type: integer
+    description: "Taxa percentual em basis points (0..10000 → 0%..100%). Ex.: 250 = 2,50%."
+    minimum: 0
+    maximum: 10000
+  fee_percent:
+    type: string
+    description: "Conveniência: `fee_percent_basis_points / 100` em decimal, serializado como string. Ex.: '2.5'."
+  fee_fixed_cents:
+    type: integer
+    description: "Taxa fixa em centavos (BIGINT). Somada ao percentual."
+    minimum: 0
+  liquidation_days:
+    type: integer
+    description: "Prazo de liquidação em dias (D+N) para projetar a data de recebimento."
+    minimum: 0
+  valid_from: { type: string, format: date, description: "Início da vigência (inclusivo). Imutável." }
+  valid_to:
+    type: string
+    format: date
+    nullable: true
+    description: "Fim da vigência (inclusivo). `null` = vigente indefinidamente. Setado para `Date.current` ao desativar."
+  status:
+    type: string
+    enum: [active, inactive]
+  created_at: { type: string, format: date-time }
+  updated_at: { type: string, format: date-time }

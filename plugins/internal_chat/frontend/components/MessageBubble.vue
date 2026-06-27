@@ -2,9 +2,26 @@
 import { computed, onUnmounted, ref } from 'vue';
 import { useStore } from 'vuex';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
+// Toast feedback padrão do Chatwoot — `useAlert` empilha mensagens no canto
+// inferior direito com timeout. Mesma fonte usada pelos templates da Bea.
+import { useAlert } from 'dashboard/composables';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
+// FE-6: Tooltip moderno em vez de title="..." nativo.
+import Tooltip from '@plugins/beclinic_core/frontend/components/Tooltip.vue';
+// FE-8: BeclinicButton no preview-modal de sticker (Salvar/Remover/Fechar).
+// Chevrons (em Tooltip), inline edit buttons (text-[11px] minúsculo), e
+// reaction-bar interna ficam nativos por terem visual contextual ao bubble.
+import BeclinicButton from '@plugins/beclinic_core/frontend/components/Button.vue';
 import MessageAttachments from './MessageAttachments.vue';
 import ReplyPreview from './ReplyPreview.vue';
+// FE-1 (auditoria 2026-05-19): partes display-only do bubble extraídas pra
+// reduzir LOC do god component. State crítico (showActionsMenu, edição
+// inline FE-20, sticker actions FE-14) PERMANECE aqui no pai — só blocos
+// puramente visuais foram movidos.
+import ReadReceiptIcon from './messageBubbleParts/ReadReceiptIcon.vue';
+import ReactionsBar from './messageBubbleParts/ReactionsBar.vue';
+import MessageActionsMenu from './messageBubbleParts/MessageActionsMenu.vue';
 
 const props = defineProps({
   message: { type: Object, required: true },
@@ -14,6 +31,7 @@ const props = defineProps({
 const store = useStore();
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const currentUserId = computed(() => store.getters.getCurrentUserID);
 
 // Paleta de pastéis pra label do nome do remetente em grupo (estilo WhatsApp).
@@ -58,7 +76,15 @@ const isRead = computed(() => maxOthersRead.value >= props.message.id);
 const emit = defineEmits(['reply', 'jump-to-reply']);
 
 const showStickerPreview = ref(false);
-const stickerActionPending = ref(false);
+// FE-14 (auditoria 2026-05-18): `stickerActionPending` migrado pra store
+// global (`internalChatStickers/isStickerPending`). Antes era per-instance
+// — user clicando save no bubble A + remove no bubble B do MESMO sticker
+// disparava 2 requests concorrentes com state divergente.
+const stickerActionPending = computed(() => {
+  const id = props.message.sticker?.id;
+  if (!id) return false;
+  return store.getters['internalChatStickers/isStickerPending'](id);
+});
 const stickerActionMsg = ref('');
 
 // Sticker está na coleção do user atual?
@@ -82,9 +108,11 @@ const openStickerPreview = () => {
   showStickerPreview.value = true;
 };
 
+// FE-14: setters de pending agora vivem no store (commit SET_PENDING
+// dentro das actions). Bubble só dispatcha; `stickerActionPending`
+// é getter reativo.
 const saveSticker = async () => {
   if (stickerActionPending.value) return;
-  stickerActionPending.value = true;
   stickerActionMsg.value = '';
   try {
     await store.dispatch(
@@ -94,15 +122,12 @@ const saveSticker = async () => {
     stickerActionMsg.value = 'Figurinha salva nas suas favoritas.';
   } catch {
     stickerActionMsg.value = 'Falha ao salvar.';
-  } finally {
-    stickerActionPending.value = false;
   }
 };
 
 const removeSticker = async () => {
   if (stickerActionPending.value) return;
   if (!confirm('Remover esta figurinha das suas favoritas?')) return;
-  stickerActionPending.value = true;
   stickerActionMsg.value = '';
   try {
     await store.dispatch(
@@ -112,8 +137,6 @@ const removeSticker = async () => {
     stickerActionMsg.value = 'Figurinha removida.';
   } catch {
     stickerActionMsg.value = 'Falha ao remover.';
-  } finally {
-    stickerActionPending.value = false;
   }
 };
 
@@ -186,6 +209,15 @@ const renderedHtml = computed(() => {
 // === Edit/Delete ===
 const EDIT_WINDOW_MS = 5 * 60 * 1000;
 const showActionsMenu = ref(false);
+// UX-fix 2026-05-20: refs do botão chevron (2 — sticker e texto, ambos
+// usam o mesmo state mas têm DOM elements diferentes). MessageActionsMenu
+// usa um deles via Teleport+position fixed pra ancorar sem interferir
+// no layout vizinho.
+const stickerChevronRef = ref(null);
+const bubbleChevronRef = ref(null);
+const actionMenuAnchor = computed(() =>
+  stickerChevronRef.value || bubbleChevronRef.value
+);
 const isEditing = ref(false);
 const editText = ref('');
 const editSaving = ref(false);
@@ -205,6 +237,7 @@ if (typeof document !== 'undefined') {
 }
 onUnmounted(() => {
   if (tickTimer) clearInterval(tickTimer);
+  stopEditTick();
   if (typeof document !== 'undefined') {
     document.removeEventListener('click', closeMenuOnClickOutside);
   }
@@ -221,6 +254,34 @@ const canEdit = computed(() => {
   return Date.now() - created < EDIT_WINDOW_MS;
 });
 const canDelete = computed(() => props.isOwn && !isDeleted.value);
+
+// FE-20 (auditoria 2026-05-18): countdown durante edit pra avisar antes
+// da janela expirar — user perde texto se janela passa durante digitação
+// e backend retorna 422. Tick mais granular (1s) só durante isEditing
+// pra evitar re-renders desnecessários quando ninguém tá editando.
+let editTick = null;
+const startEditTick = () => {
+  if (editTick) return;
+  editTick = setInterval(() => { tick.value++; }, 1000);
+};
+const stopEditTick = () => {
+  if (editTick) {
+    clearInterval(editTick);
+    editTick = null;
+  }
+};
+
+const editTimeRemainingSec = computed(() => {
+  void tick.value;
+  if (!isEditing.value) return null;
+  const created = new Date(props.message.created_at).getTime();
+  const remaining = EDIT_WINDOW_MS - (Date.now() - created);
+  return remaining > 0 ? Math.ceil(remaining / 1000) : 0;
+});
+
+const editWindowWarning = computed(
+  () => editTimeRemainingSec.value !== null && editTimeRemainingSec.value <= 60
+);
 
 // Conversar com [nome]: cria/encontra DM com o autor da mensagem e navega.
 // RoomCreator é idempotente em direct, então repetir o clique abre a mesma sala.
@@ -287,11 +348,19 @@ const onToggleFavorite = async () => {
   showActionsMenu.value = false;
   if (favoritePending.value) return;
   favoritePending.value = true;
+  // Captura estado ANTES do dispatch — store atualiza otimisticamente,
+  // então `isFavorited.value` já está invertido após o await.
+  const wasAlreadyFavorited = isFavorited.value;
   try {
     await store.dispatch('internalChatMessages/toggleFavorite', {
       roomId: props.message.room_id,
       messageId: props.message.id,
     });
+    useAlert(
+      t(wasAlreadyFavorited
+        ? 'INTERNAL_CHAT.MESSAGE.UNFAVORITED_TOAST'
+        : 'INTERNAL_CHAT.MESSAGE.FAVORITED_TOAST')
+    );
   } catch {
     // silencioso — o store já reverte o estado otimista
   } finally {
@@ -328,11 +397,14 @@ const startEdit = () => {
   editText.value = props.message.content || '';
   editError.value = '';
   isEditing.value = true;
+  // FE-20: tick 1s durante edit pra atualizar countdown.
+  startEditTick();
 };
 const cancelEdit = () => {
   isEditing.value = false;
   editText.value = '';
   editError.value = '';
+  stopEditTick();
 };
 const saveEdit = async () => {
   const content = editText.value.trim();
@@ -350,6 +422,7 @@ const saveEdit = async () => {
       content,
     });
     isEditing.value = false;
+    stopEditTick();
   } catch (e) {
     editError.value = e?.response?.data?.error || 'Falha ao editar';
   } finally {
@@ -401,14 +474,16 @@ const doDelete = async () => {
     >
       <!-- Nome do remetente: pílula off-white com texto colorido único do
            usuário, ocupando a largura inteira da figurinha. Só em grupo. -->
-      <div
+      <!-- FE-6: Tooltip absorve a classe `ic-name-pill` pra preservar visual
+           da pílula. `senderName || ''` evita bubble vazio se sender for null. -->
+      <Tooltip
         v-if="!isOwn && isInGroup"
+        :label="senderName || ''"
         class="ic-name-pill mb-1"
         :style="{ color: senderColor.text }"
-        :title="senderName"
       >
         <span class="truncate">{{ senderName }}</span>
-      </div>
+      </Tooltip>
       <p
         v-else-if="!isOwn"
         class="text-[11px] font-medium mb-0.5 px-1 text-n-slate-11 truncate"
@@ -416,128 +491,80 @@ const doDelete = async () => {
         {{ senderName }}
       </p>
       <div class="relative inline-block">
-        <img
-          :src="sticker.image_url"
-          class="object-contain w-52 h-52 sm:w-60 sm:h-60 select-none cursor-pointer"
-          draggable="false"
-          loading="lazy"
-          alt="figurinha"
-          title="Clique para salvar"
-          @click="openStickerPreview"
-        >
+        <Tooltip label="Clique para salvar">
+          <img
+            :src="sticker.image_url"
+            class="object-contain w-52 h-52 sm:w-60 sm:h-60 select-none cursor-pointer"
+            draggable="false"
+            loading="lazy"
+            alt="figurinha"
+            @click="openStickerPreview"
+          >
+        </Tooltip>
         <!-- Chevron único no canto superior direito da figurinha -->
-        <button
-          type="button"
-          class="absolute top-1 right-1 ic-chevron-floating opacity-0 group-hover/msg:opacity-100 focus:opacity-100"
-          title="Mais ações"
-          @click.stop="showActionsMenu = !showActionsMenu"
+        <!-- FE-6: Tooltip absorve o posicionamento absoluto + visibility do
+             chevron — assim o bubble do tooltip e o fade-in seguem o mesmo
+             elemento. -->
+        <Tooltip
+          label="Mais ações"
+          class="absolute top-1 right-1 opacity-0 group-hover/msg:opacity-100 focus-within:opacity-100"
         >
-          <span class="i-lucide-chevron-down text-base" />
-        </button>
+          <button
+            ref="stickerChevronRef"
+            type="button"
+            class="ic-chevron-floating"
+            @click.stop="showActionsMenu = !showActionsMenu"
+          >
+            <span class="i-lucide-chevron-down text-lg" />
+          </button>
+        </Tooltip>
+
+        <!-- Menu agora usa Teleport + position fixed calculada do botão
+             chevron (anchor-el). Vive fora do DOM da bolha — não interfere
+             com mensagens vizinhas nem com scroll do thread. -->
+        <MessageActionsMenu
+          v-if="showActionsMenu"
+          :anchor-el="actionMenuAnchor"
+          :reaction-emojis="REACTION_EMOJIS"
+          :reactions="reactions"
+          :can-react="canReact"
+          :can-edit="canEdit"
+          :can-delete="canDelete"
+          :can-converse-with-sender="canConverseWithSender"
+          :is-favorited="isFavorited"
+          :favorite-pending="favoritePending"
+          :sender-name="senderName"
+          :is-own="isOwn"
+          @react="onReact"
+          @reply="onReply"
+          @reply-privately="onReplyPrivately"
+          @converse-with-sender="onConverseWithSender"
+          @toggle-favorite="onToggleFavorite"
+          @edit="startEdit"
+          @delete="doDelete"
+        />
       </div>
       <!-- Hora: pílula branca abaixo da figurinha (estilo WhatsApp) -->
       <div class="flex justify-end mt-1">
         <span class="ic-time-pill">
-          <span>{{ time }}</span>
+          <!-- Indicador "favoritada" estilo WhatsApp: estrela pequena
+               âmbar antes da hora. Mesma cor do botão de favoritar
+               (text-n-amber-11) pra consistência visual. -->
           <span
-            v-if="isOwn"
-            class="inline-flex items-center"
-            :class="isRead ? 'ic-tick-read' : ''"
-            :title="isRead ? 'Lida' : 'Enviada'"
-          >
-            <span v-if="isRead" class="i-lucide-check-check text-sm" />
-            <span v-else class="i-lucide-check text-sm" />
-          </span>
+            v-if="isFavorited"
+            class="i-ri-star-fill text-[11px] text-n-amber-11"
+            aria-label="Favoritada"
+          />
+          <span>{{ time }}</span>
+          <ReadReceiptIcon v-if="isOwn" :is-read="isRead" />
         </span>
       </div>
       <!-- Reações: pílulas brancas, sempre alinhadas à direita (junto da hora). -->
-      <div
-        v-if="reactions.length"
-        class="flex flex-wrap gap-1 mt-1 justify-end"
-      >
-        <button
-          v-for="r in reactions"
-          :key="r.emoji"
-          type="button"
-          class="ic-reaction-badge"
-          :class="r.by_me ? 'ic-reaction-badge-mine' : ''"
-          :title="r.by_me ? 'Remover minha reação' : `Reagir com ${r.emoji}`"
-          @click="onReact(r.emoji)"
-        >
-          <span>{{ r.emoji }}</span>
-          <span class="ic-reaction-count">{{ r.count }}</span>
-        </button>
-      </div>
-      <!-- Dropdown unificado — aparece AO LADO da figurinha (estilo WhatsApp) -->
-      <div
-        v-if="showActionsMenu"
-        class="absolute z-30 top-0 w-52 rounded-lg shadow-2xl bg-n-solid-1 border border-n-weak overflow-hidden"
-        :class="isOwn ? 'right-full mr-2' : 'left-full ml-2'"
-        @click.stop
-      >
-        <!-- Quick reactions row (estilo WhatsApp) — 6 emojis padrão -->
-        <div
-          v-if="canReact"
-          class="flex items-center justify-between gap-1 px-2 py-2 border-b border-n-weak"
-        >
-          <button
-            v-for="e in REACTION_EMOJIS"
-            :key="e"
-            type="button"
-            class="ic-reaction-pick"
-            :class="reactions.find(r => r.emoji === e && r.by_me) ? 'ic-reaction-pick-active' : ''"
-            :title="`Reagir com ${e}`"
-            @click="onReact(e)"
-          >
-            {{ e }}
-          </button>
-        </div>
-        <button
-          type="button"
-          class="flex items-center w-full gap-2 px-3 py-2 text-xs text-start text-n-slate-12 hover:bg-n-alpha-1"
-          @click="onReply"
-        >
-          <span class="i-lucide-corner-up-left text-sm" />
-          <span>Responder</span>
-        </button>
-        <button
-          v-if="canConverseWithSender"
-          type="button"
-          class="flex items-center w-full gap-2 px-3 py-2 text-xs text-start text-n-slate-12 hover:bg-n-alpha-1"
-          @click="onReplyPrivately"
-        >
-          <span class="i-lucide-reply text-sm" />
-          <span class="truncate flex-1">Responder no particular</span>
-        </button>
-        <button
-          v-if="canConverseWithSender"
-          type="button"
-          class="flex items-center w-full gap-2 px-3 py-2 text-xs text-start text-n-slate-12 hover:bg-n-alpha-1"
-          @click="onConverseWithSender"
-        >
-          <span class="i-lucide-message-circle text-sm" />
-          <span class="truncate">Conversar com {{ senderName }}</span>
-        </button>
-        <button
-          type="button"
-          class="flex items-center w-full gap-2 px-3 py-2 text-xs text-start hover:bg-n-alpha-1"
-          :class="isFavorited ? 'text-n-amber-11' : 'text-n-slate-12'"
-          :disabled="favoritePending"
-          @click="onToggleFavorite"
-        >
-          <span :class="isFavorited ? 'i-lucide-star-off' : 'i-lucide-star'" class="text-sm" />
-          <span class="flex-1">{{ isFavorited ? 'Remover dos favoritos' : 'Favoritar' }}</span>
-        </button>
-        <button
-          v-if="canDelete"
-          type="button"
-          class="flex items-center w-full gap-2 px-3 py-2 text-xs text-start text-n-ruby-11 hover:bg-n-ruby-3 border-t border-n-weak"
-          @click="doDelete"
-        >
-          <span class="i-lucide-trash-2 text-sm" />
-          <span>Apagar pra todos</span>
-        </button>
-      </div>
+      <ReactionsBar
+        :reactions="reactions"
+        align="end"
+        @react="onReact"
+      />
 
       <!-- Preview ao clicar no sticker: salvar nas favoritas / remover -->
       <div
@@ -554,33 +581,31 @@ const doDelete = async () => {
             Enviada por <span class="font-medium text-n-slate-12">{{ senderName }}</span>
           </p>
           <div class="flex justify-center gap-2 mt-4">
-            <button
+            <BeclinicButton
               v-if="!stickerIsDefault && !stickerInCollection"
-              type="button"
-              class="px-4 py-2 text-sm font-medium text-white rounded-md bg-n-brand hover:brightness-110 disabled:opacity-50"
+              label="Salvar nas favoritas"
+              icon="i-lucide-star"
+              size="sm"
               :disabled="stickerActionPending"
               @click="saveSticker"
-            >
-              <span class="i-lucide-star align-middle text-base" />
-              <span class="ml-1 align-middle">Salvar nas favoritas</span>
-            </button>
-            <button
+            />
+            <BeclinicButton
               v-else-if="!stickerIsDefault"
-              type="button"
-              class="px-4 py-2 text-sm font-medium rounded-md text-n-amber-11 hover:bg-n-amber-3 disabled:opacity-50"
+              label="Remover das favoritas"
+              icon="i-lucide-star-off"
+              variant="faded"
+              color="amber"
+              size="sm"
               :disabled="stickerActionPending"
               @click="removeSticker"
-            >
-              <span class="i-lucide-star-off align-middle text-base" />
-              <span class="ml-1 align-middle">Remover das favoritas</span>
-            </button>
-            <button
-              type="button"
-              class="px-3 py-2 text-sm rounded-md text-n-slate-11 hover:bg-n-alpha-1"
+            />
+            <BeclinicButton
+              label="Fechar"
+              variant="ghost"
+              color="slate"
+              size="sm"
               @click="showStickerPreview = false"
-            >
-              Fechar
-            </button>
+            />
           </div>
           <p
             v-if="stickerActionMsg"
@@ -665,7 +690,7 @@ const doDelete = async () => {
         :class="isOwn ? 'ic-own-muted' : 'text-n-slate-10'"
       >
         <span class="i-lucide-ban text-sm" />
-        <span>Mensagem apagada pelo usuário</span>
+        <span>{{ $t('INTERNAL_CHAT.MESSAGE.DELETED') }}</span>
       </p>
       <template v-else-if="isEditing">
         <textarea
@@ -680,19 +705,33 @@ const doDelete = async () => {
           v-if="editError"
           class="mt-1 text-[11px] text-n-ruby-11"
         >{{ editError }}</p>
+        <!-- FE-20: countdown da janela de edição. Texto neutro até 60s,
+             warning quando faltam <=60s. -->
+        <p
+          v-if="editTimeRemainingSec !== null"
+          class="mt-1 text-[11px]"
+          :class="editWindowWarning ? 'text-n-amber-11 font-medium' : 'text-n-slate-10'"
+        >
+          <template v-if="editTimeRemainingSec > 0">
+            Janela de edição: {{ Math.floor(editTimeRemainingSec / 60) }}:{{ String(editTimeRemainingSec % 60).padStart(2, '0') }}
+          </template>
+          <template v-else>
+            ⚠️ Janela de edição expirou. O texto será mantido se você cancelar.
+          </template>
+        </p>
         <div class="flex justify-end gap-2 mt-1">
           <button
             type="button"
             class="text-[11px] font-medium px-2 py-1 rounded text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-1"
             :disabled="editSaving"
             @click="cancelEdit"
-          >Cancelar</button>
+          >{{ $t('INTERNAL_CHAT.MESSAGE.EDIT_CANCEL') }}</button>
           <button
             type="button"
             class="text-[11px] font-medium px-2 py-1 rounded bg-n-brand text-white hover:brightness-110 disabled:opacity-50"
             :disabled="editSaving || !editText.trim()"
             @click="saveEdit"
-          >{{ editSaving ? 'Salvando…' : 'Salvar' }}</button>
+          >{{ editSaving ? $t('INTERNAL_CHAT.MESSAGE.EDIT_SAVING') : $t('INTERNAL_CHAT.MESSAGE.EDIT_SAVE') }}</button>
         </div>
       </template>
       <template v-else>
@@ -716,142 +755,80 @@ const doDelete = async () => {
         class="text-[10px] mt-1 text-end flex items-center justify-end gap-1"
         :class="isOwn ? 'ic-own-muted' : 'text-n-slate-10'"
       >
+        <!-- Indicador "favoritada" estilo WhatsApp: estrela pequena âmbar
+             antes da hora. Mesma cor do botão de favoritar (n-amber-11). -->
+        <span
+          v-if="isFavorited"
+          class="i-lucide-star text-[11px] text-n-amber-11"
+          aria-label="Favoritada"
+        />
         <span>{{ time }}</span>
         <span v-if="message.edited_at" class="italic">· editada</span>
-        <span
-          v-if="isOwn && !isDeleted"
-          class="inline-flex items-center"
-          :class="isRead ? 'ic-tick-read' : ''"
-          :title="isRead ? 'Lida' : 'Enviada'"
-        >
-          <span v-if="isRead" class="i-lucide-check-check text-sm" />
-          <span v-else class="i-lucide-check text-sm" />
-        </span>
+        <ReadReceiptIcon v-if="isOwn && !isDeleted" :is-read="isRead" />
       </p>
 
       <!-- Reações: pílulas clicáveis com emoji + count. Click toggla. -->
-      <div
-        v-if="reactions.length"
-        class="flex flex-wrap gap-1 mt-1.5"
-        :class="isOwn ? 'justify-end' : 'justify-start'"
-      >
-        <button
-          v-for="r in reactions"
-          :key="r.emoji"
-          type="button"
-          class="ic-reaction-badge"
-          :class="r.by_me ? 'ic-reaction-badge-mine' : ''"
-          :title="r.by_me ? 'Remover minha reação' : `Reagir com ${r.emoji}`"
-          @click="onReact(r.emoji)"
-        >
-          <span>{{ r.emoji }}</span>
-          <span class="ic-reaction-count">{{ r.count }}</span>
-        </button>
-      </div>
+      <ReactionsBar
+        :reactions="reactions"
+        :align="isOwn ? 'end' : 'start'"
+        top-spacing="mt-1.5"
+        @react="onReact"
+      />
 
       <!-- Chevron único no canto superior direito da bolha (estilo WhatsApp) -->
-      <button
+      <!-- FE-6: Tooltip absorve `absolute top-1 right-1 opacity-0 ...` pra
+           preservar posicionamento + visibility do chevron. -->
+      <Tooltip
         v-if="!isDeleted && !isEditing"
-        type="button"
-        class="absolute top-1 right-1 ic-chevron-bubble opacity-0 group-hover/msg:opacity-100 focus:opacity-100"
-        :class="isOwn ? 'ic-chevron-on-own' : 'ic-chevron-on-other'"
-        title="Mais ações"
-        @click.stop="showActionsMenu = !showActionsMenu"
+        label="Mais ações"
+        class="absolute top-1 right-1 opacity-0 group-hover/msg:opacity-100 focus-within:opacity-100"
       >
-        <span class="i-lucide-chevron-down text-base" />
-      </button>
+        <button
+          ref="bubbleChevronRef"
+          type="button"
+          class="ic-chevron-bubble"
+          :class="isOwn ? 'ic-chevron-on-own' : 'ic-chevron-on-other'"
+          @click.stop="showActionsMenu = !showActionsMenu"
+        >
+          <span class="i-lucide-chevron-down text-base" />
+        </button>
+      </Tooltip>
 
-      <!-- Dropdown unificado — aparece AO LADO da bolha (estilo WhatsApp) -->
-      <div
+      <!-- Menu via Teleport+fixed (ver MessageActionsMenu). Anchor = botão. -->
+      <MessageActionsMenu
         v-if="showActionsMenu"
-        class="absolute z-30 top-0 w-52 rounded-lg shadow-2xl bg-n-solid-1 border border-n-weak overflow-hidden"
-        :class="isOwn ? 'right-full mr-2' : 'left-full ml-2'"
-        @click.stop
-      >
-        <!-- Quick reactions row (estilo WhatsApp) — 6 emojis padrão -->
-        <div
-          v-if="canReact"
-          class="flex items-center justify-between gap-1 px-2 py-2 border-b border-n-weak"
-        >
-          <button
-            v-for="e in REACTION_EMOJIS"
-            :key="e"
-            type="button"
-            class="ic-reaction-pick"
-            :class="reactions.find(r => r.emoji === e && r.by_me) ? 'ic-reaction-pick-active' : ''"
-            :title="`Reagir com ${e}`"
-            @click="onReact(e)"
-          >
-            {{ e }}
-          </button>
-        </div>
-        <button
-          type="button"
-          class="flex items-center w-full gap-2 px-3 py-2 text-xs text-start text-n-slate-12 hover:bg-n-alpha-1"
-          @click="onReply"
-        >
-          <span class="i-lucide-corner-up-left text-sm" />
-          <span>Responder</span>
-        </button>
-        <button
-          v-if="canConverseWithSender"
-          type="button"
-          class="flex items-center w-full gap-2 px-3 py-2 text-xs text-start text-n-slate-12 hover:bg-n-alpha-1"
-          @click="onReplyPrivately"
-        >
-          <span class="i-lucide-reply text-sm" />
-          <span class="truncate flex-1">Responder no particular</span>
-        </button>
-        <button
-          v-if="canConverseWithSender"
-          type="button"
-          class="flex items-center w-full gap-2 px-3 py-2 text-xs text-start text-n-slate-12 hover:bg-n-alpha-1"
-          @click="onConverseWithSender"
-        >
-          <span class="i-lucide-message-circle text-sm" />
-          <span class="truncate">Conversar com {{ senderName }}</span>
-        </button>
-        <button
-          type="button"
-          class="flex items-center w-full gap-2 px-3 py-2 text-xs text-start hover:bg-n-alpha-1"
-          :class="isFavorited ? 'text-n-amber-11' : 'text-n-slate-12'"
-          :disabled="favoritePending"
-          @click="onToggleFavorite"
-        >
-          <span :class="isFavorited ? 'i-lucide-star-off' : 'i-lucide-star'" class="text-sm" />
-          <span class="flex-1">{{ isFavorited ? 'Remover dos favoritos' : 'Favoritar' }}</span>
-        </button>
-        <button
-          v-if="canEdit"
-          type="button"
-          class="flex items-center w-full gap-2 px-3 py-2 text-xs text-start text-n-slate-12 hover:bg-n-alpha-1 border-t border-n-weak"
-          @click="startEdit"
-        >
-          <span class="i-lucide-pencil text-sm" />
-          <span>Editar</span>
-        </button>
-        <button
-          v-if="canDelete"
-          type="button"
-          class="flex items-center w-full gap-2 px-3 py-2 text-xs text-start text-n-ruby-11 hover:bg-n-ruby-3"
-          :class="canEdit ? '' : 'border-t border-n-weak'"
-          @click="doDelete"
-        >
-          <span class="i-lucide-trash-2 text-sm" />
-          <span>Apagar pra todos</span>
-        </button>
-      </div>
+        :anchor-el="actionMenuAnchor"
+        :reaction-emojis="REACTION_EMOJIS"
+        :reactions="reactions"
+        :can-react="canReact"
+        :can-edit="canEdit"
+        :can-delete="canDelete"
+        :can-converse-with-sender="canConverseWithSender"
+        :is-favorited="isFavorited"
+        :favorite-pending="favoritePending"
+        :sender-name="senderName"
+        :is-own="isOwn"
+        @react="onReact"
+        @reply="onReply"
+        @reply-privately="onReplyPrivately"
+        @converse-with-sender="onConverseWithSender"
+        @toggle-favorite="onToggleFavorite"
+        @edit="startEdit"
+        @delete="doDelete"
+      />
     </div>
   </div>
 </template>
 
 <style>
+/* Mention destacada — só cor azul Klivy no texto, sem badge/background.
+   Decisão UX: badge pesava demais visualmente, ficava parecendo botão. */
 .ic-mention {
   font-weight: 600;
-  background: rgb(var(--n-brand) / 0.15);
-  color: rgb(var(--n-brand));
-  padding: 0 4px;
-  border-radius: 4px;
+  color: #1d4ed8;  /* blue-700 */
+}
+.dark .ic-mention {
+  color: #93c5fd;  /* blue-300 — contraste maior no escuro */
 }
 /* Bolha enviada: verde claro estilo WhatsApp */
 .ic-bubble-own {
@@ -861,14 +838,6 @@ const doDelete = async () => {
 .dark .ic-bubble-own {
   background-color: #005c4b;
   color: #e2e8f0;
-}
-.ic-bubble-own .ic-mention {
-  background: rgba(15, 23, 42, 0.08);
-  color: #1d4ed8;
-}
-.dark .ic-bubble-own .ic-mention {
-  background: rgba(255, 255, 255, 0.18);
-  color: #93c5fd;
 }
 .ic-own-muted {
   color: rgba(15, 23, 42, 0.55);
@@ -885,15 +854,20 @@ const doDelete = async () => {
 
 /* Chevron embutido na bolha (estilo WhatsApp): semi-transparente, fade-in
    no hover, contraste diferente entre own (verde claro) e other (cinza). */
+/* UX-fix 2026-05-20: container 22→28px + font-size 16px explícito pra
+   garantir que o glyph `i-lucide-chevron-down` renderize corretamente.
+   Antes o button compacto cortava o ícone em alguns zooms/DPRs. */
 .ic-chevron-bubble {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border-radius: 9999px;
   cursor: pointer;
   transition: opacity 120ms ease, background-color 120ms ease;
+  font-size: 16px;
 }
 .ic-chevron-on-own {
   color: rgba(15, 23, 42, 0.55);
@@ -917,21 +891,24 @@ const doDelete = async () => {
   color: rgba(226, 232, 240, 0.95);
 }
 
-/* Chevron flutuante na figurinha (não tem bolha, então usa fundo sólido). */
+/* Chevron flutuante na figurinha (não tem bolha, então usa fundo sólido).
+   UX-fix 2026-05-20: aumentado de 26→32px + ícone text-lg pra ser
+   visível e confortável de clicar (era invisível em screens pequenas). */
 .ic-chevron-floating {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   border-radius: 9999px;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.55);
   color: #fff;
   cursor: pointer;
   transition: opacity 120ms ease, background-color 120ms ease;
+  font-size: 18px;
 }
 .ic-chevron-floating:hover {
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.75);
 }
 
 /* Itens disabled (Em breve) no menu de ações — clarinhos, sem hover. */

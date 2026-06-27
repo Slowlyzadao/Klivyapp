@@ -1,0 +1,23 @@
+get:
+  tags:
+    - Audit Logs
+  summary: Exportar prontuário completo em PDF
+  description: |
+    Gera PDF com todo o prontuário do paciente (dados básicos + audit logs +
+    eventos clínicos) via `Patients::RecordPdfGenerator`. Exige permissão
+    Pundit `patient:export?`. Disposition `attachment` (browser baixa).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  responses:
+    '200':
+      description: PDF do prontuário
+      content:
+        application/pdf:
+          schema:
+            type: string
+            format: binary
+    '403':
+      description: Sem permissão para exportar
+    '422':
+      description: Falha na geração

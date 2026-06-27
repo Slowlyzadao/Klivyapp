@@ -151,10 +151,10 @@ class ConversationFinder
     return unless params[:q]
 
     allowed_message_types = [Message.message_types[:incoming], Message.message_types[:outgoing]]
-    @conversations = conversations.joins(:messages).where('messages.content ILIKE :search', search: "%#{params[:q]}%")
-                                  .where(messages: { message_type: allowed_message_types }).includes(:messages)
+    @conversations = conversations.joins(:messages)
                                   .where('messages.content ILIKE :search', search: "%#{params[:q]}%")
                                   .where(messages: { message_type: allowed_message_types })
+                                  .includes(:messages)
   end
 
   def filter_by_status
@@ -183,10 +183,19 @@ class ConversationFinder
   end
 
   def set_count_for_all_conversations
+    # GROUP BY :assignee_id em uma única query em vez de 3 COUNT separadas.
+    # Matematicamente equivalente: bucket `current_user.id` = assigned_to(user),
+    # bucket `nil` = unassigned, soma dos buckets = total. Mantém o
+    # comportamento atual em todos os cenários, inclusive quando há
+    # `joins(:messages)` via filter_by_query (a contagem inflada por match
+    # de conteúdo é a mesma de antes — preservar essa semântica é
+    # intencional aqui; corrigir o bug do count com `params[:q]` é tarefa
+    # separada que muda número visível na UI).
+    counts_by_assignee = @conversations.group(:assignee_id).count
     [
-      @conversations.assigned_to(current_user).count,
-      @conversations.unassigned.count,
-      @conversations.count
+      counts_by_assignee[current_user.id] || 0,
+      counts_by_assignee[nil] || 0,
+      counts_by_assignee.values.sum
     ]
   end
 

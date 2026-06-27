@@ -229,8 +229,14 @@ module Migration
       existing_score = score_existing(existing)
       incoming_score = score_mapped(mapped)
       needs_cleanup = legacy_pinned_to_migrate?(existing)
+      # Re-import precisa popular `external_ids['clinicorp']` mesmo em
+      # pacientes que já têm dados bons (caso contrário score-based skip
+      # deixaria o id ausente). Sem isso, o vínculo do TreatmentOperation
+      # importer (futuro) falha pra esses registros.
+      missing_external_id = mapped[:clinicorp_id].present? &&
+                            existing.external_ids.to_h['clinicorp'].to_s != mapped[:clinicorp_id].to_s
 
-      if incoming_score > existing_score || needs_cleanup
+      if incoming_score > existing_score || needs_cleanup || missing_external_id
         existing.update!(merge_into_existing(existing, mapped))
         @counters[:updated] += 1
       else
@@ -297,7 +303,25 @@ module Migration
         attrs[:notes] = mapped[:notes]
       end
 
+      # Persist the Clinicorp id so future imports (TreatmentOperation,
+      # Anamnesis follow-ups) can resolve patient links deterministically.
+      # Re-import is idempotent: existing pacientes recebem a chave faltante.
+      external_ids = with_clinicorp_external_id(existing.external_ids, mapped[:clinicorp_id])
+      attrs[:external_ids] = external_ids if external_ids != existing.external_ids
+
       attrs
+    end
+
+    # Mescla `clinicorp_id` no JSONB sem sobrescrever IDs de outras origens
+    # (BeClinic, Dentrix etc.). Retorna o hash original se nada muda — caller
+    # usa essa identidade pra evitar UPDATE sem necessidade.
+    def with_clinicorp_external_id(existing_jsonb, clinicorp_id)
+      return existing_jsonb if clinicorp_id.blank?
+
+      base = existing_jsonb.is_a?(Hash) ? existing_jsonb : {}
+      return base if base['clinicorp'].to_s == clinicorp_id.to_s
+
+      base.merge('clinicorp' => clinicorp_id.to_s)
     end
 
     def create_patient(mapped, line_number)
@@ -315,6 +339,7 @@ module Migration
         insurance: mapped[:insurance] || {},
         emergency_contact: mapped[:emergency_contact] || {},
         notes: mapped[:notes],
+        external_ids: with_clinicorp_external_id({}, mapped[:clinicorp_id]),
         origin: 'migration_clinicorp'
       )
       if patient.save
@@ -356,10 +381,23 @@ module Migration
       end
     end
 
-    # Mimics Excel's scientific notation rounding for long IDs, so the
-    # truncated string in the anamnesis CSVs ("5,02564E+15") matches what we
-    # compute from Patient.csv's exact id ("5025635697819648"). Excel rounds
-    # half-up to 5 decimal places (6 significant digits).
+    # FALLBACK PATH (pós-PR auditoria 2026-05-21): o frontend agora converte
+    # XLSX→CSV com `rawNumbers: true` no SheetJS (MigrationUploadForm.vue),
+    # então IDs longos do Clinicorp preservam precisão exata e PatientAnamnesis
+    # /Anamnesis casam direto com Patient.csv pelo `clinicorp_id` exato. O
+    # caminho feliz não passa mais por aqui — mantido como defesa em camada
+    # pra CSVs vindos por outro caminho (download direto, conversão manual no
+    # Excel, ferramenta de terceiros) onde IDs ainda venham em notação
+    # científica PT-BR ("5,02564E+15").
+    #
+    # Bug original (corrigido no frontend, não aqui): SheetJS sem `rawNumbers`
+    # gera notação científica EN-US ("5.02564E+15", ponto decimal) e ESTE
+    # método gera PT-BR ("5,02564E+15", vírgula). As chaves nunca casavam.
+    # Importação Streit 2026-05-21 deixou 469 anamneses órfãs por isso no
+    # preview. Com `rawNumbers: true` ambos os lados ficam exatos.
+    #
+    # Implementação: simula o arredondamento half-up que Excel faz pra IDs >7
+    # dígitos, gerando "5,02564E+15" a partir de "5025635697819648".
     def scientific_truncation(exact_id_str)
       digits = exact_id_str.to_s.gsub(/\D/, '')
       return nil if digits.length < 7

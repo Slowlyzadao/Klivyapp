@@ -1,0 +1,99 @@
+get:
+  tags:
+    - Permissões e Funções
+  summary: Detalhar função
+  description: Mesma regra de permissão do index (`roles_view` OU `users_edit`).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Função
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/KlivyRole.yml'
+    '403':
+      description: Sem permissão
+    '404':
+      description: Função não encontrada
+patch:
+  tags:
+    - Permissões e Funções
+  summary: Atualizar função
+  description: |
+    Requer `settings.roles_edit`. `permissions` é sanitizado + verificado contra
+    privilege escalation (mesma lógica do POST — auditoria C-2).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [klivy_role]
+          properties:
+            klivy_role:
+              type: object
+              properties:
+                name: { type: string, maxLength: 80 }
+                description: { type: string, maxLength: 240 }
+                preset_key: { type: string }
+                permissions:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    additionalProperties: true
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/KlivyRole.yml'
+    '403':
+      description: |
+        - `{ "error": "forbidden" }` se requester não tem `settings.roles_edit`.
+        - `{ "error": "forbidden_permission_escalation", "message": ..., "forbidden": [...] }`
+          se tentar delegar perm/scope que não possui (auditoria C-2).
+    '422':
+      description: Erro de validação
+put:
+  tags:
+    - Permissões e Funções
+  summary: Atualizar função (alias PUT)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            klivy_role:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizada
+delete:
+  tags:
+    - Permissões e Funções
+  summary: Excluir função
+  description: |
+    Antes de deletar, faz **nullify automático** em todos os `AccountUser`s
+    que tinham essa role (`klivy_role_id = nil`). Os usuários ficam sem
+    role personalizada — passam a depender do papel default (Chatwoot
+    administrator/agent). Requer `settings.roles_delete`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204':
+      description: Removida (e users afetados nullified)
+    '403':
+      description: "Sem permissão (`settings.roles_delete`)"

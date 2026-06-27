@@ -4,12 +4,15 @@ const SET_MENTIONS = 'internalChatMentions/SET_MENTIONS';
 const PREPEND_MENTION = 'internalChatMentions/PREPEND_MENTION';
 const SET_UNREAD_COUNT = 'internalChatMentions/SET_UNREAD_COUNT';
 const SET_UI_FLAG = 'internalChatMentions/SET_UI_FLAG';
+const RESET = 'internalChatMentions/RESET';
 
-export const state = {
+const initialState = () => ({
   records: [],
   unreadCount: 0,
   uiFlags: { isFetching: false },
-};
+});
+
+export const state = initialState();
 
 export const getters = {
   getAll: _state => _state.records,
@@ -67,6 +70,8 @@ export const actions = {
     commit(PREPEND_MENTION, record);
     commit(SET_UNREAD_COUNT, s.unreadCount + 1);
   },
+  // MT-14/MT-19 — ver internalChatRooms.js#reset.
+  reset: ({ commit }) => commit(RESET),
 };
 
 export const mutations = {
@@ -81,6 +86,9 @@ export const mutations = {
   },
   [SET_UI_FLAG](_state, data) {
     _state.uiFlags = { ..._state.uiFlags, ...data };
+  },
+  [RESET](_state) {
+    Object.assign(_state, initialState());
   },
 };
 

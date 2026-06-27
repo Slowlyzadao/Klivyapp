@@ -1,0 +1,105 @@
+@use "../variables" as *;
+
+/* ── #2 RevenueGoalGauge (gauge-*) ─────────────────────── */
+.gauge-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.gauge-chart-area {
+  position: relative;
+  height: 160px;
+  width: 100%;
+}
+
+.gauge-center-text {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.gauge-pct {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.gauge-subtitle {
+  font-size: 0.6875rem;
+  color: rgb(var(--s-500));
+  white-space: nowrap;
+}
+
+.gauge-value {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgb(var(--s-700));
+}
+
+.dark .gauge-value {
+  color: rgb(var(--s-300));
+}
+
+.gauge-metrics {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.gauge-metric {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.5rem;
+  background: rgb(var(--s-50));
+  border-radius: 8px;
+}
+
+.dark .gauge-metric {
+  background: rgb(var(--s-800));
+}
+
+.gauge-metric__label {
+  font-size: 0.6875rem;
+  color: rgb(var(--s-500));
+}
+
+.gauge-metric__value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(var(--s-900));
+}
+
+.dark .gauge-metric__value {
+  color: rgb(var(--s-100));
+}
+
+.gauge-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgb(254 243 199);
+  border-left: 3px solid $brand-amber-bright;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  color: #92400E;
+}
+
+.dark .gauge-alert {
+  background: rgb(69 26 3 / 50%);
+  color: #FCD34D;
+}
+
+.gauge-alert__icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}

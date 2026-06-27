@@ -68,26 +68,23 @@ class Document < ApplicationRecord
     deleted_at.present?
   end
 
-  # URL assinada via Active Storage padrão (rails_blob_url).
+  # Roadmap #17.1 ✅ — URL passa pelo `SecureBlobsController` com cross-tenant
+  # guard. Token assinado por message_verifier(:secure_blob) carrega blob_id +
+  # account_id + expiração. Controller (auth via cookie devise) valida que
+  # current_user pertence à account antes de redirecionar para o blob URL real
+  # com janela curta (30s). Se a URL vazar, qualquer GET de account diferente
+  # recebe 403.
   #
-  # NOTA arquitetural: tentamos antes apontar pra um SecureBlobsController
-  # com guard de cross-tenant via devise_token_auth, mas isso quebra o
-  # click-to-open do browser (browser GET vanilla não envia headers de auth
-  # token, então devise rejeita com 401). A guarda de cross-tenant via
-  # auth de API é incompatível com o fluxo "clicar no link pra abrir PDF".
-  #
-  # Mitigação atual: signed_id curto (30min) + HTTPS limitam superfície de
-  # replay caso a URL vaze. Para hardening adicional (cross-tenant guard
-  # SEM quebrar click-to-open), seria necessário redesign — token customizado
-  # que carrega account_id + auth via cookie de sessão. Fora de escopo agora.
-  def signed_url(expires_in: 30.minutes, disposition: :inline)
+  # `disposition` é ignorado aqui — o controller usa `:inline` no redirect.
+  def signed_url(expires_in: 15.minutes, disposition: :inline)
     return nil unless file.attached?
 
-    Rails.application.routes.url_helpers.rails_blob_url(
-      file,
-      expires_in: expires_in,
-      disposition: disposition
+    token = Patients::SecureBlobTokenService.encode(
+      blob_id: file.blob.id,
+      account_id: account_id,
+      expires_in: expires_in
     )
+    Rails.application.routes.url_helpers.secure_blob_url(token: token)
   rescue StandardError
     nil
   end

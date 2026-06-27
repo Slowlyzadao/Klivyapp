@@ -1,0 +1,22 @@
+get:
+  tags:
+    - Financeiro · Relatórios
+  summary: Despesas por categoria (F-30 §sub-aba 1)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+  responses:
+    '200':
+      description: Agregação por categoria
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '403':
+      description: Sem permissão (GERENTE/ADMIN/AUDITOR)

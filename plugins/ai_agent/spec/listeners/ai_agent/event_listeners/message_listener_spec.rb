@@ -50,4 +50,31 @@ RSpec.describe AiAgent::EventListeners::MessageListener do
       expect(listener.send(:sent_via_api?, stub_msg(ca: { 'sent_via_api' => false }))).to be(false)
     end
   end
+
+  describe '#ensure_conversation_visible' do
+    let(:account) { create(:account) }
+    let(:inbox) { create(:inbox, account: account) }
+
+    def incoming_for(conversation)
+      instance_double(Message, incoming?: true, private?: false, conversation: conversation, conversation_id: conversation.id)
+    end
+
+    it 'promove conversa pending sem responsável pra open na chegada (aparece sem depender da Bea)' do
+      conv = create(:conversation, account: account, inbox: inbox)
+      conv.update_column(:status, Conversation.statuses[:pending])
+
+      listener.send(:ensure_conversation_visible, incoming_for(conv))
+
+      expect(conv.reload.status).to eq('open')
+    end
+
+    it 'NÃO promove se já há responsável humano (não rouba do atendente)' do
+      conv = create(:conversation, account: account, inbox: inbox)
+      conv.update_columns(status: Conversation.statuses[:pending], assignee_id: create(:user, account: account).id)
+
+      listener.send(:ensure_conversation_visible, incoming_for(conv))
+
+      expect(conv.reload.status).to eq('pending')
+    end
+  end
 end

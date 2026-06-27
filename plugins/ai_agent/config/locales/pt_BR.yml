@@ -1,0 +1,29 @@
+# i18n PT-BR pro plugin ai_agent (FE-16/17 + ARCH-23 do audit
+# 2026-05-18). Pattern espelhando internal_chat — começar pelas
+# mensagens user-facing que aparecem em chat/WhatsApp ou error
+# responses; logs e telemetry permanecem em PT-BR ASCII no código.
+#
+# Convenções:
+#   - Namespace `ai_agent.*` (consistente com plugin name)
+#   - Sub-namespace por área: `chat.*` (respostas da Bea), `controllers.*`,
+#     `tools.*` (notes_for_bea), `notifications.*` (templates)
+#   - Strings interpoladas usam `%{var}` (Ruby Format String style)
+#
+# IMPORTANTE: Bea responde EM PT-BR sempre (não traduzir pra outras línguas
+# automaticamente — paciente é da clínica BR). Suporte futuro a múltiplas
+# línguas exigirá decisão de produto + per-account toggle.
+pt_BR:
+  ai_agent:
+    chat:
+      # Mensagens que a Bea envia ao paciente em fluxos curto-circuito
+      # (sem LLM). LLM-generated text fica fora — o modelo já responde
+      # em PT-BR via system prompt.
+      quota_exhausted: 'O atendimento automático bateu o limite do plano deste mês. Já avisei a equipe — em instantes alguém continua o atendimento por aqui. 🙏'
+      handoff_generic: 'Vou te passar para um atendente da nossa equipe agora. Só um instante.'
+      recall_opt_out_ack: 'Tudo bem, não te chamo mais com lembretes proativos. Se um dia quiser remarcar, é só falar comigo. 🙏'
+    controllers:
+      feedbacks:
+        invalid_token: 'invalid_token'
+        invalid_rating: 'rating must be 1 or -1'
+        trace_not_found: 'trace_not_found'
+        rate_limited: 'rate_limited'

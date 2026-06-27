@@ -1,0 +1,14 @@
+get:
+  tags:
+    - Financeiro · Recibos
+  summary: Detalhar recibo (com items inline)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Recibo
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PaymentReceipt.yml'

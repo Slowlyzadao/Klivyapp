@@ -2,7 +2,13 @@ tags:
   - Account
 operationId: update-account
 summary: Update account
-description: Update account details, settings, and custom attributes
+description: |
+  Update account details, settings, and custom attributes.
+
+  **Authorization** (`AccountPolicy#update?`, desde 1.6.1.24 — auditoria M-3):
+  - `administrator` (nativo Chatwoot) — pass.
+  - Klivy `settings.account_manage` (preset Gerente tem) — pass.
+  - Outros agents recebem 401.
 security:
   - userApiKey: []
 parameters:

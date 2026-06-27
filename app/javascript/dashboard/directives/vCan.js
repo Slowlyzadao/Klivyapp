@@ -21,9 +21,6 @@ const hasPermission = (moduleName, action) => {
   const currentRole = store.getters.getCurrentRole;
   if (currentRole === 'administrator') return true;
 
-  const beclinicRole = store.getters['beclinicPermissions/getBeclinicRole'];
-  if (beclinicRole === 'dono') return true;
-
   return store.getters['beclinicPermissions/can'](moduleName, action);
 };
 

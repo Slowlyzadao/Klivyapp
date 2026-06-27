@@ -1,0 +1,57 @@
+get:
+  tags:
+    - Financeiro · Relatórios
+  summary: Receitas por forma de pagamento (Hub Relatórios)
+  description: |
+    Agrega Entries de receita (`direction=in`, `affects_dre=true`,
+    kind ∈ [receita, manual_entry]) por `payment_method` no período de
+    competência. `payment_method` nulo vira bucket "(não informado)".
+    Ordenado por total desc. Exige role GERENTE/ADMIN/AUDITOR.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+  responses:
+    '200':
+      description: Agregação por forma de pagamento
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              period:
+                type: object
+                properties:
+                  from: { type: string, format: date }
+                  to: { type: string, format: date }
+              summary:
+                type: object
+                properties:
+                  total_cents: { type: integer }
+                  transactions_count: { type: integer }
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    payment_method: { type: string, nullable: true }
+                    label: { type: string }
+                    qty: { type: integer }
+                    total_cents: { type: integer }
+                    ticket_avg_cents: { type: integer, nullable: true }
+                    percent_of_total: { type: number }
+    '403':
+      description: Sem permissão (exige GERENTE/ADMIN/AUDITOR)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string, example: forbidden }
+              required_roles:
+                type: array
+                items: { type: string }

@@ -5,14 +5,12 @@ export default {
       const routes = {
         EDIT_WIZARD_DETAILS: 'settings_teams_edit',
         EDIT_WIZARD_AGENTS: 'settings_teams_edit_members',
-        EDIT_WIZARD_PERMISSIONS: 'settings_teams_edit_permissions',
         EDIT_WIZARD_FINISH: 'settings_teams_edit_finish',
       };
 
       const steps = [
         'EDIT_WIZARD_DETAILS',
         'EDIT_WIZARD_AGENTS',
-        'EDIT_WIZARD_PERMISSIONS',
         'EDIT_WIZARD_FINISH',
       ];
 

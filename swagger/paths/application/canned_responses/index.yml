@@ -2,7 +2,16 @@ tags:
   - Canned Responses
 operationId: get-account-canned-response
 summary: List all Canned Responses in an Account
-description: Get Details of Canned Responses in an Account
+description: |
+  Get Details of Canned Responses in an Account.
+
+  **Authorization** (`CannedResponsePolicy#index?`, desde 1.6.1.17 + 1.6.1.26):
+  - `administrator` OR `agent` (nativo Chatwoot) — pass.
+  - Klivy `settings.canned_view` — pass.
+
+  Leitura é mantida aberta pra agent porque respostas prontas são usadas no
+  editor de mensagem (autocomplete `/comando`) por todos os atendentes —
+  restringir quebraria UX clínica (auditoria A-7 patch — Lote 14).
 security:
   - userApiKey: []
 responses:
@@ -15,8 +24,10 @@ responses:
           description: 'Array of all canned responses'
           items:
             $ref: '#/components/schemas/canned_response'
+  '401':
+    description: Unauthorized — token de acesso ausente/inválido.
   '403':
-    description: Access denied
+    description: Access denied — agent sem perm Klivy `canned_view` E sem role nativa.
     content:
       application/json:
         schema:

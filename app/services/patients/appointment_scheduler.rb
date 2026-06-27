@@ -80,11 +80,17 @@ module Patients
     def patient_is_overdue_blocked?
       return false unless account.settings&.dig('block_scheduling_on_overdue') == true
 
-      overdue_balance = patient.transactions.active
-                               .where(status: %w[vencido pendente])
-                               .where('due_date < ?', Date.today)
-                               .sum(:amount)
-      overdue_balance > 0
+      # Migrado para v2 em 2026-05-11 (Fase A): lê de `financial_installments`
+      # em vez do legacy `Transaction`. Em v2 valores são BIGINT em centavos,
+      # mas `> 0` continua resultando no mesmo bloqueio (qualquer pendência
+      # vencida bloqueia o agendamento).
+      overdue_cents = ::Financial::Installment
+                        .where(account_id: patient.account_id,
+                               patient_id: patient.id,
+                               status: %w[vencido pendente])
+                        .where('due_date < ?', Date.today)
+                        .sum('amount_cents - received_amount_cents')
+      overdue_cents > 0
     end
 
     def inadimplente_bloqueado

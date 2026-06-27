@@ -26,6 +26,8 @@ import CopilotContainer from 'dashboard/components/copilot/CopilotContainer.vue'
 import MobileSidebarLauncher from 'dashboard/components-next/sidebar/MobileSidebarLauncher.vue';
 import { useCallsStore } from 'dashboard/stores/calls';
 
+import AgendaEventLauncherOutlet from '@plugins/agenda/frontend/components/AgendaEventLauncherOutlet.vue';
+
 export default {
   components: {
     NextSidebar,
@@ -37,6 +39,7 @@ export default {
     CopilotContainer,
     FloatingCallWidget,
     MobileSidebarLauncher,
+    AgendaEventLauncherOutlet,
   },
   setup() {
     const upgradePageRef = ref(null);
@@ -163,6 +166,7 @@ export default {
         />
         <CopilotContainer />
         <FloatingCallWidget v-if="hasActiveCall || hasIncomingCall" />
+        <AgendaEventLauncherOutlet />
       </template>
       <AddAccountModal
         :show="showCreateAccountModal"

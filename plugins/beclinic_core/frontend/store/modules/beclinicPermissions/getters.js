@@ -1,8 +1,6 @@
 // store/modules/beclinicPermissions/getters.js
 export const getters = {
   getPermissions: state => state.permissions,
-  getBeclinicRole: state => state.beclinicRole,
-  getTeam: state => state.team,
   isLoaded: state => state.loaded,
   isLoading: state => state.isLoading,
 
@@ -22,8 +20,4 @@ export const getters = {
     const modulePerms = state.permissions[moduleName];
     return modulePerms?.scope || 'all';
   },
-
-  isDono: state => state.beclinicRole === 'dono',
-  isGerente: state => state.beclinicRole === 'gerente',
-  isEspecialista: state => state.beclinicRole === 'especialista',
 };

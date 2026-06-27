@@ -1,0 +1,35 @@
+# LiveKit dev config para rodar DENTRO do compose beclinic (mesma rede).
+# Usado pelo docker-compose.override.yml na raiz.
+#
+# (O config.yaml ao lado é pra rodar NATIVO no host com cloudflared — usa
+# localhost. Este aqui usa nomes de serviço do compose: redis, rails.)
+#
+# 🔑 node_ip 127.0.0.1: o LiveKit num container anunciaria o IP INTERNO da
+# rede docker (172.x) pra mídia (UDP), que o browser no HOST não alcança —
+# o sinal (WS) conectaria mas o vídeo não. Anunciando 127.0.0.1, o browser
+# alcança a mídia via porta publicada (7882/udp). Vale pra teste na MESMA
+# máquina; pra paciente em outra rede, use LiveKit Cloud (tem TURN).
+
+port: 7880
+
+keys:
+  devkey: secret
+
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  use_external_ip: false
+  node_ip: 127.0.0.1
+
+# Redis do compose — routing + necessário pro Egress (gravação) depois.
+redis:
+  address: redis:6379
+
+# Webhook pro Rails (mesma rede) — avisa quando a gravação do Egress termina.
+webhook:
+  api_key: devkey
+  urls:
+    - http://rails:3000/webhooks/livekit/egress
+
+logging:
+  level: info

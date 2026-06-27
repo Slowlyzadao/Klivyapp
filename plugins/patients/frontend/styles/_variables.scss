@@ -1,0 +1,43 @@
+/* ============================================================
+   _variables.scss — Tokens de cores do prontuário
+
+   Tokens semânticos compartilhados entre os partials de record/.
+   Usados via `@use '../variables' as *;` no topo de cada partial
+   que precise das cores. SCSS resolve em compile-time, então o
+   CSS final é byte-equivalente ao hex/rgba inline.
+
+   IMPORTANTE: cores aqui são para overrides hardcoded de cor
+   semântica (success/danger/info/etc.) que escapam do tema base
+   `rgb(var(--slate-N))`. Para tokens de cinza/superfície, sempre
+   prefira os custom properties (`rgb(var(--slate-N))`) — eles
+   acompanham o dual-theme.
+   ============================================================ */
+
+// ── Brand semantic colors (hex base) ─────────────────────────
+$brand-success:        #16a34a;  // verde principal (text/border)
+$brand-success-strong: #15803d;  // verde-dark (text emphasis)
+$brand-success-light:  #4ade80;  // verde-light (dark mode text)
+$brand-success-bright: #22c55e;  // verde-bright (rgba base)
+
+$brand-danger:         #dc2626;  // vermelho principal
+$brand-danger-light:   #f87171;  // vermelho-light (dark mode)
+$brand-danger-strong:  #b91c1c;  // vermelho-dark
+$brand-danger-bright:  #ef4444;  // vermelho-bright (rgba base)
+
+$brand-info:           #2563eb;  // azul principal (text)
+$brand-info-bright:    #3b82f6;  // azul-bright (rgba base + bg)
+$brand-info-light:     #60a5fa;  // azul-light (dark mode)
+
+$brand-amber:          #d97706;  // âmbar principal (text)
+$brand-amber-bright:   #f59e0b;  // âmbar-bright (rgba base — 245,158,11)
+$brand-amber-strong:   #fbbf24;  // âmbar-strong (text emphasis)
+
+$brand-purple:         #7c3aed;  // roxo principal
+$brand-purple-bright:  #a855f7;  // roxo-bright (rgba base — 168,85,247)
+$brand-purple-light:   #c084fc;  // roxo-light (dark mode)
+
+$brand-slate-mid:      #475569;  // slate text fallback
+$brand-slate-light:    #94a3b8;  // slate-light (dark mode text)
+
+// ── External brand colors ────────────────────────────────────
+$whatsapp-green: #25D366;

@@ -1,0 +1,65 @@
+get:
+  tags:
+    - Financeiro · Lançamentos
+  summary: Detalhar lançamento
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Lançamento
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Entry.yml'
+patch:
+  tags:
+    - Financeiro · Lançamentos
+  summary: Atualizar lançamento
+  description: |
+    **Restrição:** lançamentos automáticos (`kind != manual_entry`) só
+    aceitam reclassificação de categoria (`financial_dre_category_id`
+    sendo o único campo no body). Outros campos = 422.
+
+    **RBAC** (2026-05-30): editar lançamento requer RECEPCAO/GERENTE/ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [entry]
+          properties:
+            entry:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Entry.yml'
+    '403':
+      description: Sem permissão (requer RECEPCAO/GERENTE/ADMIN)
+    '422':
+      description: Lançamento automático com mudança não permitida
+delete:
+  tags:
+    - Financeiro · Lançamentos
+  summary: Excluir lançamento
+  description: |
+    Só permite `kind=manual_entry`. Para reverter um lançamento automático,
+    use o estorno do recibo/despesa de origem.
+
+    **RBAC** (2026-05-30): excluir lançamento exige **GERENTE** ou **ADMIN**.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204': { description: "Removido" }
+    '403': { description: "Sem permissão (requer GERENTE/ADMIN)" }
+    '422': { description: "Lançamento automático — use estorno do recurso de origem" }

@@ -1,0 +1,113 @@
+{
+  "PATIENT_DOCUMENTS": {
+    "HEADER": {
+      "TITLE": "Documentos",
+      "SUBTITLE": "Receitas, atestados, pedidos de exame, encaminhamentos e outros documentos clínicos.",
+      "GENERATE": "Gerar Documento"
+    },
+    "SECTION": {
+      "TITLE": "Documentos Gerados",
+      "SUBTITLE": "PDF gerados e disponíveis para download ou envio via WhatsApp"
+    },
+    "EMPTY": {
+      "TITLE": "Nenhum documento gerado ainda.",
+      "FIRST_LINK": "Gerar primeiro documento →"
+    },
+    "TABLE": {
+      "COL_DOCUMENT": "Documento",
+      "COL_TYPE": "Tipo",
+      "COL_DATE": "Data",
+      "COL_PROFESSIONAL": "Profissional",
+      "COL_STATUS": "Status",
+      "COL_ACTIONS": "Ações",
+      "DEFAULT_TITLE": "Documento",
+      "VERSION_PREFIX": "v",
+      "DEFAULT_PROFESSIONAL": "Sistema",
+      "PREVIEW_TITLE": "Visualizar documento",
+      "DOWNLOAD_TITLE": "Baixar documento",
+      "WHATSAPP_TITLE": "Enviar via WhatsApp",
+      "SIGN_TITLE": "Enviar pra assinatura",
+      "DELETE_TITLE": "Excluir documento"
+    },
+    "PREVIEW": {
+      "TITLE": "Visualização do Documento",
+      "DOWNLOAD": "Baixar PDF"
+    },
+    "STATUS": {
+      "GERADO": "Gerado",
+      "PENDENTE_ASSINATURA": "Aguard. Assinatura",
+      "ASSINADO": "Assinado",
+      "ENVIADO": "Enviado",
+      "ARQUIVADO": "Arquivado"
+    },
+    "TYPES": {
+      "RECEITA": "Receita Médica",
+      "ATESTADO": "Atestado Médico",
+      "PEDIDO_EXAME": "Pedido de Exame",
+      "DECLARACAO": "Declaração",
+      "RELATORIO_CLINICO": "Relatório Clínico",
+      "ENCAMINHAMENTO": "Encaminhamento",
+      "CONTRATO": "Contrato",
+      "ORCAMENTO": "Orçamento",
+      "INSTRUCAO_PROCEDIMENTO": "Instruções de Procedimento",
+      "QUESTIONARIO": "Questionário",
+      "OUTRO": "Outro"
+    },
+    "MODAL": {
+      "TITLE": "Gerar Documento Clínico",
+      "SUBTITLE": "O PDF será gerado e baixado automaticamente.",
+      "TEMPLATE_LABEL": "Gerar a partir de um modelo",
+      "TEMPLATE_OPTIONAL": "(opcional)",
+      "TEMPLATE_PLACEHOLDER": "Escolha um modelo da biblioteca",
+      "TEMPLATE_NONE": "Nenhum — preencher manualmente",
+      "TEMPLATE_HINT": "O conteúdo vem do modelo, preenchido com os dados do paciente. Os campos de tipo abaixo não se aplicam.",
+      "INPUT_FIELDS_LABEL": "Campos de preenchimento do modelo",
+      "TYPE_LABEL": "Tipo de Documento",
+      "TYPE_PLACEHOLDER": "Selecione o tipo",
+      "DOCUMENT_TITLE_LABEL": "Título",
+      "DOCUMENT_TITLE_OPTIONAL": "(opcional)",
+      "ATESTADO": {
+        "CID": "CID",
+        "CID_PLACEHOLDER": "Ex: M54.5",
+        "DAYS": "Dias de afastamento",
+        "DAYS_PLACEHOLDER": "Ex: 2"
+      },
+      "RECEITA": {
+        "MEDICATIONS": "Medicamentos",
+        "MEDICATIONS_PLACEHOLDER": "Ex: Dipirona 500mg, Ibuprofeno 400mg...",
+        "DOSAGE": "Posologia",
+        "DOSAGE_PLACEHOLDER": "Ex: Tomar 1 comprimido de 8 em 8 horas por 5 dias..."
+      },
+      "EXAM": {
+        "EXAMS_REQUESTED": "Exames solicitados",
+        "EXAMS_PLACEHOLDER": "Ex: Hemograma completo, Glicemia em jejum, TSH..."
+      },
+      "REFERRAL": {
+        "TO": "Encaminhar para",
+        "TO_PLACEHOLDER": "Nome do especialista / clínica",
+        "SPECIALTY": "Especialidade",
+        "SPECIALTY_PLACEHOLDER": "Ex: Ortopedia"
+      },
+      "FREE_CONTENT_LABEL": "Conteúdo",
+      "FREE_CONTENT_PLACEHOLDER": "Descreva o conteúdo do documento...",
+      "OBSERVATIONS_LABEL": "Observações adicionais",
+      "OBSERVATIONS_PLACEHOLDER": "Informações complementares...",
+      "CANCEL": "Cancelar",
+      "GENERATE": "Gerar e Baixar PDF",
+      "GENERATING": "Gerando PDF..."
+    },
+    "DELETE_MODAL": {
+      "TITLE": "Excluir Documento?",
+      "MESSAGE": "Tem certeza que deseja excluir este documento? O arquivo PDF será removido permanentemente. Esta ação não pode ser desfeita.",
+      "CONFIRM": "Excluir"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Erro ao carregar documentos.",
+      "GENERATE_ERROR": "Erro ao gerar documento. Verifique os dados e tente novamente.",
+      "DOWNLOAD_ERROR": "Erro ao baixar o documento.",
+      "WHATSAPP_OPENED": "WhatsApp aberto em nova aba — confirme o envio lá.",
+      "WHATSAPP_ERROR": "Não foi possível preparar o envio via WhatsApp.",
+      "DELETE_ERROR": "Erro ao excluir o documento."
+    }
+  }
+}

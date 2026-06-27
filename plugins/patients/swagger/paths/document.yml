@@ -1,0 +1,34 @@
+get:
+  tags:
+    - Documentos
+  summary: Detalhar documento
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Documento
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Document.yml'
+    '404':
+      description: Não encontrado
+delete:
+  tags:
+    - Documentos
+  summary: Remover documento (soft-delete)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Removido
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string }

@@ -1,0 +1,36 @@
+get:
+  tags:
+    - Bea — Base de Conhecimento
+  summary: Obter documento
+  description: 'Autorização: admin OR Klivy `captain.view`.'
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Documento
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Document.yml'
+    '403':
+      description: Sem permissão (`captain.view`)
+    '404':
+      description: Documento não encontrado (ou pertence a outra conta — scoped)
+delete:
+  tags:
+    - Bea — Base de Conhecimento
+  summary: Deletar documento
+  description: |
+    Remove documento + cascade nos chunks (parent + child). Autorização:
+    admin OR Klivy `captain.manage_documents`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204':
+      description: Deletado
+    '403':
+      description: Sem permissão (`captain.manage_documents`)
+    '404':
+      description: Documento não encontrado

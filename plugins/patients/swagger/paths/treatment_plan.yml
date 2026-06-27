@@ -1,0 +1,90 @@
+get:
+  tags:
+    - Planos de Tratamento
+  summary: Detalhar plano
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Plano com `treatment_items` inline
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/TreatmentPlan.yml'
+patch:
+  tags:
+    - Planos de Tratamento
+  summary: Atualizar plano
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [treatment_plan]
+          properties:
+            treatment_plan:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/TreatmentPlan.yml'
+delete:
+  tags:
+    - Planos de Tratamento
+  summary: Arquivar plano (soft-delete, com regra de cascata)
+  description: |
+    Regra canon (Clinicorp/Conta Azul) para Budget v2 vinculado:
+    1. **Sem Budget** ou Budget cancelado → arquiva direto.
+    2. **Budget aprovado SEM parcela paga** → exige header `X-Confirm-Cascade: true`
+       para cancelar o Budget E arquivar o plano (transação atômica). Sem o
+       header, devolve `409 Conflict` com detalhes do orçamento.
+    3. **Budget com parcela paga** → **bloqueia** com `422`. Operador precisa
+       estornar os recebimentos antes (proteção contra perda de auditoria
+       financeira).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+    - name: X-Confirm-Cascade
+      in: header
+      description: Envie `true` para confirmar cascata no cenário 2.
+      schema:
+        type: string
+        enum: ["true"]
+  responses:
+    '204':
+      description: Plano arquivado
+    '409':
+      description: "Cascata requer confirmação (header `X-Confirm-Cascade: true`)"
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+              cascade_required: { type: boolean }
+              budget:
+                type: object
+                properties:
+                  id: { type: integer }
+                  status: { type: string }
+                  total: { type: number, format: float }
+    '422':
+      description: Bloqueado (parcelas já recebidas)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }

@@ -5,6 +5,7 @@ import {
 } from 'dashboard/constants/permissions.js';
 
 import account from './account/account.routes';
+import clinic from './clinic/clinic.routes';
 import agent from './agents/agent.routes';
 import assignmentPolicy from './assignmentPolicy/assignmentPolicy.routes';
 import agentBot from './agentBots/agentBot.routes';
@@ -22,10 +23,12 @@ import store from '../../../store';
 import sla from './sla/sla.routes';
 import teams from './teams/teams.routes';
 import customRoles from '@plugins/custom_roles/frontend/routes/routes';
+import { hideCopilotLauncherOn } from '../../../helper/copilotLauncherRoutes';
 import profile from './profile/profile.routes';
 import security from './security/security.routes';
 import conversationWorkflow from './conversationWorkflow/conversationWorkflow.routes';
 import captain from './captain/captain.routes';
+import patientPortal from './patient_portal/patient_portal.routes';
 
 export default {
   routes: [
@@ -47,6 +50,7 @@ export default {
       },
     },
     ...account.routes,
+    ...clinic.routes,
     ...agent.routes,
     ...assignmentPolicy.routes,
     ...agentBot.routes,
@@ -62,10 +66,12 @@ export default {
     ...reports.routes,
     ...sla.routes,
     ...teams.routes,
-    ...customRoles.routes,
+    // Papéis (custom_roles) é módulo Klivy → esconde o FAB do Captain.
+    ...hideCopilotLauncherOn(customRoles.routes),
     ...profile.routes,
     ...security.routes,
     ...conversationWorkflow.routes,
     ...captain.routes,
+    ...patientPortal.routes,
   ],
 };

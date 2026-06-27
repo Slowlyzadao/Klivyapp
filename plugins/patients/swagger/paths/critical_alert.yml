@@ -1,0 +1,37 @@
+patch:
+  tags:
+    - Alertas Críticos
+  summary: Atualizar alerta
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [critical_alert]
+          properties:
+            critical_alert:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Atualizado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/CriticalAlert.yml'
+delete:
+  tags:
+    - Alertas Críticos
+  summary: Excluir alerta (soft-delete)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Excluído

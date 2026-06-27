@@ -1,21 +1,20 @@
 <script setup>
-import './patients-index.css';
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import '@plugins/patients/frontend/styles/patients-index.scss';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import PatientsAPI from '@plugins/patients/frontend/api/patients/index';
+import {
+  formatCpf as formatCpfBase,
+  formatPhone,
+} from '@plugins/patients/frontend/features/patient-record/utils/patientFormatters';
 import NewPatientModal from './components/NewPatientModal.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import { useAlert } from 'dashboard/composables';
+import FormSelect from '@plugins/beclinic_core/frontend/components/FormSelect.vue';
+import BeclinicButton from '@plugins/beclinic_core/frontend/components/Button.vue';
+import Tooltip from '@plugins/beclinic_core/frontend/components/Tooltip.vue';
 
-const formatCpf = cpfStr => {
-  if (!cpfStr) return '-';
-  const v = String(cpfStr).replace(/\D/g, '').slice(0, 11);
-  if (v.length > 9)
-    return v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
-  if (v.length > 6) return v.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
-  if (v.length > 3) return v.replace(/(\d{3})(\d{1,3})/, '$1.$2');
-  return v;
-};
+const formatCpf = cpfStr => formatCpfBase(cpfStr, { emptyFallback: '-' });
 
 const formatDate = dateStr => {
   if (!dateStr) return '-';
@@ -24,13 +23,67 @@ const formatDate = dateStr => {
   });
 };
 
+const brlFormatter = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+});
+const formatBalance = cents => brlFormatter.format((Number(cents) || 0) / 100);
+
+// `balance_due_cents` vem do backend POSITIVO quando o paciente DEVE (saldo em
+// aberto) e negativo quando tem crédito. Na coluna mostramos pela ótica do
+// paciente: devedor = negativo (−R$ 150,00 vermelho), crédito = positivo
+// (R$ 50,00 verde). Negar o valor faz o Intl cuidar do sinal nos dois casos.
+const formatBalanceSigned = cents => formatBalance(-(Number(cents) || 0));
+
+// Quebra o saldo em vencido + a vencer pra reconciliar com os cards "Devedor
+// (Vencido)" e "Em Aberto" da aba financeira do paciente (mesma definição:
+// vencido = due_date < hoje). `overdue_cents` é subconjunto do saldo total.
+const balanceTooltip = patient => {
+  const total = Number(patient.balance_due_cents) || 0;
+  const overdue = Number(patient.overdue_cents) || 0;
+  if (total > 0) {
+    const upcoming = total - overdue;
+    if (overdue > 0 && upcoming > 0) {
+      return `Saldo devedor: ${formatBalance(total)} — ${formatBalance(
+        overdue
+      )} vencido + ${formatBalance(upcoming)} a vencer`;
+    }
+    if (overdue > 0) return `Saldo devedor: ${formatBalance(total)} (vencido)`;
+    return `Saldo devedor: ${formatBalance(total)} (a vencer)`;
+  }
+  if (total < 0) return `Crédito de ${formatBalance(-total)} a favor do paciente`;
+  return 'Sem saldo em aberto';
+};
+
 const showNewPatientModal = ref(false);
 const rawPatients = ref([]);
 const isLoading = ref(false);
 const searchQuery = ref('');
 const viewMode = ref('list');
-const activeFilter = ref('Todos');
+// Vazio = "Todos". Mapeia 1:1 pro `patient_status` do backend.
+const activeFilter = ref('');
 const sortOrder = ref('az');
+
+// Opções do filtro de status com cor distinta — segue a mesma paleta do
+// Badge do prontuário (PatientProfileBanner): novo=blue, ativo=teal,
+// inativo=slate, faltoso=amber, alta=violet.
+const STATUS_OPTIONS = [
+  { value: '', label: 'Todos os status' },
+  { value: 'novo', label: 'Novo', color: 'rgb(var(--blue-9))' },
+  { value: 'ativo', label: 'Ativo', color: 'rgb(var(--teal-9))' },
+  { value: 'inativo', label: 'Inativo', color: 'rgb(var(--slate-9))' },
+  { value: 'faltoso', label: 'Faltoso', color: 'rgb(var(--amber-9))' },
+  { value: 'alta', label: 'Alta', color: 'rgb(var(--violet-9))' },
+];
+
+// Filtro por situação financeira. Vazio = todas. "Inadimplente" = tem parcela
+// VENCIDA (atrasada) — definição alinhada ao backend (`apply_financial_filter`).
+const activeFinancialFilter = ref('');
+const FINANCIAL_OPTIONS = [
+  { value: '', label: 'Todas as situações' },
+  { value: 'inadimplente', label: 'Inadimplentes', color: 'rgb(var(--ruby-9))' },
+  { value: 'adimplente', label: 'Adimplentes', color: 'rgb(var(--teal-9))' },
+];
 const showSortMenu = ref(false);
 const showDeleteModal = ref(false);
 const patientToDelete = ref(null);
@@ -39,6 +92,10 @@ const patientToDelete = ref(null);
 const currentPage = ref(1);
 const perPage = ref(25);
 const perPageOptions = [25, 50, 100, 200];
+const perPageSelectOptions = perPageOptions.map(n => ({
+  value: n,
+  label: `${n} por página`,
+}));
 const totalCount = ref(0);
 const totalPagesFromServer = ref(1);
 
@@ -59,8 +116,10 @@ const fetchArchived = async () => {
     const response = await PatientsAPI.archived(searchQuery.value);
     archivedPatients.value =
       response.data?.payload?.map?.(p => ({ ...p })) || [];
-  } catch {
-    // ignorar
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('[Patients] Falha ao carregar arquivados', error);
+    useAlert('Erro ao carregar pacientes arquivados.');
   } finally {
     isLoadingArchived.value = false;
   }
@@ -76,7 +135,9 @@ const restorePatient = async patient => {
     useAlert(`${patient.name} foi restaurado com sucesso!`);
     // Atualiza lista ativa tb
     fetchPatients();
-  } catch {
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('[Patients] Falha ao restaurar paciente', error);
     useAlert('Não foi possível restaurar o paciente.');
   } finally {
     isRestoring.value = null;
@@ -97,6 +158,69 @@ const sortKeyToServer = {
   newest: 'created_at_desc',
   oldest: 'created_at_asc',
 };
+
+// Posicionamento inteligente do sort dropdown — Teleport pro body com
+// position:fixed pra escapar do `overflow-x: hidden` do .pt-page e clamp
+// dentro do viewport (sem corte mesmo quando o botão está perto da borda).
+const sortBtnRef = ref(null);
+const sortDropdownRef = ref(null);
+const sortDropdownStyle = ref({});
+
+const updateSortDropdownPosition = () => {
+  const trigger = sortBtnRef.value;
+  if (!trigger) return;
+  const rect = trigger.getBoundingClientRect();
+  const dropdownWidth = 170; // ≈ min-width do menu + padding
+  const dropdownHeight = 180;
+  const margin = 8;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Alinha pela direita do botão; se estourar a esquerda, gruda em margin.
+  let left = rect.right - dropdownWidth;
+  if (left < margin) left = margin;
+  if (left + dropdownWidth > vw - margin) left = vw - margin - dropdownWidth;
+
+  // Abre pra baixo se couber, senão pra cima.
+  const spaceBelow = vh - rect.bottom;
+  const goesUp = spaceBelow < dropdownHeight && rect.top > spaceBelow;
+  const top = goesUp
+    ? Math.max(margin, rect.top - dropdownHeight - 4)
+    : rect.bottom + 4;
+
+  sortDropdownStyle.value = {
+    position: 'fixed',
+    top: `${top}px`,
+    left: `${left}px`,
+    minWidth: `${dropdownWidth}px`,
+    zIndex: 100000,
+  };
+};
+
+const onSortScrollOrResize = () => {
+  if (showSortMenu.value) updateSortDropdownPosition();
+};
+
+const toggleSortMenu = async () => {
+  if (showSortMenu.value) {
+    showSortMenu.value = false;
+    return;
+  }
+  updateSortDropdownPosition();
+  showSortMenu.value = true;
+  await nextTick();
+  updateSortDropdownPosition();
+};
+
+watch(showSortMenu, isOpen => {
+  if (isOpen) {
+    window.addEventListener('scroll', onSortScrollOrResize, true);
+    window.addEventListener('resize', onSortScrollOrResize);
+  } else {
+    window.removeEventListener('scroll', onSortScrollOrResize, true);
+    window.removeEventListener('resize', onSortScrollOrResize);
+  }
+});
 
 const setSortOrder = value => {
   sortOrder.value = value;
@@ -137,49 +261,81 @@ function setPerPage(n) {
   fetchPatients();
 }
 
-const filters = ['Todos', 'Novo', 'Ativo', 'Inativo', 'Faltoso', 'Alta'];
-const statusMap = {
-  Todos: '',
-  Novo: 'novo',
-  Ativo: 'ativo',
-  Inativo: 'inativo',
-  Faltoso: 'faltoso',
-  Alta: 'alta',
-};
+// Contador monotônico — cada chamada de fetch incrementa e captura seu id.
+// Usuário digita rápido na busca → 3 requests podem estar em vôo → só a
+// última deve popular a lista. Descartamos respostas obsoletas.
+let latestFetchId = 0;
 
-const fetchPatients = async () => {
+// `silent` faz um refresh sem trocar a tabela pelo spinner — usado quando a
+// aba volta a ficar visível (atualiza o saldo em segundo plano, sem flash).
+const fetchPatients = async ({ silent = false } = {}) => {
+  latestFetchId += 1;
+  const requestId = latestFetchId;
   try {
-    isLoading.value = true;
+    if (!silent) isLoading.value = true;
     const response = await PatientsAPI.get({
       page: currentPage.value,
       perPage: perPage.value,
       sort: sortKeyToServer[sortOrder.value] || 'name_asc',
       search: searchQuery.value,
-      status: statusMap[activeFilter.value],
+      status: activeFilter.value,
+      financialStatus: activeFinancialFilter.value,
     });
+    // Descarta resposta obsoleta — outra request mais recente está em vôo
+    // (ou já chegou e populou rawPatients).
+    if (requestId !== latestFetchId) return;
     rawPatients.value =
       response.data?.payload?.map?.(patient => ({ ...patient })) || [];
     totalCount.value = response.data?.meta?.total_count ?? rawPatients.value.length;
     totalPagesFromServer.value =
       response.data?.meta?.total_pages ??
       Math.max(1, Math.ceil(totalCount.value / perPage.value));
-  } catch {
-    // ignorar erro
+  } catch (error) {
+    if (requestId !== latestFetchId) return;
+    // eslint-disable-next-line no-console
+    console.error('[Patients] Falha ao carregar lista', error);
+    useAlert('Erro ao carregar lista de pacientes.');
   } finally {
-    isLoading.value = false;
+    // Só a request mais recente limpa o spinner — independente de `silent`,
+    // pra um refresh silencioso nunca deixar um loader não-silencioso preso.
+    if (requestId === latestFetchId) isLoading.value = false;
   }
 };
 
+// Click-outside considera tanto o botão (`pt-sort-wrap`) quanto o dropdown
+// teleportado (`pt-sort-dropdown`), que está fora do .pt-sort-wrap no DOM.
 const closeSortMenu = e => {
-  if (!e.target.closest('.pt-sort-wrap')) showSortMenu.value = false;
+  if (!showSortMenu.value) return;
+  if (
+    e.target.closest('.pt-sort-wrap') ||
+    e.target.closest('.pt-sort-dropdown')
+  ) {
+    return;
+  }
+  showSortMenu.value = false;
+};
+
+// Saldo é calculado ao vivo no backend a cada request — nunca fica velho lá.
+// O que ficava velho era a LISTA montada (ex: aba aberta enquanto um
+// lançamento é criado em outra aba/janela): ela só re-buscava no F5. Ao a aba
+// voltar a ficar visível, refazemos um fetch silencioso preservando
+// página/filtros/ordenação — o saldo se atualiza sem recarregar a página.
+const onVisibilityChange = () => {
+  if (document.visibilityState !== 'visible') return;
+  if (showArchived.value) fetchArchived();
+  else fetchPatients({ silent: true });
 };
 
 onMounted(() => {
   fetchPatients();
   document.addEventListener('click', closeSortMenu);
+  document.addEventListener('visibilitychange', onVisibilityChange);
 });
 onUnmounted(() => {
   document.removeEventListener('click', closeSortMenu);
+  document.removeEventListener('visibilitychange', onVisibilityChange);
+  window.removeEventListener('scroll', onSortScrollOrResize, true);
+  window.removeEventListener('resize', onSortScrollOrResize);
 });
 
 let searchTimeout;
@@ -195,10 +351,11 @@ watch(activeFilter, () => {
   currentPage.value = 1;
   fetchPatients();
 });
+watch(activeFinancialFilter, () => {
+  currentPage.value = 1;
+  fetchPatients();
+});
 
-const setFilter = filter => {
-  activeFilter.value = filter;
-};
 const setViewMode = mode => {
   viewMode.value = mode;
 };
@@ -231,7 +388,9 @@ const confirmDelete = async () => {
   try {
     await PatientsAPI.delete(patientToDelete.value.id);
     fetchPatients();
-  } catch {
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('[Patients] Falha ao arquivar paciente', error);
     useAlert('Não foi possível arquivar o paciente. Tente novamente.');
   } finally {
     closeDeleteModal();
@@ -270,31 +429,43 @@ const statusCls = patient =>
         </p>
       </div>
       <div class="pt-header-actions">
-        <button
-          class="pt-btn-archived"
-          :class="{ 'pt-btn-archived--active': showArchived }"
+        <!-- Desktop: ícone + label -->
+        <BeclinicButton
+          variant="faded"
+          color="slate"
+          icon="i-lucide-archive"
+          :label="showArchived ? 'Fechar Arquivo' : 'Arquivados'"
+          class="hidden md:inline-flex"
           @click="toggleArchived"
-        >
-          <i class="i-lucide-archive w-4 h-4" />
-          <span>{{ showArchived ? 'Fechar Arquivo' : 'Arquivados' }}</span>
-        </button>
-        <button
+        />
+        <BeclinicButton
           v-if="!showArchived"
-          class="pt-btn-new hidden md:flex"
+          variant="solid"
+          color="blue"
+          icon="i-lucide-plus"
+          label="Novo Paciente"
+          class="hidden md:inline-flex"
           @click="openNewPatientModal"
-        >
-          <i class="i-lucide-plus w-4 h-4" />
-          <span>Novo Paciente</span>
-        </button>
+        />
 
-        <!-- FAB Mobile: Novo Paciente -->
-        <button
+        <!-- Mobile: ícone-only no topo (substitui FAB) -->
+        <BeclinicButton
+          variant="faded"
+          color="slate"
+          :icon="showArchived ? 'i-lucide-x' : 'i-lucide-archive'"
+          :title="showArchived ? 'Fechar Arquivo' : 'Arquivados'"
+          class="md:hidden"
+          @click="toggleArchived"
+        />
+        <BeclinicButton
           v-if="!showArchived"
-          class="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-[0_4px_14px_rgba(37,99,235,0.4)] flex items-center justify-center z-50 transition-transform active:scale-95"
+          variant="solid"
+          color="blue"
+          icon="i-lucide-plus"
+          title="Novo Paciente"
+          class="md:hidden"
           @click="openNewPatientModal"
-        >
-          <i class="i-lucide-plus w-6 h-6" />
-        </button>
+        />
       </div>
     </div>
 
@@ -313,17 +484,22 @@ const statusCls = patient =>
 
       <!-- Filtros de status + view/sort -->
       <div class="pt-controls-right">
-        <!-- Pills de filtro -->
-        <div class="pt-filters">
-          <button
-            v-for="filter in filters"
-            :key="filter"
-            class="pt-filter-btn"
-            :class="{ 'pt-filter-btn--active': activeFilter === filter }"
-            @click="setFilter(filter)"
-          >
-            {{ filter }}
-          </button>
+        <!-- Filtro de status — dropdown com cor por status -->
+        <div class="pt-status-select">
+          <FormSelect
+            v-model="activeFilter"
+            :options="STATUS_OPTIONS"
+            placeholder="Todos os status"
+          />
+        </div>
+
+        <!-- Filtro de situação financeira (inadimplente/adimplente) -->
+        <div class="pt-status-select">
+          <FormSelect
+            v-model="activeFinancialFilter"
+            :options="FINANCIAL_OPTIONS"
+            placeholder="Situação financeira"
+          />
         </div>
 
         <!-- Divider -->
@@ -331,45 +507,52 @@ const statusCls = patient =>
 
         <!-- View toggle -->
         <div class="pt-view-toggle">
-          <button
-            class="pt-toggle-btn"
-            :class="{ 'pt-toggle-btn--active': viewMode === 'list' }"
+          <BeclinicButton
+            size="sm"
+            :variant="viewMode === 'list' ? 'faded' : 'ghost'"
+            :color="viewMode === 'list' ? 'blue' : 'slate'"
+            icon="i-lucide-list"
             title="Lista"
             @click="setViewMode('list')"
-          >
-            <i class="i-lucide-list w-4 h-4" />
-          </button>
-          <button
-            class="pt-toggle-btn"
-            :class="{ 'pt-toggle-btn--active': viewMode === 'grid' }"
+          />
+          <BeclinicButton
+            size="sm"
+            :variant="viewMode === 'grid' ? 'faded' : 'ghost'"
+            :color="viewMode === 'grid' ? 'blue' : 'slate'"
+            icon="i-lucide-layout-grid"
             title="Grade"
             @click="setViewMode('grid')"
-          >
-            <i class="i-lucide-layout-grid w-4 h-4" />
-          </button>
+          />
         </div>
 
         <!-- Sort -->
-        <div class="pt-sort-wrap">
-          <button
-            class="pt-toggle-btn"
-            :class="{ 'pt-toggle-btn--active': showSortMenu }"
+        <div ref="sortBtnRef" class="pt-sort-wrap">
+          <BeclinicButton
+            size="sm"
+            :variant="showSortMenu ? 'faded' : 'ghost'"
+            :color="showSortMenu ? 'blue' : 'slate'"
+            icon="i-lucide-arrow-up-down"
             title="Ordenar"
-            @click="showSortMenu = !showSortMenu"
-          >
-            <i class="i-lucide-arrow-up-down w-4 h-4" />
-          </button>
-          <div v-if="showSortMenu" class="pt-sort-dropdown">
-            <button
-              v-for="(label, key) in sortLabels"
-              :key="key"
-              class="pt-sort-option"
-              :class="{ 'pt-sort-option--active': sortOrder === key }"
-              @click="setSortOrder(key)"
+            @click="toggleSortMenu"
+          />
+          <Teleport to="body">
+            <div
+              v-if="showSortMenu"
+              ref="sortDropdownRef"
+              class="pt-sort-dropdown"
+              :style="sortDropdownStyle"
             >
-              {{ label }}
-            </button>
-          </div>
+              <button
+                v-for="(label, key) in sortLabels"
+                :key="key"
+                class="pt-sort-option"
+                :class="{ 'pt-sort-option--active': sortOrder === key }"
+                @click="setSortOrder(key)"
+              >
+                {{ label }}
+              </button>
+            </div>
+          </Teleport>
         </div>
       </div>
     </div>
@@ -390,7 +573,8 @@ const statusCls = patient =>
           <div class="pt-col pt-col--cpf">CPF</div>
           <div class="pt-col pt-col--date">Cadastrado em</div>
           <div class="pt-col pt-col--visit">Última Consulta</div>
-          <div class="pt-col pt-col--status">Status</div>
+          <div class="pt-col pt-col--procedures">Procedimentos</div>
+          <div class="pt-col pt-col--balance">Saldo</div>
           <div class="pt-col pt-col--actions" />
         </div>
 
@@ -400,7 +584,7 @@ const statusCls = patient =>
           <p class="pt-empty-title">Nenhum paciente encontrado</p>
           <p class="pt-empty-hint">
             {{
-              searchQuery || activeFilter !== 'Todos'
+              searchQuery || activeFilter || activeFinancialFilter
                 ? 'Tente ajustar os filtros.'
                 : 'Cadastre o primeiro paciente.'
             }}
@@ -418,7 +602,7 @@ const statusCls = patient =>
             <Avatar
               :src="patient.avatar_url"
               :name="patient.name"
-              :size="38"
+              :size="32"
               rounded-full
             />
             <div>
@@ -428,10 +612,10 @@ const statusCls = patient =>
           </div>
 
           <div class="pt-col pt-col--contact pt-cell-text">
-            {{ patient.phone || '-' }}
+            {{ formatPhone(patient.phone) || '-' }}
           </div>
 
-          <div class="pt-col pt-col--cpf pt-cell-mono">
+          <div class="pt-col pt-col--cpf pt-cell-text">
             {{ formatCpf(patient.cpf) }}
           </div>
 
@@ -452,27 +636,44 @@ const statusCls = patient =>
             </div>
           </div>
 
-          <div class="pt-col pt-col--status">
-            <span :class="statusCls(patient)">{{
-              patient.patient_status || 'Novo'
-            }}</span>
+          <div
+            class="pt-col pt-col--procedures"
+            :class="{ 'pt-procedures--zero': (patient.procedures_count || 0) === 0 }"
+          >
+            {{ patient.procedures_count ?? 0 }}
+          </div>
+
+          <div
+            class="pt-col pt-col--balance"
+            :class="{
+              'pt-balance--due': (patient.balance_due_cents || 0) > 0,
+              'pt-balance--credit': (patient.balance_due_cents || 0) < 0,
+            }"
+          >
+            <Tooltip :label="balanceTooltip(patient)" position="left" multiline>
+              <span class="pt-balance-value">{{
+                formatBalanceSigned(patient.balance_due_cents)
+              }}</span>
+            </Tooltip>
           </div>
 
           <div class="pt-col pt-col--actions" @click.stop>
-            <button
-              class="pt-action-btn"
+            <BeclinicButton
+              size="sm"
+              variant="ghost"
+              color="slate"
+              icon="i-lucide-file-text"
               title="Abrir prontuário"
               @click="openRecord(patient.id)"
-            >
-              <i class="i-lucide-file-text w-4 h-4" />
-            </button>
-            <button
-              class="pt-action-btn pt-action-btn--danger"
+            />
+            <BeclinicButton
+              size="sm"
+              variant="ghost"
+              color="ruby"
+              icon="i-lucide-trash-2"
               title="Arquivar"
               @click="openDeleteModal(patient)"
-            >
-              <i class="i-lucide-trash-2 w-4 h-4" />
-            </button>
+            />
           </div>
         </div>
 
@@ -483,15 +684,12 @@ const statusCls = patient =>
           </div>
           <div class="pt-pagination__controls">
             <!-- Per-page selector -->
-            <select
-              :value="perPage"
-              class="mr-2 px-2 py-1 bg-transparent border border-n-strong rounded-md text-xs text-n-slate-11 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer transition-colors hover:border-n-slate-10"
-              @change="setPerPage(Number($event.target.value))"
-            >
-              <option v-for="n in perPageOptions" :key="n" :value="n">
-                {{ n }} por página
-              </option>
-            </select>
+            <FormSelect
+              :model-value="perPage"
+              :options="perPageSelectOptions"
+              class="pt-pagination__per-page mr-2"
+              @update:model-value="setPerPage(Number($event))"
+            />
             <!-- Page buttons -->
             <button
               class="pt-pagination__btn"
@@ -532,7 +730,7 @@ const statusCls = patient =>
           <p class="pt-empty-title">Nenhum paciente encontrado</p>
           <p class="pt-empty-hint">
             {{
-              searchQuery || activeFilter !== 'Todos'
+              searchQuery || activeFilter || activeFinancialFilter
                 ? 'Tente ajustar os filtros.'
                 : 'Cadastre o primeiro paciente.'
             }}
@@ -591,10 +789,15 @@ const statusCls = patient =>
 
           <!-- Card footer -->
           <div class="pt-card-footer">
-            <button class="pt-card-btn" @click="openRecord(patient.id)">
-              <i class="i-lucide-folder-open w-3.5 h-3.5" />
-              Abrir Prontuário
-            </button>
+            <BeclinicButton
+              size="sm"
+              variant="faded"
+              color="blue"
+              icon="i-lucide-folder-open"
+              label="Abrir Prontuário"
+              class="w-full"
+              @click="openRecord(patient.id)"
+            />
           </div>
         </div>
 
@@ -604,15 +807,12 @@ const statusCls = patient =>
             Exibindo {{ rangeStart }}–{{ rangeEnd }} de {{ totalCount }} pacientes
           </div>
           <div class="pt-pagination__controls">
-            <select
-              :value="perPage"
-              class="mr-2 px-2 py-1 bg-transparent border border-n-strong rounded-md text-xs text-n-slate-11 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer transition-colors hover:border-n-slate-10"
-              @change="setPerPage(Number($event.target.value))"
-            >
-              <option v-for="n in perPageOptions" :key="n" :value="n">
-                {{ n }} por página
-              </option>
-            </select>
+            <FormSelect
+              :model-value="perPage"
+              :options="perPageSelectOptions"
+              class="pt-pagination__per-page mr-2"
+              @update:model-value="setPerPage(Number($event))"
+            />
             <button
               class="pt-pagination__btn"
               :disabled="currentPage === 1"
@@ -685,7 +885,7 @@ const statusCls = patient =>
             <Avatar
               :src="patient.avatar_url"
               :name="patient.name"
-              :size="38"
+              :size="32"
               rounded-full
               class="pt-archived-avatar"
             />
@@ -696,10 +896,10 @@ const statusCls = patient =>
           </div>
 
           <div class="pt-col pt-col--contact pt-cell-text">
-            {{ patient.phone || '-' }}
+            {{ formatPhone(patient.phone) || '-' }}
           </div>
 
-          <div class="pt-col pt-col--cpf pt-cell-mono">
+          <div class="pt-col pt-col--cpf pt-cell-text">
             {{ formatCpf(patient.cpf) }}
           </div>
 
@@ -708,25 +908,24 @@ const statusCls = patient =>
           </div>
 
           <div class="pt-col pt-col--actions">
-            <button
-              class="pt-action-btn"
+            <BeclinicButton
+              size="sm"
+              variant="ghost"
+              color="slate"
+              icon="i-lucide-file-text"
               title="Abrir prontuário"
               @click="openRecord(patient.id)"
-            >
-              <i class="i-lucide-file-text w-4 h-4" />
-            </button>
-            <button
-              class="pt-action-btn pt-action-btn--restore"
+            />
+            <BeclinicButton
+              size="sm"
+              variant="ghost"
+              color="teal"
+              icon="i-lucide-archive-restore"
+              :is-loading="isRestoring === patient.id"
               :disabled="isRestoring === patient.id"
               title="Restaurar paciente"
               @click="restorePatient(patient)"
-            >
-              <i
-                v-if="isRestoring === patient.id"
-                class="i-lucide-loader-2 animate-spin w-4 h-4"
-              />
-              <i v-else class="i-lucide-archive-restore w-4 h-4" />
-            </button>
+            />
           </div>
         </div>
       </div>

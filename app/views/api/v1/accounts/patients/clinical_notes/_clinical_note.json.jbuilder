@@ -6,6 +6,7 @@ json.appointment_id  note.appointment_id
 json.form_template_id note.form_template_id
 json.note_date       note.note_date&.iso8601
 json.status          note.status
+json.lock_version    note.lock_version
 json.signed_at       note.signed_at&.iso8601
 json.signed_by_id    note.signed_by_id
 json.within_draft_window note.within_draft_window?
@@ -32,5 +33,15 @@ if note.signed_by.present?
   json.signed_by do
     json.id note.signed_by.id
     json.name note.signed_by.available_name
+  end
+end
+
+# Errata
+json.erratum_at     note.erratum_at&.iso8601
+json.erratum_reason note.erratum_reason
+if note.erratum_by.present?
+  json.erratum_by do
+    json.id note.erratum_by.id
+    json.name note.erratum_by.available_name
   end
 end

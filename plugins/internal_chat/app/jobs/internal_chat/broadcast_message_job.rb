@@ -14,13 +14,21 @@ module InternalChat
         data: InternalChat::MessageSerializer.new(message).as_json,
       }
 
+      # MT-20 (auditoria 2026-05-18): usa o scope `.active` (left_at IS NULL)
+      # — mesmo padrão dos outros broadcast sites (MessagesController,
+      # TypingController, MembershipsController). Antes era `.where(left_at: nil)`
+      # inline — funcionalmente igual mas drift-prone se a definição do
+      # scope `.active` mudar.
       mention_user_ids = message.mentions.pluck(:user_id).to_set
       recipient_ids = message.room.memberships
+                                  .active
                                   .where.not(user_id: nil)
-                                  .where(left_at: nil)
                                   .pluck(:user_id)
 
-      User.where(id: recipient_ids).find_each do |user|
+      # ARCH-21 (audit 2026-05-19): fan-out via UserBroadcaster.each — block
+      # API porque cada user pode receber 1 ou 2 payloads (mention) + tem
+      # side effect de telemetria que depende do user.id.
+      InternalChat::UserBroadcaster.each(user_ids: recipient_ids) do |user|
         ActionCable.server.broadcast(user.pubsub_token, message_payload)
 
         next unless mention_user_ids.include?(user.id)

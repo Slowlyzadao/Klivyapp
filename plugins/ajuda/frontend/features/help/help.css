@@ -70,7 +70,7 @@
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  background: #ffffff;
+  background: rgb(var(--slate-1));
   border: 1.5px solid rgb(var(--slate-5));
   border-radius: 14px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -208,7 +208,7 @@
 
 /* ── Banner ───────────────────────────────────────────────── */
 .hp-banner {
-  background: #fff;
+  background: rgb(var(--slate-2));
   border: 1px solid rgb(var(--slate-5));
   border-radius: 14px;
   padding: 18px 22px;
@@ -518,7 +518,7 @@
   top: 0;
   right: 0;
   height: 100vh;
-  width: 520px;
+  width: 680px;
   max-width: 92vw;
   background: rgb(var(--slate-2));
   display: flex;
@@ -591,9 +591,29 @@
   font-size: 28px;
   line-height: 1.25;
 }
-.hp-drawer--expanded .hp-art-body {
-  font-size: 15.5px;
-  line-height: 1.8;
+.hp-drawer--expanded .hp-art-iframe {
+  /* expanded mode reserves more horizontal space; iframe content uses its own typography */
+}
+
+/* Em telas estreitas, drawer ocupa a viewport inteira (mais espaço útil
+   pra ler o artigo, sem o backdrop competindo por área). */
+@media (max-width: 720px) {
+  .hp-drawer {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    box-shadow: none;
+  }
+  .hp-drawer-body {
+    padding: 20px 16px 48px;
+  }
+  .hp-drawer--expanded {
+    top: 0 !important;
+    right: 0 !important;
+    transform: none !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+  }
 }
 
 .hp-drawer-pill {
@@ -618,16 +638,15 @@
   color: rgb(var(--slate-12));
   line-height: 1.3;
 }
-.hp-art-body { line-height: 1.7; color: rgb(var(--slate-12)); }
-.hp-art-body p  { margin: 0 0 14px; }
-.hp-art-body h2 { font-size: 1.15em; font-weight: 700; margin: 22px 0 10px; }
-.hp-art-body h3 { font-size: 1em; font-weight: 600; margin: 18px 0 8px; }
-.hp-art-body ul, .hp-art-body ol { padding-left: 20px; margin: 8px 0 14px; }
-.hp-art-body li { margin-bottom: 4px; }
-.hp-art-body blockquote { border-left: 3px solid rgb(var(--blue-7)); padding-left: 14px; color: rgb(var(--slate-11)); margin: 14px 0; }
-.hp-art-body a { color: rgb(var(--blue-11)); text-decoration: underline; }
-.hp-art-body iframe { max-width: 100%; border-radius: 8px; margin: 14px 0; }
-.hp-art-body .ha-video-wrap { margin: 14px 0; }
+/* Iframe sandbox isola o HTML do artigo (CSS e JS não vazam para a app). */
+.hp-art-iframe {
+  width: 100%;
+  min-height: 200px;
+  border: 0;
+  display: block;
+  background: #ffffff;
+  color-scheme: light;
+}
 
 .hp-art-video {
   margin: 0 0 22px;
@@ -707,6 +726,47 @@
 }
 .hp-helpful-btns { display: flex; gap: 8px; justify-content: center; }
 .hp-helpful-ack { font-size: 12px; color: rgb(var(--slate-10)); margin-top: 10px; }
+
+/* ── Modo "artigo": força tema claro ──────────────────────────
+   O HTML do artigo (renderizado dentro de iframe sandbox) só tem
+   estilos light — então quando o drawer está exibindo um artigo,
+   forçamos toda a coluna de leitura a permanecer clara mesmo no
+   dark mode, para não criar contraste com o iframe.
+   A view de categoria (lista de artigos) NÃO recebe esse modifier,
+   então segue o tema do app normalmente. */
+.hp-drawer-body--article {
+  background: #ffffff;
+  color: #1c2024;
+  color-scheme: light;
+}
+.hp-drawer-body--article h1 { color: #0f172a; }
+.hp-drawer-body--article h2 { color: #0f172a; }
+.hp-drawer-body--article p { color: #475569; }
+.hp-drawer-body--article ul { color: #475569; }
+.hp-drawer-body--article code {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+.hp-drawer-body--article .hp-art-meta { color: #64748b; }
+.hp-drawer-body--article .hp-callout {
+  background: #e0edff;
+  border-left-color: #086de0;
+  color: #086de0;
+}
+.hp-drawer-body--article .hp-helpful { background: #f1f5f9; }
+.hp-drawer-body--article .hp-helpful-q { color: #0f172a; }
+.hp-drawer-body--article .hp-helpful-ack { color: #64748b; }
+.hp-drawer-body--article .hp-btn-ghost {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  color: #1c2024;
+}
+.hp-drawer-body--article .hp-btn-ghost:hover { background: #f1f5f9; }
+.hp-drawer-body--article .hp-btn-ghost.hp-voted {
+  background: #e0edff;
+  color: #086de0;
+  border-color: #93c5fd;
+}
 
 /* Article list in category drawer */
 .hp-art-list {
@@ -880,7 +940,7 @@
 
 /* ── Feedback form (Reportar erro / Solicitar melhoria) ───── */
 .hp-form-card {
-  background: #ffffff;
+  background: rgb(var(--slate-2));
   border: 1px solid rgb(var(--slate-5));
   border-radius: 14px;
   padding: 28px 28px 24px;
@@ -956,7 +1016,7 @@
   border: 1.5px solid rgb(var(--slate-5));
   border-radius: 10px;
   padding: 10px 12px;
-  background: #ffffff;
+  background: rgb(var(--slate-1));
   color: rgb(var(--slate-12));
   font-size: 14px;
   font-family: inherit;

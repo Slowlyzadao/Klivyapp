@@ -1,0 +1,32 @@
+type: object
+description: Log de envio de notificação automática.
+properties:
+  id:
+    type: integer
+    example: 1
+  sent_at:
+    type: string
+    format: date-time
+  status:
+    type: string
+    enum: [sent, failed, skipped]
+    example: sent
+  error_message:
+    type: string
+    nullable: true
+  rule:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      title: { type: string }
+      rule_type: { type: string }
+      icon: { type: string }
+      icon_color: { type: string }
+  event:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      title: { type: string }
+      starts_at: { type: string, format: date-time }

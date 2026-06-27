@@ -23,6 +23,18 @@ class AgendaEventPolicy < ApplicationPolicy
     beclinic_can?(:agenda, :cancel_event)
   end
 
+  # Telemedicina (plugin telemed): emitir token da sala LiveKit, reportar
+  # joined/left, admitir paciente, controlar gravação e confirmar atendimento.
+  # STRICT — só o profissional responsável pelo horário entra. Mesmo admin não
+  # passa se não for o dono do evento, porque a identity da sala precisa ser o
+  # dentista real que o paciente vê. Pra outra pessoa cobrir, reatribuir o
+  # `user_id` do evento antes. Usado por Telemed::SessionsController e afins.
+  def telemedicine_join?
+    return false unless beclinic_can?(:agenda, :view)
+
+    record.user_id == user.id
+  end
+
   class Scope < ApplicationPolicy::Scope
     def resolve
       base = scope.where(account_id: account.id)

@@ -1,19 +1,15 @@
 # app/models/concerns/beclinic_permissible.rb
 #
 # Concern incluído no User para fornecer métodos de verificação de permissões RBAC.
-# As permissões são lidas a partir do primeiro Time (Team) do usuário na conta atual.
-# O `administrator` nativo (super admin BeClinic) tem bypass total em tudo.
+# As permissões vêm da KlivyRole atribuída ao account_user (plugins/custom_roles).
+#
+# Precedência (3 passos):
+#   1. SuperAdmin (BeClinic — User#type) -> bypass total
+#   2. Chatwoot administrator (account_user.role) -> bypass total
+#   3. KlivyRole atribuída ao account_user -> consulta permissões; sem role -> false
 #
 module BeclinicPermissible
   extend ActiveSupport::Concern
-
-  # Returns the user's RBAC team for the given account.
-  # Uses the first team the user belongs to in that account.
-  def beclinic_team_for(account)
-    teams.joins(:team_members)
-         .where(account_id: account.id)
-         .first
-  end
 
   # Returns the KlivyRole assigned to this user via account_users.klivy_role_id.
   def klivy_role_for(account)
@@ -28,13 +24,6 @@ module BeclinicPermissible
   end
 
   # Primary permission check method.
-  # Precedence:
-  #   1. SuperAdmin (BeClinic) -> bypass total
-  #   2. Chatwoot administrator -> bypass total
-  #   3. Klivy Role attached to account_user -> consult its permissions
-  #   4. Team with beclinic_role 'dono' -> bypass
-  #   5. Team permissions (legacy) -> consult
-  #   6. No team -> false
   # @param account [Account]
   # @param module_name [Symbol] e.g. :patients, :agenda, :financial
   # @param action [Symbol] e.g. :view, :create, :delete
@@ -43,78 +32,47 @@ module BeclinicPermissible
     return true if beclinic_admin_in?(account)
 
     klivy_role = klivy_role_for(account)
-    return klivy_role.can?(module_name, action) if klivy_role
-
-    team = beclinic_team_for(account)
-    return true if team&.dono?
-    return false unless team
-
-    team.can?(module_name, action)
+    klivy_role ? klivy_role.can?(module_name, action) : false
   end
 
   # Returns the scope ('all' or 'own') for a given module.
-  # Admins and dono teams always get 'all'.
+  # Admins always get 'all'. Without role, defaults to 'own' (most restrictive).
   def beclinic_scope(account, module_name)
     return 'all' if beclinic_super_admin?
     return 'all' if beclinic_admin_in?(account)
 
     klivy_role = klivy_role_for(account)
-    return klivy_role.scope_for(module_name) if klivy_role
-
-    team = beclinic_team_for(account)
-    return 'all' if team&.dono?
-    return 'own' unless team
-
-    team.scope_for(module_name)
+    klivy_role ? klivy_role.scope_for(module_name) : 'own'
   end
 
-  # Returns the beclinic_role string from the user's team.
+  # Returns a label describing the user's role in the account.
   def beclinic_role_for(account)
     return 'super_admin' if beclinic_super_admin?
+    return 'administrator' if beclinic_admin_in?(account)
 
-    team = beclinic_team_for(account)
-    team&.beclinic_role || 'especialista'
+    klivy_role_for(account)&.name
   end
 
-  # Returns all permissions hash for the user's team.
-  # Klivy Role takes precedence over Team for source of truth.
+  # Returns the permissions hash for the user in the account.
+  #
+  # Para admin/SuperAdmin retorna `{}` — o frontend faz bypass total via
+  # `usePermissions#isAdmin` (que checa `getCurrentRole === 'administrator'`
+  # ANTES de consultar o store) e o backend faz bypass via `beclinic_can?`
+  # (que retorna true antes de checar permissions). Logo o payload pra admin
+  # não é consultado em lugar nenhum — retornar um hash hardcoded só servia
+  # pra ficar dessincronizado com o catálogo real (auditoria M-9: o hash
+  # antigo tinha keys defasadas — `chat.transfer_inbox`, `financial.view_transactions`,
+  # `settings.manage_users`, `agenda.scope` symbol, etc.).
   def beclinic_permissions_for(account)
-    return full_permissions_hash if beclinic_super_admin?
-    return full_permissions_hash if beclinic_admin_in?(account)
+    return {} if beclinic_super_admin?
+    return {} if beclinic_admin_in?(account)
 
-    klivy_role = klivy_role_for(account)
-    return klivy_role.permissions || {} if klivy_role
-
-    team = beclinic_team_for(account)
-    return full_permissions_hash if team&.dono?
-
-    team&.permissions || {}
+    klivy_role_for(account)&.permissions || {}
   end
 
   # Super admin check — true if the user's type is SuperAdmin (BeClinic owners).
   # These users have full bypass on all permission checks.
   def beclinic_super_admin?
     is_a?(SuperAdmin)
-  end
-
-  private
-
-  def full_permissions_hash
-    {
-      patients: { scope: 'all', view: true, create: true, edit: true, delete: true,
-                  view_clinical_notes: true, create_clinical_notes: true, sign_clinical_notes: true,
-                  delete_clinical_notes: true, view_treatment_plans: true, manage_treatment_plans: true,
-                  view_consents: true, manage_consents: true, view_documents: true, manage_documents: true,
-                  view_exams: true, manage_exams: true, view_audit: true, view_timeline: true },
-      agenda: { scope: 'all', view: true, create_event: true, edit_event: true, cancel_event: true,
-                drag_and_drop: true, manage_blocks: true, view_notifications: true, manage_notifications: true },
-      financial: { view_transactions: true, create_transaction: true, delete_transaction: true,
-                   view_estimates: true, create_estimate: true, edit_estimate: true,
-                   approve_estimate: true, delete_estimate: true, view_cashflow: true, export_cashflow: true },
-      chat: { view_all: true, view_unassigned: true, reply: true, assign_conversation: true,
-              transfer_inbox: true, delete_message: true, send_broadcast: true },
-      settings: { manage_users: true, manage_roles: true, manage_agenda_config: true,
-                  manage_inboxes: true, view_reports: true }
-    }
   end
 end

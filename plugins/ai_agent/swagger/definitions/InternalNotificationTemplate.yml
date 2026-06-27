@@ -1,0 +1,96 @@
+type: object
+description: |
+  Template pré-definido que a Bea dispara no Chat Interno em eventos
+  específicos do EventCatalog (ex.: paciente cancelou, no-show detectado,
+  emergência clínica, ofensa/agressão). Mensagens são templated com
+  variáveis (`%{patient_name}`, `%{patient_phone}` etc.) — ZERO token de
+  LLM por disparo.
+
+  Cada `(account_id, event_key)` é UNIQUE — `DefaultTemplatesSeeder` cria
+  os 10 templates default automaticamente em `Account.after_create_commit`,
+  todos começando `target_type='disabled'`. A clínica abre BEA →
+  Notificações Internas, edita texto + escolhe destino (sala/DM/disabled)
+  + ativa.
+properties:
+  id:
+    type: integer
+  account_id:
+    type: integer
+  event_key:
+    type: string
+    description: Chave do EventCatalog (ver `event_catalog.rb`).
+    example: appointment_pending_confirmation
+  event_label:
+    type: string
+    readOnly: true
+    description: |
+      Label humano do evento, derivado do EventCatalog do `event_key`.
+      Fallback pro próprio `event_key` quando a entrada não existe mais no
+      catálogo (event_key órfão).
+  event_description:
+    type: string
+    readOnly: true
+    nullable: true
+    description: Descrição curta do evento, derivada do EventCatalog.
+  icon:
+    type: string
+    readOnly: true
+    nullable: true
+    description: Nome do ícone (lucide) do evento, derivado do EventCatalog.
+  color:
+    type: string
+    readOnly: true
+    nullable: true
+    description: 'Cor semântica do evento (ex.: `sky`, `rose`), derivada do EventCatalog.'
+  target_label:
+    type: string
+    readOnly: true
+    description: |
+      Rótulo humano do destino, computado pelo backend:
+      `Sala: <nome>` (target_type=room), `DM: <nome>` (target_type=user),
+      ou `Desativado`. Quando o room/user foi removido, retorna
+      `Sala removida` / `Usuário removido`.
+  name:
+    type: string
+    maxLength: 120
+  body:
+    type: string
+    maxLength: 4000
+    description: Pode usar `%{var}` — vars disponíveis vêm de `available_vars`.
+  target_type:
+    type: string
+    enum: [room, user, disabled]
+    description: |
+      - **room**: notifica numa sala do internal_chat (target_id = room.id)
+      - **user**: DM direto pra um usuário (target_id = user.id)
+      - **disabled**: template existe mas não dispara
+  target_id:
+    type: integer
+    nullable: true
+  enabled:
+    type: boolean
+    default: false
+  available_vars:
+    type: array
+    readOnly: true
+    description: |
+      Lista de variáveis que podem ser usadas no `body`, derivada do
+      EventCatalog do `event_key`.
+    items:
+      type: string
+  detector_status:
+    type: string
+    readOnly: true
+    enum: [active, planned]
+    description: |
+      Derivado (readOnly) do EventCatalog do `event_key`. Reflete se o
+      detector que dispara este evento já está implementado: `active` = roda;
+      `planned` = catalogado mas detector ainda não foi feito (UI exibe badge
+      "Em breve"). Fallback pra `planned` quando o `event_key` é órfão (não
+      existe mais no catálogo).
+  created_at:
+    type: string
+    format: date-time
+  updated_at:
+    type: string
+    format: date-time

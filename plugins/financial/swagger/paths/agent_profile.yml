@@ -1,0 +1,205 @@
+get:
+  tags:
+    - Financeiro · Comissionados
+  summary: Detalhar perfil financeiro de um usuário
+  description: |
+    **O `:id` da URL é o `user_id`** (não o `profile.id`). Retorna o `user`
+    (identidade core) e o `profile` financeiro (que pode ser `null` quando o
+    usuário ainda não tem configuração financeira).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: id
+      in: path
+      required: true
+      description: "**`user_id`** do usuário (não o `profile.id`)."
+      schema: { type: integer }
+  responses:
+    '200':
+      description: Usuário + perfil financeiro (pode estar `null`).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              user:
+                type: object
+                properties:
+                  id: { type: integer }
+                  name: { type: string }
+                  email: { type: string }
+                  avatar_url: { type: string, nullable: true }
+                  role: { type: string, nullable: true }
+                  beclinic_super_admin: { type: boolean }
+                  custom_role_id: { type: integer, nullable: true }
+                  klivy_role:
+                    type: object
+                    nullable: true
+                    properties:
+                      name: { type: string }
+              profile:
+                nullable: true
+                allOf:
+                  - $ref: '../definitions/AgentProfile.yml'
+    '404':
+      description: "`user_not_found_in_account` — o usuário não pertence à conta."
+put:
+  tags:
+    - Financeiro · Comissionados
+  summary: Criar ou atualizar perfil financeiro (upsert)
+  description: |
+    Upsert 1-to-1: cria o perfil se ainda não existir (**`201`**) ou atualiza
+    o existente (**`200`**). **O `:id` da URL é o `user_id`**.
+
+    RBAC: **ADMIN-only** — o perfil contém dados bancários sensíveis (LGPD)
+    usados para pagamento de comissão. Idempotência via header
+    `Idempotency-Key`. `PATCH` é idêntico ao `PUT`.
+
+    Regras de validação relevantes: `cro` obrigatório quando
+    `agent_category = profissional`; `administrador` nunca pode ser
+    `commissionable`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: id
+      in: path
+      required: true
+      description: "**`user_id`** do usuário."
+      schema: { type: integer }
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [agent_profile]
+          properties:
+            agent_profile:
+              type: object
+              description: "Atributos permitidos (strong params)."
+              properties:
+                cpf: { type: string, nullable: true, description: "Normalizado para só dígitos; criptografado em repouso." }
+                agent_category: { type: string, enum: [profissional, operacional, comercial, administrador] }
+                bond_type: { type: string, enum: [PJ, CLT, Socio, PF] }
+                entry_date: { type: string, format: date }
+                commissionable: { type: boolean }
+                cro: { type: string, nullable: true }
+                bank_name: { type: string, nullable: true }
+                bank_agency: { type: string, nullable: true }
+                bank_account_number: { type: string, nullable: true }
+                pix_key: { type: string, nullable: true }
+                status: { type: string, enum: [active, inactive] }
+                notes: { type: string, nullable: true }
+                specialties:
+                  type: array
+                  items: { type: string }
+  responses:
+    '201':
+      description: Perfil criado.
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgentProfile.yml'
+    '200':
+      description: Perfil atualizado.
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgentProfile.yml'
+    '403':
+      description: Sem permissão (não é ADMIN).
+    '404':
+      description: "`user_not_found_in_account`."
+    '422':
+      description: "Erro de validação — corpo `{ errors: [...] }`."
+patch:
+  tags:
+    - Financeiro · Comissionados
+  summary: Criar ou atualizar perfil financeiro (upsert)
+  description: |
+    Idêntico ao `PUT` deste recurso (mesmo `upsert`). **O `:id` da URL é o
+    `user_id`**. RBAC **ADMIN-only** (dados bancários sensíveis).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: id
+      in: path
+      required: true
+      description: "**`user_id`** do usuário."
+      schema: { type: integer }
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [agent_profile]
+          properties:
+            agent_profile:
+              type: object
+              properties:
+                cpf: { type: string, nullable: true }
+                agent_category: { type: string, enum: [profissional, operacional, comercial, administrador] }
+                bond_type: { type: string, enum: [PJ, CLT, Socio, PF] }
+                entry_date: { type: string, format: date }
+                commissionable: { type: boolean }
+                cro: { type: string, nullable: true }
+                bank_name: { type: string, nullable: true }
+                bank_agency: { type: string, nullable: true }
+                bank_account_number: { type: string, nullable: true }
+                pix_key: { type: string, nullable: true }
+                status: { type: string, enum: [active, inactive] }
+                notes: { type: string, nullable: true }
+                specialties:
+                  type: array
+                  items: { type: string }
+  responses:
+    '201':
+      description: Perfil criado.
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgentProfile.yml'
+    '200':
+      description: Perfil atualizado.
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgentProfile.yml'
+    '403':
+      description: Sem permissão (não é ADMIN).
+    '404':
+      description: "`user_not_found_in_account`."
+    '422':
+      description: "Erro de validação — corpo `{ errors: [...] }`."
+delete:
+  tags:
+    - Financeiro · Comissionados
+  summary: Inativar perfil financeiro (deactivate)
+  description: |
+    Soft-delete do perfil financeiro — **o `User` base permanece intacto**, só
+    perde a configuração financeira (comissões/folha deixam de ficar
+    disponíveis). **O `:id` da URL é o `user_id`**.
+
+    Idempotente: se não houver perfil configurado, responde
+    `{ ok: true, already_unconfigured: true }`. RBAC **ADMIN-only**.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: id
+      in: path
+      required: true
+      description: "**`user_id`** do usuário."
+      schema: { type: integer }
+  responses:
+    '200':
+      description: Inativado (ou já não configurado).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              ok: { type: boolean }
+              already_unconfigured:
+                type: boolean
+                description: "Presente (`true`) quando não havia perfil para inativar."
+    '403':
+      description: Sem permissão (não é ADMIN).
+    '404':
+      description: "`user_not_found_in_account`."

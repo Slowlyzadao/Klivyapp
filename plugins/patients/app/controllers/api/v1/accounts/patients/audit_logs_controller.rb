@@ -1,7 +1,7 @@
 class Api::V1::Accounts::Patients::AuditLogsController < Api::V1::Accounts::Patients::BaseController
   # GET /api/v1/accounts/:account_id/patients/:patient_id/audit_logs
   def index
-    @audit_logs = PatientAuditLog.where(patient: @patient, account: current_account)
+    @audit_logs = PatientAuditLog.where(patient: @patient, account: Current.account)
                                  .ordered
                                  .page(page_number).per(page_size)
 
@@ -33,21 +33,30 @@ class Api::V1::Accounts::Patients::AuditLogsController < Api::V1::Accounts::Pati
                 type: 'application/pdf',
                 disposition: 'attachment'
     else
-      render json: { error: 'Falha ao gerar o PDF do prontuário', details: result.error }, status: :unprocessable_entity
+      render_error(['Falha ao gerar o PDF do prontuário', result.error].compact)
     end
   end
 
   private
 
+  # Padrão Pundit deste controller: a autorização acontece DENTRO de cada
+  # action (`fetch_patient` chama `authorize @patient, :audit_logs?` e
+  # `export` chama `authorize @patient, :export?`). Por isso desligamos o
+  # auto-call que o Api::BaseController dispara — evita Pundit::AuthorizationNotPerformedError
+  # e double-authorize.
+  #
+  # ⚠️ CRÍTICO: ao adicionar nova action neste controller, garanta que ela
+  # chama `authorize @patient, :alguma_action?` explicitamente. Sem isso,
+  # a action ficará SEM proteção de autorização.
   def check_authorization
     true
   end
 
   def fetch_patient
-    @patient = current_account.patients.find(params[:patient_id])
+    @patient = Current.account.patients.find(params[:patient_id])
     authorize @patient, :audit_logs?
   rescue ActiveRecord::RecordNotFound
-    render json: { error: 'Paciente não encontrado' }, status: :not_found
+    render_error('Paciente não encontrado', status: :not_found)
   end
 
   def filter_logs(scope)

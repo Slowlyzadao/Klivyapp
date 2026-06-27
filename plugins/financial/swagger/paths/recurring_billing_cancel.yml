@@ -1,0 +1,39 @@
+post:
+  tags:
+    - Financeiro · Mensalidades
+  summary: Cancelar mensalidade fixa
+  description: |
+    Encerra o contrato definitivamente (`status='canceled'`, registra
+    `canceled_at` e `cancel_reason`). **Preserva** o histórico (não é soft
+    delete). Para excluir um billing que nunca gerou nada, use
+    `DELETE /:id`. Billings já `canceled`/`completed` retornam 422
+    `already_closed`.
+
+    Requer RECEPCAO/GERENTE/ADMIN. Idempotência opcional via header
+    `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            reason: { type: string, description: "Motivo do cancelamento (gravado em `cancel_reason`)." }
+  responses:
+    '200':
+      description: Mensalidade cancelada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/RecurringBilling.yml'
+    '403':
+      description: Sem permissão (requer RECEPCAO/GERENTE/ADMIN).
+    '404':
+      description: Não encontrada.
+    '412':
+      description: Setup financeiro incompleto (wizard pendente).
+    '422':
+      description: Mensalidade já encerrada/cancelada (`already_closed`).

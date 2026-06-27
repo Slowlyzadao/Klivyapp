@@ -234,6 +234,39 @@ class Rack::Attack
     "#{user_identifier}:#{match_data[:account_id]}" if user_identifier.present?
   end
 
+  ##-----------------------------------------------##
+  ###--- Agendamento público (auditoria 9.9) ------###
+  ##-----------------------------------------------##
+  # Endpoint `/public/api/v1/agenda/:public_id/{slots,book}` é anônimo (sem
+  # auth) — sem throttle, atacante consegue tanto spam de bookings quanto
+  # enumeração de horários disponíveis. Throttles em duas dimensões: por IP
+  # (caso clássico de bot) e por `public_id` (caso atacante use IPs rotativos
+  # mas mire um profissional específico).
+
+  ## /book — limite estreito (operação destrutiva: cria evento + contact).
+  throttle('agenda_public/book/ip',
+           limit: ENV.fetch('RATE_LIMIT_AGENDA_PUBLIC_BOOK_IP', '10').to_i, period: 1.hour) do |req|
+    req.ip if req.path.start_with?('/public/api/v1/agenda/') && req.path.end_with?('/book') && req.post?
+  end
+
+  throttle('agenda_public/book/public_id',
+           limit: ENV.fetch('RATE_LIMIT_AGENDA_PUBLIC_BOOK_PUBLIC_ID', '30').to_i, period: 1.hour) do |req|
+    match = %r{\A/public/api/v1/agenda/(?<public_id>[^/]+)/book\z}.match(req.path)
+    match[:public_id] if match.present? && req.post?
+  end
+
+  ## /slots — limite generoso (read-only, mas evita enumeração massiva).
+  throttle('agenda_public/slots/ip',
+           limit: ENV.fetch('RATE_LIMIT_AGENDA_PUBLIC_SLOTS_IP', '120').to_i, period: 1.hour) do |req|
+    req.ip if req.path.start_with?('/public/api/v1/agenda/') && req.path.end_with?('/slots') && req.get?
+  end
+
+  throttle('agenda_public/slots/public_id',
+           limit: ENV.fetch('RATE_LIMIT_AGENDA_PUBLIC_SLOTS_PUBLIC_ID', '600').to_i, period: 1.hour) do |req|
+    match = %r{\A/public/api/v1/agenda/(?<public_id>[^/]+)/slots\z}.match(req.path)
+    match[:public_id] if match.present? && req.get?
+  end
+
   ## ----------------------------------------------- ##
 end
 

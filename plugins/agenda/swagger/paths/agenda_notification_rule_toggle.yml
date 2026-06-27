@@ -1,0 +1,15 @@
+patch:
+  tags:
+    - Regras de Notificação
+  summary: Alternar `enabled`
+  description: Inverte o estado `enabled` da regra (idempotente em pares).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Regra com novo estado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaNotificationRule.yml'

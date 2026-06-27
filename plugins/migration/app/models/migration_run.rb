@@ -1,7 +1,7 @@
 class MigrationRun < ApplicationRecord
   belongs_to :account
 
-  KINDS = %w[patients agenda anamnesis financial].freeze
+  KINDS = %w[patients agenda anamnesis financial treatment_operations].freeze
   STATUSES = %w[pending processing completed failed].freeze
   SOURCES = %w[clinicorp generic].freeze
 

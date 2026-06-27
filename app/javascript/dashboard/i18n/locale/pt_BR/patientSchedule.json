@@ -1,0 +1,116 @@
+{
+  "PATIENT_SCHEDULE": {
+    "HEADER": {
+      "TITLE": "Agenda e Histórico",
+      "SUBTITLE": "Acompanhamento completo de agendamentos, faltas e retornos do paciente.",
+      "VIEW_AGENDA": "Ver na Agenda",
+      "NEW_APPOINTMENT": "Novo Agendamento"
+    },
+    "KPI": {
+      "TOTAL": "Total",
+      "DONE": "Realizados",
+      "UPCOMING": "Próximos",
+      "NO_SHOWS": "Faltas"
+    },
+    "FILTERS": {
+      "ALL": "Todos",
+      "UPCOMING": "Próximos",
+      "ISSUES": "Faltas/Cancelados"
+    },
+    "RECALL": {
+      "TITLE": "Retorno Pendente — Paciente Faltou",
+      "DESCRIPTION_PREFIX": "O paciente não compareceu à consulta de",
+      "DESCRIPTION_DATE": "agendada para",
+      "DESCRIPTION_TIME": "às {time}",
+      "DESCRIPTION_SUFFIX": ". Nenhum lembrete foi enviado ainda.",
+      "REMIND_WHATSAPP": "Lembrar via WhatsApp",
+      "RESCHEDULE_MANUAL": "Reagendar Manualmente",
+      "OPEN_AGENDA": "Abrir Agenda",
+      "DISMISS_FOREVER": "Não mostrar mais",
+      "DISMISS_TITLE": "Fechar lembrete"
+    },
+    "LOADING": "Carregando agendamentos...",
+    "LOADING_MORE": "Carregando mais…",
+    "EMPTY": {
+      "TITLE": "Nenhum agendamento encontrado",
+      "HINT_ALL": "Este paciente ainda não tem consultas registradas.",
+      "HINT_FILTERED": "Nenhum registro neste filtro.",
+      "FIRST_APPOINTMENT": "Agendar Primeira Consulta"
+    },
+    "TIMELINE": {
+      "END_LABEL": "Início do histórico"
+    },
+    "CARD": {
+      "NEXT_BADGE": "PRÓXIMA",
+      "PROFESSIONAL_LABEL": "Profissional Responsável",
+      "PROFESSIONAL_FALLBACK": "Não informado",
+      "TREATMENT_LABEL": "Tratamento",
+      "DURATION_SUFFIX": "min",
+      "RESCHEDULE_REASON": "Motivo Reagendamento:",
+      "CANCELLATION_REASON": "Motivo Cancelamento:",
+      "DELETED_DEFAULT": "Excluído",
+      "DELETED_BY": "por",
+      "DELETED_AT": "em",
+      "DELETION_NOTE": "Justificativa:",
+      "NOTIFY_WHATSAPP": "Notificar WhatsApp",
+      "RESCHEDULE_NOW": "Reagendar Agora",
+      "MARK_NO_SHOW": "Marcar Falta"
+    },
+    "RESCHEDULE_MODAL": {
+      "TITLE": "Reagendar Consulta",
+      "SUBTITLE": "Selecione a nova data e horário",
+      "NEW_DATETIME_LABEL": "Nova Data e Hora *",
+      "BRT_HINT": "(horário de Brasília)",
+      "DURATION_LABEL": "Duração (minutos)",
+      "REASON_LABEL": "Motivo do Reagendamento",
+      "REASON_PLACEHOLDER": "Ex: Solicitação do paciente...",
+      "CANCEL": "Cancelar",
+      "CONFIRM": "Confirmar Reagendamento"
+    },
+    "NO_SHOW_MODAL": {
+      "TITLE": "Registrar Falta",
+      "SUBTITLE": "Esta ação não pode ser desfeita",
+      "MESSAGE_PREFIX": "O status será alterado para",
+      "STATUS_BADGE": "Falta",
+      "MESSAGE_SUFFIX": "e o contador de faltas do paciente será incrementado.",
+      "CANCEL": "Cancelar",
+      "CONFIRM": "Confirmar Falta"
+    },
+    "STATUS": {
+      "SCHEDULED": "Agendado",
+      "CONFIRMED": "Confirmado",
+      "ARRIVED": "Presente",
+      "IN_PROGRESS": "Em Atendimento",
+      "DONE": "Realizado",
+      "NO_SHOW": "Falta",
+      "CANCELED": "Cancelado",
+      "RESCHEDULED": "Reagendado",
+      "DELETED_USER": "Cancelado pelo Usuário",
+      "DELETED_PATIENT": "Cancelado pelo Paciente",
+      "DELETED_RESCHEDULE": "Reagendado",
+      "DELETED_OTHER": "Excluído"
+    },
+    "TYPES": {
+      "AVALIACAO": "Avaliação",
+      "RETORNO": "Retorno",
+      "PROCEDIMENTO": "Procedimento",
+      "REVISAO": "Revisão",
+      "EMERGENCIA": "Emergência",
+      "CONSULTATION": "Consulta",
+      "AGENDA_BLOCK": "Bloqueio",
+      "APPOINTMENT": "Compromisso"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Erro ao carregar agenda do paciente.",
+      "RESCHEDULE_MISSING_DATE": "Selecione uma data e hora para o reagendamento.",
+      "RESCHEDULE_INVALID": "Data/hora inválida.",
+      "RESCHEDULE_SUCCESS": "Consulta reagendada com sucesso!",
+      "RESCHEDULE_ERROR": "Erro ao reagendar consulta.",
+      "NO_SHOW_SUCCESS": "Falta registrada com sucesso.",
+      "NO_SHOW_ERROR": "Erro ao registrar falta.",
+      "RECALL_SUCCESS": "Lembrete de retorno enviado via WhatsApp!",
+      "RECALL_FALLBACK_MESSAGE": "Olá{name}! Notamos que você não compareceu à sua última consulta. Gostaríamos de reagendar para um horário conveniente para você. 😊",
+      "RECALL_FALLBACK_NO_PHONE": "Lembrete enviado!"
+    }
+  }
+}

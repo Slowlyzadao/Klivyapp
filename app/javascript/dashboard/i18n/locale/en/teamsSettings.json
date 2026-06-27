@@ -57,11 +57,6 @@
         "ROUTE": "settings_teams_edit_members",
         "BODY": "Edit agents in your team."
       },
-      "EDIT_WIZARD_PERMISSIONS": {
-        "TITLE": "Permissions",
-        "ROUTE": "settings_teams_edit_permissions",
-        "BODY": "Configure what this team can access."
-      },
       "EDIT_WIZARD_FINISH": {
         "TITLE": "Finish",
         "ROUTE": "settings_teams_edit_finish",

@@ -1,0 +1,87 @@
+get:
+  tags:
+    - Bea — Treinamento
+  summary: Listar conversas de treinamento
+  description: |
+    Lista as conversas de WhatsApp enviadas pra treinar a Bea, paginadas
+    (25 por página). Resumo, sem `parsed_messages`. Autorização
+    (`AiAgent::TrainingConversationPolicy`): admin OR Klivy `captain.view`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 1
+  responses:
+    '200':
+      description: Lista paginada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              payload:
+                type: array
+                items:
+                  $ref: '../definitions/TrainingConversation.yml'
+              meta:
+                type: object
+                properties:
+                  total_count:
+                    type: integer
+                  page:
+                    type: integer
+    '403':
+      description: Sem permissão (`captain.view`)
+post:
+  tags:
+    - Bea — Treinamento
+  summary: Enviar conversa de treinamento
+  description: |
+    Recebe o `.zip` exportado do WhatsApp e enfileira
+    `AiAgent::ProcessTrainingConversationJob` pra processar em background.
+    Autorização: admin OR Klivy `captain.manage_faqs`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    description: |
+      Params aceitos (`training_conversation.permit`): `name`,
+      `clinic_sender_name`, `zip_file`.
+
+      - `zip_file` é **obrigatório**: `.zip` exportado do WhatsApp (≤ 200 MB,
+        precisa conter `_chat.txt`).
+      - `clinic_sender_name` é **obrigatório**: nome do remetente que é a
+        clínica na conversa (usado pra separar clínica × paciente).
+      - `name` é **opcional**: sem ele, o backend usa o nome-base do `.zip`.
+    content:
+      multipart/form-data:
+        schema:
+          type: object
+          required:
+            - clinic_sender_name
+            - zip_file
+          properties:
+            clinic_sender_name:
+              type: string
+              description: Nome da clínica na conversa.
+            zip_file:
+              type: string
+              format: binary
+              description: .zip do WhatsApp (≤ 200 MB).
+            name:
+              type: string
+              description: Opcional. Default = nome-base do .zip.
+  responses:
+    '201':
+      description: Criado, processamento em background
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/TrainingConversation.yml'
+    '403':
+      description: Sem permissão (`captain.manage_faqs`)
+    '422':
+      description: Payload inválido (sem .zip, .zip inválido/grande, ou sem `clinic_sender_name`)

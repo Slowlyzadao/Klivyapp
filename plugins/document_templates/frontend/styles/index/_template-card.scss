@@ -1,0 +1,275 @@
+// TemplateCard — match mockup M3 Klivy. h-320, preview 192, body flexível.
+
+.tpl-card {
+  display: flex;
+  flex-direction: column;
+  height: 320px;
+  border: 1px solid var(--kl-border-subtle);
+  border-radius: var(--kl-radius-xl);
+  background: var(--kl-surface-white);
+  box-shadow: var(--kl-shadow-card);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color var(--kl-transition);
+
+  &:hover {
+    border-color: var(--kl-primary);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--kl-primary);
+    box-shadow: var(--kl-ring);
+  }
+
+  &[draggable='true'] { cursor: grab; }
+  &[draggable='true']:active { cursor: grabbing; }
+
+  // ── Preview area: bg surface-low com mini-papel branco dentro ─────────
+  &__preview {
+    position: relative;
+    height: 192px;
+    padding: 16px;
+    // Papel: thumbnail do documento → branco fixo nos dois temas (no dark
+    // fica uma "folha" branca sobre o card escuro, como prévia de página).
+    background: var(--kl-paper);
+    border-bottom: 1px solid var(--kl-border-subtle);
+    overflow: hidden;
+  }
+
+  // Real preview: texto sanitizado do content_json renderizado pequeno.
+  // Aparenta um "papelzinho" dentro da área cinza.
+  // ── Mini-papel branco com conteúdo real ─────────────────────────────
+  // Estratégia: o doc interno renderiza em tamanho NORMAL de documento
+  // (12-22px) e é miniaturizado via transform: scale(0.35). Isso evita
+  // a regra de minimum-font-size do Chrome (~10px) que clampa fontes
+  // pequenas mesmo com CSS dizendo o contrário.
+  //
+  // Fator de escala: 0.35. Pra preencher um preview de ~250×170, o
+  // inner precisa ter ~715×485 antes da escala.
+  $preview-scale: 0.35;
+
+  &__preview-doc {
+    position: relative;
+    height: 100%;
+    border-radius: 4px;
+    background: var(--kl-paper);
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+    box-shadow: 0 1px 2px rgba(7, 16, 42, 0.04);
+  }
+
+  &__preview-doc-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(100% / #{$preview-scale});
+    height: calc(100% / #{$preview-scale});
+    padding: 28px 32px;
+    transform: scale(#{$preview-scale});
+    transform-origin: top left;
+    // Tinta sobre o papel branco (fixa) — sem isso o texto do preview some
+    // no dark (token theme-aware viraria claro sobre o papel branco).
+    color: var(--kl-paper-ink);
+    font-family: var(--kl-font-family);
+    font-size: 24px;
+    line-height: 1.5;
+
+    :deep(h1) {
+      margin: 0 0 8px;
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    :deep(h2) {
+      margin: 14px 0 6px;
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    :deep(h3) {
+      margin: 10px 0 4px;
+      font-size: 22px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    :deep(h4) {
+      margin: 8px 0 4px;
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    :deep(p),
+    :deep(li),
+    :deep(blockquote) {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+    :deep(p:empty) {
+      display: none;
+    }
+    :deep(ul),
+    :deep(ol) {
+      margin: 0 0 8px 22px;
+      padding: 0;
+    }
+    :deep(li) {
+      margin: 0 0 4px;
+    }
+    :deep(blockquote) {
+      margin: 0 0 8px;
+      padding-left: 10px;
+      border-left: 2px solid var(--kl-paper-line);
+      color: var(--kl-paper-ink-soft);
+    }
+    :deep(em) {
+      color: var(--kl-paper-ink-soft);
+      font-style: normal;
+    }
+    :deep(strong) {
+      font-weight: 700;
+    }
+  }
+
+  // Fallback wireframe: usado quando o template está vazio.
+  &__preview-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 8px;
+  }
+
+  &__preview-title-bar {
+    display: block;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--kl-paper-ink);
+  }
+
+  &__preview-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  &__preview-line {
+    display: block;
+    height: 6px;
+    border-radius: 2px;
+    background: var(--kl-paper-line);
+  }
+
+  // ── Badge (canto sup. direito da preview) ──────────────────────────────
+  &__badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 4px 10px;
+    border-radius: var(--kl-radius-pill);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    white-space: nowrap;
+
+    // Klivy e Personalizado = chip azul sutil da marca (bg blue 12%, texto
+    // blue-11, borda blue 24% pra o chip ficar visível). Antes o Klivy era
+    // um pill preto sólido e o Personalizado quase sem fundo.
+    &--klivy,
+    &--cloned {
+      background: var(--kl-primary-fixed);
+      color: var(--kl-on-primary-fixed-variant);
+      border: 1px solid var(--kl-primary-fixed-dim);
+      font-weight: 600;
+    }
+  }
+
+  // ── Body ──────────────────────────────────────────────────────────────
+  &__body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex: 1;
+    padding: 16px;
+    min-height: 0;
+  }
+
+  &__heading {
+    min-width: 0;
+  }
+
+  &__title {
+    margin: 0 0 4px;
+    font-family: inherit;
+    font-size: var(--kl-font-headline-sm);
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--kl-on-surface);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__type {
+    margin: 0;
+    font-family: inherit;
+    font-size: var(--kl-font-label-md);
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--kl-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // ── Footer (meta + menu) ──────────────────────────────────────────────
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--kl-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__version {
+    font-weight: 700;
+    color: var(--kl-on-surface);
+  }
+
+  &__dot { color: var(--kl-secondary); }
+
+  &__menu-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--kl-secondary);
+    cursor: pointer;
+    transition: color var(--kl-transition);
+
+    span { width: 18px; height: 18px; }
+
+    &:hover { color: var(--kl-primary); }
+
+    &:focus-visible {
+      outline: none;
+      color: var(--kl-primary);
+    }
+  }
+}

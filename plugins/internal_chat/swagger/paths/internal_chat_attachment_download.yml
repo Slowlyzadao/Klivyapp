@@ -1,0 +1,39 @@
+get:
+  tags:
+    - Chat Interno — Anexos
+  summary: Baixar anexo
+  description: |
+    Baixa um anexo da sala com `Content-Disposition: attachment`.
+
+    - Imagens `image/webp` (formato em que as imagens são armazenadas) são
+      reconvertidas in-memory via MiniMagick pra JPG (sem alpha) ou PNG (com
+      alpha) e servidas com `send_data` (200). Falha na conversão cai pro
+      redirect da URL original do WebP.
+    - Outros tipos: `302` redirecionando pra URL direta do ActiveStorage
+      (`allow_other_host: false`).
+
+    Autorização: admin OR (Klivy `internal_chat.view` AND member).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/roomId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: |
+        Imagem WebP reconvertida (JPG/PNG) servida inline como binário.
+      content:
+        image/jpeg:
+          schema:
+            type: string
+            format: binary
+        image/png:
+          schema:
+            type: string
+            format: binary
+    '302':
+      description: Redirect pra URL direta do ActiveStorage (tipos não-WebP)
+    '403':
+      description: Sem permissão / não é membro
+    '404':
+      description: |
+        Anexo não encontrado, ou não pertence a esta sala, ou sala de outra conta.

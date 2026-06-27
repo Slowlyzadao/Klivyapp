@@ -327,7 +327,7 @@
     "FINANCIAL_SETTINGS": "Settings",
     "CALENDAR": "Calendar",
     "AGENDA_CATEGORIES": "Categories",
-    "CAPTAIN": "Bea",
+    "CAPTAIN": "Captain",
     "CAPTAIN_ASSISTANTS": "Assistants",
     "CAPTAIN_DOCUMENTS": "Documents",
     "CAPTAIN_RESPONSES": "FAQs",
@@ -336,6 +336,12 @@
     "CAPTAIN_PLAYGROUND": "Playground",
     "CAPTAIN_INBOXES": "Inboxes",
     "CAPTAIN_SETTINGS": "Settings",
+    "AI_AGENT_SYSTEM_PROMPT": "System Message",
+    "AI_AGENT_FOLLOW_UPS": "Follow-ups",
+    "AI_AGENT_TEMPLATES": "Internal Notifications",
+    "AI_AGENT_TRAINING": "Training",
+    "AI_AGENT_VOUCHERS": "Vouchers",
+    "INTERNAL_CHAT": "Internal Chat",
     "HOME": "Home",
     "AGENTS": "Agents",
     "AGENT_BOTS": "Bots",
@@ -346,6 +352,7 @@
     "INTEGRATIONS": "Integrations",
     "PROFILE_SETTINGS": "Profile Settings",
     "ACCOUNT_SETTINGS": "Account Settings",
+    "CLINIC_DATA": "Clinic Data",
     "APPLICATIONS": "Applications",
     "LABELS": "Labels",
     "CUSTOM_ATTRIBUTES": "Custom Attributes",
@@ -398,15 +405,15 @@
     },
     "DOCS": "Read docs",
     "SECURITY": "Security",
-    "CAPTAIN_AI": "Bea",
+    "CAPTAIN_AI": "Captain",
     "CONVERSATION_WORKFLOW": "Conversation Workflow"
   },
   "CAPTAIN_SETTINGS": {
-    "TITLE": "Bea Settings",
-    "DESCRIPTION": "Configure your AI models and features for Bea. Bea follows a credit-based billing — you will be charged credits for every action Bea takes based on the model selected.",
-    "LOADING": "Loading Bea configuration...",
-    "LINK_TEXT": "Learn more about Bea Credits",
-    "NOT_ENABLED": "Bea is not enabled for your account. Please upgrade your plan to access Bea features.",
+    "TITLE": "Captain Settings",
+    "DESCRIPTION": "Configure your AI models and features for Captain. Captain follows a credit based billing, you will be charged credits for every action Captain takes based on the model selected.",
+    "LOADING": "Loading Captain configuration...",
+    "LINK_TEXT": "Learn more about Captain Credits",
+    "NOT_ENABLED": "Captain is not enabled for your account. Please upgrade your plan to access Captain features.",
     "MODEL_CONFIG": {
       "TITLE": "Model Configuration",
       "DESCRIPTION": "Select AI models for different features.",
@@ -445,8 +452,8 @@
       }
     },
     "API": {
-      "SUCCESS": "Bea settings updated successfully.",
-      "ERROR": "Failed to update Bea settings. Please try again."
+      "SUCCESS": "Captain settings updated successfully.",
+      "ERROR": "Failed to update Captain settings. Please try again."
     }
   },
   "BILLING_SETTINGS": {
@@ -465,12 +472,12 @@
       "BUTTON_TXT": "Go to the billing portal"
     },
     "CAPTAIN": {
-      "TITLE": "Bea",
-      "DESCRIPTION": "Manage usage and credits for Bea AI.",
+      "TITLE": "Captain",
+      "DESCRIPTION": "Manage usage and credits for Captain AI.",
       "BUTTON_TXT": "Buy more credits",
       "DOCUMENTS": "Documents",
       "RESPONSES": "Credits",
-      "UPGRADE": "Bea is not available on the free plan — upgrade now to access assistants, copilot and more.",
+      "UPGRADE": "Captain is not available on the free plan, upgrade now to get access to assistants, copilot and more.",
       "REFRESH_CREDITS": "Refresh"
     },
     "CHAT_WITH_US": {
@@ -482,7 +489,7 @@
     "TOPUP": {
       "BUY_CREDITS": "Buy more credits",
       "MODAL_TITLE": "Buy AI Credits",
-      "MODAL_DESCRIPTION": "Purchase additional credits for Bea AI.",
+      "MODAL_DESCRIPTION": "Purchase additional credits for Captain AI.",
       "CREDITS": "CREDITS",
       "ONE_TIME": "one-time",
       "POPULAR": "Most Popular",
@@ -942,9 +949,35 @@
       "MONTH": "Month",
       "WEEK": "Week",
       "DAY": "Day",
+      "YEAR": "Year",
       "TODAY": "Today",
       "FILTER_AGENTS": "Filter Agents",
       "NEW_EVENT": "New Event"
+    },
+    "YEAR": {
+      "APPOINTMENTS_IN_YEAR": "appointments this year",
+      "APPOINTMENTS": "appointments",
+      "APPOINTMENT": "appointment",
+      "SCHEDULED_NOUN_SINGULAR": "scheduled",
+      "SCHEDULED_NOUN_PLURAL": "scheduled",
+      "NO_APPOINTMENTS_SHORT": "No appointments",
+      "PEAK_IN": "peak in",
+      "PEAK_WITH": "with",
+      "NO_APPOINTMENTS": "no appointments",
+      "OPEN_MONTH": "Open month",
+      "BAR_CHART_ARIA": "Total appointments per month",
+      "SCHEDULED": "scheduled",
+      "CONFIRMED": "confirmed",
+      "ARRIVED": "arrived",
+      "IN_PROGRESS": "in progress",
+      "COMPLETED": "completed",
+      "CANCELLED": "cancelled",
+      "NO_SHOW": "no-shows",
+      "LEGEND": {
+        "LESS": "Less",
+        "MORE": "More",
+        "HINT": "Click a day to open the agenda · click a month name to open the full month"
+      }
     },
     "DAYS": {
       "SUN": "SUN",

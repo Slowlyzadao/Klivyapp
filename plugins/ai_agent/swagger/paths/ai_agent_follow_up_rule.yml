@@ -1,0 +1,63 @@
+get:
+  tags:
+    - Bea — Follow-ups
+  summary: Obter regra
+  description: 'Autorização: admin OR Klivy `captain.view`.'
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Regra
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/FollowUpRule.yml'
+    '404':
+      description: Não encontrada (ou pertence a outra conta)
+put:
+  tags:
+    - Bea — Follow-ups
+  summary: Atualizar regra
+  description: 'Autorização: admin OR Klivy `captain.manage_follow_ups`.'
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            follow_up_rule:
+              type: object
+              description: Mesmos campos do POST (todos opcionais no update).
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/FollowUpRule.yml'
+    '401':
+      description: Sem permissão (`captain.manage_follow_ups`) — Pundit renderiza 401
+    '404':
+      description: Não encontrada
+    '422':
+      description: Validação falhou
+delete:
+  tags:
+    - Bea — Follow-ups
+  summary: Deletar regra
+  description: 'Autorização: admin OR Klivy `captain.manage_follow_ups`.'
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '204':
+      description: Deletada
+    '401':
+      description: Sem permissão
+    '404':
+      description: Não encontrada

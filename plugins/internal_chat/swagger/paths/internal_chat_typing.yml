@@ -1,0 +1,42 @@
+post:
+  tags:
+    - Chat Interno — Salas
+  summary: Sinalizar "digitando…"
+  description: |
+    Broadcast efêmero do indicador "Fulano está digitando…" pros demais
+    membros da sala (evento `internal_chat.typing` via ActionCable). Não
+    persiste nada — o frontend usa debounce de ~3s.
+
+    Rate-limit server-side: no máximo 1 broadcast de `active=true` por
+    usuário/sala/segundo (cache Redis). `active=false` (stop) SEMPRE passa,
+    pra comunicar a parada imediatamente e não deixar outros membros vendo
+    "digitando" infinito. Falha de cache (Redis down) degrada graciosamente —
+    ainda responde `204`.
+
+    Autorização: Klivy `internal_chat.view` AND member. DIVERGÊNCIA
+    INTENCIONAL vs. as outras policies do módulo: a `TypingPolicy` NÃO faz
+    bypass de admin não-membro — um admin fora da sala digitando geraria
+    ruído ("Admin está digitando…") sem ele estar presente. Admin que queira
+    participar entra na sala primeiro.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/roomId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            active:
+              type: boolean
+              description: '`true` = começou a digitar; `false` = parou.'
+  responses:
+    '204':
+      description: |
+        Sinal processado (sem corpo). Também retornado quando o rate-limit
+        suprime o broadcast ou quando o cache falha silenciosamente.
+    '403':
+      description: Sem permissão / não é membro (sem bypass de admin)
+    '404':
+      description: Sala não encontrada (ou pertence a outra conta)

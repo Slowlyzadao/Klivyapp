@@ -1,0 +1,28 @@
+patch:
+  tags:
+    - Documentos
+  summary: Atualizar status do documento
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [status]
+          properties:
+            status:
+              type: string
+              description: "Valor de `Document::STATUSES` (ex.: gerado, enviado, assinado, arquivado)."
+  responses:
+    '200':
+      description: Status atualizado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Document.yml'
+    '422':
+      description: Status inválido

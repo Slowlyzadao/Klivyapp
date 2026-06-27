@@ -40,10 +40,18 @@ const props = defineProps({
   maxHeight: { type: Number, default: 240 },
 });
 
-const emit = defineEmits(['update:modelValue', 'change']);
+// `search-change` permite que pickers com busca remota (ex.: paciente,
+// que tem milhares de registros e não dá pra pre-load) reajam ao texto
+// digitado no campo de busca interno. Pra uso client-side comum (lista
+// pre-carregada), basta ignorar o evento — o filtro `filteredOptions`
+// já funciona sozinho.
+const emit = defineEmits(['update:modelValue', 'change', 'search-change']);
 
 const open = ref(false);
 const search = ref('');
+
+// Encaminha o input de busca pra fora pra consumers fazerem fetch remoto.
+watch(search, val => emit('search-change', val));
 const triggerRef = ref(null);
 const dropdownRef = ref(null);
 const searchInputRef = ref(null);
@@ -66,14 +74,19 @@ const showSearch = computed(() => {
   return false;
 });
 
+// Busca interna do dropdown: casa em `label`, `badge` e `hint`. Permite
+// achar opções tanto por nome quanto por ID/identificador exibido como badge.
 const filteredOptions = computed(() => {
   if (!search.value) return normalizedOptions.value;
   const q = search.value.toLowerCase().trim();
-  return normalizedOptions.value.filter(o =>
-    String(o.label || o.value || '')
-      .toLowerCase()
-      .includes(q)
-  );
+  return normalizedOptions.value.filter(o => {
+    const haystack = [o.label, o.badge, o.hint, o.value]
+      .filter(v => v !== null && v !== undefined && v !== '')
+      .map(String)
+      .join(' ')
+      .toLowerCase();
+    return haystack.includes(q);
+  });
 });
 
 const selected = computed(
@@ -103,7 +116,9 @@ const updatePosition = () => {
     position: 'fixed',
     left: `${rect.left}px`,
     width: `${rect.width}px`,
-    zIndex: 9999,
+    // Acima dos modais do Chatwoot (.modal-mask z-[9990]) e qualquer outro
+    // overlay. Inline overrides class CSS, então precisa estar aqui.
+    zIndex: 100000,
   };
 
   if (goesUp) {
@@ -119,12 +134,18 @@ const updatePosition = () => {
 
 const toggle = async () => {
   if (props.disabled) return;
-  open.value = !open.value;
   if (open.value) {
-    await nextTick();
-    updatePosition();
-    if (showSearch.value) searchInputRef.value?.focus();
+    close();
+    return;
   }
+  // Calcula posição ANTES de marcar open=true para que o primeiro paint do
+  // dropdown já saia no lugar certo (sem o "flash" de canto na 1ª abertura).
+  updatePosition();
+  open.value = true;
+  await nextTick();
+  // Reposiciona pós-render caso layout tenha shiftado (ex: scroll travou).
+  updatePosition();
+  if (showSearch.value) searchInputRef.value?.focus();
 };
 
 const close = () => {
@@ -261,7 +282,15 @@ onBeforeUnmount(() => {
                 class="ms-dot"
                 :style="{ background: option.color }"
               />
-              <span class="ms-option-label">{{ option.label }}</span>
+              <!-- ms-option-main: agrupa label + badge para que o badge fique
+                   inline com o nome. O `flex: 1` daqui empurra o hint pra direita. -->
+              <span class="ms-option-main">
+                <span class="ms-option-label">{{ option.label }}</span>
+                <span
+                  v-if="option.badge !== null && option.badge !== undefined && option.badge !== ''"
+                  class="ms-option-badge"
+                >{{ option.badge }}</span>
+              </span>
               <span v-if="option.hint" class="ms-option-hint">{{
                 option.hint
               }}</span>
@@ -291,7 +320,7 @@ onBeforeUnmount(() => {
   padding: 0.375rem 0.75rem;
   min-height: 2.5rem;
   border: 1px solid rgb(var(--slate-4));
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   background: rgb(var(--slate-2));
   color: rgb(var(--slate-12));
   font-size: 0.875rem;
@@ -302,11 +331,15 @@ onBeforeUnmount(() => {
   font-family: inherit;
 }
 
-.ms-trigger:hover,
+.ms-trigger:hover {
+  border-color: rgb(var(--slate-6));
+  background: rgb(var(--slate-1));
+  box-shadow: none;
+}
 .ms-trigger:focus,
 .ms-root.open .ms-trigger {
-  border-color: rgba(var(--blue-9), 0.5);
-  box-shadow: 0 0 0 1px rgba(var(--blue-9), 0.5);
+  border-color: rgb(var(--blue-8));
+  box-shadow: 0 0 0 3px rgba(var(--blue-9), 0.12);
   background: rgb(var(--slate-1));
 }
 
@@ -362,9 +395,11 @@ onBeforeUnmount(() => {
 /* Unscoped — the dropdown is teleported to <body>, so scoped CSS won't
    reach it. Class names are namespaced (ms-*) to avoid collisions. */
 .ms-dropdown {
+  /* Acima dos modais do Chatwoot (~9999) */
+  z-index: 100000;
   background: rgb(var(--slate-1));
   border: 1px solid rgb(var(--border-strong));
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
   padding: 4px;
   display: flex;
@@ -462,17 +497,61 @@ onBeforeUnmount(() => {
   height: 14px;
 }
 
-.ms-option-label {
+/* Wrapper que mantém label + badge juntos (inline). Toma o `flex: 1`
+   da row para que o hint fique empurrado pra direita. */
+.ms-option-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.ms-option-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.ms-option-hint {
-  font-size: 0.75rem;
+/* Badge discreto AO LADO do label — identificador numérico (ID do serviço).
+   Monospace + tabular-nums + fundo sutil cinza. */
+.ms-option-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, 'JetBrains Mono', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   color: rgb(var(--slate-9));
   flex-shrink: 0;
+  line-height: 1.2;
+}
+
+/* Hint visual como badge azul sutil — usado para duração + preço, ou
+   qualquer info numérica/contextual à direita da opção. */
+.ms-option-hint {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: rgba(37, 99, 235, 0.08);
+  color: rgb(var(--blue-11));
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+:root.dark .ms-option-hint {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.32);
 }
 
 .ms-empty {

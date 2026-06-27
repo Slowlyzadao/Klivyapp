@@ -1,0 +1,62 @@
+get:
+  tags:
+    - Relatórios da Agenda
+  summary: Previsão de agendamentos (next N days)
+  description: |
+    Previsão simples baseada em média de eventos por dia-da-semana nos
+    últimos 28 dias. Dias fechados (fora de `open_days`) são omitidos.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: days
+      in: query
+      description: Horizonte em dias (1-90). Default 7.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 90
+        default: 7
+    - name: user_id
+      in: query
+      schema:
+        type: integer
+    - name: open_hour
+      in: query
+      schema: { type: integer, default: 9 }
+    - name: close_hour
+      in: query
+      schema: { type: integer, default: 18 }
+    - name: lunch_duration_minutes
+      in: query
+      schema: { type: integer, default: 0 }
+    - name: slot_minutes
+      in: query
+      schema: { type: integer, default: 30 }
+    - name: open_days
+      in: query
+      description: Índices de dia (0=Dom). Default `1,2,3,4,5,6`.
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Previsão
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              forecast:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date: { type: string, format: date }
+                    label: { type: string }
+                    predicted_total: { type: number, format: float }
+                    predicted_occupancy:
+                      type: number
+                      format: float
+                      description: 0-100 (clamped)
+                    slots_available: { type: integer }
+                    day_of_week: { type: integer, minimum: 0, maximum: 6 }
+              horizon_days: { type: integer }
+              history_days: { type: integer, example: 28 }

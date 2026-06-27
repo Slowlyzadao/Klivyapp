@@ -1,4 +1,8 @@
 type: object
+description: |
+  Agent (membro do time da clínica vinculado a uma `Account` via `AccountUser`).
+  Campos de role/segurança são **condicionalmente visíveis** dependendo de quem
+  consulta — ver coluna "Visibilidade" abaixo (auditoria A-9 — info disclosure).
 properties:
   id:
     type: integer
@@ -16,20 +20,106 @@ properties:
     description: Whether the agent has confirmed their email address.
   email:
     type: string
-    description: The email of the agent
+    description: The email of the agent.
   available_name:
     type: string
-    description: The available name of the agent
+    description: The available name of the agent.
   name:
     type: string
-    description: The name of the agent
+    description: The name of the agent.
   role:
     type: string
     enum: ['agent', 'administrator']
-    description: The role of the agent
+    description: |
+      Native Chatwoot role of the agent in this account.
+      `administrator` = bypass total em todas as policies (RBAC Klivy + Chatwoot).
+      `agent` = consultado contra `KlivyRole` atribuída (se houver).
   thumbnail:
     type: string
-    description: The thumbnail of the agent
+    description: URL do avatar do agent (CDN-redirected via Active Storage).
+  agenda_public_id:
+    type: string
+    nullable: true
+    description: |
+      Slug público (8 chars alfanuméricos) usado pelo link público de agendamento
+      `/agenda/:agenda_public_id`. Auto-gerado em `User#ensure_agenda_public_id`
+      após o vínculo `AccountUser` ser criado (corrigido em 1.6.1.18).
+    example: "iu0wbwql"
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Campos públicos a todos os agents (sem visibilidade condicional)
+  # ───────────────────────────────────────────────────────────────────────────
+  klivy_role:
+    type: object
+    nullable: true
+    description: |
+      Função personalizada (`KlivyRole`) atribuída ao agent — payload reduzido
+      visível a TODOS os agents da conta (necessário pra exibir badge "Especialista"
+      em telas de prontuário, AuditLog, ChangeResponsibleModal, etc.).
+      `id` e `preset_key` ficam ocultos pra quem não tem `settings.users_view`
+      (ver `viewer_can_see_role_internals` abaixo).
+    properties:
+      name:
+        type: string
+        description: Nome legível da role (ex.: "Especialista", "Gerente").
+        example: "Especialista"
+      id:
+        type: integer
+        description: |
+          ID interno da `KlivyRole`. **Condicional**: só visível para
+          `administrator` OU quem tem `settings.users_view`. Caso contrário ausente
+          do payload.
+      preset_key:
+        type: string
+        nullable: true
+        description: |
+          Chave do preset built-in (`recepcionista`/`especialista`/`gerente`/`sdr`).
+          **Condicional**: mesma regra do `id`.
+        example: "especialista"
+  is_agenda_provider:
+    type: boolean
+    description: |
+      Resolvido por `AccountUser#agenda_provider?` na ordem:
+      override per-user → admin? (default true) → role default `agenda.is_provider`
+      → false. Indica se o agent aparece como coluna no calendário e recebe agendamentos.
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Campos CONDICIONAIS — só visíveis para admin OU quem tem `settings.users_view`
+  # ───────────────────────────────────────────────────────────────────────────
+  klivy_role_id:
+    type: integer
+    nullable: true
+    description: |
+      FK para `KlivyRole`. **Visibilidade condicional** (auditoria A-9):
+      só presente no payload se o requester é `administrator` OU tem
+      `beclinic_can?(:settings, :users_view)`. Pra demais agents, ausente.
+      Used internally pelo `AssignRoleModal` (que exige `users_edit`).
+  beclinic_super_admin:
+    type: boolean
+    description: |
+      `true` se o `User` é um `SuperAdmin` (BeClinic owners — bypass total).
+      **Visibilidade condicional** (auditoria A-9): só presente se o requester
+      é `administrator` OU tem `settings.users_view`. Sem isso, qualquer agent
+      conseguia mapear quem é super admin (information disclosure).
+  is_agenda_provider_override:
+    type: boolean
+    nullable: true
+    description: |
+      Valor explícito do toggle "Atende na agenda" no editor do agent (`null`
+      quando herdado do role default — ver `is_agenda_provider`).
+      **Visibilidade condicional**: igual aos campos acima.
   custom_role_id:
     type: integer
-    description: The custom role id of the agent
+    nullable: true
+    deprecated: true
+    description: |
+      ⚠️ **DEPRECATED** desde 1.6.1.23 (auditoria C-3 Fase A). O sistema
+      legacy Chatwoot `CustomRole` foi descontinuado em favor de `KlivyRole`
+      (canon `rbac_klivy_only`). Campo permanece no banco mas:
+
+      - `enterprise/agents_controller#associate_agent_with_custom_role` foi
+        DELETADO — `POST/PATCH /agents` agora ignora `custom_role_id` no payload.
+      - Será dropado da tabela em Fase B (PR futuro).
+
+      **Não dependa deste campo em integrações novas.** Use `klivy_role`/`klivy_role_id`.
+      **Visibilidade condicional**: igual aos campos acima.

@@ -1,0 +1,108 @@
+{
+  "PATIENT_DOCUMENTS": {
+    "HEADER": {
+      "TITLE": "Documents",
+      "SUBTITLE": "Prescriptions, certificates, exam requests, referrals and other clinical documents.",
+      "GENERATE": "Generate Document"
+    },
+    "SECTION": {
+      "TITLE": "Generated Documents",
+      "SUBTITLE": "PDFs generated and available for download or send via WhatsApp"
+    },
+    "EMPTY": {
+      "TITLE": "No document generated yet.",
+      "FIRST_LINK": "Generate first document →"
+    },
+    "TABLE": {
+      "COL_DOCUMENT": "Document",
+      "COL_TYPE": "Type",
+      "COL_DATE": "Date",
+      "COL_PROFESSIONAL": "Professional",
+      "COL_STATUS": "Status",
+      "COL_ACTIONS": "Actions",
+      "DEFAULT_TITLE": "Document",
+      "VERSION_PREFIX": "v",
+      "DEFAULT_PROFESSIONAL": "System",
+      "DOWNLOAD_TITLE": "Download document",
+      "WHATSAPP_TITLE": "Send via WhatsApp",
+      "SIGN_TITLE": "Send for signature",
+      "DELETE_TITLE": "Delete document"
+    },
+    "STATUS": {
+      "GERADO": "Generated",
+      "PENDENTE_ASSINATURA": "Awaiting Signature",
+      "ASSINADO": "Signed",
+      "ENVIADO": "Sent",
+      "ARQUIVADO": "Archived"
+    },
+    "TYPES": {
+      "RECEITA": "Medical Prescription",
+      "ATESTADO": "Medical Certificate",
+      "PEDIDO_EXAME": "Exam Request",
+      "DECLARACAO": "Declaration",
+      "RELATORIO_CLINICO": "Clinical Report",
+      "ENCAMINHAMENTO": "Referral",
+      "CONTRATO": "Contract",
+      "ORCAMENTO": "Estimate",
+      "INSTRUCAO_PROCEDIMENTO": "Procedure Instructions",
+      "QUESTIONARIO": "Questionnaire",
+      "OUTRO": "Other"
+    },
+    "MODAL": {
+      "TITLE": "Generate Clinical Document",
+      "SUBTITLE": "PDF will be generated and downloaded automatically.",
+      "TEMPLATE_LABEL": "Generate from a template",
+      "TEMPLATE_OPTIONAL": "(optional)",
+      "TEMPLATE_PLACEHOLDER": "Choose a library template",
+      "TEMPLATE_NONE": "None — fill manually",
+      "TEMPLATE_HINT": "Content comes from the template, filled with the patient's data. The type fields below don't apply.",
+      "INPUT_FIELDS_LABEL": "Template fill-in fields",
+      "TYPE_LABEL": "Document Type",
+      "TYPE_PLACEHOLDER": "Select type",
+      "DOCUMENT_TITLE_LABEL": "Title",
+      "DOCUMENT_TITLE_OPTIONAL": "(optional)",
+      "ATESTADO": {
+        "CID": "ICD",
+        "CID_PLACEHOLDER": "e.g. M54.5",
+        "DAYS": "Days off work",
+        "DAYS_PLACEHOLDER": "e.g. 2"
+      },
+      "RECEITA": {
+        "MEDICATIONS": "Medications",
+        "MEDICATIONS_PLACEHOLDER": "e.g. Dipyrone 500mg, Ibuprofen 400mg...",
+        "DOSAGE": "Dosage",
+        "DOSAGE_PLACEHOLDER": "e.g. Take 1 tablet every 8 hours for 5 days..."
+      },
+      "EXAM": {
+        "EXAMS_REQUESTED": "Requested Exams",
+        "EXAMS_PLACEHOLDER": "e.g. Complete blood count, Fasting glucose, TSH..."
+      },
+      "REFERRAL": {
+        "TO": "Refer to",
+        "TO_PLACEHOLDER": "Specialist / clinic name",
+        "SPECIALTY": "Specialty",
+        "SPECIALTY_PLACEHOLDER": "e.g. Orthopedics"
+      },
+      "FREE_CONTENT_LABEL": "Content",
+      "FREE_CONTENT_PLACEHOLDER": "Describe the document content...",
+      "OBSERVATIONS_LABEL": "Additional notes",
+      "OBSERVATIONS_PLACEHOLDER": "Complementary information...",
+      "CANCEL": "Cancel",
+      "GENERATE": "Generate and Download PDF",
+      "GENERATING": "Generating PDF..."
+    },
+    "DELETE_MODAL": {
+      "TITLE": "Delete Document?",
+      "MESSAGE": "Are you sure you want to delete this document? The PDF file will be permanently removed. This action cannot be undone.",
+      "CONFIRM": "Delete"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Error loading documents.",
+      "GENERATE_ERROR": "Error generating document. Check the data and try again.",
+      "DOWNLOAD_ERROR": "Error downloading document.",
+      "WHATSAPP_SUCCESS": "Document sent via WhatsApp successfully!",
+      "WHATSAPP_ERROR": "Error sending document via WhatsApp.",
+      "DELETE_ERROR": "Error deleting document."
+    }
+  }
+}

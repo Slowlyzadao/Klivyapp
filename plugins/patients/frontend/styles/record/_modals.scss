@@ -1,0 +1,76 @@
+@use "../variables" as *;
+
+/* ============================================================
+   CLASSES CUSTOMIZADAS DE MODAIS DO PRONTUÁRIO
+   Substituem inline style="" (proibido pelo ESLint do projeto).
+   Usam variáveis CSS para adaptar automaticamente ao tema.
+   ============================================================ */
+
+/* Container principal dos modais de pasta, arquivos, etc. */
+.record-modal-box {
+  background: rgb(var(--slate-1)) !important;
+  border-color: rgb(var(--slate-4)) !important;
+}
+
+/* Título/h3 dos modais */
+.record-modal-title {
+  color: rgb(var(--slate-12)) !important;
+}
+
+/* Labels dentro dos modais */
+.record-modal-label {
+  color: rgb(var(--slate-9)) !important;
+}
+
+/* Inputs nos modais de pasta (Criar, Renomear) */
+.record-modal-input {
+  background: rgb(var(--slate-2)) !important;
+  border-color: rgb(var(--slate-5)) !important;
+  color: rgb(var(--slate-12)) !important;
+}
+.record-modal-input::placeholder {
+  color: rgb(var(--slate-8)) !important;
+}
+.record-modal-input:focus {
+  border-color: rgb(var(--blue-8)) !important;
+  outline: none !important;
+}
+
+/* Preview de pasta no modal de renomear */
+.record-modal-preview {
+  background: rgb(var(--slate-3)) !important;
+  border-color: rgb(var(--slate-4)) !important;
+}
+
+/* Texto mutado (descrições/avisos em modais) */
+
+/* Texto mutado (descrições/avisos em modais) */
+.record-modal-muted {
+  color: rgb(var(--slate-9)) !important;
+}
+
+/* ============================================================
+   PADRÃO DE BOTÕES DE MODAL (StyleMD)
+   Todos os modais do Prontuário devem usar estas classes.
+   ============================================================ */
+
+/*
+ * .btn-modal-primary e .btn-modal-cancel removidos em 2026-05-04 —
+ * substituídos por BeclinicButton em todos os modais (commit 1.5.1.83+).
+ */
+
+/* Garantia de que Tailwind bg-blue-600 em botões não é sobreposto */
+button.bg-blue-600,
+button[class*="bg-blue-"] {
+  background-color: $brand-info !important;
+  color: #ffffff !important;
+}
+button.bg-blue-600:hover:not(:disabled),
+button[class*="bg-blue-"]:hover:not(:disabled) {
+  background-color: #1d4ed8 !important;
+}
+button.bg-blue-600:disabled,
+button[class*="bg-blue-"]:disabled {
+  opacity: 0.45 !important;
+}
+

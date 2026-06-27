@@ -1,0 +1,213 @@
+type: object
+description: |
+  Regra de follow-up configurável da Bea. Cron `AiAgent::FollowUpDispatcherJob`
+  roda a cada 1 minuto, varre regras `enabled`, identifica candidatos pelo
+  `trigger_type` + `offset` (com `offset_unit`) e enfileira `BeaSendFollowUpJob`
+  pra cada par (regra, contato/consulta) novo.
+
+  Anti-flood via `max_per_target`: 1 = uma vez por consulta/contato;
+  0 = ilimitado.
+properties:
+  id:
+    type: integer
+  name:
+    type: string
+    maxLength: 120
+    example: "Lembrete 24h antes da consulta"
+  enabled:
+    type: boolean
+    default: true
+  position:
+    type: integer
+    default: 0
+  trigger_type:
+    type: string
+    enum: [pre_appointment, post_appointment, no_response, no_show, appointment_confirmed, custom, service_recall]
+    description: |
+      Tipo de gatilho:
+      - **pre_appointment**: N horas ANTES de `AgendaEvent.starts_at`
+      - **post_appointment**: N horas DEPOIS
+      - **no_response**: paciente não responde há N horas
+      - **no_show**: `AgendaEvent.status='no_show'` há N horas
+      - **appointment_confirmed**: event-driven (NÃO usa cron). Dispara via
+        callback do `AgendaEvent` quando o status muda de
+        `pending_confirmation` pra `scheduled`/`confirmed`. O
+        `CandidateFinder` ignora esse trigger; a entrada vem do
+        `AiAgent::FollowUps::DispatchAppointmentConfirmedJob`.
+      - **custom**: dispara só via API explícita (sem cron)
+  offset_hours:
+    type: integer
+    description: |
+      Offset POSITIVO. Direção (antes/depois) vem do `trigger_type`.
+      Combinado com `offset_unit` (default `hours`) e clampado por unidade
+      (ver `OFFSET_LIMITS` no model).
+    example: 24
+  offset_unit:
+    type: string
+    enum: [seconds, minutes, hours]
+    default: hours
+  offset_seconds:
+    type: integer
+    description: Computado pelo backend a partir de `offset_hours * offset_unit`.
+    readOnly: true
+  applies_to:
+    type: string
+    enum: [both, ai_agent, manual]
+    default: both
+    description: |
+      Filtra origem do `AgendaEvent`:
+      - **both**: aplica a tudo (default)
+      - **ai_agent**: só pra consultas reservadas pela Bea
+      - **manual**: só pra reservas humanas (UI/import)
+  status_filter:
+    type: object
+    description: |
+      Sobrepõe os status default de AgendaEvent do trigger. Só a chave
+      `allowed` é aceita (validado): `{"allowed":["scheduled","confirmed"]}`
+      — máx 10 itens, strings de até 30 chars. `{}` = defaults do trigger.
+    properties:
+      allowed:
+        type: array
+        maxItems: 10
+        items: { type: string, maxLength: 30 }
+    additionalProperties: false
+  action_type:
+    type: string
+    enum: [generative, static]
+    default: generative
+    description: |
+      Modo de ação:
+      - **generative**: a Bea escreve a mensagem (usa `context_brief`).
+      - **static**: mensagem fixa com variáveis (usa `static_body`), sem LLM.
+      Variáveis suportadas no `static_body`/steps: `{{nome}}`, `{{data}}`,
+      `{{hora}}`, `{{profissional}}`, `{{clinica}}`.
+  context_brief:
+    type: string
+    maxLength: 4000
+    description: |
+      Cenário em texto livre — Bea usa pra gerar a mensagem em PT-BR.
+      Obrigatório quando `action_type=generative`.
+  static_body:
+    type: string
+    maxLength: 4000
+    description: |
+      Mensagem fixa do passo 1 (com variáveis). Obrigatória quando
+      `action_type=static`.
+  persona_override:
+    type: string
+    nullable: true
+    maxLength: 2000
+    description: |
+      Tom/persona próprio deste follow-up (por tipo). Anexado ao system
+      prompt do gerador quando `action_type=generative` — sobrepõe o tom
+      padrão da Bea. Ignorado no modo estático.
+  agenda_service_id:
+    type: integer
+    nullable: true
+    description: |
+      Serviço-alvo da reativação (`trigger_type=service_recall`). Lido do
+      plugin agenda por id (sem FK). Obrigatório nesse trigger.
+  recall_interval_value:
+    type: integer
+    nullable: true
+    description: |
+      Valor do intervalo da reativação por serviço — dispara esse tanto de
+      `recall_interval_unit` após a última sessão assinada. Obrigatório em
+      service_recall, dentro do teto da unidade (days 1..365, weeks 1..52,
+      months 1..36, minutes 1..43200, hours 1..8760, years 1..10).
+  recall_interval_unit:
+    type: string
+    enum: [minutes, hours, days, weeks, months, years]
+    default: months
+    description: Unidade do intervalo de reativação.
+  stop_on_reply:
+    type: boolean
+    default: false
+    description: |
+      Para os próximos passos da cadência se o paciente respondeu (mandou
+      mensagem) depois do último envio dessa regra. Não afeta o passo 1.
+  stop_on_booking:
+    type: boolean
+    default: false
+    description: |
+      Para a sequência se o paciente tem agendamento futuro (scheduled/
+      confirmed). Ignora o próprio evento-alvo. Aplicável a
+      post_appointment/no_show/no_response.
+  cloud_template_name:
+    type: string
+    nullable: true
+    description: |
+      Nome do template aprovado na Meta, usado como fallback quando o envio
+      cai FORA da janela de 24h no WhatsApp oficial (`conversation.can_reply?`
+      false). Vazio = sem fallback (a execução é pulada com
+      `outside_messaging_window`). Não se aplica a `whatsapp_qr` (sem janela).
+  cloud_template_lang:
+    type: string
+    default: pt_BR
+    description: "Código de idioma do template (ex: pt_BR, en_US)."
+  cloud_template_params:
+    type: array
+    items: { type: string }
+    description: |
+      Variáveis ORDENADAS que preenchem {{1}}, {{2}}… do template. Ex:
+      `["nome","data"]`. `[]` = template sem variável. Strings livres —
+      valores conhecidos (nome, data, hora, profissional, clinica) são
+      interpolados; desconhecidos viram `-` no envio.
+  max_per_target:
+    type: integer
+    minimum: 0
+    default: 1
+    description: 0 = ilimitado.
+  cooldown_minutes:
+    type: integer
+    minimum: 0
+    maximum: 10080
+    default: 10
+    description: |
+      Intervalo mínimo (minutos) desde o último follow-up de OUTRA regra pro
+      mesmo paciente — trava anti-rajada por regra. 0 = sem cooldown (a rajada
+      no mesmo tick ainda é barrada). Default 10.
+  steps:
+    type: array
+    description: |
+      Passos ADICIONAIS da cadência (beats 2..N). O passo 1 é a própria
+      regra (`offset_*` + corpo: `context_brief` no modo generativo ou
+      `static_body` no estático). Cada passo carrega o seu próprio corpo
+      (`context_brief` e/ou `static_body`) conforme o `action_type` da
+      regra. Só se aplica a triggers cron
+      (`pre_appointment`, `post_appointment`, `no_show`, `no_response`);
+      ignorado em `appointment_confirmed`/`custom`. Cada passo dispara com
+      seu próprio `offset` a partir do mesmo ponto de referência do gatilho.
+      No POST/PUT, enviar a lista completa desejada — o backend sincroniza
+      in-place por posição (preserva os ids dos passos; excedentes são
+      removidos). Omitir a chave `steps` mantém a cadência intacta.
+    items:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        position:
+          type: integer
+          readOnly: true
+          description: Ordem do passo (>= 1; o passo 1/regra é 0). Computado no servidor pela ordem do array.
+        offset_hours:
+          type: integer
+        offset_unit:
+          type: string
+          enum: [seconds, minutes, hours]
+        offset_seconds:
+          type: integer
+          readOnly: true
+        context_brief:
+          type: string
+          maxLength: 4000
+        static_body:
+          type: string
+          maxLength: 4000
+  created_at:
+    type: string
+    format: date-time
+  updated_at:
+    type: string
+    format: date-time

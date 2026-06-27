@@ -3,7 +3,8 @@ import PatientsAPI from '@plugins/patients/frontend/api/patients/index';
 import ContactAPI from 'dashboard/api/contacts';
 import DatePicker from 'vue-datepicker-next';
 import 'vue-datepicker-next/index.css';
-import { PRIORITIES, TREATMENTS, CUSTOM_ATTR_ICONS } from '../utils/agenda-constants.js';
+import FormSelect from '@plugins/beclinic_core/frontend/components/FormSelect.vue';
+import { PRIORITIES, TREATMENTS, CUSTOM_ATTR_ICONS, formatPhoneBR } from '../utils/agenda-constants.js';
 import { padZ } from '../utils/agenda-date.js';
 import { getPriorityColor } from '../utils/agenda-colors.js';
 
@@ -28,7 +29,7 @@ const TAB_DEFS = [
 
 export default {
   name: 'AgendaEventModal',
-  components: { DatePicker },
+  components: { DatePicker, FormSelect },
   props: {
     show: { type: Boolean, default: false },
     isEditing: { type: Boolean, default: false },
@@ -42,6 +43,16 @@ export default {
     isSlotBlocked: { type: Function, default: null },
     isSaving: { type: Boolean, default: false },
     isDeleting: { type: Boolean, default: false },
+    // Quando true e o modal abre sem paciente vinculado, abre direto o
+    // sub-modal "+ Novo paciente" pré-preenchido com nome/telefone vindos
+    // do contato. Set pelo launcher quando aberto via Conversas. Backend
+    // linka ao contato via `contact_id` em `submitQuickPatient`.
+    autoCreatePatient: { type: Boolean, default: false },
+    // Quando true, esconde a tab "Bloqueio". Bloqueio é trava de horário
+    // (férias, treinamento, almoço) — não faz sentido quando o
+    // agendamento é para um contato/conversa específico (caminho do botão
+    // "Agendar consulta" em Conversas).
+    hideBlockTab: { type: Boolean, default: false },
   },
   emits: ['close', 'save', 'delete', 'update:newEvent'],
   data() {
@@ -49,15 +60,8 @@ export default {
       // Active tab
       activeTab: 'consultation',
 
-      // Dropdown states
-      priorityOpen: false,
-      prioritySearch: '',
-      treatmentOpen: false,
-      treatmentSearch: '',
-      categoryOpen: false,
-      categorySearch: '',
-      agentOpen: false,
-      agentSearch: '',
+      // Patient picker state (treatment/category/agent/priority dropdowns
+      // são geridos pelo próprio FormSelect)
       patientOpen: false,
       patientSearch: '',
 
@@ -66,6 +70,12 @@ export default {
 
       // Quick Patient Modal
       showQuickPatientModal: false,
+      // Diferencia abertura automática (via Conversas → autoCreatePatient)
+      // de abertura manual (clique do agente em "+ Novo paciente"). Quando
+      // true, cancelar o sub-modal sem cadastrar fecha o modal pai junto
+      // — evita evento órfão. Manual: cancelar fecha apenas o sub-modal,
+      // mantém o pai aberto pra agente continuar (busca / outro fluxo).
+      quickPatientAutoOpened: false,
       quickPatient: { name: '', last_name: '', phone: '' },
       isSubmittingPatient: false,
       quickPatientPhoneOpen: false,
@@ -81,6 +91,12 @@ export default {
       return PT_BR_LANG;
     },
     tabs() {
+      // Quando aberto a partir de Conversas (`hideBlockTab=true`),
+      // esconde a tab Bloqueio — agendamento para contato/conversa não
+      // se aplica a trava de horário genérica.
+      if (this.hideBlockTab) {
+        return TAB_DEFS.filter(t => t.value !== 'agenda_block');
+      }
       return TAB_DEFS;
     },
     activeTabDef() {
@@ -97,56 +113,72 @@ export default {
       if (this.activeTab === 'agenda_block') return 'Bloquear agenda';
       return `Confirmar ${this.activeTabDef.confirmKey}`;
     },
-    selectedPriorityLabel() {
-      const found = PRIORITIES.find(p => p.value === this.newEvent.priority);
-      return found ? found.label : 'Selecione';
+    priorityOptionsForSelect() {
+      return PRIORITIES.map(p => ({
+        value: p.value,
+        label: p.label,
+        color: getPriorityColor(p.value),
+      }));
     },
-    filteredPriorities() {
-      const q = this.prioritySearch.toLowerCase();
-      return PRIORITIES.filter(p => p.label.toLowerCase().includes(q));
-    },
-    filteredTreatments() {
-      const q = this.treatmentSearch.toLowerCase();
-      return this.treatmentOptions.filter(tr => {
-        const name = typeof tr === 'string' ? tr : tr.name || '';
-        return name.toLowerCase().includes(q);
+    treatmentOptionsForSelect() {
+      return (this.treatmentOptions || []).map(tr => {
+        if (typeof tr === 'string') return { value: tr, label: tr };
+        const dur = tr.duration_minutes;
+        let durHint = '';
+        if (dur) {
+          const h = Math.floor(dur / 60);
+          const m = dur % 60;
+          durHint = `${h > 0 ? `${h}h` : ''}${m > 0 ? `${m}min` : ''}`;
+        }
+        // 2026-05-22: preço removido daqui (migrou pra Financial::ServicePricing).
+        // Hint mostra só duração agora. Quando a UI de pricing financeiro estiver
+        // pronta, podemos cruzar AgendaService + ServicePricing num endpoint
+        // dedicado e voltar a exibir preço aqui no select de evento.
+        // PR ID visível (2026-05-14): id vira badge discreto na opção (sem #).
+        // Busca interna do FormSelect inclui badge, então digitar o ID acha.
+        const hint = durHint;
+        return {
+          value: tr.name,
+          label: tr.name,
+          badge: tr.id || null,
+          color: tr.color,
+          hint,
+        };
       });
     },
-    filteredCategories() {
-      const q = this.categorySearch.toLowerCase();
-      return (this.categoryOptions || []).filter(c =>
-        (c.name || '').toLowerCase().includes(q)
-      );
+    categoryOptionsForSelect() {
+      return (this.categoryOptions || []).map(c => ({
+        value: c.id,
+        label: c.name,
+        color: c.color,
+      }));
     },
-    selectedCategory() {
-      const id = this.newEvent.category_id;
-      if (!id) return null;
-      return (this.categoryOptions || []).find(c => c.id === id) || null;
-    },
-    filteredAgents() {
-      const q = this.agentSearch.toLowerCase();
-      return this.agents.filter(a => (a.name || '').toLowerCase().includes(q));
-    },
-    selectedAgentLabel() {
-      const a = this.agents.find(x => x.id === this.newEvent.user_id);
-      return a?.name || '';
-    },
-    selectedTreatmentColor() {
-      const name = this.newEvent.treatment;
-      if (!name) return null;
-      const found = this.treatmentOptions.find(
-        t => (typeof t === 'string' ? t : t.name) === name
-      );
-      return found && typeof found === 'object' ? found.color : null;
+    agentOptionsForSelect() {
+      return (this.agents || []).map(a => ({
+        value: a.id,
+        label: a.name,
+        color: a.color,
+      }));
     },
     hasPatientSelected() {
-      return Boolean(this.newEvent.patient_id || this.newEvent.selectedPatientName);
+      // Considera selecionado APENAS quando há `patient_id` real (Patient
+      // existe no banco). Apenas `selectedPatientName` (sem id) é estado
+      // "fantasma" vindo do pré-preenchimento do launcher (Conversas) ou
+      // de troca de tab — apresenta o picker em modo busca pra agente
+      // decidir cadastrar novo (com pre-fill) ou selecionar existente.
+      // Antes, ghost state mostrava chip enganador e levava a evento
+      // órfão se o agente confirmasse direto.
+      return Boolean(this.newEvent.patient_id);
     },
     canConfirm() {
       if (this.isSaving) return false;
       if (!this.newEvent.time_start || !this.newEvent.time_end) return false;
       if (this.activeTab === 'consultation') {
-        return Boolean(this.newEvent.selectedPatientName) && Boolean(this.newEvent.user_id);
+        // Consulta exige `patient_id` real. Defesa em profundidade contra
+        // evento órfão (Consulta sem registro de paciente no banco) — antes
+        // exigia só `selectedPatientName` (string), o que aceitava ghost
+        // state.
+        return Boolean(this.newEvent.patient_id) && Boolean(this.newEvent.user_id);
       }
       return Boolean(this.newEvent.title) && Boolean(this.newEvent.user_id);
     },
@@ -219,37 +251,45 @@ export default {
       if (val) {
         this.activeTab = this.newEvent.event_type || 'consultation';
         this.fetchPatients('');
+        // Aberto via Conversas e contato ainda não está em pacientes →
+        // abre direto o Quick Patient pré-preenchido com nome/telefone do
+        // contato. nextTick para esperar o ciclo de mount do conteúdo do
+        // modal terminar (form fields montados) antes de empilhar o
+        // sub-modal por cima.
+        if (this.autoCreatePatient && !this.newEvent.patient_id) {
+          this.$nextTick(() => this.openNewPatientModal(true));
+        }
       } else {
-        this.priorityOpen = false;
-        this.treatmentOpen = false;
-        this.categoryOpen = false;
-        this.agentOpen = false;
         this.patientOpen = false;
         this.quickPatientPhoneOpen = false;
-        this.prioritySearch = '';
-        this.treatmentSearch = '';
-        this.categorySearch = '';
-        this.agentSearch = '';
         this.patientSearch = '';
+        this.showQuickPatientModal = false;
+        this.quickPatientAutoOpened = false;
       }
     },
-    activeTab(newVal, oldVal) {
+    activeTab(newVal) {
       if (!this.show || this.newEvent.event_type === newVal) return;
-      const update = { event_type: newVal };
-      // Clear patient-bound data when leaving Consulta — appointment/block don't use a patient.
-      if (oldVal === 'consultation' && newVal !== 'consultation') {
-        update.title = '';
-        update.contact_id = null;
-        update.patient_id = null;
-        update.selectedPatientName = '';
-        update.selectedPatientPhone = '';
-        update.selectedPatientAvatarUrl = null;
+      // Preserva todo o estado ao alternar tabs — agente pode ir e voltar
+      // entre Consulta, Compromisso e Bloqueio sem perder o que já
+      // preencheu (paciente selecionado, título digitado, telefone,
+      // contato de origem). Antes (≤ 1.5.5.13) o watch zerava patient_id
+      // e selectedPatientName ao sair de Consulta — destrutivo: voltar
+      // pra Consulta exigia reseleção de paciente.
+      //
+      // saveEvent decide o que enviar baseado em `event_type`. Manter
+      // `custom_attributes.patient_*` preenchido mesmo em Compromisso é
+      // semanticamente válido (ex: "reunião sobre caso do paciente X")
+      // e o backend trata como linkagem opcional — não quebra render
+      // nem reports porque eles já filtram por event_type.
+      this.emitUpdate({ event_type: newVal });
+
+      // Sub-modal "+ Novo paciente" só faz sentido em Consulta — fecha
+      // ao sair. Reabertura manual via picker continua disponível quando
+      // o agente voltar pra Consulta.
+      if (newVal !== 'consultation') {
+        this.showQuickPatientModal = false;
+        this.quickPatientAutoOpened = false;
       }
-      // Clear free-form title when entering Consulta — title will be set from the chosen patient.
-      if (newVal === 'consultation' && oldVal !== 'consultation') {
-        if (!this.newEvent.selectedPatientName) update.title = '';
-      }
-      this.emitUpdate(update);
     },
   },
   mounted() {
@@ -262,8 +302,6 @@ export default {
     document.removeEventListener('click', this.handleClickOutside, true);
   },
   methods: {
-    getPriorityColor,
-    padZ,
     toMinutes(t) {
       if (!t) return 0;
       const [h, m] = t.split(':').map(Number);
@@ -311,52 +349,26 @@ export default {
         });
       }
     },
-    getAgentColorById(id) {
-      const a = this.agents.find(x => x.id === id);
-      return a?.color || '#3b82f6';
-    },
     handleClickOutside(e) {
       if (!this.show) return;
-      if (!e.target.closest('.custom-select') && !e.target.closest('.cs-dropdown') && !e.target.closest('[data-patient-picker]')) {
-        this.priorityOpen = false;
-        this.treatmentOpen = false;
-        this.categoryOpen = false;
-        this.agentOpen = false;
+      // O patient picker tem estado próprio aqui, então fecha em clique fora.
+      // Os dropdowns de treatment/category/agent/priority foram migrados para
+      // FormSelect (que gerencia seu próprio click-outside). O popup de
+      // sugestões de telefone do quick-patient fecha via @blur do input.
+      if (!e.target.closest('[data-patient-picker]')) {
         this.patientOpen = false;
-        this.quickPatientPhoneOpen = false;
       }
     },
-    toggleDropdown(name) {
-      const keys = ['priority', 'treatment', 'category', 'agent'];
-      keys.forEach(k => {
-        if (k !== name) this[`${k}Open`] = false;
-      });
-      this[`${name}Open`] = !this[`${name}Open`];
-    },
-    selectCategory(c) {
-      this.emitUpdate({ category_id: c.id });
-      this.categoryOpen = false;
-      this.categorySearch = '';
-    },
-    clearCategory() {
-      this.emitUpdate({ category_id: null });
-      this.categoryOpen = false;
-      this.categorySearch = '';
-    },
-    selectPriority(p) {
-      this.emitUpdate({ priority: p.value });
-      this.priorityOpen = false;
-      this.prioritySearch = '';
-    },
-    selectAgent(a) {
-      this.emitUpdate({ user_id: a.id });
-      this.agentOpen = false;
-      this.agentSearch = '';
-    },
-    selectTreatment(tr) {
-      const name = typeof tr === 'string' ? tr : tr.name;
+    onTreatmentChange(name) {
+      if (!name) {
+        this.emitUpdate({ treatment: '' });
+        return;
+      }
+      const tr = this.treatmentOptions.find(
+        t => (typeof t === 'string' ? t : t.name) === name
+      );
       const update = { treatment: name };
-      if (tr && tr.duration_minutes) {
+      if (tr && typeof tr === 'object' && tr.duration_minutes) {
         const interval = this.slotInterval;
         // Round duration UP to the nearest whole slot so the auto-selected
         // range always lands exactly on grid boundaries (e.g. 45-min service
@@ -383,13 +395,6 @@ export default {
         }
       }
       this.emitUpdate(update);
-      this.treatmentOpen = false;
-      this.treatmentSearch = '';
-    },
-    clearTreatment() {
-      this.emitUpdate({ treatment: '' });
-      this.treatmentOpen = false;
-      this.treatmentSearch = '';
     },
 
     // Patient picker
@@ -416,6 +421,15 @@ export default {
       });
       this.patientOpen = false;
       this.patientSearch = '';
+      // Reseta o flag de auto-flow ANTES do `closeQuickPatientModal`
+      // que vem em seguida (em submitQuickPatient / selectPhoneSuggestion).
+      // Sem isso, há race: emitUpdate atualiza o newEvent do parent só
+      // no próximo tick, então `closeQuickPatientModal` lê
+      // `newEvent.patient_id` ainda como null, dispara o branch
+      // wasAutoOpened+!patient_id e fecha o modal pai por engano.
+      // selectContact representa "paciente foi selecionado/cadastrado
+      // com sucesso" — auto-flow não se aplica mais.
+      this.quickPatientAutoOpened = false;
     },
     clearPatient() {
       this.emitUpdate({
@@ -447,12 +461,65 @@ export default {
     },
 
     // Quick Patient
-    openNewPatientModal() {
+    openNewPatientModal(viaAuto = false) {
       this.showQuickPatientModal = true;
-      this.quickPatient = { name: this.patientSearch || '', last_name: '', phone: '' };
+      // `viaAuto === true` apenas quando vem do watch em `show` (fluxo
+      // "Agendar consulta" via Conversas para contato sem paciente). Cliques
+      // manuais no botão "+ Novo paciente" não passam argumento — Vue
+      // dispatch via `@mousedown.prevent="openNewPatientModal()"` envia
+      // `undefined`, então o default false vale. Determina o comportamento
+      // do `closeQuickPatientModal` (fecha pai junto ou não).
+      this.quickPatientAutoOpened = viaAuto === true;
+      // Pré-preenchimento prioriza dados do contato vindos via launcher
+      // (`selectedPatientName` / `selectedPatientPhone`) — caminho do botão
+      // "Agendar consulta" em Conversas. Cai pra `patientSearch` quando o
+      // usuário abriu o Quick Patient manualmente após digitar uma busca
+      // que não retornou resultado.
+      const seedName = this.newEvent.selectedPatientName || this.patientSearch || '';
+      const parts = seedName.trim().split(/\s+/).filter(Boolean);
+      const firstName = parts.shift() || '';
+      const lastName = parts.join(' ');
+      this.quickPatient = {
+        name: firstName,
+        last_name: lastName,
+        phone: this.formatSeedPhone(this.newEvent.selectedPatientPhone || ''),
+      };
+    },
+    // Normaliza o telefone do contato (pode vir em E.164 com `+55` ou
+    // contendo sufixo `@s.whatsapp.net` em casos raros) para o formato
+    // brasileiro mascarado que o input do Quick Patient espera. Se já vier
+    // limpo (10/11 dígitos), aplica máscara direto.
+    formatSeedPhone(raw) {
+      if (!raw) return '';
+      let digits = String(raw).replace(/\D/g, '');
+      // Remove DDI 55 quando presente (E.164 BR tem 12 ou 13 dígitos).
+      if (digits.startsWith('55') && digits.length > 11) {
+        digits = digits.slice(2);
+      }
+      if (digits.length > 11) digits = digits.slice(-11);
+      if (digits.length > 6) {
+        return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+      }
+      if (digits.length > 2) {
+        return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+      }
+      return digits;
     },
     closeQuickPatientModal() {
       this.showQuickPatientModal = false;
+      // Sub-modal aberto automaticamente via Conversas + agente cancelou
+      // sem cadastrar (patient_id continua null) → fecha o modal pai junto.
+      // Sem isso, pai ficaria aberto com selectedPatientName ainda
+      // pré-preenchido do contato, permitindo confirmar uma consulta sem
+      // paciente real (volta ao bug que a Opção B resolveu). Após
+      // selectContact() — submitQuickPatient ou selectPhoneSuggestion —
+      // patient_id está set, então a branch é skipada e o agente segue
+      // agendando normalmente.
+      const wasAutoOpened = this.quickPatientAutoOpened;
+      this.quickPatientAutoOpened = false;
+      if (wasAutoOpened && !this.newEvent.patient_id) {
+        this.$emit('close');
+      }
     },
     formatQuickPatientPhone() {
       let phone = this.quickPatient.phone.replace(/\D/g, '');
@@ -499,13 +566,41 @@ export default {
       if (!this.quickPatient.name) return;
       this.isSubmittingPatient = true;
       try {
+        // Backend `PatientsController#patient_params` permite só `:name`
+        // (não tem `:last_name`). Concatenar antes de enviar — Rails
+        // strong params descarta `last_name` silenciosamente, salvando
+        // o paciente só com o primeiro nome. O input separa em dois
+        // campos só pra UX de cadastro (mais claro de revisar), mas o
+        // armazenamento é num único campo `name`.
+        const fullName = [this.quickPatient.name, this.quickPatient.last_name]
+          .filter(Boolean)
+          .map(s => s.trim())
+          .filter(Boolean)
+          .join(' ');
         const payload = {
-          name: this.quickPatient.name,
-          last_name: this.quickPatient.last_name,
+          name: fullName,
           phone: this.quickPatient.phone.replace(/\D/g, ''),
         };
+        // Quando o Quick Patient é aberto a partir de Conversas, o contato
+        // já existe (foi criado pelo ContactInboxWithContactBuilder na
+        // primeira mensagem WhatsApp). Linka o paciente direto ao contato
+        // existente em vez de o backend criar um contato novo via
+        // find-by-phone (que pode falhar com formatos divergentes do "9"
+        // brasileiro — ver Whatsapp::PhoneSearchVariants em 1.5.5.8).
+        if (this.newEvent.contact_id) {
+          payload.contact_id = this.newEvent.contact_id;
+        }
         const res = await PatientsAPI.create(payload);
-        const patient = res.data;
+        // `app/views/api/v1/accounts/patients/show.json.jbuilder` envelopa
+        // o paciente em `payload:` (`json.payload do ... end`). Sem este
+        // unwrap, `patient.id`, `patient.name`, `patient.contact_id` saem
+        // todos undefined → selectContact emite update com patient_id
+        // undefined → `hasPatientSelected` (que agora exige patient_id real
+        // desde 1.5.5.15) retorna false → chip não aparece e o agente é
+        // forçado a buscar o paciente recém-criado manualmente. Outras
+        // chamadas (fetchLinkedPatient, fetchPatients) já desembrulham
+        // — só esta esquecia.
+        const patient = res.data?.payload || res.data;
         this.selectContact({
           id: patient.id,
           contact_id: patient.contact_id || null,
@@ -588,6 +683,7 @@ export default {
       if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
       return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     },
+    formatPhoneBR,
   },
 };
 </script>
@@ -664,6 +760,22 @@ export default {
             <div class="px-4 sm:px-6 py-5 flex-1 overflow-y-auto flex flex-col gap-5 modal-scroll">
               <!-- ── CONSULTA TAB ── -->
               <template v-if="activeTab === 'consultation'">
+                <!-- Título do agendamento (opcional, default = nome do paciente) -->
+                <div class="form-group">
+                  <label class="form-label">
+                    <i class="i-lucide-type label-icon" />
+                    Título do agendamento
+                    <span class="text-n-slate-9 text-xs font-normal ml-1">(opcional)</span>
+                  </label>
+                  <input
+                    :value="newEvent.title"
+                    type="text"
+                    class="w-full px-3 py-3 text-base bg-n-solid-1 border border-n-weak rounded-xl text-n-slate-12 placeholder:text-n-slate-9 outline-none transition-all focus:border-n-blue-9 focus:ring-2 focus:ring-n-blue-9/20"
+                    :placeholder="newEvent.selectedPatientName || 'Será preenchido com o nome do paciente'"
+                    @input="e => onTitleInput(e.target.value)"
+                  />
+                </div>
+
                 <!-- Patient Picker (focal) -->
                 <div data-patient-picker>
                   <div v-if="!hasPatientSelected" class="relative">
@@ -673,7 +785,7 @@ export default {
                         v-model="patientSearch"
                         type="text"
                         class="w-full px-3 py-3 text-base bg-n-solid-1 border border-n-weak rounded-xl text-n-slate-12 placeholder:text-n-slate-9 outline-none transition-all focus:border-n-blue-9 focus:ring-2 focus:ring-n-blue-9/20"
-                        placeholder="Nome do paciente"
+                        placeholder="Buscar por nome, telefone ou CPF"
                         @focus="onPatientFocus"
                         @input="onPatientSearchInput"
                       />
@@ -685,7 +797,7 @@ export default {
                       <button
                         type="button"
                         class="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-n-blue-11 hover:bg-n-alpha-2 transition-colors text-left font-medium"
-                        @mousedown.prevent="openNewPatientModal"
+                        @mousedown.prevent="openNewPatientModal()"
                       >
                         <i class="i-lucide-user-plus w-4 h-4" />
                         <template v-if="patientSearch">
@@ -706,11 +818,29 @@ export default {
                           class="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-n-alpha-2 transition-colors text-left"
                           @mousedown.prevent="selectContact(patient)"
                         >
-                          <span class="flex items-center justify-center w-7 h-7 rounded-full bg-n-blue-2 text-n-blue-11 text-xs font-semibold shrink-0">
+                          <span
+                            v-if="patient.avatar_url"
+                            class="w-7 h-7 rounded-full overflow-hidden shrink-0 bg-n-slate-3"
+                          >
+                            <img
+                              :src="patient.avatar_url"
+                              :alt="patient.name"
+                              class="w-full h-full object-cover"
+                            />
+                          </span>
+                          <span
+                            v-else
+                            class="flex items-center justify-center w-7 h-7 rounded-full bg-n-blue-2 text-n-blue-11 text-xs font-semibold shrink-0"
+                          >
                             {{ getInitials(patient.name) }}
                           </span>
                           <span class="text-sm text-n-slate-12 truncate">{{ patient.name }}</span>
-                          <span v-if="patient.phone" class="text-xs text-n-slate-10 ml-auto">{{ patient.phone }}</span>
+                          <span
+                            v-if="patient.phone"
+                            class="ml-auto px-2 py-0.5 text-[11px] font-medium tabular-nums rounded-md bg-n-slate-3 text-n-slate-11 border border-n-weak shrink-0"
+                          >
+                            {{ formatPhoneBR(patient.phone) }}
+                          </span>
                         </button>
                       </div>
                       <div v-else-if="patientSearch" class="px-3 py-3 text-sm text-n-slate-10 italic text-center border-t border-n-weak">
@@ -720,7 +850,20 @@ export default {
                   </div>
                   <!-- Selected patient summary card -->
                   <div v-else class="border border-n-weak rounded-xl bg-n-alpha-1 px-4 py-3 flex items-center gap-3">
-                    <span class="flex items-center justify-center w-10 h-10 rounded-full bg-n-blue-2 text-n-blue-11 text-sm font-semibold shrink-0">
+                    <span
+                      v-if="newEvent.selectedPatientAvatarUrl"
+                      class="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-n-slate-3"
+                    >
+                      <img
+                        :src="newEvent.selectedPatientAvatarUrl"
+                        :alt="newEvent.selectedPatientName"
+                        class="w-full h-full object-cover"
+                      />
+                    </span>
+                    <span
+                      v-else
+                      class="flex items-center justify-center w-10 h-10 rounded-full bg-n-blue-2 text-n-blue-11 text-sm font-semibold shrink-0"
+                    >
                       {{ getInitials(newEvent.selectedPatientName) }}
                     </span>
                     <div class="flex-1 min-w-0">
@@ -728,7 +871,7 @@ export default {
                         {{ newEvent.selectedPatientName }}
                       </div>
                       <div class="text-xs text-n-slate-10 truncate">
-                        Telefone: {{ newEvent.selectedPatientPhone || 'Não informado' }}
+                        Telefone: {{ newEvent.selectedPatientPhone ? formatPhoneBR(newEvent.selectedPatientPhone) : 'Não informado' }}
                       </div>
                     </div>
                     <button
@@ -762,43 +905,14 @@ export default {
                     <i class="i-lucide-activity label-icon" />
                     Serviço
                   </label>
-                  <div class="custom-select" :class="{ open: treatmentOpen }">
-                    <button class="cs-trigger" type="button" @click="toggleDropdown('treatment')">
-                      <span class="cs-trigger-content">
-                        <span
-                          v-if="selectedTreatmentColor"
-                          class="cs-svc-dot"
-                          :style="{ background: selectedTreatmentColor }"
-                        />
-                        {{ newEvent.treatment || 'Selecione um serviço' }}
-                      </span>
-                      <i class="i-lucide-chevron-down cs-arrow" />
-                    </button>
-                    <div v-if="treatmentOpen" class="cs-dropdown">
-                      <input v-model="treatmentSearch" class="cs-search" placeholder="Buscar..." @click.stop />
-                      <div
-                        v-if="newEvent.treatment"
-                        class="cs-option !text-n-slate-10 !flex items-center gap-2"
-                        @click.stop="clearTreatment"
-                      >
-                        <i class="i-lucide-x w-3.5 h-3.5" />
-                        Limpar seleção
-                      </div>
-                      <div
-                        v-for="tr in filteredTreatments"
-                        :key="typeof tr === 'string' ? tr : tr.id"
-                        class="cs-option cs-option-service"
-                        :class="{ selected: newEvent.treatment === (typeof tr === 'string' ? tr : tr.name) }"
-                        @click="selectTreatment(tr)"
-                      >
-                        <span v-if="tr && tr.color" class="cs-svc-dot" :style="{ background: tr.color }" />
-                        <span class="cs-svc-name">{{ typeof tr === 'string' ? tr : tr.name }}</span>
-                        <span v-if="tr && tr.duration_minutes" class="cs-svc-dur">
-                          {{ Math.floor(tr.duration_minutes / 60) > 0 ? Math.floor(tr.duration_minutes / 60) + 'h' : '' }}{{ tr.duration_minutes % 60 > 0 ? (tr.duration_minutes % 60) + 'min' : '' }}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  <FormSelect
+                    :model-value="newEvent.treatment"
+                    :options="treatmentOptionsForSelect"
+                    placeholder="Selecione um serviço"
+                    searchable
+                    clearable
+                    @change="onTreatmentChange"
+                  />
                 </div>
 
                 <!-- Categoria -->
@@ -807,40 +921,14 @@ export default {
                     <i class="i-lucide-tag label-icon" />
                     Categoria
                   </label>
-                  <div class="custom-select" :class="{ open: categoryOpen }">
-                    <button class="cs-trigger" type="button" @click="toggleDropdown('category')">
-                      <span class="cs-trigger-content">
-                        <span
-                          v-if="selectedCategory"
-                          class="cs-svc-dot"
-                          :style="{ background: selectedCategory.color }"
-                        />
-                        {{ selectedCategory ? selectedCategory.name : 'Selecionar categoria' }}
-                      </span>
-                      <i class="i-lucide-chevron-down cs-arrow" />
-                    </button>
-                    <div v-if="categoryOpen" class="cs-dropdown">
-                      <input v-model="categorySearch" class="cs-search" placeholder="Buscar..." @click.stop />
-                      <div
-                        v-if="newEvent.category_id"
-                        class="cs-option !text-n-slate-10 !flex items-center gap-2"
-                        @click.stop="clearCategory"
-                      >
-                        <i class="i-lucide-x w-3.5 h-3.5" />
-                        Limpar seleção
-                      </div>
-                      <div
-                        v-for="c in filteredCategories"
-                        :key="c.id"
-                        class="cs-option cs-option-service"
-                        :class="{ selected: newEvent.category_id === c.id }"
-                        @click="selectCategory(c)"
-                      >
-                        <span class="cs-svc-dot" :style="{ background: c.color }" />
-                        <span class="cs-svc-name">{{ c.name }}</span>
-                      </div>
-                    </div>
-                  </div>
+                  <FormSelect
+                    :model-value="newEvent.category_id"
+                    :options="categoryOptionsForSelect"
+                    placeholder="Selecionar categoria"
+                    searchable
+                    clearable
+                    @change="value => emitUpdate({ category_id: value || null })"
+                  />
                 </div>
 
                 <!-- Custom Attributes -->
@@ -860,15 +948,15 @@ export default {
                       {{ attr.name }}
                       <span v-if="attr.required" class="text-red-400 ml-0.5">*</span>
                     </label>
-                    <select
+                    <FormSelect
                       v-if="attr.type === 'select'"
-                      :value="newEvent.custom_values[`attr_${attr.id}`]"
-                      class="form-input form-select"
-                      @change="e => updateCustomValue(`attr_${attr.id}`, e.target.value)"
-                    >
-                      <option value="" disabled>Selecione</option>
-                      <option v-for="opt in getOptions(attr.options)" :key="opt" :value="opt">{{ opt }}</option>
-                    </select>
+                      :model-value="newEvent.custom_values[`attr_${attr.id}`]"
+                      :options="getOptions(attr.options)"
+                      placeholder="Selecione"
+                      :clearable="!attr.required"
+                      auto-searchable
+                      @change="value => updateCustomValue(`attr_${attr.id}`, value)"
+                    />
                     <textarea
                       v-else-if="attr.type === 'textarea'"
                       :value="newEvent.custom_values[`attr_${attr.id}`]"
@@ -923,63 +1011,25 @@ export default {
                       <i class="i-lucide-user label-icon" />
                       {{ $t('AGENDA.MODAL.FIELD_AGENT') }}
                     </label>
-                    <div class="custom-select" :class="{ open: agentOpen }">
-                      <button class="cs-trigger" type="button" @click="toggleDropdown('agent')">
-                        <span class="cs-trigger-content">
-                          <span
-                            v-if="newEvent.user_id"
-                            class="cs-svc-dot"
-                            :style="{ background: getAgentColorById(newEvent.user_id) }"
-                          />
-                          {{ selectedAgentLabel || 'Selecione' }}
-                        </span>
-                        <i class="i-lucide-chevron-down cs-arrow" />
-                      </button>
-                      <div v-if="agentOpen" class="cs-dropdown">
-                        <input v-model="agentSearch" class="cs-search" placeholder="Buscar..." @click.stop />
-                        <div
-                          v-for="a in filteredAgents"
-                          :key="a.id"
-                          class="cs-option cs-option-service"
-                          :class="{ selected: newEvent.user_id === a.id }"
-                          @click="selectAgent(a)"
-                        >
-                          <span class="cs-svc-dot" :style="{ background: a.color }" />
-                          <span class="cs-svc-name">{{ a.name }}</span>
-                        </div>
-                      </div>
-                    </div>
+                    <FormSelect
+                      :model-value="newEvent.user_id"
+                      :options="agentOptionsForSelect"
+                      placeholder="Selecione"
+                      auto-searchable
+                      @change="value => emitUpdate({ user_id: value })"
+                    />
                   </div>
                   <div class="form-group">
                     <label class="form-label">
                       <i class="i-lucide-alert-circle label-icon" />
                       Prioridade
                     </label>
-                    <div class="custom-select" :class="{ open: priorityOpen }">
-                      <button class="cs-trigger" type="button" @click="toggleDropdown('priority')">
-                        <span class="cs-trigger-content">
-                          <span
-                            class="cs-svc-dot"
-                            :style="{ background: getPriorityColor(newEvent.priority) }"
-                          />
-                          {{ selectedPriorityLabel }}
-                        </span>
-                        <i class="i-lucide-chevron-down cs-arrow" />
-                      </button>
-                      <div v-if="priorityOpen" class="cs-dropdown">
-                        <input v-model="prioritySearch" class="cs-search" placeholder="Buscar..." @click.stop />
-                        <div
-                          v-for="p in filteredPriorities"
-                          :key="p.value"
-                          class="cs-option cs-option-service"
-                          :class="{ selected: newEvent.priority === p.value }"
-                          @click="selectPriority(p)"
-                        >
-                          <span class="cs-svc-dot" :style="{ background: getPriorityColor(p.value) }" />
-                          <span class="cs-svc-name">{{ p.label }}</span>
-                        </div>
-                      </div>
-                    </div>
+                    <FormSelect
+                      :model-value="newEvent.priority"
+                      :options="priorityOptionsForSelect"
+                      placeholder="Selecione"
+                      @change="value => emitUpdate({ priority: value })"
+                    />
                   </div>
                 </div>
 
@@ -1063,32 +1113,13 @@ export default {
                     <i class="i-lucide-user label-icon" />
                     {{ $t('AGENDA.MODAL.FIELD_AGENT') }}
                   </label>
-                  <div class="custom-select" :class="{ open: agentOpen }">
-                    <button class="cs-trigger" type="button" @click="toggleDropdown('agent')">
-                      <span class="cs-trigger-content">
-                        <span
-                          v-if="newEvent.user_id"
-                          class="cs-svc-dot"
-                          :style="{ background: getAgentColorById(newEvent.user_id) }"
-                        />
-                        {{ selectedAgentLabel || 'Selecione' }}
-                      </span>
-                      <i class="i-lucide-chevron-down cs-arrow" />
-                    </button>
-                    <div v-if="agentOpen" class="cs-dropdown">
-                      <input v-model="agentSearch" class="cs-search" placeholder="Buscar..." @click.stop />
-                      <div
-                        v-for="a in filteredAgents"
-                        :key="a.id"
-                        class="cs-option cs-option-service"
-                        :class="{ selected: newEvent.user_id === a.id }"
-                        @click="selectAgent(a)"
-                      >
-                        <span class="cs-svc-dot" :style="{ background: a.color }" />
-                        <span class="cs-svc-name">{{ a.name }}</span>
-                      </div>
-                    </div>
-                  </div>
+                  <FormSelect
+                    :model-value="newEvent.user_id"
+                    :options="agentOptionsForSelect"
+                    placeholder="Selecione"
+                    auto-searchable
+                    @change="value => emitUpdate({ user_id: value })"
+                  />
                 </div>
 
                 <!-- Observações (Compromisso only) -->
@@ -1240,7 +1271,7 @@ export default {
                   <input v-model="quickPatient.phone" type="tel" class="form-input" maxlength="15" :placeholder="$t('AGENDA.MODAL.PLACEHOLDER_PHONE')" @input="formatQuickPatientPhone" @blur="quickPatientPhoneOpen = false" />
                   <div
                     v-if="quickPatientPhoneOpen && quickPatientPhoneSuggestions.length"
-                    class="cs-dropdown !block absolute z-50 w-full top-full mt-1"
+                    class="absolute z-50 w-full top-full mt-1 bg-n-solid-1 border border-n-weak rounded-lg shadow-lg p-1"
                   >
                     <div class="px-3 py-1.5 text-sm font-semibold text-n-slate-10 uppercase tracking-wider border-b border-n-weak">
                       Contato já existente?
@@ -1248,7 +1279,7 @@ export default {
                     <div
                       v-for="sug in quickPatientPhoneSuggestions"
                       :key="sug.id"
-                      class="cs-option flex items-center justify-between"
+                      class="px-2.5 py-2 text-sm text-n-slate-11 hover:bg-n-alpha-2 hover:text-n-slate-12 rounded-md cursor-pointer flex items-center justify-between"
                       @mousedown.prevent="selectPhoneSuggestion(sug)"
                     >
                       <span class="font-medium text-n-slate-12">{{ sug.name }}</span>

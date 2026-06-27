@@ -52,12 +52,14 @@ UI: `ModuleSection.vue` decide entre renderizar a lista flat ou delegar para mú
 
 Ordem de precedência (em `BeclinicPermissible#beclinic_can?`):
 
-1. `SuperAdmin` (BeClinic) → bypass total
-2. Chatwoot `administrator` na conta → bypass total
-3. **Klivy Role atribuída ao `account_user`** → permissão consultada
-4. Time com `beclinic_role: 'dono'` → bypass
-5. Permissão do Time (legado, mantido por retrocompat)
-6. Sem time → `false`
+1. `SuperAdmin` (BeClinic — `User#type`) → bypass total
+2. Chatwoot `administrator` (`account_user.role`) → bypass total
+3. **Klivy Role atribuída ao `account_user`** → permissão consultada (sem role → `false`)
+
+O RBAC legado de Times (`team.permissions` + `beclinic_role: 'dono'`) foi
+removido em 2026-04-30 — ver histórico no `CHANGELOG.md` e `git log -- plugins/beclinic_core/app/models/concerns/beclinic_permissible.rb`.
+O comprador da conta entra com `account_user.role = administrator`
+automaticamente via `AccountBuilder` e cai no passo 2 (bypass).
 
 O endpoint `GET /api/v1/accounts/:id/beclinic_permissions` retorna o hash já
 consolidado, então o frontend (`usePermissions`) é agnóstico à fonte.
@@ -70,9 +72,9 @@ consolidado, então o frontend (`usePermissions`) é agnóstico à fonte.
 
 | Arquivo | O que faz |
 |---|---|
-| `lib/custom_roles/engine.rb` | Rails Engine. Registra `db/migrate` do plugin via `initializer :append_custom_roles_migrations`. `to_prepare` injeta `Account has_many :klivy_roles` e `AccountUser belongs_to :klivy_role`. |
-| `app/models/klivy_role.rb` | Model `KlivyRole`. Campos: `account_id`, `name`, `description`, `preset_key`, `permissions` (jsonb). Métodos `can?`, `module_enabled?`, `scope_for`. |
-| `app/controllers/api/v1/accounts/klivy_roles_controller.rb` | CRUD + `POST /:id/assign` (atribui role a um user). Renderiza JSON inline (sem jbuilder). Autorização: só `administrator`. |
+| `lib/custom_roles/engine.rb` | Rails Engine. Registra `db/migrate` do plugin via `initializer :append_custom_roles_migrations`. `to_prepare` injeta `Account has_many :klivy_roles` e `AccountUser belongs_to :klivy_role, optional: true`. Define também `AccountUser#agenda_provider?` com resolução em 4 passos (override per-user `is_agenda_provider` → admin default `true` → `klivy_role.can?(:agenda, :is_provider)` → `false`). |
+| `app/models/klivy_role.rb` | Model `KlivyRole`. Campos: `account_id`, `name` (uniq case-insensitive por conta, max 80), `description` (max 240), `preset_key`, `permissions` (jsonb). Métodos `can?(mod, action)`, `module_enabled?(mod)` (ignora a chave `scope` ao decidir se o módulo está vazio), `scope_for(mod)` (default `'all'`). `dependent: :nullify` em `account_users` (excluir role limpa o FK). |
+| `app/controllers/api/v1/accounts/klivy_roles_controller.rb` | CRUD + `POST /:id/assign` (atribui role a um user, **limpa `is_agenda_provider` per-user** ao trocar). Renderiza JSON inline (sem jbuilder) com `member_count` calculado no serializer. Autorização granular por action: index/show liberados por `roles_view` **OU** `users_edit` (modal de atribuição precisa carregar lista); create/update/destroy exigem `roles_*` específica; assign exige `users_edit`. Admin nativo passa direto (ver §"Custom Roles compartilhados", atualização 11). |
 | `db/migrate/20260425220001_create_klivy_roles.rb` | Cria tabela `klivy_roles` com índice único `(account_id, name)`. |
 | `db/migrate/20260425220002_add_klivy_role_id_to_account_users.rb` | Adiciona FK `klivy_role_id` em `account_users`. |
 
@@ -91,7 +93,7 @@ consolidado, então o frontend (`usePermissions`) é agnóstico à fonte.
 |---|---|
 | `frontend/api/klivyRolesApi.js` | HTTP client (axios) — `list`, `show`, `create`, `update`, `delete`, `assignToUser`. |
 | `frontend/composables/useRolesList.js` | Estado da lista de roles (load, remove). |
-| `frontend/composables/useRoleEditor.js` | Estado do editor (name, description, presetKey, permissions, save, applyPreset, togglePermission, setModuleEnabled, **setGroupEnabled** desde 2026-04-26). |
+| `frontend/composables/useRoleEditor.js` | Estado do editor (name, description, presetKey, permissions, save, applyPreset, togglePermission, setModuleEnabled, **setGroupEnabled** desde 2026-04-26). `applyPreset` autopreenche `name`/`description` com os do preset quando os campos estão vazios — facilita "escolhi Recepcionista e quero chamar de Recepcionista mesmo". |
 | `frontend/composables/useSilentErrors.js` | `useSilentErrors()` retorna `notifyError(msg, error)` que **silencia 401 e 403** e mostra `useAlert(msg)` só pra erros reais. |
 
 #### Componentes reutilizáveis
@@ -124,7 +126,7 @@ consolidado, então o frontend (`usePermissions`) é agnóstico à fonte.
 | Arquivo | O que faz |
 |---|---|
 | `frontend/features/role-assignment/AssignRoleButton.vue` | Botão escudo (ícone `i-lucide-shield-plus`) + `woot-modal` embutido. Aparece na linha de cada agente. |
-| `frontend/features/role-assignment/AssignRoleModal.vue` | Conteúdo do modal. Usa `woot-modal-header` padrão do projeto. Lista de roles com radio circle desenhado em CSS (sem `<input type="radio">` pra evitar bordas pretas do navegador). |
+| `frontend/features/role-assignment/AssignRoleModal.vue` | Conteúdo do modal. Usa `woot-modal-header` padrão do projeto. Lista de roles com radio circle desenhado em CSS (sem `<input type="radio">` pra evitar bordas pretas do navegador). **Ordena por nº de permissões ativas (desc)**, empate cai pra ordem alfabética PT-BR — papéis mais poderosos aparecem no topo. Mesma regra da lista de Funções. |
 | `frontend/features/role-assignment/RoleOption.vue` | Linha de uma role no modal — botão clicável com radio + nome + descrição + pill de "X permissões". Selected: `border-n-brand bg-n-brand/5`. |
 
 #### Roteamento
@@ -253,9 +255,10 @@ consolidado, então o frontend (`usePermissions`) é agnóstico à fonte.
   `InboxPolicy#create?` antigo era estritamente `@account_user.administrator?` —
   então o backend devolvia 401 Unauthorized mesmo com a permissão Klivy ligada.
 - O `beclinic_can?` (já presente em `ApplicationPolicy` como private helper
-  delegando ao `BeclinicPermissible#beclinic_can?`) cobre o resto: super admin,
-  admin nativo da conta, KlivyRole, fallback Time. Admins continuam passando pelo
-  primeiro termo do OR; Klivy custom roles pelo segundo.
+  delegando ao `BeclinicPermissible#beclinic_can?`) cobre o resto: super admin
+  BeClinic → admin nativo da conta → KlivyRole. Admins continuam passando pelo
+  primeiro termo do OR; Klivy custom roles pelo segundo. O RBAC legado de Time
+  foi removido em 2026-04-30 — ver seção 1.
 - **Padrão a replicar nas outras policies** (Macro, Label, Automation,
   CannedResponse, AgentBot, Sla, Workflow, etc.) quando estendermos o gating CRUD
   pra essas áreas.
@@ -459,10 +462,10 @@ Cada switch agora tem ponto de aplicação real na UI/backend:
 ### `plugins/beclinic_core/app/models/concerns/beclinic_permissible.rb`
 - **Adicionado** método `klivy_role_for(account)` — busca a `KlivyRole` atribuída via `account_users.klivy_role_id`.
 - **Adicionado** método `beclinic_admin_in?(account)` — checa se é `administrator` Chatwoot.
-- **Reescrito** `beclinic_can?` e `beclinic_scope` pra consultar **Klivy Role antes** do Time (ordem definida na seção 1).
+- **Reescrito** `beclinic_can?` e `beclinic_scope` na ordem canônica de 3 passos: SuperAdmin BeClinic → admin nativo Chatwoot → KlivyRole (ver seção 1). O RBAC de Time / `beclinic_role: 'dono'` foi removido em 2026-04-30.
 
 ### `plugins/beclinic_core/app/controllers/api/v1/accounts/beclinic_permissions_controller.rb`
-- **Reescrito** `show` para retornar `permissions` consolidadas via `effective_permissions` (Klivy Role → fallback Time).
+- **Reescrito** `show` para retornar `permissions` consolidadas a partir da KlivyRole do `account_user` (ou `{}` quando não há role atribuída — admins/super admins recebem bypass total em `BeclinicPermissible#beclinic_can?`).
 - **Adicionado** payload `klivy_role: { id, name, preset_key }` ao response.
 
 ### `plugins/agenda/` — gating completo do calendário, configurações e atributos (2026-04-26)
@@ -1124,27 +1127,77 @@ bundle exec rails db:migrate
 > YAML serializado). **Não bloqueia as migrations** e não tem relação com este
 > trabalho — investigar separadamente.
 
+### Payload da API (serializer)
+
+O controller renderiza JSON inline (sem jbuilder). Cada role serializa para:
+
+```json
+{
+  "id": 12,
+  "name": "Recepcionista",
+  "description": "Agenda, cadastro e visualização.",
+  "preset_key": "recepcionista",
+  "permissions": { "inbox": { "view": true }, "agenda": { "view": true, "scope": "own" }, ... },
+  "member_count": 3,
+  "created_at": "2026-04-26T12:34:56Z",
+  "updated_at": "2026-05-02T09:18:00Z"
+}
+```
+
+- `member_count` é calculado a cada serialização (`AccountUser.where(klivy_role_id: id).count`).
+  É usado na lista de Funções para mostrar "N agentes" no card.
+- `permissions` aceita uma chave especial `scope` por módulo (`'all'` | `'own'`)
+  consumida por `KlivyRole#scope_for(mod)`. Não conta para `module_enabled?`
+  (que ignora `scope` ao decidir se o módulo está vazio).
+
 ---
 
 ## 7. Catálogo de módulos (`plugins/custom_roles/frontend/shared/modules.js`)
 
-12 módulos × N sub-permissões. Cada `module.key` corresponde ao primeiro
-argumento de `can(modulo, acao)` e ao `SIDEBAR_NAME_TO_MODULE` do sidebar.
+12 módulos. Cada `module.key` corresponde ao primeiro argumento de
+`can(modulo, acao)` e ao `SIDEBAR_NAME_TO_MODULE` do sidebar. Módulos com a
+marca **(agrupado)** usam o esquema `groups[]` no catálogo — as chaves
+continuam flat no JSONB, o agrupamento é só de UX (ver seção 1).
+
+> Esta seção é a fonte secundária: a **fonte de verdade** é
+> [plugins/custom_roles/frontend/shared/modules.js](plugins/custom_roles/frontend/shared/modules.js).
+> Ao adicionar/remover uma chave lá, regenere este catálogo.
 
 | Módulo | Sub-permissões |
 |---|---|
 | `inbox` | view, mark_read |
-| `chat` | view_all, view_unassigned, view_mentions, reply, assign_conversation, transfer_inbox, delete_message, send_broadcast |
-| `captain` | view, manage_faqs, manage_documents, manage_scenarios, use_playground, manage_settings |
-| `agenda` | **(agrupado)** Calendário: view, create_event, edit_event, cancel_event, drag_and_drop, manage_blocks · Configurações: view_settings, manage_schedules, manage_online_booking, manage_services · Notificações: view_notifications, manage_notifications · Atributos: manage_custom_attributes |
-| `patients` | view, create, edit, delete, view_clinical_notes, create_clinical_notes, sign_clinical_notes, delete_clinical_notes, view_treatment_plans, manage_treatment_plans, view_consents, manage_consents, view_documents, manage_documents, view_exams, manage_exams, view_audit, view_timeline |
+| `chat` **(agrupado)** | **Ações da conversa** (`actions`): view_all, view_unassigned, view_mentions, reply, assign_conversation, delete_message, send_broadcast · **Painel da conversa** (`panel`): view_conversation_actions, use_macros, view_conversation_info, view_contact_attributes, view_contact_notes, view_previous_conversations, view_participants · **Ações do contato** (`contact_header`): view_patient_record, create_appointment, edit_contact, merge_contact, manage_waiting_list, view_contact_profile, delete_contact |
+| `captain` (BEA) | view, manage_faqs, manage_documents, manage_scenarios, use_playground, manage_inboxes, manage_tools, manage_settings |
+| `agenda` **(agrupado)** | **Profissional da agenda** (`provider`): is_provider · **Calendário** (`calendar`): view, create_event, edit_event, cancel_event, drag_and_drop, manage_blocks · **Configurações da agenda** (`settings_tab`): view_settings, manage_schedules, manage_online_booking, manage_services · **Notificações automáticas** (`notifications_tab`): view_notifications, manage_notifications · **Atributos personalizados** (`custom_attributes_tab`): manage_custom_attributes |
+| `patients` | view, create, edit, delete, view_anamnesis, manage_anamnesis, view_clinical_notes, create_clinical_notes, sign_clinical_notes, delete_clinical_notes, view_treatment_plans, manage_treatment_plans, view_consents, manage_consents, view_documents, manage_documents, view_exams, manage_exams, view_audit, view_timeline, view_financial, manage_financial |
 | `financial` | view_dashboard, view_cashflow, view_receivables, view_payables, view_dre, view_reports, view_cash_register, create_transaction, edit_transaction, delete_transaction, manage_estimates, approve_estimate, export_data, manage_settings |
 | `contacts` | view_all, view_active, create, edit, delete, manage_segments, manage_tags, import_export |
 | `reports` | view_overview, view_conversation, view_agent, view_label, view_inbox, view_team, view_csat, view_sla, view_bot, view_agenda |
 | `campaigns` | view, manage_live_chat, manage_sms, manage_whatsapp |
 | `help_center` | view, manage_articles, manage_categories, manage_portals |
-| `settings` | **(agrupado, CRUD por área)** Conta: account_view, account_manage · Agentes: users_view, users_invite, users_edit, users_remove · Times: teams_view, teams_create, teams_edit, teams_delete · Caixas de entrada: inboxes_view, inboxes_create, inboxes_edit, inboxes_delete, inboxes_manage_agents · Etiquetas: labels_view, labels_create, labels_edit, labels_delete · Atributos personalizados: custom_attributes_view, custom_attributes_create, custom_attributes_edit, custom_attributes_delete · Automação: automation_view, automation_create, automation_edit, automation_delete · Robôs: agent_bots_view, agent_bots_manage · Macros: macros_view, macros_create, macros_edit, macros_delete · Respostas prontas: canned_view, canned_create, canned_edit, canned_delete · Integrações: integrations_view, integrations_manage · Auditoria: audit_view · Funções personalizadas: roles_view, roles_create, roles_edit, roles_delete · SLA: sla_view, sla_create, sla_edit, sla_delete · Fluxo de conversa: workflow_view, workflow_manage · Segurança: security_view, security_manage · Cobrança: billing_view, billing_manage |
+| `settings` **(agrupado, CRUD por área)** | **Conta** (`account`): account_view, account_manage · **Agentes** (`users`): users_view, users_invite, users_edit, users_remove · **Times** (`teams`): teams_view, teams_create, teams_edit, teams_delete · **Caixas de entrada** (`inboxes`): inboxes_view, inboxes_create, inboxes_edit, inboxes_delete, inboxes_manage_agents · **Etiquetas** (`labels`): labels_view, labels_create, labels_edit, labels_delete · **Atributos personalizados** (`custom_attributes`): custom_attributes_view, custom_attributes_create, custom_attributes_edit, custom_attributes_delete · **Automação** (`automation`): automation_view, automation_create, automation_edit, automation_delete · **Robôs** (`agent_bots`): agent_bots_view, agent_bots_manage · **Macros** (`macros`): macros_view, macros_create, macros_edit, macros_delete · **Respostas prontas** (`canned`): canned_view, canned_create, canned_edit, canned_delete · **Integrações** (`integrations`): integrations_view, integrations_manage · **Auditoria** (`audit`): audit_view · **Funções personalizadas** (`roles`): roles_view, roles_create, roles_edit, roles_delete · **SLA** (`sla`): sla_view, sla_create, sla_edit, sla_delete · **Fluxo de conversa** (`workflow`): workflow_view, workflow_manage · **Segurança** (`security`): security_view, security_manage · **Cobrança** (`billing`): billing_view, billing_manage |
 | `help` | view |
+
+### Permissões com semântica especial
+
+- **`agenda.is_provider`** — não é um gate de UI. Indica que o agente é
+  profissional clínico e aparece como coluna no calendário / pode receber
+  agendamentos. A resolução final segue 4 passos em [AccountUser#agenda_provider?](plugins/custom_roles/lib/custom_roles/engine.rb#L28-L39):
+  1. `account_users.is_agenda_provider` (override per-user, setado pelo toggle "Atende na agenda" no editor de agente)
+  2. Chatwoot `administrator` → default `true` (dono da clínica)
+  3. `klivy_role.permissions.agenda.is_provider`
+  4. `false`
+  Trocar a função via `POST /klivy_roles/:id/assign` **limpa** o override
+  per-user (`= nil`) — o default da role nova volta a valer. Evita que um
+  ex-Especialista promovido a Gerente continue ocupando coluna na agenda.
+- **`scope` por módulo** — cada hash de módulo aceita uma chave especial
+  `scope` (`'all'` | `'own'`) consumida por `KlivyRole#scope_for(module)`.
+  A UI do editor ignora essa chave (não tem toggle dedicado ainda); o
+  backend consulta via `scope_for(:agenda)` etc. para filtrar listas
+  (ex.: ver só os próprios pacientes). O `module_enabled?` do model ignora
+  `scope` ao decidir se o módulo está vazio — só sub-permissões `true`
+  contam. Swagger documenta o formato em
+  [definitions/KlivyRole.yml](plugins/custom_roles/swagger/definitions/KlivyRole.yml).
 
 ---
 
@@ -1311,49 +1364,27 @@ Implementação canônica disponível em:
 
 ## 10. Pendências conhecidas
 
-Não foram feitas nesta rodada:
+Áreas que ainda não estão 100% gated. As atualizações 7–11 fecharam Financeiro,
+Contatos, Relatórios, Campanhas e o leque inteiro de Settings (ver §"Atualização
+11"), então o que sobrou é menor e mais focado:
 
-1. **Pass de `v-if can()` nas tabs internas do prontuário** — botões dentro de
-   `EvolutionTab.vue`, `TreatmentPlanTab.vue`, `DocumentsTab.vue`,
-   `ConsentsTab.vue`, `ExamsTab.vue`, `AuditTab.vue`, `RegistrationTab.vue`.
-   O catálogo já cobre todas as ações (`patients.create_clinical_notes`,
-   `sign_clinical_notes`, `manage_treatment_plans`, etc); falta aplicar nos
-   templates.
-2. **Pass nos outros plugins** (financial, contacts, campaigns, help_center) —
-   botões de criar/editar/excluir dentro deles ainda aparecem independente de
-   permissão. **Agenda já foi feita** (calendário + configurações + atributos
-   personalizados). **Caixas de Entrada (settings/inbox/Index.vue + InboxPolicy)**
-   já foi feita ponta-a-ponta:
-   - **Frontend**: `usePermissions().can('settings', 'inboxes_*')` no `Index.vue`
-     (botões "Configurar nova", "Editar", "Excluir").
-   - **Backend**: `InboxPolicy` com `@account_user.administrator? || beclinic_can?(:settings, :inboxes_*)`.
-
-   As demais páginas internas de Configurações (Etiquetas, Macros, Respostas
-   Prontas, Automação, Robôs, Times, Agentes, etc.) seguem o **mesmo padrão**:
-   - Frontend: importar `usePermissions`, criar computeds `canCreateXxx/canEditXxx/canDeleteXxx`
-     e trocar os `v-if="isAdmin"` por essas computeds.
-   - Backend: editar a Policy correspondente (`MacroPolicy`, `LabelPolicy`,
-     `AutomationRulePolicy`, `CannedResponsePolicy`, `SlaPolicyPolicy`, etc.)
-     trocando `@account_user.administrator?` por
-     `@account_user.administrator? || beclinic_can?(:settings, :<group>_<action>)`.
-3. **Tabs internas das configurações da agenda** — dentro das abas que o
-   usuário **pode** ver, todos os toggles/inputs/botões ainda funcionam
-   livremente. A regra atual é binária: se você vê a aba, você gerencia.
-   Caso seja preciso um modo "read-only", precisaria adicionar um prop
-   `readOnly` em cada `SettingsTab*.vue` e desabilitar inputs.
-4. **Router guard global para módulos não-Settings** — para rotas das
-   Configurações e Agenda já existe fallback Klivy em `routeHelpers.js`
-   (ver seção 3). Para outros módulos (financial, contacts, campaigns,
-   reports, help_center) o fallback não está mapeado: alguém que cola
-   `/financial` no navegador ainda chega na página se for `administrator`
-   nativo, e é redirecionado se não for. Adicionar entradas no
-   `KLIVY_EXACT_ROUTE_RULES`/`KLIVY_PREFIX_ROUTE_RULES` cobre os próximos
-   plugins quando entrarem no escopo.
-5. **Remoção do `customRole` Vuex legado** e referências no formulário de
+1. **Tabs internas do prontuário** — `RegistrationTab.vue`, `TreatmentPlanTab.vue`,
+   `DocumentsTab.vue`, `ConsentsTab.vue`, `AuditTab.vue` ainda não têm `v-if`
+   nos botões de salvar / criar / excluir dentro dos forms. O catálogo já
+   cobre todas as ações (`patients.manage_treatment_plans`, `manage_consents`,
+   `manage_documents`, etc); falta aplicar nos templates. **EvolutionTab.vue,
+   ExamsTab.vue e a aba Financeiro já foram feitas** (atualização 6).
+2. **Modo read-only nas configurações da agenda** — dentro das abas que o
+   usuário **pode** ver, todos os toggles/inputs continuam editáveis. A regra
+   atual é binária: se você vê a aba (`view_settings` + `manage_*`), você
+   gerencia. Caso seja preciso um perfil "só lê configurações", precisaria
+   adicionar prop `readOnly` em cada `SettingsTab*.vue` e desabilitar inputs.
+3. **Remoção do `customRole` Vuex legado** e referências no formulário de
    agente — pode ser feito quando o time confirmar que a feature flag
    `custom_roles` do Chatwoot Enterprise não é mais usada.
-6. **`annotaterb` quebrado** em `db:migrate` — pré-existente, sem relação.
-   Investigar a column serializada que está com YAML inválido.
+4. **`annotaterb` quebrado** em `db:migrate` — pré-existente, sem relação
+   com este trabalho. Investigar a column serializada que está com YAML
+   inválido.
 
 ---
 

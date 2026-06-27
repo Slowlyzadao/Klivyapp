@@ -17,7 +17,17 @@ class ConsentRecord < ApplicationRecord
 
 
   # Status enum
-  STATUSES = %w[pendente assinado_localmente assinado_remotamente vencido revogado].freeze
+  #
+  # Status canônico: `pendente / signed / vencido / revogado`.
+  # Diferenciação do canal de assinatura vive na coluna `mode`
+  # (`local_tablet` / `remote_link`), exposta no JSON via `signature_method`
+  # ('local'/'remote').
+  #
+  # Backfill `assinado_localmente`/`assinado_remotamente` → `signed` rodado
+  # em 2026-05-04 via `db/migrate/20260503190100_backfill_consent_signed_status.rb`
+  # (count legacy verificado = 0). Constante `LEGACY_SIGNED_STATUSES` removida.
+  SIGNED_STATUSES = %w[signed].freeze
+  STATUSES = (%w[pendente] + SIGNED_STATUSES + %w[vencido revogado]).freeze
   MODES    = %w[local_tablet remote_link].freeze
 
   validates :patient_id, presence: true
@@ -34,13 +44,12 @@ class ConsentRecord < ApplicationRecord
   before_save   :calculate_expires_at
   # Callbacks
   before_create :generate_remote_token
-  after_commit  :update_patient_recall_flag, on: [:create, :update]
   after_create_commit :record_timeline_consent_created
   after_update_commit :record_timeline_consent_signed, if: :saved_change_to_status?
 
   # Scopes
   scope :pending, -> { where(status: 'pendente') }
-  scope :signed, -> { where(status: %w[assinado_localmente assinado_remotamente]) }
+  scope :signed, -> { where(status: SIGNED_STATUSES) }
   scope :expired, -> { where(status: 'vencido') }
   scope :pending_or_expired, -> { where(status: %w[pendente vencido]) }
   scope :today_pending, lambda {
@@ -62,7 +71,16 @@ class ConsentRecord < ApplicationRecord
   end
 
   def signed?
-    %w[assinado_localmente assinado_remotamente].include?(status)
+    SIGNED_STATUSES.include?(status)
+  end
+
+  # 'local' ou 'remote' — derivado de `mode`. Padrão Klivy preferido sobre
+  # checar `assinado_localmente`/`assinado_remotamente` no status.
+  def signature_method
+    case mode
+    when 'local_tablet' then 'local'
+    when 'remote_link'  then 'remote'
+    end
   end
 
   def expired?
@@ -80,7 +98,7 @@ class ConsentRecord < ApplicationRecord
     signed_at_time = Time.current
 
     update!(
-      status: 'assinado_localmente',
+      status: 'signed',
       mode: 'local_tablet',
       signature_blob: signature_blob,
       ip_address: ip_address,
@@ -98,7 +116,7 @@ class ConsentRecord < ApplicationRecord
     signed_at_time = Time.current
 
     update!(
-      status: 'assinado_remotamente',
+      status: 'signed',
       mode: 'remote_link',
       signature_blob: signature_blob,
       ip_address: ip_address,
@@ -130,23 +148,26 @@ class ConsentRecord < ApplicationRecord
     expected == integrity_hash
   end
 
-  # URL assinada via Active Storage padrão (mesma decisão de Document#signed_url —
-  # ver comentário lá para o trade-off de cross-tenant vs click-to-open).
-  # 30min é equilíbrio entre vida útil para download e janela de exposição.
+  # Roadmap #17.1 ✅ — proxy via SecureBlobsController com cross-tenant guard.
+  # Token signed (15min) → controller valida current_user pertence à account →
+  # redirect para URL real com janela curta (30s). Frontend continua usando
+  # `<img :src>` direto, sem mudança no consumo.
   def signature_image_url
     return nil unless signature_image.attached?
 
-    Rails.application.routes.url_helpers.rails_blob_url(
-      signature_image,
-      expires_in: 30.minutes,
-      disposition: :inline
+    token = Patients::SecureBlobTokenService.encode(
+      blob_id: signature_image.blob.id,
+      account_id: account_id,
+      expires_in: 15.minutes
     )
+    Rails.application.routes.url_helpers.secure_blob_url(token: token)
+  rescue StandardError
+    nil
   end
 
-  # Recalcula status vencido em tempo real
+  # Recalcula status vencido em tempo real para qualquer variante assinada.
   def computed_status
-    return 'vencido' if expires_at.present? && expires_at < Time.current && status == 'assinado_localmente'
-    return 'vencido' if expires_at.present? && expires_at < Time.current && status == 'assinado_remotamente'
+    return 'vencido' if expires_at.present? && expires_at < Time.current && signed?
 
     status
   end
@@ -167,10 +188,6 @@ class ConsentRecord < ApplicationRecord
     self.expires_at = signed_at + expires_after_days.days
   end
 
-  def update_patient_recall_flag
-    true
-  end
-
   def record_timeline_consent_created
     record_timeline_event!(
       event_type: 'consent_signed',
@@ -182,7 +199,7 @@ class ConsentRecord < ApplicationRecord
   end
 
   def record_timeline_consent_signed
-    return unless status.in?(%w[assinado_localmente assinado_remotamente])
+    return unless signed?
 
     record_timeline_event!(
       event_type: 'consent_signed',

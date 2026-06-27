@@ -1,0 +1,89 @@
+// Item da sidebar de organização (Todos / pastas / Arquivados).
+// Ícone solto (sem caixa). Count à direita; delete aparece no hover.
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--kl-radius-lg);
+  background: transparent;
+  color: var(--kl-on-surface);
+  font-family: inherit;
+  font-size: var(--kl-font-body-md);
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--kl-transition);
+
+  &:hover { background: var(--kl-surface-low); }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--kl-ring);
+  }
+
+  &--active {
+    background: var(--kl-surface-low);
+    color: var(--kl-on-surface);
+  }
+
+  &--drop-target {
+    background: var(--kl-primary-fixed);
+    outline: 2px dashed var(--kl-primary-container);
+    outline-offset: -2px;
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    color: var(--kl-secondary);
+  }
+
+  &__name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // Count à direita. Some no hover quando há botão de delete (pra dar lugar).
+  &__count {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--kl-secondary);
+  }
+
+  // Botão excluir pasta — ícone solto (zero padding/bg), revelado no hover.
+  &__delete {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--kl-secondary);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--kl-transition), color var(--kl-transition);
+
+    span { width: 16px; height: 16px; }
+
+    &:hover { color: var(--kl-error); }
+
+    &:focus-visible {
+      outline: none;
+      opacity: 1;
+      color: var(--kl-error);
+    }
+  }
+
+  // No hover do item: revela o delete e esconde o count (mesmo slot visual).
+  &:hover &__delete { opacity: 1; }
+  &:hover &__count { display: none; }
+}

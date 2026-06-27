@@ -1,20 +1,32 @@
 <script setup>
+// FE-16/17 (auditoria 2026-05-19): strings PT-BR migradas pra
+// `INTERNAL_CHAT.STICKER_PICKER.*` via i18n. TABS vira `computed` pra
+// resolver labels via `t()` (categorias da Klivy). `emptyMessage`
+// também usa `t()` por ser dinâmico (depende da aba ativa).
 import { computed, onMounted, ref } from 'vue';
 import { useStore } from 'vuex';
+import { useI18n } from 'vue-i18n';
+// FE-6: Tooltip moderno em vez de title="..." nativo.
+import Tooltip from '@plugins/beclinic_core/frontend/components/Tooltip.vue';
+// FE-8: BeclinicButton no footer do preview. Demais botões (grid de stickers,
+// tabs, ações inline com Tooltip) ficam nativos por terem visual muito custom
+// (aspect-square, icon-only com badge, etc) e dependerem de wrapping Tooltip.
+import BeclinicButton from '@plugins/beclinic_core/frontend/components/Button.vue';
 import StickerCreatorModal from './StickerCreatorModal.vue';
 
 const emit = defineEmits(['select', 'close']);
 const store = useStore();
+const { t } = useI18n();
 
 // Tabs: 'recent' | 'all' | 'dentista' | 'bem_estar' | 'estetica' | 'mine'
-const TABS = [
-  { key: 'recent', label: 'Recentes', icon: 'i-lucide-clock' },
-  { key: 'all', label: 'Salvas', icon: 'i-lucide-star' },
-  { key: 'dentista', label: 'Dentista', icon: 'i-ph-tooth' },
-  { key: 'bem_estar', label: 'Bem-estar', icon: 'i-ph-leaf' },
-  { key: 'estetica', label: 'Estética', icon: 'i-ph-sparkle' },
-  { key: 'mine', label: 'Minhas', icon: 'i-lucide-user' },
-];
+const TABS = computed(() => [
+  { key: 'recent', label: t('INTERNAL_CHAT.STICKER_PICKER.TAB_RECENT'), icon: 'i-lucide-clock' },
+  { key: 'all', label: t('INTERNAL_CHAT.STICKER_PICKER.TAB_ALL'), icon: 'i-lucide-star' },
+  { key: 'dentista', label: t('INTERNAL_CHAT.STICKER_PICKER.TAB_DENTIST'), icon: 'i-ph-tooth' },
+  { key: 'bem_estar', label: t('INTERNAL_CHAT.STICKER_PICKER.TAB_WELLNESS'), icon: 'i-ph-leaf' },
+  { key: 'estetica', label: t('INTERNAL_CHAT.STICKER_PICKER.TAB_AESTHETICS'), icon: 'i-ph-sparkle' },
+  { key: 'mine', label: t('INTERNAL_CHAT.STICKER_PICKER.TAB_MINE'), icon: 'i-lucide-user' },
+]);
 const tab = ref('recent');
 const showCreator = ref(false);
 const search = ref('');
@@ -56,15 +68,16 @@ const visible = computed(() => {
 
 const emptyMessage = computed(() => {
   if (tab.value === 'recent') {
-    return 'Suas figurinhas mais usadas aparecem aqui. Envie algumas pra começar.';
+    return t('INTERNAL_CHAT.STICKER_PICKER.EMPTY_RECENT');
   }
   if (tab.value === 'mine') {
-    return 'Você ainda não criou figurinhas. Clique em + Criar.';
+    return t('INTERNAL_CHAT.STICKER_PICKER.EMPTY_MINE');
   }
   if (tab.value === 'all') {
-    return 'Nenhuma figurinha salva. Crie uma ou pegue das categorias da Klivy.';
+    return t('INTERNAL_CHAT.STICKER_PICKER.EMPTY_ALL');
   }
-  return `A Klivy ainda não tem figurinhas em ${TABS.find(t => t.key === tab.value)?.label}.`;
+  const label = TABS.value.find(opt => opt.key === tab.value)?.label;
+  return t('INTERNAL_CHAT.STICKER_PICKER.EMPTY_CATEGORY', { label });
 });
 
 const select = sticker => emit('select', sticker);
@@ -95,94 +108,115 @@ const toggleFavorite = async (id, e) => {
 </script>
 
 <template>
+  <!-- UX-fix 2026-05-20: posicionamento alinhado ao botão de figurinhas
+       (canto esquerdo do composer) em vez de centralizado/esticado. Antes
+       `left-0 right-0 mx-auto max-w-md` deixava o popover flutuando no
+       meio do composer container (que ocupa a largura toda). Agora `left-2`
+       ancora à esquerda + width fixa 360px (com fallback mobile via
+       `max-w-[calc(100vw-32px)]`). -->
   <div
-    class="absolute bottom-full left-0 right-0 mx-auto mb-2 w-full max-w-md z-30 rounded-xl shadow-2xl bg-n-solid-1 border border-n-weak overflow-hidden ic-sticker-pop"
+    class="absolute bottom-full left-2 mb-2 w-[360px] max-w-[calc(100vw-32px)] z-30 rounded-xl shadow-2xl bg-n-solid-1 border border-n-weak overflow-hidden ic-sticker-pop"
   >
     <header class="flex items-center justify-between px-3 pt-3 gap-2">
       <div class="flex items-center gap-0.5 overflow-x-auto ic-tabs-scroll flex-1">
-        <button
-          v-for="t in TABS"
-          :key="t.key"
-          type="button"
-          class="inline-flex items-center justify-center w-8 h-8 rounded-md transition shrink-0"
-          :class="
-            tab === t.key
-              ? 'bg-n-alpha-2 text-n-slate-12'
-              : 'text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-1'
-          "
-          :title="t.label"
-          @click="tab = t.key"
+        <Tooltip
+          v-for="opt in TABS"
+          :key="opt.key"
+          :label="opt.label"
         >
-          <span :class="t.icon" class="text-base" />
-        </button>
+          <button
+            type="button"
+            class="inline-flex items-center justify-center w-10 h-10 rounded-lg transition shrink-0"
+            :class="
+              tab === opt.key
+                ? 'bg-n-alpha-2 text-n-slate-12'
+                : 'text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-1'
+            "
+            @click="tab = opt.key"
+          >
+            <span :class="opt.icon" class="text-xl" />
+          </button>
+        </Tooltip>
       </div>
-      <button
-        type="button"
-        class="text-n-slate-11 hover:text-n-slate-12 shrink-0"
-        title="Fechar"
-        @click="emit('close')"
-      >
-        <span class="i-lucide-x text-base" />
-      </button>
+      <Tooltip :label="$t('INTERNAL_CHAT.STICKER_PICKER.CLOSE_TOOLTIP')">
+        <button
+          type="button"
+          class="inline-flex items-center justify-center w-10 h-10 rounded-lg text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-1 shrink-0"
+          @click="emit('close')"
+        >
+          <span class="i-lucide-x text-xl" />
+        </button>
+      </Tooltip>
     </header>
 
     <p class="px-3 pt-1 text-[10px] font-medium uppercase tracking-wide text-n-slate-11">
-      {{ TABS.find(t => t.key === tab)?.label }}
+      {{ TABS.find(opt => opt.key === tab)?.label }}
     </p>
 
     <div class="px-3 pt-2">
       <input
         v-model="search"
         type="text"
-        placeholder="Pesquisar por nome..."
+        :placeholder="$t('INTERNAL_CHAT.STICKER_PICKER.SEARCH_PLACEHOLDER')"
         class="w-full px-3 py-1.5 text-xs rounded-md bg-n-alpha-1 text-n-slate-12 placeholder:text-n-slate-10 focus:outline-none focus:ring-1 focus:ring-n-brand"
       >
     </div>
 
     <div class="max-h-[320px] overflow-y-auto ic-thread-scroll p-2">
       <div v-if="isFetching && !allStickers.length" class="py-8 text-center text-xs text-n-slate-11">
-        Carregando…
+        {{ $t('INTERNAL_CHAT.STICKER_PICKER.LOADING') }}
       </div>
 
-      <div v-else class="grid grid-cols-5 gap-1.5">
+      <!-- UX-fix 2026-05-20: grid de 5→4 colunas + gap maior pra stickers
+           maiores e mais clicáveis. Width do popover (360px) acomoda
+           4 items de ~75px confortavelmente. -->
+      <div v-else class="grid grid-cols-4 gap-2">
         <!-- Botão Criar aparece em 'Salvas' e 'Minhas' (nas categorias da Klivy não faz sentido criar). -->
-        <button
+        <Tooltip
           v-if="tab === 'all' || tab === 'mine'"
-          type="button"
-          class="aspect-square flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-n-weak text-n-slate-11 hover:bg-n-alpha-1 hover:text-n-slate-12 transition"
-          title="Criar nova figurinha"
-          @click="showCreator = true"
+          :label="$t('INTERNAL_CHAT.STICKER_PICKER.CREATE_TOOLTIP')"
         >
-          <span class="i-lucide-plus text-xl" />
-          <span class="text-[10px] font-medium">Criar</span>
-        </button>
+          <button
+            type="button"
+            class="aspect-square flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-n-weak text-n-slate-11 hover:bg-n-alpha-1 hover:text-n-slate-12 transition"
+            @click="showCreator = true"
+          >
+            <span class="i-lucide-plus text-xl" />
+            <span class="text-[10px] font-medium">{{ $t('INTERNAL_CHAT.STICKER_PICKER.CREATE_LABEL') }}</span>
+          </button>
+        </Tooltip>
 
-        <button
+        <Tooltip
           v-for="s in visible"
           :key="s.id"
-          type="button"
-          class="aspect-square flex items-center justify-center rounded-lg bg-n-alpha-1 hover:bg-n-alpha-2 transition relative group/st"
-          :title="s.name || 'figurinha'"
-          @click="select(s)"
-          @contextmenu.prevent="openPreview(s)"
+          :label="s.name || $t('INTERNAL_CHAT.STICKER_PICKER.STICKER_FALLBACK_NAME')"
         >
-          <img
-            v-if="s.image_url"
-            :src="s.image_url"
-            class="object-contain w-full h-full p-0.5"
-            loading="lazy"
-            draggable="false"
+          <button
+            type="button"
+            class="aspect-square flex items-center justify-center rounded-lg bg-n-alpha-1 hover:bg-n-alpha-2 transition relative group/st"
+            @click="select(s)"
+            @contextmenu.prevent="openPreview(s)"
           >
-          <span
-            v-if="s.is_default"
-            class="absolute top-0.5 right-0.5 text-[8px] font-bold uppercase tracking-wide px-1 rounded bg-n-brand text-white"
-            title="Figurinha padrão da Klivy"
-          >K</span>
-        </button>
+            <img
+              v-if="s.image_url"
+              :src="s.image_url"
+              class="object-contain w-full h-full p-0.5"
+              loading="lazy"
+              draggable="false"
+            >
+            <!-- UX-fix 2026-05-20: badge "K" removido. Era marca decorativa
+                 nos stickers default da Klivy mas poluía visualmente o
+                 picker (especialmente em grid 4×N onde cada sticker tem
+                 ~75px de altura — o badge ocupava ~10% do thumbnail).
+                 A informação "default vs custom" continua acessível via
+                 outros sinais (categoria/tab + permissão pra excluir). -->
+
+          </button>
+        </Tooltip>
 
         <p
           v-if="!visible.length && !isFetching"
-          class="col-span-5 py-6 text-center text-xs text-n-slate-11"
+          class="col-span-4 py-6 text-center text-xs text-n-slate-11"
         >
           {{ emptyMessage }}
         </p>
@@ -202,23 +236,25 @@ const toggleFavorite = async (id, e) => {
       class="absolute inset-0 z-10 bg-n-solid-1 flex flex-col"
     >
       <header class="flex items-center justify-between px-3 pt-3">
-        <button
-          type="button"
-          class="inline-flex items-center gap-1 text-xs font-medium text-n-slate-11 hover:text-n-slate-12"
-          title="Voltar"
-          @click="closePreview"
-        >
-          <span class="i-lucide-arrow-left text-base" />
-          <span>Voltar</span>
-        </button>
-        <button
-          type="button"
-          class="text-n-slate-11 hover:text-n-slate-12"
-          title="Fechar"
-          @click="emit('close')"
-        >
-          <span class="i-lucide-x text-base" />
-        </button>
+        <Tooltip :label="$t('INTERNAL_CHAT.STICKER_PICKER.BACK_TOOLTIP')">
+          <button
+            type="button"
+            class="inline-flex items-center gap-1 text-xs font-medium text-n-slate-11 hover:text-n-slate-12"
+            @click="closePreview"
+          >
+            <span class="i-lucide-arrow-left text-base" />
+            <span>{{ $t('INTERNAL_CHAT.STICKER_PICKER.BACK_LABEL') }}</span>
+          </button>
+        </Tooltip>
+        <Tooltip :label="$t('INTERNAL_CHAT.STICKER_PICKER.CLOSE_TOOLTIP')">
+          <button
+            type="button"
+            class="text-n-slate-11 hover:text-n-slate-12"
+            @click="emit('close')"
+          >
+            <span class="i-lucide-x text-base" />
+          </button>
+        </Tooltip>
       </header>
 
       <div class="flex-1 flex items-center justify-center p-2 min-h-0">
@@ -237,29 +273,30 @@ const toggleFavorite = async (id, e) => {
           {{ previewSticker.name }}
         </p>
         <div class="flex justify-center gap-2">
-          <button
-            type="button"
-            class="px-4 py-2 text-sm font-medium text-white rounded-md bg-n-brand hover:brightness-110"
+          <BeclinicButton
+            :label="$t('INTERNAL_CHAT.STICKER_PICKER.SEND')"
+            icon="i-lucide-send"
+            size="sm"
             @click="select(previewSticker); closePreview()"
-          >
-            <span class="i-lucide-send align-middle text-base" />
-            <span class="ml-1 align-middle">Enviar</span>
-          </button>
-          <button
+          />
+          <Tooltip
             v-if="!previewSticker.is_default"
-            type="button"
-            class="px-3 py-2 text-sm font-medium rounded-md text-n-amber-11 hover:bg-n-amber-3"
-            title="Remover das favoritas"
-            @click="e => toggleFavorite(previewSticker.id, e)"
+            :label="$t('INTERNAL_CHAT.STICKER_PICKER.REMOVE_FAVORITE_TOOLTIP')"
           >
-            <span class="i-lucide-star-off align-middle text-base" />
-          </button>
+            <button
+              type="button"
+              class="px-3 py-2 text-sm font-medium rounded-md text-n-amber-11 hover:bg-n-amber-3"
+              @click="e => toggleFavorite(previewSticker.id, e)"
+            >
+              <span class="i-lucide-star-off align-middle text-base" />
+            </button>
+          </Tooltip>
         </div>
         <p
           v-if="previewSticker.is_default"
           class="text-center text-[10px] text-n-slate-10"
         >
-          Figurinha padrão da Klivy
+          {{ $t('INTERNAL_CHAT.STICKER_PICKER.DEFAULT_FOOTER_HINT') }}
         </p>
       </footer>
     </div>

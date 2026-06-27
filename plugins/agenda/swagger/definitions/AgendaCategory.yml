@@ -1,0 +1,34 @@
+type: object
+description: |
+  Categoria de agendamento (`Agenda::Category`). Soft-delete via `active=false`
+  — preserva referências históricas em `agenda_events.category_id`.
+properties:
+  id:
+    type: integer
+    example: 1
+  account_id:
+    type: integer
+    example: 1
+  name:
+    type: string
+    example: "Avaliação"
+  color:
+    type: string
+    description: Hex color (UI).
+    example: "#3b82f6"
+  position:
+    type: integer
+    example: 0
+  active:
+    type: boolean
+    example: true
+  appointments_count:
+    type: integer
+    description: Total de `agenda_events` vinculados (computado).
+    example: 27
+  created_at:
+    type: string
+    format: date-time
+  updated_at:
+    type: string
+    format: date-time

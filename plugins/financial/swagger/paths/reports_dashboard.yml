@@ -1,0 +1,26 @@
+get:
+  tags:
+    - Financeiro · Relatórios
+  summary: KPIs do Dashboard
+  description: |
+    Aceita `from`+`to` (período) OU `date` (dia único). Quando ambos
+    `from`/`to` são vazios, usa `date` (default hoje).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+    - name: date
+      in: query
+      schema: { type: string, format: date }
+  responses:
+    '200':
+      description: KPIs
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

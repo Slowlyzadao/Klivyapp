@@ -1,0 +1,19 @@
+get:
+  tags:
+    - Agenda do Paciente
+  summary: Detalhar agendamento do paciente
+  description: |
+    Aceita `id` como `agenda_event_id` (preferido) ou ID da `patient_appointments`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Agendamento
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PatientAppointment.yml'
+    '404':
+      description: Não encontrado

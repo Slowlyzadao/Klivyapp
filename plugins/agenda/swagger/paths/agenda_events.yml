@@ -2,16 +2,41 @@ get:
   tags:
     - Agendamentos
   summary: Listar agendamentos
+  description: |
+    Retorna até 500 eventos da agenda (`agenda_events.kept`), com snapshot
+    inline de `user`, `contact` e `agenda_service`. Filtragem por
+    `starts_at`/`ends_at` usa **overlap real** (não containment) — eventos que
+    cruzam a borda da janela são incluídos. Pundit aplica `policy_scope`
+    (operadores com `scope=own` veem só os próprios).
   parameters:
     - $ref: '../common.yml#/components/parameters/accountId'
     - name: user_id
       in: query
+      description: Filtra por profissional.
+      schema:
+        type: integer
+    - name: contact_id
+      in: query
+      description: Filtra por paciente (Contact ID).
       schema:
         type: integer
     - name: status
       in: query
       schema:
         type: string
+        enum: [scheduled, confirmed, arrived, in_progress, completed, cancelled, no_show]
+    - name: starts_at
+      in: query
+      description: Limite inferior do range (ISO 8601). Use junto com `ends_at`.
+      schema:
+        type: string
+        format: date-time
+    - name: ends_at
+      in: query
+      description: Limite superior do range (ISO 8601).
+      schema:
+        type: string
+        format: date-time
   responses:
     '200':
       description: Lista de eventos
@@ -24,7 +49,11 @@ get:
 post:
   tags:
     - Agendamentos
-  summary: Criar novo agendamento
+  summary: Criar agendamento
+  description: |
+    Cria um `AgendaEvent`. Backend nullifica `contact_id`, `category_id` e
+    `agenda_service_id` se apontarem para registros inexistentes/cross-tenant
+    (defense in depth). Soft-delete de serviço também resulta em FK nullificada.
   parameters:
     - $ref: '../common.yml#/components/parameters/accountId'
   requestBody:
@@ -33,11 +62,33 @@ post:
       application/json:
         schema:
           type: object
+          required: [agenda_event]
           properties:
             agenda_event:
-              $ref: '../definitions/AgendaEvent.yml'
+              type: object
+              required: [title, starts_at, ends_at, status, event_type]
+              properties:
+                title: { type: string }
+                description: { type: string, nullable: true }
+                starts_at: { type: string, format: date-time }
+                ends_at: { type: string, format: date-time }
+                user_id: { type: integer, nullable: true }
+                contact_id: { type: integer, nullable: true }
+                category_id: { type: integer, nullable: true }
+                agenda_service_id: { type: integer, nullable: true }
+                status:
+                  type: string
+                  enum: [scheduled, confirmed, arrived, in_progress, completed, cancelled, no_show]
+                event_type: { type: string, example: appointment }
+                custom_attributes:
+                  type: object
+                  additionalProperties: true
   responses:
-    '201':
+    '200':
       description: Evento criado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaEvent.yml'
     '422':
-      description: Erro de validação
+      description: "Erro de validação (ex.: `ends_at < starts_at`, status inválido)."

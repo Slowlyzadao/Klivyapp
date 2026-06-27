@@ -1,0 +1,52 @@
+get:
+  tags:
+    - Categorias da Agenda
+  summary: Listar categorias
+  description: Por padrão lista só ativas. Use `include_inactive=true` para ver as arquivadas.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: include_inactive
+      in: query
+      schema:
+        type: boolean
+        default: false
+  responses:
+    '200':
+      description: Lista de categorias (com `appointments_count` decorado)
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/AgendaCategory.yml'
+post:
+  tags:
+    - Categorias da Agenda
+  summary: Criar categoria
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [agenda_category]
+          properties:
+            agenda_category:
+              type: object
+              required: [name, color]
+              properties:
+                name: { type: string }
+                color: { type: string, description: "Hex color" }
+                position: { type: integer }
+                active: { type: boolean, default: true }
+  responses:
+    '201':
+      description: Categoria criada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/AgendaCategory.yml'
+    '422':
+      description: Erro de validação (nome duplicado dentro da conta)

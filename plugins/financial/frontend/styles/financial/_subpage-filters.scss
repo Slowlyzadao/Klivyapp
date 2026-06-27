@@ -1,0 +1,106 @@
+@use "../variables" as *;
+
+/* ── Filters bar ──────────────────────────────────────────── */
+.financial-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.financial-filters__left {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 320px;
+}
+
+.financial-search-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: rgb(var(--s-400));
+}
+
+.financial-filters__search {
+  width: 100%;
+  padding: 0.5rem 1rem 0.5rem 2.5rem !important;
+  font-size: 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(var(--s-200));
+  background-color: rgb(var(--s-50));
+  color: rgb(var(--s-800));
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.financial-filters__search:focus {
+  background-color: var(--white);
+  border-color: rgb(var(--s-300));
+  box-shadow: 0 0 0 2px rgba($brand-info-bright, 0.1);
+}
+
+body.dark .financial-filters__search {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgb(var(--s-100));
+}
+
+body.dark .financial-filters__search:focus {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.financial-filters__right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.financial-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 9999px;
+  background-color: rgb(var(--s-100));
+  color: rgb(var(--s-600));
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.financial-filter-pill:hover {
+  background-color: rgb(var(--s-200));
+  color: rgb(var(--s-800));
+}
+
+.financial-filter-pill--active {
+  background-color: rgba($brand-info-bright, 0.1);
+  color: $brand-info;
+}
+
+body.dark .financial-filter-pill {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: rgb(var(--s-400));
+}
+
+body.dark .financial-filter-pill:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: rgb(var(--s-200));
+}
+
+body.dark .financial-filter-pill--active {
+  background-color: rgba($brand-info-bright, 0.2);
+  color: $brand-info-light;
+}
+
+.financial-filters__divider {
+  width: 1px;
+  height: 1.5rem;
+  background-color: rgb(var(--s-200));
+}
+
+body.dark .financial-filters__divider {
+  background-color: rgb(var(--s-700));
+}

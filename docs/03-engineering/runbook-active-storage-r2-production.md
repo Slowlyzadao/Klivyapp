@@ -297,13 +297,11 @@ Marcar conforme avança:
 
 1. **Reverter rapidamente:** Easypanel → ambos services → mudar `ACTIVE_STORAGE_SERVICE=local` → redeploy. Sistema volta ao estado anterior em ~2 min.
 2. **Diagnóstico:** logs do service rails no Easypanel + smoke test §6.1 isolado.
-3. **Documentação base:** [implementation-plan-active-storage-r2.md](implementation-plan-active-storage-r2.md) tem o plano completo da migração com todos os "porquês".
+3. **Histórico da migração:** ver `CHANGELOG.md` (entrada `1.5.0.11`, 2026-04-27) e `git log -- config/initializers/aws_sdk_r2_compat.rb`.
 
 ---
 
 ## 📎 Referências
 
-- Plano de implementação completo: [implementation-plan-active-storage-r2.md](implementation-plan-active-storage-r2.md)
-- Auditoria do módulo Exames e Imagens (afetado): [audit-exames-imagens.md](audit-exames-imagens.md)
 - Cloudflare R2 S3 API: https://developers.cloudflare.com/r2/api/s3/api/
 - Active Storage S3 service: https://api.rubyonrails.org/classes/ActiveStorage/Service/S3Service.html

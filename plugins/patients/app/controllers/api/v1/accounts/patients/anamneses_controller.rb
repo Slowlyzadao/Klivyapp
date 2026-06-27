@@ -3,12 +3,22 @@ module Api
     module Accounts
       module Patients
         class AnamnesesController < Api::V1::Accounts::BaseController
+          include BeclinicErrorResponse
+
           before_action :set_patient
           before_action :set_anamnesis, only: [:show, :update, :finalize, :destroy]
 
           # GET /api/v1/accounts/:account_id/patients/:patient_id/anamneses
           def index
-            @anamneses = policy_scope(@patient.anamneses.active.order(version_number: :desc))
+            # `pdf_attachment: :blob` evita N+1: jbuilder chama
+            # `anamnesis.pdf.attached?` + `rails_blob_url(anamnesis.pdf)` — sem
+            # preload do anexo do Active Storage cada anamnese vira 1+1 query.
+            @anamneses = policy_scope(
+              @patient.anamneses
+                      .active
+                      .includes(pdf_attachment: :blob)
+                      .order(version_number: :desc)
+            )
             render 'api/v1/accounts/patients/anamneses/index'
           end
 
@@ -21,13 +31,13 @@ module Api
           # POST /api/v1/accounts/:account_id/patients/:patient_id/anamneses
           def create
             @anamnesis = @patient.anamneses.new(anamnesis_params)
-            @anamnesis.account    = current_account
+            @anamnesis.account    = Current.account
             @anamnesis.professional = current_user
             authorize @anamnesis
 
             if @anamnesis.save
               PatientAuditLog.log!(
-                account: current_account,
+                account: Current.account,
                 patient: @patient,
                 actor: current_user,
                 action: 'create',
@@ -35,7 +45,7 @@ module Api
               )
               render 'api/v1/accounts/patients/anamneses/show', status: :created
             else
-              render json: { error: @anamnesis.errors.full_messages }, status: :unprocessable_entity
+              render_error(@anamnesis.errors.full_messages, status: :unprocessable_entity)
             end
           end
 
@@ -44,13 +54,13 @@ module Api
             authorize @anamnesis
 
             if @anamnesis.status_finalized?
-              render json: { error: 'Anamnese finalizada não pode ser editada.' }, status: :forbidden
+              render_error('Anamnese finalizada não pode ser editada.', status: :forbidden)
               return
             end
 
             if @anamnesis.update(anamnesis_params)
               PatientAuditLog.log!(
-                account: current_account,
+                account: Current.account,
                 patient: @patient,
                 actor: current_user,
                 action: 'update',
@@ -58,7 +68,7 @@ module Api
               )
               render 'api/v1/accounts/patients/anamneses/show'
             else
-              render json: { error: @anamnesis.errors.full_messages }, status: :unprocessable_entity
+              render_error(@anamnesis.errors.full_messages, status: :unprocessable_entity)
             end
           end
 
@@ -78,7 +88,7 @@ module Api
                 critical_alerts_created: result.critical_alerts_created.count
               }
             else
-              render json: { error: result.error }, status: :unprocessable_entity
+              render_error(result.error, status: :unprocessable_entity)
             end
           end
 
@@ -87,13 +97,13 @@ module Api
             authorize @anamnesis
 
             if @anamnesis.status_finalized?
-              render json: { error: 'Anamnese finalizada não pode ser excluída.' }, status: :forbidden
+              render_error('Anamnese finalizada não pode ser excluída.', status: :forbidden)
               return
             end
 
             @anamnesis.soft_delete!
             PatientAuditLog.log!(
-              account: current_account,
+              account: Current.account,
               patient: @patient,
               actor: current_user,
               action: 'delete',
@@ -105,15 +115,15 @@ module Api
           private
 
           def set_patient
-            @patient = current_account.patients.find(params[:patient_id])
+            @patient = Current.account.patients.find(params[:patient_id])
           rescue ActiveRecord::RecordNotFound
-            render json: { error: 'Paciente não encontrado.' }, status: :not_found
+            render_error('Paciente não encontrado.', status: :not_found)
           end
 
           def set_anamnesis
             @anamnesis = @patient.anamneses.active.find(params[:id])
           rescue ActiveRecord::RecordNotFound
-            render json: { error: 'Anamnese não encontrada.' }, status: :not_found
+            render_error('Anamnese não encontrada.', status: :not_found)
           end
 
           def anamnesis_params

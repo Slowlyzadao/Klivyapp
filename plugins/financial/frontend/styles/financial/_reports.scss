@@ -1,0 +1,470 @@
+@use "../variables" as *;
+
+/* ====================================================================
+   Reports — Onda 4A (Comissões + Despesas por Categoria)
+   Prefixos: .rep-*   → shell da página de relatórios
+             .comm-*  → aba Comissões
+             .exp-cat-* → aba Despesas por Categoria
+   ==================================================================== */
+
+/* ── Tab bar ─────────────────────────────────────────────────── */
+.rep-tabs {
+  display: flex;
+  gap: 0.25rem;
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 0.5rem;
+  padding: 0.25rem;
+  width: fit-content;
+}
+
+.rep-tab {
+  padding: 0.375rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: rgb(var(--slate-11));
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: all 0.15s ease;
+}
+
+.rep-tab:hover {
+  color: rgb(var(--slate-12));
+  background: rgb(var(--slate-3));
+}
+
+.rep-tab--active {
+  background: $brand-info-bright; /* Blue-500 */
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.rep-tab--active:hover {
+  background: $brand-info; /* Blue-600 */
+  color: #ffffff;
+}
+
+/* ── Filters bar ─────────────────────────────────────────────── */
+.rep-filters {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0;
+}
+
+.rep-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.rep-filter-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(var(--slate-11));
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.rep-select {
+  padding: 0.375rem 0.625rem;
+  font-size: 0.8125rem;
+  border: 1px solid rgb(var(--slate-5));
+  border-radius: 0.5rem;
+  background: #ffffff;
+  color: rgb(var(--slate-12));
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+  min-width: 180px;
+}
+
+.rep-select:focus { border-color: var(--color-woot-400); }
+
+body.dark .rep-select {
+  background: rgb(var(--slate-12));
+  border-color: rgb(var(--slate-11));
+  color: rgb(var(--slate-4));
+}
+
+.rep-date-input {
+  padding: 0.375rem 0.625rem;
+  font-size: 0.8125rem;
+  border: 1px solid rgb(var(--slate-5));
+  border-radius: 0.5rem;
+  background: #ffffff;
+  color: rgb(var(--slate-12));
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.rep-date-input:focus { border-color: var(--color-woot-400); }
+
+body.dark .rep-date-input {
+  background: rgb(var(--slate-12));
+  border-color: rgb(var(--slate-11));
+  color: rgb(var(--slate-4));
+}
+
+.rep-apply-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4375rem 1rem;
+  background: var(--color-woot-500);
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.rep-apply-btn:hover { background: var(--color-woot-600); }
+.rep-apply-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Export CSV button ───────────────────────────────────────── */
+.rep-filter-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.rep-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(var(--slate-5));
+  background: rgb(var(--slate-2));
+  color: rgb(var(--slate-12));
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.rep-export-btn:hover {
+  background: rgb(var(--slate-4));
+}
+
+/* ── Year input ──────────────────────────────────────────────── */
+.rep-date-input--year { width: 90px; }
+
+/* ── Empty min height ────────────────────────────────────────── */
+.rep-empty-min { min-height: 20vh; }
+
+/* ── Insurance tab accent ────────────────────────────────────── */
+.rep-ins-dot { background: var(--color-woot-500); }
+.rep-ins-fill { background: var(--color-woot-500); }
+
+/* ── Average Ticket accent ───────────────────────────────────── */
+.rep-tick-dot { background: $brand-emerald; }
+.rep-tick-fill { background: $brand-emerald; }
+.rep-tick-value { color: $brand-emerald; font-weight: 600; }
+
+/* ── Period tabs (month/quarter/year/custom) ─────────────────── */
+.rep-period-tabs {
+  display: flex;
+  gap: 0.25rem;
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 0.5rem;
+  padding: 0.25rem;
+}
+
+.rep-period-tab {
+  padding: 0.3125rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: rgb(var(--slate-11));
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: all 0.15s ease;
+}
+
+.rep-period-tab:hover {
+  background: rgb(var(--slate-3));
+  color: rgb(var(--slate-12));
+}
+
+.rep-period-tab--active {
+  background: $brand-info-bright;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.rep-period-tab--active:hover {
+  background: $brand-info;
+  color: #ffffff;
+}
+
+/* == COMMISSIONS tab =========================================== */
+
+/* Summary card */
+.comm-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.comm-kpi {
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 0.75rem;
+  padding: 1.125rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+
+
+.comm-kpi--total {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(99, 102, 241, 0.05));
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+
+
+.comm-kpi__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(var(--slate-11));
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.comm-kpi__value {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: rgb(var(--slate-12));
+  font-variant-numeric: tabular-nums;
+}
+
+
+
+.comm-kpi__value--profit { color: $brand-purple; }
+
+
+
+
+
+/* Type badge */
+.comm-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.comm-type-badge--pct {
+  background: rgba($brand-info-bright, 0.1);
+  color: #1d4ed8;
+}
+
+.comm-type-badge--fixed {
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+}
+
+body.dark .comm-type-badge--pct  { background: rgba($brand-info-bright,0.15); color: #93c5fd; }
+
+
+/* Value colors */
+.comm-val--positive { color: $brand-purple; font-weight: 600; }
+.comm-val--muted    { color: rgb(var(--slate-9)); }
+
+
+/* == EXPENSES BY CATEGORY tab ================================== */
+
+.exp-cat-chart-block {
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+}
+
+
+
+.exp-cat-chart-block__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(var(--slate-12));
+  margin-bottom: 1rem;
+}
+
+
+
+/* Bar chart rows */
+.exp-cat-bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.exp-cat-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.exp-cat-bar-row__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.exp-cat-bar-row__name {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: rgb(var(--slate-12));
+}
+
+
+
+.exp-cat-bar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.exp-cat-bar-row__values {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.exp-cat-bar-row__amount {
+  font-weight: 700;
+  color: rgb(var(--slate-12));
+  font-variant-numeric: tabular-nums;
+}
+
+
+
+.exp-cat-bar-row__pct {
+  color: rgb(var(--slate-9));
+  font-size: 0.75rem;
+}
+
+.exp-cat-track {
+  height: 8px;
+  background: rgb(var(--slate-4));
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+
+
+.exp-cat-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+/* Table for expenses & commissions (uses generic rep-table) */
+.rep-card {
+  background: rgb(var(--slate-2));
+  border: 1px solid rgb(var(--slate-4));
+  border-radius: 12px;
+  overflow: hidden;
+  padding: 0 !important;
+  transform: translateZ(0); /* Fix Safari border-radius clipping */
+}
+
+.rep-table-wrap {
+  overflow-x: auto;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100%;
+}
+
+.rep-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+  min-width: 480px;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.rep-th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgb(var(--slate-9));
+  background: rgb(var(--slate-3));
+  border-bottom: 1px solid rgb(var(--slate-4));
+  white-space: nowrap;
+}
+
+.rep-th--num { text-align: right; }
+
+.rep-td {
+  padding: 12px 16px;
+  vertical-align: middle;
+  font-size: 0.875rem;
+}
+
+.rep-td--num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.rep-row {
+  border-bottom: 1px solid rgb(var(--slate-3));
+  transition: background 0.12s;
+}
+.rep-row:last-child {
+  border-bottom: none;
+}
+.rep-row:hover {
+  background: rgb(var(--slate-3));
+}
+
+.rep-row--total {
+  background: rgb(var(--slate-2));
+  font-weight: 700;
+  border-top: 2px solid rgb(var(--slate-4));
+}
+
+.rep-color-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.rep-name-text {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: rgb(var(--slate-12));
+}
+
+

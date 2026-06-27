@@ -89,7 +89,35 @@ export default defineConfig({
                 return '[name].js';
               },
             }
-          : {}),
+          : {
+              // Isola libs pesadas e independentes em chunks próprios e cacheáveis:
+              // deploys de código de app não invalidam o vendor, e libs que só
+              // entram via rota lazy (twilio/chart.js) ficam fora do grafo eager.
+              // SÓ leaf libs — nunca quebrar vue/router/store, que o Vite já
+              // fatia corretamente. Não se aplica ao build do SDK (library mode).
+              manualChunks(id) {
+                if (!id.includes('node_modules')) return undefined;
+                if (id.includes('@sentry')) return 'vendor-sentry';
+                if (id.includes('@twilio')) return 'vendor-twilio';
+                if (id.includes('chart.js') || id.includes('@kurkle'))
+                  return 'vendor-chartjs';
+                // ProseMirror/TipTap num ÚNICO chunk vendor (cache estável).
+                // ATENÇÃO: chunk único NÃO deduplica — o "multiple versions of
+                // prosemirror-model" (Enter/citação/preview quebrando) vinha de
+                // DUAS cópias físicas (@chatwoot 1.22.3 vs @tiptap 1.25.7). A
+                // dedup real é via `pnpm.overrides.prosemirror-model` no
+                // package.json (uma única instância na árvore). Este chunk é só
+                // organização de cache.
+                if (
+                  id.includes('/prosemirror-') ||
+                  id.includes('@tiptap/') ||
+                  id.includes('@tiptap+') ||
+                  id.includes('prosemirror-schema')
+                )
+                  return 'vendor-prosemirror';
+                return undefined;
+              },
+            }),
         inlineDynamicImports: isLibraryMode, // Disable code-splitting for SDK
       },
     },

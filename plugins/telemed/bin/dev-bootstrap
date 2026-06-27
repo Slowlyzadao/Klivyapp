@@ -1,0 +1,138 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Sprint L — bootstrap de dev local pra Telemedicina.
+#
+# Sobe junto com o Procfile.dev.local e:
+#   1. Aguarda MinIO ficar acessível (porta 9000) e cria o bucket
+#      `klivy-storage-dev` se ainda não existe.
+#   2. Vigia os logs dos 2 cloudflareds (tmp/cf-rails.log,
+#      tmp/cf-livekit.log) extraindo as URLs `*.trycloudflare.com`.
+#   3. Escreve `tmp/telemed-tunnels.json` com `{rails_url, livekit_url}`.
+#      O CredentialsResolver lê esse arquivo a cada call em dev, então
+#      o frontend do paciente recebe automaticamente a URL pública WSS
+#      do LiveKit quando o tunnel sobe.
+#   4. Imprime no STDOUT (foreman mostra colorido) a URL pública do
+#      portal — é o que você manda pro celular da outra pessoa.
+#
+# Loop infinito; reage a re-conexões do cloudflared (URL muda no restart).
+
+require 'json'
+require 'fileutils'
+require 'open3'
+require 'net/http'
+require 'uri'
+
+# Sobe 3 níveis pra sair de plugins/telemed/bin/ e chegar na raiz do projeto.
+# tmp/ vive na raiz (Rails padrão), não dentro do plugin.
+ROOT = File.expand_path('../../..', __dir__)
+TUNNELS_FILE = File.join(ROOT, 'tmp/telemed-tunnels.json')
+CF_RAILS_LOG = File.join(ROOT, 'tmp/cf-rails.log')
+CF_LIVEKIT_LOG = File.join(ROOT, 'tmp/cf-livekit.log')
+
+MINIO_ENDPOINT = ENV['MINIO_ENDPOINT'] || 'http://localhost:9000'
+MINIO_USER     = ENV['MINIO_ROOT_USER'] || 'minioadmin'
+MINIO_PASS     = ENV['MINIO_ROOT_PASSWORD'] || 'minioadmin'
+BUCKET         = ENV['TELEMED_STORAGE_BUCKET'] || 'klivy-storage-dev'
+
+def log(msg)
+  ts = Time.now.strftime('%H:%M:%S')
+  puts "[telemed-bootstrap #{ts}] #{msg}"
+  $stdout.flush
+end
+
+# --- MinIO ------------------------------------------------------------------
+
+def wait_for_minio(timeout_s: 60)
+  uri = URI("#{MINIO_ENDPOINT}/minio/health/ready")
+  deadline = Time.now + timeout_s
+  loop do
+    begin
+      res = Net::HTTP.get_response(uri)
+      return true if res.is_a?(Net::HTTPSuccess) || res.code.to_i == 403
+    rescue StandardError
+      # not ready yet
+    end
+    raise 'Timeout aguardando MinIO subir' if Time.now > deadline
+
+    sleep 1
+  end
+end
+
+def ensure_bucket!
+  # Usa `mc` se disponível; fallback pro alias via Docker exec.
+  out, status = Open3.capture2e(
+    'docker', 'exec', 'klivy-minio',
+    'mc', 'alias', 'set', 'local', MINIO_ENDPOINT.sub('localhost', '127.0.0.1'), MINIO_USER, MINIO_PASS
+  )
+  unless status.success?
+    log "mc alias falhou: #{out}"
+    return
+  end
+
+  out, status = Open3.capture2e('docker', 'exec', 'klivy-minio', 'mc', 'mb', '--ignore-existing', "local/#{BUCKET}")
+  if status.success?
+    log "bucket #{BUCKET}: ok"
+  else
+    log "mc mb falhou: #{out}"
+  end
+end
+
+# --- Cloudflared URL extraction --------------------------------------------
+
+CLOUDFLARE_REGEX = %r{https://[a-z0-9-]+\.trycloudflare\.com}i
+
+def extract_url(log_path)
+  return nil unless File.exist?(log_path)
+
+  content = File.read(log_path)
+  match = content.scan(CLOUDFLARE_REGEX).last
+  match&.strip
+end
+
+def write_tunnels!(rails_url:, livekit_url:)
+  data = { 'rails_url' => rails_url, 'livekit_url' => livekit_url, 'updated_at' => Time.now.iso8601 }
+  tmp = "#{TUNNELS_FILE}.tmp"
+  File.write(tmp, JSON.pretty_generate(data))
+  File.rename(tmp, TUNNELS_FILE)
+end
+
+# --- Main loop --------------------------------------------------------------
+
+log 'aguardando MinIO subir…'
+begin
+  wait_for_minio
+  log "MinIO ok em #{MINIO_ENDPOINT}"
+  ensure_bucket!
+rescue StandardError => e
+  log "MinIO setup falhou: #{e.message} (continuando p/ vigiar túneis)"
+end
+
+last = { rails: nil, livekit: nil }
+
+loop do
+  rails_url   = extract_url(CF_RAILS_LOG)
+  livekit_url = extract_url(CF_LIVEKIT_LOG)
+
+  # Converte https://xyz.trycloudflare.com → wss://xyz.trycloudflare.com pro LiveKit
+  livekit_ws_url = livekit_url ? livekit_url.sub(/\Ahttps?:/, 'wss:') : nil
+
+  if rails_url && livekit_ws_url && (rails_url != last[:rails] || livekit_ws_url != last[:livekit])
+    write_tunnels!(rails_url: rails_url, livekit_url: livekit_ws_url)
+    last = { rails: rails_url, livekit: livekit_ws_url }
+
+    puts ''
+    log '╔══════════════════════════════════════════════════════════════════════════╗'
+    log '║                                                                          ║'
+    log '║  ✅ Túneis ativos! Mande este link pro celular da outra pessoa:         ║'
+    log '║                                                                          ║'
+    log "║  #{rails_url.ljust(72)}║"
+    log '║                                                                          ║'
+    log "║  (LiveKit WSS:  #{livekit_ws_url.ljust(56)})║"
+    log '║                                                                          ║'
+    log '╚══════════════════════════════════════════════════════════════════════════╝'
+    puts ''
+  end
+
+  sleep 2
+end

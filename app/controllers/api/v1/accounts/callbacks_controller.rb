@@ -24,8 +24,11 @@ class Api::V1::Accounts::CallbacksController < Api::V1::Accounts::BaseController
 
   def log_additional_info
     Rails.logger.debug do
-      "user_access_token: #{params[:user_access_token]} , page_access_token: #{params[:page_access_token]} ,
-      page_id: #{params[:page_id]}, inbox_name: #{params[:inbox_name]}"
+      # Tokens redacted: presence flag only, never the actual value (vazava em Sentry/console com debug ativo).
+      "register_facebook_page params: page_id=#{params[:page_id]}, " \
+      "inbox_name=#{params[:inbox_name]}, " \
+      "user_access_token_present=#{params[:user_access_token].present?}, " \
+      "page_access_token_present=#{params[:page_access_token].present?}"
     end
   end
 

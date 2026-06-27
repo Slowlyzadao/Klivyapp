@@ -6,8 +6,7 @@ class Api::V1::Accounts::BulkActionsController < Api::V1::Accounts::BaseControll
       head :ok
     when 'Contact'
       check_authorization_for_contact_action
-      enqueue_contact_job
-      head :ok
+      process_contact_action
     else
       render json: { success: false }, status: :unprocessable_entity
     end
@@ -27,12 +26,35 @@ class Api::V1::Accounts::BulkActionsController < Api::V1::Accounts::BaseControll
     )
   end
 
+  def process_contact_action
+    if delete_contact_action?
+      # Exclusão SÍNCRONA (não enfileira). O cascade pesado (conversas,
+      # mensagens) já é `dependent: :destroy_async` no Contact, então o destroy
+      # do contato em si é rápido, e a seleção é limitada ao tamanho da página
+      # (<= 100). Rodar inline elimina a corrida entre o job assíncrono e o
+      # refetch imediato do front, que fazia a contagem exibida não bater com a
+      # seleção ("selecionou 100, excluiu ~10"). Responde com o total real.
+      deleted = Contacts::BulkDeleteService.new(
+        account: @current_account,
+        contact_ids: contact_ids
+      ).perform
+      render json: { deleted: deleted }
+    else
+      enqueue_contact_job
+      head :ok
+    end
+  end
+
   def enqueue_contact_job
     Contacts::BulkActionJob.perform_later(
       @current_account.id,
       current_user.id,
       contact_params
     )
+  end
+
+  def contact_ids
+    Array(contact_params[:ids]).compact
   end
 
   def delete_contact_action?

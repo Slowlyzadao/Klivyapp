@@ -36,7 +36,9 @@ class SuperAdmin::AiAgentDocumentsController < SuperAdmin::ApplicationController
   end
 
   def destroy
-    document = AiAgent::Document.find(params[:id])
+    # Scoped à conta da URL (igual ao index) — evita apagar documento de OUTRA
+    # conta via id forjado e auditoria atribuída à conta errada (auditoria 2026-05-30).
+    document = @account.documents_for_bea.find(params[:id])
     document.destroy!
     AiAgent::AuditLog.record(
       scope: 'account',

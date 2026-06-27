@@ -1,0 +1,42 @@
+post:
+  tags:
+    - Financeiro · Parcelas
+  summary: Estornar pagamento da parcela
+  description: |
+    Estorna o último `PaymentReceipt` que quitou a parcela.
+    `amount_cents` < total → estorno parcial (parcela volta para `parcial`).
+    `generate_patient_credit=true` → vira crédito do paciente em vez de
+    saída real de caixa.
+
+    Idempotência via header `Idempotency-Key`.
+
+    **RBAC** (2026-05-30): estornar reverte dinheiro/comissão — requer
+    **GERENTE** ou **ADMIN**. 403 caso contrário.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            amount_cents: { type: integer, description: "Default = saldo não-estornado do recibo" }
+            notes: { type: string }
+            payment_method: { type: string, description: "Informativo (vai pra descrição)" }
+            generate_patient_credit:
+              type: boolean
+              default: false
+              description: True = vira crédito (sem saída de caixa).
+  responses:
+    '200':
+      description: Estorno aplicado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Installment.yml'
+    '403':
+      description: Sem permissão (requer GERENTE/ADMIN)
+    '422':
+      description: Sem recibo ativo ou erro no estorno

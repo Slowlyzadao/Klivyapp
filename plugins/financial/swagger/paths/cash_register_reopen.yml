@@ -1,0 +1,28 @@
+post:
+  tags:
+    - Financeiro · Caixa
+  summary: Reabrir sessão fechada
+  description: |
+    `motivo` é obrigatório (auditoria). Requer GERENTE/ADMIN. Idempotência
+    via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [reason]
+          properties:
+            reason: { type: string }
+  responses:
+    '200':
+      description: Reaberta
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/CashRegister.yml'
+    '422':
+      description: Motivo obrigatório ou erro

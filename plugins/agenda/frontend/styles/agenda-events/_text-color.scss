@@ -1,0 +1,38 @@
+/* ── Text Color via Auto-Contrast (CSS variable from JS) ─ */
+/* `--evt-text-color` is set inline by getEventTimelineStyle() via
+   getContrastColor(bg). Fallback to white for safety. */
+.timeline-evt {
+  color: var(--evt-text-color, #fff);
+}
+
+/* Primary text (patient name): full strength, weight 600 (visual hierarchy) */
+.evt-pill-name,
+.evt-small-name,
+.evt-sbs-title {
+  color: var(--evt-text-color, #fff);
+  font-weight: 600;
+}
+
+/* Secondary text (time, treatment): same hue, ~88% opacity */
+.evt-pill-sep,
+.evt-pill-time,
+.evt-small-time,
+.evt-sbs-time,
+.evt-sbs-treatment {
+  color: var(--evt-text-color, #fff);
+  opacity: 0.88;
+}
+
+/* Botões de ação (excluir): cor branca fixa. Antes herdavam --evt-text-color,
+   o que dava ícone "azulado" sobre o fundo vermelho — ilegível. Agora
+   sempre branco em ambos os temas. */
+.evt-info-btn-hover,
+.evt-info-btn-inline {
+  color: #ffffff;
+}
+
+/* Tertiary (separator): more muted */
+.evt-sbs-sep {
+  color: var(--evt-text-color, #fff);
+  opacity: 0.5;
+}

@@ -1,0 +1,31 @@
+post:
+  tags:
+    - Financeiro · Mensalidades
+  summary: Retomar mensalidade fixa
+  description: |
+    Retoma a geração (`status='active'`, limpa `paused_at`/`paused_by`). Se o
+    `next_generation_at` ficou no passado durante a pausa, **não** há catch-up
+    automático — o operador decide (gerar manual ou ajustar a data). Só
+    billings `paused` podem ser retomados (caso contrário 422
+    `invalid_transition`).
+
+    Requer RECEPCAO/GERENTE/ADMIN. Idempotência opcional via header
+    `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Mensalidade retomada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/RecurringBilling.yml'
+    '403':
+      description: Sem permissão (requer RECEPCAO/GERENTE/ADMIN).
+    '404':
+      description: Não encontrada.
+    '412':
+      description: Setup financeiro incompleto (wizard pendente).
+    '422':
+      description: Transição inválida — só billings pausados podem ser retomados (`invalid_transition`).

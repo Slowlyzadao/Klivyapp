@@ -1,0 +1,130 @@
+/* ── DatePicker (vue-datepicker-next) inside modal ──── */
+.modal-datepicker {
+  width: 100%;
+}
+.modal-datepicker .mx-input {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+  border-radius: 0.75rem !important;
+  height: 2.5rem !important;
+  color: rgb(var(--slate-12)) !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+  padding-left: 0.75rem;
+}
+.modal-datepicker .mx-input:focus,
+.modal-datepicker .mx-input:hover {
+  border-color: rgba(var(--blue-9), 0.5) !important;
+  background: rgb(var(--slate-1)) !important;
+  box-shadow: 0 0 0 1px rgba(var(--blue-9), 0.5) !important;
+}
+.modal-datepicker .mx-icon-calendar,
+.modal-datepicker .mx-icon-clear {
+  color: rgb(var(--slate-9)) !important;
+}
+
+/* "Hoje" shortcut button next to the DatePicker */
+.datepicker-today-btn {
+  height: 2.5rem;
+  padding: 0 0.875rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--slate-4));
+  background: rgb(var(--slate-2));
+  color: rgb(var(--slate-12));
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.datepicker-today-btn:hover:not(:disabled) {
+  background: rgba(var(--blue-9), 0.1);
+  border-color: rgba(var(--blue-9), 0.5);
+  color: rgb(var(--blue-11));
+}
+.datepicker-today-btn--active,
+.datepicker-today-btn:disabled {
+  background: rgba(var(--blue-9), 0.15);
+  border-color: rgba(var(--blue-9), 0.6);
+  color: rgb(var(--blue-11));
+  cursor: default;
+}
+
+/* ── Popup (rendered to body via append-to-body) ─────────
+   Uses semantic slate/blue tokens so it inverts cleanly between light
+   and dark mode with no per-mode overrides. */
+.mx-datepicker-main {
+  background-color: rgb(var(--slate-1)) !important;
+  color: rgb(var(--slate-12)) !important;
+  border: 1px solid rgb(var(--slate-5)) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25) !important;
+  font-family: inherit;
+  z-index: 2000 !important;
+}
+.mx-datepicker-main .mx-calendar {
+  background-color: transparent !important;
+  color: rgb(var(--slate-12)) !important;
+}
+.mx-datepicker-main .mx-calendar-content .cell {
+  color: rgb(var(--slate-12)) !important;
+  font-weight: 500 !important;
+  border-radius: 6px;
+  transition: background 0.12s, color 0.12s;
+}
+.mx-datepicker-main .mx-calendar-content .cell:hover {
+  background-color: rgba(var(--blue-9), 0.15) !important;
+  color: rgb(var(--blue-11)) !important;
+}
+.mx-datepicker-main .mx-calendar-content .cell.active {
+  background-color: rgb(var(--blue-9)) !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+}
+/* "today" gets a clear ring instead of just a color tint so it's visible
+   in both light and dark mode regardless of selection state. */
+.mx-datepicker-main .mx-calendar-content .cell.today:not(.active) {
+  color: rgb(var(--blue-11)) !important;
+  font-weight: 700 !important;
+  box-shadow: inset 0 0 0 1px rgb(var(--blue-9)) !important;
+}
+.mx-datepicker-main .mx-calendar-content .cell.not-current-month {
+  color: rgb(var(--slate-9)) !important;
+  font-weight: normal !important;
+  opacity: 0.7;
+}
+.mx-datepicker-main .mx-calendar-content .cell.disabled {
+  background-color: transparent !important;
+  color: rgb(var(--slate-8)) !important;
+  cursor: not-allowed !important;
+}
+.mx-datepicker-main .mx-datepicker-header,
+.mx-datepicker-main .mx-calendar-header {
+  color: rgb(var(--slate-12)) !important;
+  border-bottom: 1px solid rgb(var(--slate-5)) !important;
+}
+.mx-datepicker-main .mx-btn,
+.mx-datepicker-main .mx-calendar-header-label,
+.mx-datepicker-main .mx-btn-icon-double-left,
+.mx-datepicker-main .mx-btn-icon-left,
+.mx-datepicker-main .mx-btn-icon-double-right,
+.mx-datepicker-main .mx-btn-icon-right {
+  color: rgb(var(--slate-12)) !important;
+}
+.mx-datepicker-main .mx-btn:hover,
+.mx-datepicker-main .mx-btn-icon-double-left:hover,
+.mx-datepicker-main .mx-btn-icon-left:hover,
+.mx-datepicker-main .mx-btn-icon-double-right:hover,
+.mx-datepicker-main .mx-btn-icon-right:hover {
+  color: rgb(var(--blue-11)) !important;
+}
+.mx-datepicker-main .mx-calendar-header-label {
+  font-weight: 600 !important;
+}
+.mx-datepicker-main .mx-table th {
+  color: rgb(var(--slate-10)) !important;
+  font-weight: 600 !important;
+}

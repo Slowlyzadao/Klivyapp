@@ -1,0 +1,82 @@
+{
+  "PATIENT_AUDIT": {
+    "HEADER": {
+      "TITLE": "Auditoria e Segurança",
+      "SUBTITLE": "Rastreabilidade com valor legal de todos os acessos, edições e assinaturas no prontuário.",
+      "EXPORT_PDF": "Exportar Prontuário PDF",
+      "EXPORTING": "Gerando PDF..."
+    },
+    "FILTERS": {
+      "ACTION_LABEL": "Tipo de Ação",
+      "ACTION_PLACEHOLDER": "Todas as ações",
+      "DATE_FROM": "Data Início",
+      "DATE_TO": "Data Fim",
+      "DATE_PLACEHOLDER": "Selecione",
+      "APPLY": "Filtrar",
+      "CLEAR_TITLE": "Limpar filtros",
+      "ALL_ACTIONS": "Todas as ações"
+    },
+    "ACTION_OPTIONS": {
+      "VIEW": "Visualização",
+      "CREATE": "Criação",
+      "UPDATE": "Edição",
+      "DELETE": "Exclusão",
+      "SIGN": "Assinatura",
+      "EXPORT": "Exportação",
+      "FINALIZE": "Finalização",
+      "APPROVE": "Aprovação",
+      "PAY": "Pagamento",
+      "PRINT": "Impressão",
+      "CLINICAL_OVERRIDE": "Override clínico"
+    },
+    "TABLE": {
+      "LOADING": "Carregando logs de auditoria...",
+      "EMPTY": "Nenhum log de auditoria encontrado para este paciente.",
+      "EMPTY_HINT": "Tente ajustar os filtros ou verifique suas permissões.",
+      "COL_DATE": "Data / Hora",
+      "COL_ACTION": "Ação",
+      "COL_USER": "Usuário / Perfil",
+      "COL_MODULE": "Módulo & Detalhes",
+      "COL_IP": "IP",
+      "COL_INFO": "Info",
+      "DEFAULT_USER": "Sistema",
+      "DEFAULT_MODULE": "Ficha",
+      "EMPTY_VALUE": "vazio",
+      "EXPAND_TITLE": "Ver detalhes completos",
+      "COLLAPSE_TITLE": "Recolher detalhes"
+    },
+    "EXPANDED": {
+      "TITLE": "Registro de Ação Detalhado",
+      "DIFF_TITLE": "Histórico de Alterações (De → Para)",
+      "NULL_VALUE": "nulo"
+    },
+    "ACTION_TEXT": {
+      "ACTOR_PREFIX_USER": "O usuário {actor}",
+      "ACTOR_PREFIX_SYSTEM": "O sistema",
+      "VIEW": "{actor} acessou e visualizou os dados de {resource}.",
+      "CREATE": "{actor} criou um novo registro em {resource}.",
+      "UPDATE": "{actor} editou e alterou informações em {resource}.",
+      "DELETE": "{actor} excluiu o registro de {resource}.",
+      "SIGN": "{actor} assinou o {resource}.",
+      "FINALIZE": "{actor} assinou e finalizou o registro de {resource}. O documento tornou-se imutável.",
+      "APPROVE": "{actor} aprovou o {resource}.",
+      "EXPORT": "{actor} exportou o arquivo PDF de {resource}.",
+      "PAY": "{actor} registrou pagamento em {resource}.",
+      "PRINT": "{actor} emitiu impressão/receita para {resource}.",
+      "CLINICAL_OVERRIDE": "{actor} executou {resource} mesmo com conflito clínico detectado pela anamnese — justificativa registrada.",
+      "DEFAULT": "{actor} executou a ação: {action} em {resource}."
+    },
+    "FOOTER": {
+      "IMMUTABLE_NOTE": "Registros imutáveis — gravados permanentemente no banco.",
+      "TOTAL": "Total: {count} eventos",
+      "PAGE_INFO": "Página {current} de {total}",
+      "PREV": "Anterior",
+      "NEXT": "Próxima"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Erro ao carregar logs de auditoria.",
+      "EXPORT_SUCCESS": "Prontuário exportado com sucesso!",
+      "EXPORT_ERROR": "Erro ao exportar o prontuário. Verifique suas permissões."
+    }
+  }
+}

@@ -1,0 +1,33 @@
+post:
+  tags:
+    - Financeiro · Caixa
+  summary: Fechar sessão
+  description: |
+    Compara `counted_balance_cents` com `expected_balance_cents` e devolve
+    `difference_cents`. Quando ≠ 0, gera Entry `quebra_caixa`. Requer
+    RECEPCAO/GERENTE/ADMIN. Idempotência via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [counted_balance_cents]
+          properties:
+            counted_balance_cents: { type: integer }
+            note: { type: string }
+  responses:
+    '200':
+      description: Fechada
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '../definitions/CashRegister.yml'
+              - type: object
+                properties:
+                  difference_cents: { type: integer }
+    '422': { description: "Erro" }

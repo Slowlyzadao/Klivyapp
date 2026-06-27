@@ -22,49 +22,52 @@
   </div>
 <% else %>
 
-<header class="booking-header" role="banner">
+<%
+  # `.presence` falls back when display_name is "" (empty string), which
+  # `||` wouldn't catch. Avoids rendering an empty .prof-name div.
+  prof_name = @user.display_name.presence || @user.name.presence || 'Profissional'
+  user_avatar_url = @user.avatar_url
+%>
+
+<!-- Auditoria UX 2026-05-15: header compacto — logo, avatar e nome do
+     profissional ficam todos em uma linha enxuta. O prof-card grande foi
+     removido para liberar espaço pro fluxo (form, calendário, slots) e
+     reduzir scroll, especialmente em mobile. -->
+<header class="booking-header" role="banner" id="booking-header">
   <% if @brand_logo.present? %>
     <img
       src="<%= @brand_logo %>"
       alt="<%= @brand_name %>"
       class="booking-header-logo"
-      width="120"
-      height="30"
+      width="100"
+      height="26"
     />
   <% else %>
     <span class="booking-header-brand"><%= @brand_name %></span>
   <% end %>
+
+  <div class="booking-header-prof" id="prof-card">
+    <div class="booking-header-avatar"
+         <% if user_avatar_url.present? %>
+           style="background-image: url('<%= user_avatar_url %>'); background-size: cover; background-position: center; color: transparent;"
+         <% end %>
+    >
+      <% if user_avatar_url.blank? %>
+        <%= prof_name[0].upcase rescue '?' %>
+      <% end %>
+    </div>
+    <div class="booking-header-prof-info">
+      <span class="booking-header-prof-name"><%= prof_name %></span>
+      <span class="booking-header-prof-badge" aria-label="Agenda disponível">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        Agenda disponível
+      </span>
+    </div>
+  </div>
 </header>
 
 <div class="booking-main">
   <div class="booking-container">
-
-    <!-- Professional Card -->
-    <%
-      # `.presence` falls back when display_name is "" (empty string), which
-      # `||` wouldn't catch. Avoids rendering an empty .prof-name div.
-      prof_name = @user.display_name.presence || @user.name.presence || 'Profissional'
-      user_avatar_url = @user.avatar_url
-    %>
-    <div class="prof-card" id="prof-card">
-      <div class="prof-avatar" id="prof-avatar"
-           <% if user_avatar_url.present? %>
-             style="background-image: url('<%= user_avatar_url %>'); background-size: cover; background-position: center; color: transparent;"
-           <% end %>
-      >
-        <% if user_avatar_url.blank? %>
-          <%= prof_name[0].upcase rescue '?' %>
-        <% end %>
-      </div>
-      <div class="prof-info">
-        <div class="prof-name"><%= prof_name %></div>
-        <div class="prof-sub">Agendamento online</div>
-        <span class="prof-badge">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          Agenda disponível
-        </span>
-      </div>
-    </div>
 
     <!-- Steps -->
     <div class="steps-bar" id="steps-bar" role="list" aria-label="Etapas do agendamento">
@@ -90,32 +93,46 @@
       </div>
       <div class="card-body">
         <form id="patient-form" novalidate aria-label="Formulário de dados do paciente">
+          <!-- 9.19 da auditoria — honeypot anti-bot. Campo invisível para
+               humanos (CSS off-screen + aria-hidden + tabindex=-1 + autocomplete=off).
+               Bots de spam tendem a preencher TODOS os inputs do form, então o
+               backend rejeita o submit se este campo vier preenchido. Defesa
+               complementar ao rate-limit de 9.9 (que já cobre volume). -->
+          <div class="hp-field" aria-hidden="true">
+            <label for="f-website">Não preencha este campo</label>
+            <input type="text" id="f-website" name="website" tabindex="-1" autocomplete="off">
+          </div>
           <div class="form-grid">
             <div class="field">
               <label for="f-first-name">Nome <span class="req" aria-hidden="true">*</span><span class="sr-only">obrigatório</span></label>
-              <input type="text" id="f-first-name" placeholder="João" autocomplete="given-name" required aria-required="true">
+              <input type="text" id="f-first-name" autocomplete="given-name" required aria-required="true">
               <span class="field-error" id="err-first-name" role="alert">Informe o nome.</span>
             </div>
             <div class="field">
               <label for="f-last-name">Sobrenome <span class="req" aria-hidden="true">*</span><span class="sr-only">obrigatório</span></label>
-              <input type="text" id="f-last-name" placeholder="Silva" autocomplete="family-name" required aria-required="true">
+              <input type="text" id="f-last-name" autocomplete="family-name" required aria-required="true">
               <span class="field-error" id="err-last-name" role="alert">Informe o sobrenome.</span>
             </div>
             <div class="field">
               <label for="f-phone">WhatsApp / Celular <span class="req" aria-hidden="true">*</span><span class="sr-only">obrigatório</span></label>
-              <input type="tel" id="f-phone" placeholder="(11) 99999-9999" autocomplete="tel" inputmode="tel" required aria-required="true">
+              <input type="tel" id="f-phone" autocomplete="tel" inputmode="tel" required aria-required="true">
               <span class="field-error" id="err-phone" role="alert">Informe um celular válido (DDD + número).</span>
             </div>
             <div class="field">
               <label for="f-email">E-mail</label>
-              <input type="email" id="f-email" placeholder="joao@email.com" autocomplete="email">
+              <input type="email" id="f-email" autocomplete="email">
               <span class="hint">Opcional – para confirmação por e-mail</span>
               <span class="field-error" id="err-email" role="alert">E-mail inválido.</span>
             </div>
             <div class="field full">
               <label for="f-cpf">CPF <span class="req" aria-hidden="true">*</span><span class="sr-only">obrigatório</span></label>
-              <input type="text" id="f-cpf" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" required aria-required="true">
+              <input type="text" id="f-cpf" maxlength="14" inputmode="numeric" required aria-required="true">
               <span class="field-error" id="err-cpf" role="alert">CPF inválido. Informe os 11 dígitos.</span>
+            </div>
+            <div class="field full">
+              <label for="f-observations">Observações</label>
+              <textarea id="f-observations" rows="3" maxlength="500" placeholder=""></textarea>
+              <span class="hint">Opcional – algo que a clínica deva saber</span>
             </div>
           </div>
           <div class="btn-row">
@@ -128,13 +145,43 @@
       </div>
     </div>
 
-    <!-- STEP 2: Calendar + Slots -->
+    <!-- STEP 2: Service + Calendar + Slots -->
     <div id="step-2" class="card" style="display:none">
       <div class="card-header">
-        <div class="card-title">Escolha data e horário</div>
-        <div class="card-sub">Selecione um dia disponível e depois o horário desejado.</div>
+        <div class="card-title">Escolha serviço, data e horário</div>
+        <div class="card-sub">Selecione o serviço desejado, depois um dia disponível e o horário.</div>
       </div>
       <div class="card-body">
+        <!-- Service Picker — visível só quando a clínica tem serviços cadastrados.
+             Não é obrigatório: paciente que não sabe qual escolher pode marcar
+             "Não sei – a clínica define" explicitamente. Sem serviços
+             cadastrados o picker é oculto e o slot grid usa
+             `slot_interval_minutes` como fallback. -->
+        <!-- Auditoria UX 2026-05-15: select nativo substituído por dropdown
+             custom (vanilla JS) inspirado no FormSelect do beclinic_core.
+             Mantém estado em state.selectedService / state.serviceSkipped. -->
+        <div id="service-picker-wrap" class="svc-picker-wrap" style="display:none">
+          <label class="svc-picker-label" for="svc-trigger">Serviço</label>
+          <div class="svc-picker">
+            <button
+              type="button"
+              class="svc-trigger"
+              id="svc-trigger"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              aria-labelledby="svc-trigger-text"
+            >
+              <span class="svc-trigger-text" id="svc-trigger-text">Selecione um serviço…</span>
+              <svg class="svc-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div class="svc-dropdown" id="svc-dropdown" role="listbox" hidden>
+              <div class="svc-dropdown-list" id="svc-dropdown-list"></div>
+            </div>
+          </div>
+          <span class="svc-picker-hint">A clínica avaliará e definirá o serviço se você não tiver certeza.</span>
+        </div>
         <div class="cal-grid">
           <!-- Calendar -->
           <div>
@@ -157,6 +204,12 @@
           <!-- Slots -->
           <div>
             <div class="slots-label" id="slots-header">Selecione um dia para ver horários</div>
+            <!-- 9.18 da auditoria: fuso explícito evita confusão para paciente em
+                 outro fuso (Manaus, Acre, Fernando de Noronha). Backend sempre
+                 interpreta entrada como America/Sao_Paulo. -->
+            <div class="slots-timezone" aria-label="Fuso horário">
+              <small>Horários no fuso de Brasília (UTC&minus;3)</small>
+            </div>
             <div id="slots-container">
               <div class="slots-empty">👈 Selecione uma data no calendário</div>
             </div>
@@ -204,8 +257,16 @@
           </svg>
         </div>
         <h2 class="success-title">Agendamento confirmado! <span class="success-emoji" aria-hidden="true">🎉</span></h2>
-        <p class="success-sub" id="success-sub">Seu agendamento foi realizado com sucesso. Em breve você receberá uma confirmação via WhatsApp.</p>
+        <p class="success-sub" id="success-sub">Seu agendamento foi realizado com sucesso.</p>
         <div class="success-detail" id="success-detail" role="status" aria-live="polite"></div>
+        <!-- 9.11: cancelamento pelo paciente. Visível apenas após booking
+             confirmado (state.cancelToken setado). -->
+        <div id="success-cancel" class="success-cancel" style="display:none">
+          <button type="button" class="btn btn-ghost btn-cancel-booking" id="btn-cancel-booking">
+            Cancelar este agendamento
+          </button>
+          <div class="success-cancel-msg" id="cancel-msg" role="status" aria-live="polite"></div>
+        </div>
       </div>
     </div>
 
@@ -216,6 +277,7 @@
 (function() {
   const PUBLIC_ID = '<%= @public_id %>';
   const API_BASE  = '/public/api/v1/agenda/' + PUBLIC_ID;
+  const FUTURE_LIMIT_DAYS = <%= (@config&.future_limit_days || 60).to_i %>;
 
   // ── State ──────────────────────────────────────────────────────────────
   const state = {
@@ -223,11 +285,26 @@
     patient: {},
     selectedDate: null,
     selectedTime: null,
+    services: [],
+    selectedService: null,
+    serviceSkipped: false,
+    servicesLoaded: false,
     calYear: new Date().getFullYear(),
     calMonth: new Date().getMonth(),
     slotsCache: {},
+    // 9.11 — token assinado retornado pelo POST /book. Usado para cancelar
+    // o agendamento via DELETE /booking/:token/cancel no step 4.
+    cancelToken: null,
+    cancelled: false,
     loadingSlots: false,
   };
+
+  // Formata preço (BRL) só quando > 0 — serviços gratuitos ficam sem rótulo.
+  function fmtPrice(p) {
+    const n = Number(p);
+    if (!Number.isFinite(n) || n <= 0) return '';
+    return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
 
   // ── Helpers ─────────────────────────────────────────────────────────────
   const $ = id => document.getElementById(id);
@@ -310,11 +387,12 @@
 
   $('patient-form').addEventListener('submit', function(e) {
     e.preventDefault();
-    const firstName = $('f-first-name').value.trim();
-    const lastName  = $('f-last-name').value.trim();
-    const phone     = $('f-phone').value.trim();
-    const cpf       = $('f-cpf').value.trim();
-    const email     = $('f-email').value.trim();
+    const firstName    = $('f-first-name').value.trim();
+    const lastName     = $('f-last-name').value.trim();
+    const phone        = $('f-phone').value.trim();
+    const cpf          = $('f-cpf').value.trim();
+    const email        = $('f-email').value.trim();
+    const observations = $('f-observations').value.trim();
 
     let invalid = false;
     setFieldError('f-first-name', 'err-first-name', !firstName);
@@ -344,9 +422,10 @@
       return;
     }
 
-    state.patient = { firstName, lastName, phone, cpf, email };
+    state.patient = { firstName, lastName, phone, cpf, email, observations };
     setStep(2);
     renderCalendar();
+    loadServices();
   });
 
   // ── Step 2 – Calendar ────────────────────────────────────────────────────
@@ -355,6 +434,11 @@
     const month = state.calMonth;
     const today = new Date();
     today.setHours(0,0,0,0);
+    // Limite máximo de datas agendáveis: respeita `future_limit_days` da
+    // AgendaOnlineConfig — clínica define quantos dias à frente o paciente
+    // pode ver/escolher na agenda pública.
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + FUTURE_LIMIT_DAYS);
 
     $('cal-month-title').textContent = MONTHS_PT[month] + ' ' + year;
 
@@ -379,11 +463,14 @@
       el.textContent = d;
 
       const isPast = date < today;
+      const isBeyondLimit = date > maxDate;
       const isToday = date.getTime() === today.getTime();
       const isSelected = state.selectedDate === iso;
 
       if (isPast) {
         el.className = 'cal-day past';
+      } else if (isBeyondLimit) {
+        el.className = 'cal-day unavailable';
       } else if (isSelected) {
         el.className = 'cal-day selected';
       } else if (isToday) {
@@ -392,12 +479,20 @@
         el.className = 'cal-day available';
       }
 
-      if (!isPast) {
+      if (!isPast && !isBeyondLimit) {
         el.addEventListener('click', () => selectDate(iso));
       }
 
       container.appendChild(el);
     }
+  }
+
+  // Cache key inclui service_id porque a duração do slot depende do serviço —
+  // grade de 30min com serviço de 45min produz slots diferentes da grade
+  // padrão. Sem essa chave o paciente trocaria serviço e veria slots stale.
+  function slotsCacheKey(iso) {
+    const svcId = state.selectedService ? state.selectedService.id : 'none';
+    return iso + '|' + svcId;
   }
 
   async function selectDate(iso) {
@@ -410,19 +505,163 @@
     $('slots-header').textContent = 'Horários disponíveis – ' + d + '/' + m + '/' + y;
     $('slots-container').innerHTML = '<div class="slots-loading"><div class="spinner spinner-brand" style="margin:0 auto 8px"></div><br>Carregando horários...</div>';
 
-    if (state.slotsCache[iso]) {
-      renderSlots(state.slotsCache[iso], iso);
+    const key = slotsCacheKey(iso);
+    if (state.slotsCache[key]) {
+      renderSlots(state.slotsCache[key], iso);
       return;
     }
 
     try {
-      const res = await fetch(API_BASE + '/slots?date=' + iso);
+      let url = API_BASE + '/slots?date=' + iso;
+      if (state.selectedService) url += '&service_id=' + state.selectedService.id;
+      const res = await fetch(url);
       const data = await res.json();
-      state.slotsCache[iso] = data.slots || [];
-      renderSlots(state.slotsCache[iso], iso);
+      state.slotsCache[key] = data.slots || [];
+      renderSlots(state.slotsCache[key], iso);
     } catch(err) {
       $('slots-container').innerHTML = '<div class="slots-empty">❌ Erro ao carregar horários. Tente novamente.</div>';
     }
+  }
+
+  // ── Service picker ──────────────────────────────────────────────────────
+  // Auditoria UX 2026-05-15: dropdown custom (sem <select> nativo). Mantém
+  // a mesma API de state — apenas o widget de UI mudou.
+  function svcDropdownOpen() {
+    const dd = $('svc-dropdown');
+    const trg = $('svc-trigger');
+    dd.hidden = false;
+    trg.setAttribute('aria-expanded', 'true');
+    trg.classList.add('svc-trigger--open');
+  }
+  function svcDropdownClose() {
+    const dd = $('svc-dropdown');
+    const trg = $('svc-trigger');
+    dd.hidden = true;
+    trg.setAttribute('aria-expanded', 'false');
+    trg.classList.remove('svc-trigger--open');
+  }
+  function svcDropdownToggle() {
+    const dd = $('svc-dropdown');
+    if (dd.hidden) svcDropdownOpen(); else svcDropdownClose();
+  }
+  function svcUpdateTriggerText() {
+    const trg = $('svc-trigger-text');
+    if (state.serviceSkipped) {
+      trg.textContent = 'Não sei – a clínica define';
+      trg.classList.remove('svc-trigger-text--placeholder');
+    } else if (state.selectedService) {
+      // 2026-05-22: preço removido do AgendaService — vive em Financial::ServicePricing.
+      // No booking público, mostrar só nome + duração; preço aparece em outro fluxo (orçamento).
+      const svc = state.selectedService;
+      trg.textContent = svc.name + ' · ' + svc.duration_minutes + 'min';
+      trg.classList.remove('svc-trigger-text--placeholder');
+    } else {
+      trg.textContent = 'Selecione um serviço…';
+      trg.classList.add('svc-trigger-text--placeholder');
+    }
+  }
+  function svcRenderList() {
+    const list = $('svc-dropdown-list');
+    list.innerHTML = '';
+
+    // "Não sei" fica no topo — fluxo do paciente leigo achar fácil.
+    const noneItem = document.createElement('button');
+    noneItem.type = 'button';
+    noneItem.className = 'svc-option svc-option--skip';
+    if (state.serviceSkipped) noneItem.classList.add('svc-option--selected');
+    noneItem.setAttribute('role', 'option');
+    noneItem.innerHTML =
+      '<span class="svc-option-icon">' +
+      '  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">' +
+      '    <circle cx="12" cy="12" r="10"/>' +
+      '    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>' +
+      '    <line x1="12" y1="17" x2="12.01" y2="17"/>' +
+      '  </svg>' +
+      '</span>' +
+      '<span class="svc-option-body">' +
+      '  <span class="svc-option-title">Não sei</span>' +
+      '  <span class="svc-option-sub">A clínica define o serviço</span>' +
+      '</span>';
+    noneItem.addEventListener('click', () => svcSelect(null, true));
+    list.appendChild(noneItem);
+
+    state.services.forEach(svc => {
+      const opt = document.createElement('button');
+      opt.type = 'button';
+      opt.className = 'svc-option';
+      if (state.selectedService && state.selectedService.id === svc.id) {
+        opt.classList.add('svc-option--selected');
+      }
+      opt.setAttribute('role', 'option');
+      // 2026-05-22: preço removido do AgendaService — Financial::ServicePricing.
+      opt.innerHTML =
+        '<span class="svc-option-dot" style="background:' + esc(svc.color || '#9ca3af') + '"></span>' +
+        '<span class="svc-option-body">' +
+        '  <span class="svc-option-title">' + esc(svc.name) + '</span>' +
+        '  <span class="svc-option-sub">' + svc.duration_minutes + 'min</span>' +
+        '</span>';
+      opt.addEventListener('click', () => svcSelect(svc.id, false));
+      list.appendChild(opt);
+    });
+  }
+  function svcSelect(id, skipped) {
+    state.serviceSkipped = !!skipped;
+    if (skipped) {
+      state.selectedService = null;
+    } else if (id != null) {
+      state.selectedService = state.services.find(s => s.id === id) || null;
+    } else {
+      state.selectedService = null;
+    }
+    svcUpdateTriggerText();
+    svcRenderList();
+    svcDropdownClose();
+
+    // Trocar serviço invalida horário e força re-fetch de slots — duração
+    // pode mudar e slots são recalculados em torno dela.
+    state.selectedTime = null;
+    $('btn-next-2').disabled = true;
+    if (state.selectedDate) {
+      selectDate(state.selectedDate);
+    }
+  }
+
+  async function loadServices() {
+    if (state.servicesLoaded) return;
+    try {
+      const res = await fetch(API_BASE + '/services');
+      const data = await res.json();
+      state.services = Array.isArray(data.services) ? data.services : [];
+    } catch(err) {
+      state.services = [];
+    }
+    state.servicesLoaded = true;
+
+    const wrap = $('service-picker-wrap');
+    if (state.services.length === 0) {
+      // Clínica sem catálogo — esconde o picker e segue fluxo legado:
+      // slots usam `slot_interval_minutes` como passo e duração do evento.
+      wrap.style.display = 'none';
+      return;
+    }
+
+    wrap.style.display = '';
+    svcUpdateTriggerText();
+    svcRenderList();
+
+    // Bind eventos uma vez. `loadServices` é idempotente via
+    // `state.servicesLoaded` guard, então os listeners não duplicam.
+    $('svc-trigger').addEventListener('click', e => {
+      e.stopPropagation();
+      svcDropdownToggle();
+    });
+    document.addEventListener('click', e => {
+      if ($('svc-dropdown').hidden) return;
+      if (!$('service-picker-wrap').contains(e.target)) svcDropdownClose();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !$('svc-dropdown').hidden) svcDropdownClose();
+    });
   }
 
   function renderSlots(slots, iso) {
@@ -450,35 +689,83 @@
     $('slots-container').appendChild(grid);
   }
 
+  // Quando o usuário navega mês via setas, reseta o painel direito de
+  // horários (antes ele ficava fixo no último dia clicado, com cabeçalho
+  // "Horários disponíveis – DD/MM" e grade de slots — confundia o paciente
+  // achando que aqueles horários eram do novo mês).
+  function resetSlotsPanel() {
+    state.selectedDate = null;
+    state.selectedTime = null;
+    $('btn-next-2').disabled = true;
+    $('slots-header').textContent = 'Selecione um dia para ver horários';
+    $('slots-container').innerHTML = '<div class="slots-empty">👈 Selecione uma data no calendário</div>';
+  }
+
   $('cal-prev').addEventListener('click', () => {
     if (state.calMonth === 0) { state.calMonth = 11; state.calYear--; }
     else state.calMonth--;
+    resetSlotsPanel();
     renderCalendar();
   });
   $('cal-next').addEventListener('click', () => {
     if (state.calMonth === 11) { state.calMonth = 0; state.calYear++; }
     else state.calMonth++;
+    resetSlotsPanel();
     renderCalendar();
   });
 
   $('btn-back-2').addEventListener('click', () => setStep(1));
   $('btn-next-2').addEventListener('click', () => {
+    // Quando a clínica tem catálogo, exigimos uma ESCOLHA explícita —
+    // ou um serviço específico, ou "Não sei" (a clínica define). Bloqueia
+    // só o placeholder vazio, pra evitar paciente avançar sem perceber
+    // que existia a etapa.
+    if (state.services.length > 0) {
+      const sel = $('service-picker');
+      if (sel.value === '') {
+        sel.classList.add('is-invalid');
+        sel.focus();
+        return;
+      }
+    }
     if (!state.selectedDate || !state.selectedTime) return;
     buildSummary();
     setStep(3);
   });
 
   // ── Step 3 – Confirm ─────────────────────────────────────────────────────
+  // Escape simples para conteúdo digitado pelo paciente — `confirm-summary`
+  // usa `innerHTML` e os campos vêm do form. Sem isso, um '<' digitado em
+  // "Observações" quebraria a renderização do summary.
+  function esc(s) {
+    return String(s || '').replace(/[&<>"']/g, c =>
+      ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])
+    );
+  }
+
   function buildSummary() {
     const p = state.patient;
+    const svc = state.selectedService;
+    // Quando paciente escolheu "Não sei", mostra explicitamente "a clínica
+    // define" — assim ele vê que aquilo é uma escolha consciente, não um
+    // campo esquecido. Sem catálogo (clínica sem serviços), a linha de
+    // serviço some inteira.
+    let serviceLine = '';
+    if (svc) {
+      serviceLine = `<strong>Serviço</strong><span>${esc(svc.name)}${svc.duration_minutes ? ' · ' + svc.duration_minutes + 'min' : ''}</span>`;
+    } else if (state.serviceSkipped) {
+      serviceLine = `<strong>Serviço</strong><span style="color:var(--text-muted)">A clínica define</span>`;
+    }
     $('confirm-summary').innerHTML = `
       <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;align-items:baseline;">
-        <strong>Nome</strong><span>${p.firstName} ${p.lastName}</span>
-        <strong>CPF</strong><span>${p.cpf}</span>
-        <strong>WhatsApp</strong><span>${p.phone}</span>
-        ${p.email ? `<strong>E-mail</strong><span>${p.email}</span>` : ''}
+        <strong>Nome</strong><span>${esc(p.firstName)} ${esc(p.lastName)}</span>
+        <strong>CPF</strong><span>${esc(p.cpf)}</span>
+        <strong>WhatsApp</strong><span>${esc(p.phone)}</span>
+        ${p.email ? `<strong>E-mail</strong><span>${esc(p.email)}</span>` : ''}
+        ${serviceLine}
         <strong>Data</strong><span>${fmtDate(state.selectedDate)}</span>
-        <strong>Horário</strong><span>${state.selectedTime}</span>
+        <strong>Horário</strong><span>${esc(state.selectedTime)}</span>
+        ${p.observations ? `<strong>Observações</strong><span>${esc(p.observations)}</span>` : ''}
       </div>
     `;
   }
@@ -499,12 +786,18 @@
     const payload = {
       date: state.selectedDate,
       time: state.selectedTime,
+      service_id: state.selectedService ? state.selectedService.id : null,
+      // 9.19 — honeypot. Bots tendem a preencher TODOS os inputs visíveis no
+      // form (incluindo o `#f-website` invisível); humanos não tocam. Se vier
+      // preenchido, backend rejeita silenciosamente.
+      website: $('f-website') ? $('f-website').value : '',
       patient: {
         first_name: p.firstName,
         last_name: p.lastName,
         phone: p.phone.replace(/\D/g,''),
         email: p.email || null,
         cpf: p.cpf.replace(/\D/g,''),
+        observations: p.observations || null,
       }
     };
 
@@ -552,10 +845,20 @@
               '</div>' +
             '</div>' +
           '</div>';
+        // 9.11 — salva token e exibe botão de cancelar.
+        state.cancelToken = data.cancel_token || null;
+        state.cancelled = false;
+        if (state.cancelToken) {
+          $('success-cancel').style.display = '';
+          $('btn-cancel-booking').disabled = false;
+          $('btn-cancel-booking').textContent = 'Cancelar este agendamento';
+          $('cancel-msg').textContent = '';
+        }
         setStep(4);
         $('steps-bar').style.display = 'none';
-        // Step 4 fica focado só na confirmação — sem prof-card no topo.
-        $('prof-card').style.display = 'none';
+        // Step 4: header compacto fica visível (prof-card agora é parte do
+        // header e dá contexto pro paciente saber em qual profissional
+        // foi agendado mesmo na tela de sucesso).
       } else {
         errBox.textContent = data.error || 'Erro ao confirmar o agendamento. Tente novamente.';
         errBox.style.display = '';
@@ -569,6 +872,49 @@
       btn.disabled = false;
       spinner.style.display = 'none';
       btnText.textContent = 'Confirmar agendamento';
+    }
+  });
+
+  // 9.11 — handler do botão "Cancelar este agendamento" no step 4. Confirma
+  // intent (window.confirm — UX padrão para ação destrutiva sem mexer em CSS
+  // de modal), envia DELETE com token, atualiza UI conforme resposta.
+  $('btn-cancel-booking').addEventListener('click', async () => {
+    if (state.cancelled) return;
+    if (!state.cancelToken) return;
+
+    const ok = window.confirm('Deseja realmente cancelar este agendamento?');
+    if (!ok) return;
+
+    const btn = $('btn-cancel-booking');
+    const msg = $('cancel-msg');
+    btn.disabled = true;
+    btn.textContent = 'Cancelando...';
+    msg.textContent = '';
+
+    try {
+      const res = await fetch('/public/api/v1/agenda/booking/' + encodeURIComponent(state.cancelToken) + '/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        state.cancelled = true;
+        btn.style.display = 'none';
+        msg.textContent = data.message || 'Agendamento cancelado.';
+        msg.classList.add('cancel-msg--success');
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Cancelar este agendamento';
+        msg.textContent = data.error || 'Não foi possível cancelar. Tente novamente.';
+        msg.classList.add('cancel-msg--error');
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Cancelar este agendamento';
+      msg.textContent = 'Erro de conexão. Tente novamente.';
+      msg.classList.add('cancel-msg--error');
     }
   });
 

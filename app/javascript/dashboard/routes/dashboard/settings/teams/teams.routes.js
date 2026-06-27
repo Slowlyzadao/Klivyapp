@@ -8,7 +8,6 @@ import CreateTeam from './Create/CreateTeam.vue';
 import EditTeam from './Edit/EditTeam.vue';
 import AddAgents from './Create/AddAgents.vue';
 import EditAgents from './Edit/EditAgents.vue';
-import TeamPermissions from './Edit/TeamPermissions.vue';
 import FinishSetup from './FinishSetup.vue';
 import SettingsContent from '../Wrapper.vue';
 import SettingsWrapper from '../SettingsWrapper.vue';
@@ -97,15 +96,6 @@ export default {
               path: 'agents',
               name: 'settings_teams_edit_members',
               component: EditAgents,
-              meta: {
-                featureFlag: FEATURE_FLAGS.TEAM_MANAGEMENT,
-                permissions: ['administrator'],
-              },
-            },
-            {
-              path: 'permissions',
-              name: 'settings_teams_edit_permissions',
-              component: TeamPermissions,
               meta: {
                 featureFlag: FEATURE_FLAGS.TEAM_MANAGEMENT,
                 permissions: ['administrator'],

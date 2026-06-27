@@ -18,11 +18,13 @@ module InternalChat
       ai_ids.concat(implicit_ai_mentions_from_reply(message))
       ai_ids.uniq!
 
+      # RT-2: scope `.active` (canon) em vez de `left_at: nil` hardcoded.
       eligible_users = []
       if user_ids.any?
         eligible_users = message.room
                                 .memberships
-                                .where(user_id: user_ids, left_at: nil)
+                                .active
+                                .where(user_id: user_ids)
                                 .pluck(:user_id)
       end
 
@@ -30,7 +32,8 @@ module InternalChat
       if ai_ids.any?
         eligible_ai = message.room
                              .memberships
-                             .where(ai_agent_id: ai_ids, left_at: nil)
+                             .active
+                             .where(ai_agent_id: ai_ids)
                              .pluck(:ai_agent_id)
       end
 

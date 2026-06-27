@@ -1,0 +1,29 @@
+get:
+  tags:
+    - Financeiro · Metas de Receita
+  summary: Listar metas
+  description: |
+    Lista as metas de receita da conta, ordenadas por `active DESC, start_date DESC`
+    (ativas primeiro, depois mais recentes). Requer papel GERENTE ou ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: active
+      in: query
+      description: |
+        Filtra por status. `true` retorna só metas ativas, `false` só encerradas.
+        Omitido retorna todas.
+      schema: { type: boolean }
+  responses:
+    '200':
+      description: Lista (ordem `active DESC, start_date DESC`)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/RevenueGoal.yml'
+    '403':
+      description: Acesso negado (apenas GERENTE/ADMIN)

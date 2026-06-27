@@ -1,0 +1,24 @@
+/* ============================================================
+   TABS.SCSS — Entry point dos styles dos tabs do prontuário
+
+   Carrega o CSS antes-scoped de cada tab (extraído dos
+   `<style scoped>` durante a migração para SCSS modular).
+
+   Importado uma única vez em Record.vue após record.scss.
+   Os tabs são montados com :key dinâmico — todos os styles
+   precisam estar disponíveis quando qualquer tab renderizar.
+
+   Ordem de @use: alfabética (sem dependência de cascata
+   entre tabs — cada um usa prefixo único como .evo-*, .fin-*,
+   .aud-*, etc.).
+   ============================================================ */
+
+@use 'tabs/AnamnesisTab';
+@use 'tabs/AuditTab';
+@use 'tabs/ConsentsTab';
+@use 'tabs/EvolutionTab';
+@use 'tabs/ExamsTab';
+@use 'tabs/FinancialTab';
+@use 'tabs/RegistrationTab';
+@use 'tabs/ScheduleTab';
+@use 'tabs/TimelineTab';

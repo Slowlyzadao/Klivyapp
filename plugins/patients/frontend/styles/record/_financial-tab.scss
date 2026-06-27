@@ -1,0 +1,132 @@
+@use "../variables" as *;
+
+/* ============================================================
+   ABA: FINANCEIRO — fin-* system
+   ============================================================ */
+
+/* KPI cards */
+.fin-kpi-card {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+.fin-kpi-card--green { background: rgba($brand-success,0.07) !important; border-color: rgba($brand-success,0.15) !important; }
+.fin-kpi-card--amber { background: rgba($brand-amber,0.07) !important; border-color: rgba($brand-amber,0.15) !important; }
+.fin-kpi-card--red   { background: rgba($brand-danger,0.07) !important; border-color: rgba($brand-danger,0.15) !important; }
+.fin-kpi-card--blue  { background: rgba($brand-info-bright,0.07) !important; border-color: rgba($brand-info-bright,0.15) !important; }
+
+.fin-kpi-icon { background: rgb(var(--slate-3)) !important; color: rgb(var(--slate-9)) !important; }
+.fin-kpi-icon--green { background: rgba($brand-success,0.12) !important;  color: $brand-success !important; }
+.fin-kpi-icon--amber { background: rgba($brand-amber,0.12) !important;  color: $brand-amber !important; }
+.fin-kpi-icon--red   { background: rgba($brand-danger,0.12) !important;  color: $brand-danger !important; }
+.fin-kpi-icon--blue  { background: rgba($brand-info-bright,0.12) !important; color: $brand-info !important; }
+
+.fin-kpi-label { color: rgb(var(--slate-9)) !important; }
+.fin-kpi-value { color: rgb(var(--slate-12)) !important; }
+.fin-kpi-hint  { color: rgb(var(--slate-8)) !important; }
+.fin-kpi-value--danger { color: $brand-danger !important; }
+
+/* Tabs internas */
+.fin-tabs-bar {
+  border-bottom: 1px solid rgb(var(--slate-4)) !important;
+}
+.fin-tab {
+  color: rgb(var(--slate-9)) !important;
+}
+.fin-tab:hover { color: rgb(var(--slate-11)) !important; }
+.fin-tab--active {
+  color: $brand-info !important;
+  border-bottom-color: $brand-info-bright !important;
+}
+.fin-tab-badge {
+  background: rgb(var(--slate-3)) !important;
+  color: rgb(var(--slate-9)) !important;
+}
+
+/* Filtros */
+.fin-filter-group {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+.fin-filter-btn { color: rgb(var(--slate-9)) !important; }
+.fin-filter-btn:hover { color: rgb(var(--slate-11)) !important; }
+.fin-filter-btn--active {
+  background: rgba($brand-info-bright, 0.10) !important;
+  color: $brand-info !important;
+}
+/* Tabela de transações */
+.fin-tx-table tbody tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.02) !important;
+}
+.fin-tx-table td,
+.fin-tx-table th {
+  color: inherit !important;
+}
+.fin-tx-table th {
+  color: rgb(var(--slate-9)) !important;
+}
+
+.fin-tx-date { color: rgb(var(--slate-9)) !important; }
+.fin-tx-date--overdue { color: $brand-danger !important; font-weight: 600; }
+.fin-tx-date--paid { color: rgb(var(--slate-8)) !important; }
+.fin-tx-paid-at { color: rgb(var(--slate-8)) !important; }
+
+.fin-tx-amount { color: rgb(var(--slate-12)) !important; }
+.fin-tx-amount--income { color: $brand-success !important; }
+.fin-tx-amount--expense { color: $brand-danger !important; }
+
+/* Badge de método */
+.fin-method-badge {
+  background: rgb(var(--slate-3)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+  color: rgb(var(--slate-9)) !important;
+}
+
+/* Cards de orçamento */
+.fin-estimate-card {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+.fin-estimate-card:hover {
+  background: rgb(var(--slate-3)) !important;
+}
+.fin-estimate-summary {
+  border-top: 1px solid rgb(var(--slate-4)) !important;
+}
+.fin-estimate-id { color: rgb(var(--slate-8)) !important; }
+.fin-estimate-value-label { color: rgb(var(--slate-8)) !important; }
+.fin-estimate-value-amount { color: rgb(var(--slate-10)) !important; }
+.fin-estimate-value-amount--highlight { color: rgb(var(--slate-12)) !important; }
+.fin-estimate-value-amount--danger { color: $brand-danger !important; }
+.fin-estimate-value-amount--green { color: $brand-success !important; }
+.fin-estimate-value-amount--amber { color: $brand-amber !important; }
+.fin-estimate-value-amount--red { color: $brand-danger !important; }
+.fin-estimate-dates { color: rgb(var(--slate-8)) !important; }
+.fin-estimate-valid { color: rgb(var(--slate-9)) !important; }
+.fin-estimate-notes {
+  color: rgb(var(--slate-9)) !important;
+  background: rgb(var(--slate-3)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+
+/* ── Botão WhatsApp global ($whatsapp-green) ──────────────────── */
+.btn-whatsapp,
+.sched-recall-btn,
+.sched-action-btn--whatsapp {
+  background: $whatsapp-green !important;
+  color: #ffffff !important;
+  border: 1px solid $whatsapp-green !important;
+}
+.btn-whatsapp:hover:not(:disabled),
+.sched-recall-btn:not(:disabled):hover,
+.sched-action-btn--whatsapp:not(:disabled):hover {
+  background: #1EB855 !important;
+  border-color: #1EB855 !important;
+  color: #ffffff !important;
+}
+.btn-whatsapp:disabled,
+.sched-recall-btn:disabled,
+.sched-action-btn--whatsapp:disabled {
+  opacity: 0.55 !important;
+  cursor: default !important;
+}
+

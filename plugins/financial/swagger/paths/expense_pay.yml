@@ -1,0 +1,32 @@
+post:
+  tags:
+    - Financeiro · Despesas
+  summary: Pagar despesa
+  description: |
+    `Financial::PayExpense` gera a Entry de saída + atualiza status para
+    `pago` (ou `parcial` se `amount_cents` < `amount_cents` total).
+    Requer RECEPCAO/GERENTE/ADMIN. Idempotência via header `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [bank_account_id]
+          properties:
+            bank_account_id: { type: integer }
+            amount_cents: { type: integer, description: "Default = `remaining_cents`" }
+            paid_at: { type: string, format: date }
+            payment_method: { type: string }
+            notes: { type: string }
+  responses:
+    '200':
+      description: Despesa atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Expense.yml'
+    '422': { description: "Erro" }

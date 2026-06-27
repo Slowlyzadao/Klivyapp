@@ -247,5 +247,40 @@
   "COMMON": {
     "OR": "Or",
     "CLICK_HERE": "click here"
+  },
+  "CLINIC_SETTINGS": {
+    "TITLE": "Clinic Data",
+    "DESCRIPTION": "Clinic information used in documents (tax ID, address, logo, etc.). Complete here whatever didn't come from signup.",
+    "IDENTITY_SECTION": {
+      "TITLE": "Identification",
+      "NOTE": "Trade name, tax ID, contact and clinic logo."
+    },
+    "ADDRESS_SECTION": {
+      "TITLE": "Address",
+      "NOTE": "Clinic address shown on documents."
+    },
+    "FORM": {
+      "LOGO": { "LABEL": "Logo", "UPLOAD": "Upload logo" },
+      "FANTASY_NAME": { "LABEL": "Trade name", "PLACEHOLDER": "Clinic trade name" },
+      "PF": "Individual",
+      "PJ": "Company",
+      "CNPJ": { "LABEL": "Tax ID (CNPJ)", "PLACEHOLDER": "00.000.000/0001-00" },
+      "CPF": { "LABEL": "Tax ID (CPF)", "PLACEHOLDER": "000.000.000-00" },
+      "PHONE": { "LABEL": "Phone", "PLACEHOLDER": "(00) 00000-0000" },
+      "WEBSITE": { "LABEL": "Website", "PLACEHOLDER": "https://..." },
+      "ADDRESS_ZIP": { "LABEL": "ZIP", "PLACEHOLDER": "00000-000" },
+      "ADDRESS_STREET": { "LABEL": "Street", "PLACEHOLDER": "Street" },
+      "ADDRESS_NUMBER": { "LABEL": "Number", "PLACEHOLDER": "No." },
+      "ADDRESS_COMPLEMENT": { "LABEL": "Complement", "PLACEHOLDER": "Suite, floor..." },
+      "ADDRESS_NEIGHBORHOOD": { "LABEL": "Neighborhood", "PLACEHOLDER": "Neighborhood" },
+      "ADDRESS_CITY": { "LABEL": "City", "PLACEHOLDER": "City" },
+      "ADDRESS_STATE": { "LABEL": "State", "PLACEHOLDER": "State" }
+    },
+    "SUBMIT": "Save",
+    "SAVE_SUCCESS": "Clinic data saved.",
+    "SAVE_ERROR": "Could not save the clinic data.",
+    "LOAD_ERROR": "Could not load the clinic data.",
+    "LOGO_ERROR": "Failed to upload the logo.",
+    "LOGO_TYPE_ERROR": "Pick an image (PNG, JPG, WEBP or SVG)."
   }
 }

@@ -11,15 +11,17 @@ class TreatmentPlanPolicy < ApplicationPolicy
     beclinic_can?(:patients, :manage_treatment_plans)
   end
 
+  # Edição e exclusão são permitidas em qualquer status — administradores
+  # precisam corrigir planos aprovados (CID errado, valor a ajustar) sem ter
+  # que cancelar e recriar tudo. Aprovar plano gera Financial::Budget v2 em
+  # RASCUNHO ("Precisa aprovação" no Financial Tab — recepção valida números
+  # e clica "Aprovar orçamento" pra gerar parcelas). Ver
+  # `Patients::TreatmentPlanBudgetCreator`.
   def update?
-    return false if record.is_a?(TreatmentPlan) && !record.status_proposto?
-
     beclinic_can?(:patients, :manage_treatment_plans)
   end
 
   def destroy?
-    return false if record.is_a?(TreatmentPlan) && !record.status_proposto?
-
     beclinic_can?(:patients, :manage_treatment_plans)
   end
 
@@ -29,5 +31,10 @@ class TreatmentPlanPolicy < ApplicationPolicy
 
   def cancel?
     beclinic_can?(:patients, :manage_treatment_plans)
+  end
+
+  # Baixar o PDF do plano usa a mesma permissão de visualizar.
+  def pdf?
+    show?
   end
 end

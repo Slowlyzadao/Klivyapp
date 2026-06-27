@@ -1,0 +1,218 @@
+# Actions de membro/collection sob `:rooms`:
+#   GET    /:id/unread_summary   — contadores de não-lidas por sala
+#   PATCH  /:id/archive          — arquivar (owner/admin)
+#   PATCH  /:id/unarchive        — desarquivar (owner/admin)
+#   PATCH  /:id/mute             — mute pessoal até `mute_until`
+#   DELETE /:id/mute             — unmute
+#   PATCH  /:id/avatar           — upload de avatar (multipart)
+#   DELETE /:id/avatar
+unread_summary:
+  get:
+    tags:
+      - Chat Interno — Salas
+    summary: Sumário de não-lidas
+    description: |
+      Retorna o número de mensagens não-lidas por sala (mapa
+      `{ <room_id>: <int> }`) + `total`. Mensagens da Bea não contam como
+      não-lidas. Não recebe `:id` — é coletivo do usuário corrente.
+      Autorização: admin OR Klivy `internal_chat.view`.
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+    responses:
+      '200':
+        description: Contadores por sala + total geral
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  description: Mapa `room_id => contagem de não-lidas`.
+                  additionalProperties:
+                    type: integer
+                  example:
+                    '5': 12
+                    '7': 0
+                    '9': 3
+                total:
+                  type: integer
+archive:
+  patch:
+    tags:
+      - Chat Interno — Salas
+    summary: Arquivar
+    description: |
+      Autorização: admin OR (membership.role ∈ {owner, admin} AND Klivy
+      `internal_chat.view`).
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+      - $ref: '../common.yml#/components/parameters/id'
+    responses:
+      '200':
+        description: Arquivada
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: '../definitions/Room.yml'
+      '403':
+        description: Sem permissão
+      '404':
+        description: Não encontrada
+unarchive:
+  patch:
+    tags:
+      - Chat Interno — Salas
+    summary: Desarquivar
+    description: |
+      Limpa `archived_at` da sala.
+      Autorização: admin OR (membership.role ∈ {owner, admin} AND Klivy
+      `internal_chat.view`).
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+      - $ref: '../common.yml#/components/parameters/id'
+    responses:
+      '200':
+        description: Desarquivada
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: '../definitions/Room.yml'
+      '403':
+        description: Sem permissão
+      '404':
+        description: Não encontrada
+mute:
+  patch:
+    tags:
+      - Chat Interno — Salas
+    summary: Mute pessoal
+    description: |
+      Muta a sala para o usuário corrente até `mute_until` (NULL = mute
+      permanente, gravado como ~100 anos no futuro).
+      Autorização: admin OR (member AND Klivy `internal_chat.view`).
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+      - $ref: '../common.yml#/components/parameters/id'
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              mute_until:
+                type: string
+                format: date-time
+                nullable: true
+                description: NULL/ausente = mute permanente até unmute explícito.
+    responses:
+      '200':
+        description: Mutado
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  properties:
+                    room_id: { type: integer }
+                    muted_until:
+                      type: string
+                      format: date-time
+                      nullable: true
+      '404':
+        description: Não encontrada
+      '422':
+        description: Sem membership ativa
+  delete:
+    tags:
+      - Chat Interno — Salas
+    summary: Unmute
+    description: 'Autorização: admin OR (member AND Klivy `internal_chat.view`).'
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+      - $ref: '../common.yml#/components/parameters/id'
+    responses:
+      '200':
+        description: Unmutado (`muted_until` zerado)
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  properties:
+                    room_id: { type: integer }
+                    muted_until:
+                      type: string
+                      nullable: true
+                      example: null
+      '404':
+        description: Não encontrada
+      '422':
+        description: Sem membership ativa
+avatar:
+  patch:
+    tags:
+      - Chat Interno — Salas
+    summary: Upload de avatar da sala
+    description: |
+      Autorização: admin OR (membership.role ∈ {owner, admin} AND
+      Klivy `internal_chat.view`). Imagem via ActiveStorage.
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+      - $ref: '../common.yml#/components/parameters/id'
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            properties:
+              avatar:
+                type: string
+                format: binary
+    responses:
+      '200':
+        description: Avatar atualizado
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: '../definitions/Room.yml'
+      '403':
+        description: Sem permissão
+      '422':
+        description: Avatar ausente, tipo MIME inválido ou >5MB
+  delete:
+    tags:
+      - Chat Interno — Salas
+    summary: Remover avatar
+    parameters:
+      - $ref: '../common.yml#/components/parameters/accountId'
+      - $ref: '../common.yml#/components/parameters/id'
+    responses:
+      '200':
+        description: Avatar removido
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: '../definitions/Room.yml'
+      '403':
+        description: Sem permissão
+      '404':
+        description: Não encontrada

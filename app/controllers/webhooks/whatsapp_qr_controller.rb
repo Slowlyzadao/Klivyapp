@@ -37,11 +37,21 @@ class Webhooks::WhatsappQrController < ActionController::API
 
     Rails.logger.info("[WHATSAPP_QR] Mensagem recebida para canal #{channel.id}: #{params.to_unsafe_hash.inspect}")
 
-    Whatsapp::IncomingMessageQrService.new(
-      inbox: channel.inbox,
-      params: params.to_unsafe_hash.with_indifferent_access
-    ).perform
+    # Webhook do bridge nao herda de BaseController, entao Current.account fica
+    # nil. Sem isso, blobs criados em attach_media_from_url e AvatarFromUrlJob
+    # caem na raiz do R2 (ver config/initializers/active_storage_account_scoping.rb).
+    previous_account = Current.account
+    Current.account = channel.account
 
-    head :ok
+    begin
+      Whatsapp::IncomingMessageQrService.new(
+        inbox: channel.inbox,
+        params: params.to_unsafe_hash.with_indifferent_access
+      ).perform
+
+      head :ok
+    ensure
+      Current.account = previous_account
+    end
   end
 end

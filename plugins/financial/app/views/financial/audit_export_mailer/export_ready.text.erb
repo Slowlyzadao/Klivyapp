@@ -1,0 +1,13 @@
+Olá <%= @user.name %>,
+
+O export de auditoria que você solicitou está pronto.
+
+Período:  <%= @from %> até <%= @to %>
+Linhas:   <%= @row_count %>
+Expira:   <%= @expires_at.strftime('%d/%m/%Y %H:%M') %>
+
+Baixar CSV:
+<%= @download_url %>
+
+Link assinado e válido por 24 horas. Após esse período, gere um novo export.
+Dados pessoais foram redacted automaticamente (compliance LGPD).

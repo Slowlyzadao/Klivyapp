@@ -1,0 +1,37 @@
+post:
+  tags:
+    - Financeiro · Formas de Pagamento
+  summary: Inativar taxa (cessar vigência)
+  description: |
+    Inativa a taxa (`status: inactive`, `valid_to: on_date`). Substitui o `update`
+    proibido pelo canon. Requer ADMIN ou GERENTE (`authorize_write!`). Idempotência
+    opcional via header `Idempotency-Key`. Se a taxa já estiver inativa, retorna
+    `200` com `{ ok: true, already_inactive: true }` (idempotente).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: payment_method_id
+      in: path
+      required: true
+      schema: { type: integer }
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            on_date: { type: string, format: date, description: "Data de fim da vigência (default hoje). Inválida cai para hoje." }
+  responses:
+    '200':
+      description: |
+        Taxa inativada (retorna a `PaymentMethodFee` atualizada), OU
+        `{ ok: true, already_inactive: true }` se já estava inativa.
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PaymentMethodFee.yml'
+    '403':
+      description: Sem permissão (requer ADMIN/GERENTE)
+    '404':
+      description: Não encontrada

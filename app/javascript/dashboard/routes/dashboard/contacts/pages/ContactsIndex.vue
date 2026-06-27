@@ -324,15 +324,23 @@ const deleteContacts = async () => {
 
   isBulkActionLoading.value = true;
   try {
-    await BulkActionsAPI.create({
+    // A exclusão é síncrona no backend e retorna o total REAL removido. O toast
+    // de sucesso só dispara DEPOIS do refetch, com a contagem que de fato saiu —
+    // evita o falso-positivo "Contatos excluídos" enquanto o job assíncrono
+    // antigo ainda rodava (a contagem exibida não batia com a seleção).
+    const response = await BulkActionsAPI.create({
       type: 'Contact',
       ids: selectedContactIds.value,
       action_name: 'delete',
     });
-    useAlert(t('CONTACTS_BULK_ACTIONS.DELETE_SUCCESS'));
+    const deletedCount =
+      response?.data?.deleted ?? selectedContactIds.value.length;
     clearSelection();
     await fetchContactsBasedOnContext(pageNumber.value);
     bulkDeleteDialogRef.value?.close?.();
+    useAlert(
+      t('CONTACTS_BULK_ACTIONS.DELETE_SUCCESS', { count: deletedCount })
+    );
   } catch (error) {
     useAlert(t('CONTACTS_BULK_ACTIONS.DELETE_FAILED'));
   } finally {

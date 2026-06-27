@@ -1,0 +1,49 @@
+type: object
+description: |
+  Documento clínico/administrativo do paciente. Pode ser **gerado** por
+  template Prawn (`is_generated=true`) ou **anexado** externamente
+  (`is_generated=false`). Arquivo é servido por URL assinada de curta
+  duração via Active Storage.
+properties:
+  id: { type: integer }
+  account_id: { type: integer }
+  patient_id: { type: integer }
+  form_template_id: { type: integer, nullable: true }
+  document_type:
+    type: string
+    description: "Tipo livre (ex.: `receita`, `atestado`, `prescricao`, `recibo`, `outro`)."
+  status:
+    type: string
+    description: "Status do documento (ex.: `gerado`, `enviado`, `assinado`, `arquivado`)."
+  title: { type: string }
+  version: { type: integer, nullable: true }
+  is_generated:
+    type: boolean
+    description: True quando o PDF foi gerado pelo servidor (Prawn).
+  file_name: { type: string, nullable: true }
+  mime_type: { type: string, nullable: true, example: "application/pdf" }
+  file_size: { type: integer, nullable: true, description: "Bytes" }
+  variables:
+    type: object
+    description: Variáveis usadas na geração do template (livre).
+    additionalProperties: true
+  sent_at: { type: string, format: date-time, nullable: true }
+  signed_at: { type: string, format: date-time, nullable: true }
+  created_at: { type: string, format: date-time }
+  updated_at: { type: string, format: date-time }
+  url:
+    type: string
+    nullable: true
+    description: URL assinada do arquivo (Active Storage, curta duração).
+  generated_by:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }
+  signed_by:
+    type: object
+    nullable: true
+    properties:
+      id: { type: integer }
+      name: { type: string }

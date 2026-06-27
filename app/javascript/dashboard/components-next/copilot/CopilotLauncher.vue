@@ -25,6 +25,16 @@ const isConversationRoute = computed(() => {
   return CONVERSATION_ROUTES.includes(route.name);
 });
 
+// Esconde o FAB nos módulos Klivy (Agenda, Pacientes, Financeiro, Chat Interno,
+// BEA, Ajuda, Papéis): essas rotas são marcadas com `meta.hideCopilotLauncher`
+// no registro (helper `hideCopilotLauncherOn` em dashboard.routes.js /
+// settings.routes.js). O Captain é uma IA de atendimento — sem contexto/atuação
+// nesses módulos. Mesmo princípio do `isConversationRoute` (onde há composer no
+// rodapé, o FAB sai). `route.meta` é mesclado pai→filho no Vue Router.
+const isKlivyModuleRoute = computed(() =>
+  Boolean(route.meta?.hideCopilotLauncher)
+);
+
 const currentAccountId = useMapGetter('getCurrentAccountId');
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
@@ -38,7 +48,8 @@ const showCopilotLauncher = computed(() => {
   return (
     isCaptainEnabled &&
     !uiSettings.value.is_copilot_panel_open &&
-    !isConversationRoute.value
+    !isConversationRoute.value &&
+    !isKlivyModuleRoute.value
   );
 });
 const toggleSidebar = () => {

@@ -1,0 +1,36 @@
+{
+  "PATIENT_TIMELINE": {
+    "HEADER": {
+      "TITLE": "Timeline do Paciente",
+      "SUBTITLE": "Visão consolidada de todas as interações, prontuários e movimentações.",
+      "EVENT_COUNT_SINGULAR": "{count} evento",
+      "EVENT_COUNT_PLURAL": "{count} eventos",
+      "SORT_OLDEST": "Mais antigo",
+      "SORT_NEWEST": "Mais recente",
+      "SORT_NEWEST_FIRST": "Mais recente primeiro",
+      "SORT_OLDEST_FIRST": "Mais antigo primeiro"
+    },
+    "FILTERS": {
+      "ALL": "Tudo",
+      "APPOINTMENTS": "Consultas",
+      "CLINICAL": "Clínico",
+      "FINANCIAL": "Financeiro",
+      "DOCUMENTS": "Documentos",
+      "CLEAR": "Limpar filtros"
+    },
+    "LOADING": "Carregando timeline...",
+    "LOADING_MORE": "Carregando mais…",
+    "EMPTY": {
+      "NO_DATE": "Sem data",
+      "TITLE": "Nenhum evento encontrado",
+      "HINT_FILTERED": "Tente remover os filtros aplicados.",
+      "HINT_ALL": "As interações com o paciente aparecerão aqui."
+    },
+    "TIMELINE": {
+      "HISTORY_END": "Início do histórico"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Erro ao carregar a timeline do paciente."
+    }
+  }
+}

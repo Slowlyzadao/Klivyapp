@@ -1,5 +1,9 @@
 <script>
-import { STATUS_OPTIONS, STATUS_CONFIGS } from '../utils/agenda-constants.js';
+import {
+  STATUS_OPTIONS,
+  STATUS_CONFIGS,
+  getEventTypeMeta,
+} from '../utils/agenda-constants.js';
 import { formatEventTime } from '../utils/agenda-date.js';
 
 export default {
@@ -29,13 +33,39 @@ export default {
       const agent = this.agents.find(a => a.id === this.event.user_id);
       return agent ? agent.color : null;
     },
+    agentAvatar() {
+      if (!this.event) return null;
+      const agent = this.agents.find(a => a.id === this.event.user_id);
+      return agent?.thumbnail || null;
+    },
+    // PR #6 (follow-up): prefere snapshot inline → lookup por ID em options →
+    // fallback NAME (legado). Mesmo padrão de 3 níveis de `getTreatmentColor`.
     treatmentColor() {
+      if (this.event?.agenda_service?.color) return this.event.agenda_service.color;
+
+      const sid = this.event?.agenda_service_id;
+      if (sid != null) {
+        const byId = this.treatmentOptions.find(t => t?.id === sid);
+        if (byId?.color) return byId.color;
+      }
+
       const name = this.event?.custom_attributes?.treatment;
       if (!name) return null;
-      const found = this.treatmentOptions.find(
+      const byName = this.treatmentOptions.find(
         t => (typeof t === 'string' ? t : t.name) === name
       );
-      return found && typeof found === 'object' ? found.color : null;
+      return byName && typeof byName === 'object' ? byName.color : null;
+    },
+    // PR #6 (follow-up²): live lookup primeiro (`treatmentOptions` vem do
+    // store reativo de serviços) → snapshot inline → JSONB legado. Sem o live
+    // lookup, rename só refletia após refetch dos eventos.
+    treatmentName() {
+      const sid = this.event?.agenda_service_id;
+      if (sid != null && this.treatmentOptions?.length) {
+        const byId = this.treatmentOptions.find(t => t?.id === sid);
+        if (byId?.name) return byId.name;
+      }
+      return this.event?.agenda_service?.name || this.event?.custom_attributes?.treatment || '';
     },
     initials() {
       const source = this.event?.title || '';
@@ -125,6 +155,25 @@ export default {
           value: vals[attr.attribute_key],
         }));
     },
+    eventTypeMeta() {
+      return getEventTypeMeta(this.event?.event_type || 'consultation');
+    },
+    showStatusSection() {
+      // Status (Agendado/Confirmado/Chegou/...) só faz sentido pra Consulta.
+      // Compromisso e Bloqueio não têm fluxo de atendimento.
+      return this.eventTypeMeta.value === 'consultation';
+    },
+    observationText() {
+      if (!this.event) return '';
+      // Modal salva em `description` (textarea principal). Pra compat com
+      // eventos legados que guardavam em custom_attributes.observation,
+      // usamos `description` primeiro e caímos pro custom_attribute.
+      return (
+        this.event.description ||
+        this.event.custom_attributes?.observation ||
+        ''
+      );
+    },
   },
   methods: {
     statusColor(key) {
@@ -153,20 +202,38 @@ export default {
           <!-- Header (Patient Info) -->
           <div class="p-4 pb-3 border-b border-slate-100 dark:border-slate-700/60 sticky top-0 bg-white dark:bg-slate-800 z-10 w-full">
             <div class="flex items-center gap-3">
-              <div v-if="event.contact?.avatar_url" class="size-10 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-white dark:ring-slate-700/40 shadow-sm">
+              <!-- Avatar pra Consulta (foto/iniciais do paciente),
+                   ícone do tipo pra Compromisso/Bloqueio -->
+              <div
+                v-if="eventTypeMeta.value === 'consultation' && event.contact?.avatar_url"
+                class="size-8 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-white dark:ring-slate-700/40 shadow-sm"
+              >
                 <img :src="event.contact.avatar_url" class="size-full object-cover" />
               </div>
               <div
-                v-else
-                class="size-10 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ring-2 ring-white dark:ring-slate-700/40 shadow-sm"
+                v-else-if="eventTypeMeta.value === 'consultation'"
+                class="size-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ring-2 ring-white dark:ring-slate-700/40 shadow-sm"
                 :style="agentColor ? { background: `color-mix(in srgb, ${agentColor} 18%, transparent)`, color: agentColor, borderColor: `color-mix(in srgb, ${agentColor} 35%, transparent)`, borderWidth: '1px', borderStyle: 'solid' } : null"
                 :class="agentColor ? '' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'"
               >
                 {{ initials }}
               </div>
+              <div
+                v-else
+                class="size-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
+                :style="{
+                  background: `color-mix(in srgb, ${eventTypeMeta.color} 18%, transparent)`,
+                  color: eventTypeMeta.color,
+                  borderColor: `color-mix(in srgb, ${eventTypeMeta.color} 35%, transparent)`,
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                }"
+              >
+                <i :class="[eventTypeMeta.icon, 'size-4']" />
+              </div>
               <div class="min-w-0 flex-1">
                 <h3 class="text-base font-bold text-slate-900 dark:text-white truncate leading-tight">{{ event.title }}</h3>
-                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Detalhes do Agendamento</p>
+                <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">{{ eventTypeMeta.contextLabel }}</p>
               </div>
               <button @click="$emit('close')" class="size-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
                 <i class="i-lucide-x size-4" />
@@ -187,7 +254,20 @@ export default {
             </div>
 
             <div v-if="agentName" class="flex gap-3 items-center">
-              <div class="size-8 rounded-lg bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center flex-shrink-0 text-slate-400 dark:text-slate-400">
+              <div
+                v-if="agentAvatar"
+                class="size-8 rounded-full overflow-hidden flex-shrink-0 ring-1 ring-slate-200 dark:ring-slate-700"
+              >
+                <img
+                  :src="agentAvatar"
+                  :alt="agentName"
+                  class="size-full object-cover"
+                />
+              </div>
+              <div
+                v-else
+                class="size-8 rounded-lg bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center flex-shrink-0 text-slate-400 dark:text-slate-400"
+              >
                 <i class="i-lucide-user size-4" />
               </div>
               <div class="min-w-0 leading-tight">
@@ -203,7 +283,7 @@ export default {
               </div>
             </div>
 
-            <div v-if="event.custom_attributes?.treatment" class="flex gap-3 items-center">
+            <div v-if="treatmentName" class="flex gap-3 items-center">
               <div class="size-8 rounded-lg bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center flex-shrink-0 text-slate-400 dark:text-slate-400">
                 <i class="i-lucide-stethoscope size-4" />
               </div>
@@ -215,7 +295,7 @@ export default {
                     class="info-dot"
                     :style="{ background: treatmentColor }"
                   />
-                  <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate leading-none">{{ event.custom_attributes.treatment }}</p>
+                  <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate leading-none">{{ treatmentName }}</p>
                 </div>
               </div>
             </div>
@@ -237,17 +317,17 @@ export default {
               </div>
             </div>
 
-            <div v-if="event.custom_attributes?.observation" class="bg-amber-50/50 dark:bg-amber-500/10 rounded-lg p-3 border border-amber-100/50 dark:border-amber-500/20">
+            <div v-if="observationText" class="bg-yellow-50 dark:bg-yellow-500/10 rounded-lg p-3 border border-yellow-200 dark:border-yellow-500/20">
                <div class="flex items-center gap-2 mb-1">
-                 <i class="i-lucide-message-square text-amber-500 dark:text-amber-400 size-3.5" />
-                 <span class="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-widest">Observação</span>
+                 <i class="i-lucide-message-square text-yellow-600 dark:text-yellow-400 size-3.5" />
+                 <span class="text-[10px] font-bold text-yellow-700 dark:text-yellow-500 uppercase tracking-widest">Observações</span>
                </div>
-               <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed italic" v-text="event.custom_attributes.observation" />
+               <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed italic whitespace-pre-line" v-text="observationText" />
             </div>
           </div>
 
-          <!-- Status Section -->
-          <div class="px-4 py-3 bg-slate-50/80 dark:bg-slate-900/40 border-y border-slate-100 dark:border-slate-700/60 sticky bottom-[64.5px] z-10 w-full backdrop-blur-md">
+          <!-- Status Section — apenas Consulta tem fluxo de atendimento -->
+          <div v-if="showStatusSection" class="px-4 py-3 bg-slate-50/80 dark:bg-slate-900/40 border-y border-slate-100 dark:border-slate-700/60 sticky bottom-[64.5px] z-10 w-full backdrop-blur-md">
             <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2.5">Atualizar Status</p>
             <div class="grid grid-cols-2 gap-2">
               <button

@@ -1,0 +1,97 @@
+post:
+  tags:
+    - Financeiro · Parcelas
+  summary: Baixa de parcela individual
+  description: |
+    Endpoint simplificado pra aba do paciente — paga uma parcela só
+    delegando ao service `Financial::ReceivePayment`. Aceita **baixa parcial**
+    (canon BUG-01) via `amount_cents` < `remaining`. Se `keep_installment_open=true`
+    (default), gera nova parcela com o saldo restante.
+
+    **Forma de pagamento** (refactor 2026-05-24, paridade com
+    `payment_receipts#create`): envie `payment_method_id` (id de um
+    `Financial::PaymentMethod` cadastrado em Settings) **ou** `payment_method`
+    (string com o `kind` v2). Quando `payment_method_id` é informado, o `kind`
+    é resolvido a partir do record e `payment_method` torna-se opcional; se
+    nenhum dos dois vier, cai no `payment_method` da própria parcela.
+
+    **Modificadores** (juros/multa/desconto) aceitam os pares
+    `<mod>_type` + `<mod>_value` (anti-tamper: quando `type=percent` o valor
+    em centavos é recalculado server-side sobre o bruto). Os campos legacy
+    `*_cents` continuam aceitos quando `type`/`value` não vierem.
+
+    Idempotência via header `Idempotency-Key` (obrigatório).
+
+    **RBAC** (2026-05-30): receber pagamento requer **RECEPCAO**, **GERENTE**
+    ou **ADMIN** (operação de balcão). 403 caso contrário.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          description: |
+            Informe `payment_method_id` **ou** `payment_method`. Nenhum dos
+            dois é obrigatório isoladamente — quando ambos faltam, usa o
+            `payment_method` da parcela.
+          properties:
+            payment_method_id:
+              type: integer
+              description: |
+                Id de um `Financial::PaymentMethod` (Settings) da conta. Quando
+                presente, resolve o `kind` e torna `payment_method` opcional.
+                404 lógico (422 `{errors:[...]}`) se não encontrado/ativo.
+            payment_method:
+              type: string
+              example: pix
+              description: "Opcional quando `payment_method_id` é informado."
+            paid_at: { type: string, format: date, description: "Default = hoje" }
+            received_at: { type: string, format: date, description: "Alias de `paid_at`" }
+            bank_account_id: { type: integer, description: "Default = primeira conta ativa" }
+            amount_cents: { type: integer, description: "Default = `remaining_cents` (baixa total)" }
+            interest_type:
+              type: string
+              enum: [percent, fixed]
+              description: "Par com `interest_value`. `percent` recalcula centavos sobre o bruto (anti-tamper)."
+            interest_value:
+              type: number
+              description: "Percentual (se `interest_type=percent`) ou valor em reais (se `fixed`)."
+            interest_cents: { type: integer, description: "Legacy — usado quando `interest_type`/`interest_value` ausentes." }
+            fine_type:
+              type: string
+              enum: [percent, fixed]
+              description: "Par com `fine_value`."
+            fine_value:
+              type: number
+              description: "Percentual (se `fine_type=percent`) ou valor em reais (se `fixed`)."
+            fine_cents: { type: integer, description: "Legacy — usado quando `fine_type`/`fine_value` ausentes." }
+            discount_type:
+              type: string
+              enum: [percent, fixed]
+              description: "Par com `discount_value`."
+            discount_value:
+              type: number
+              description: "Percentual (se `discount_type=percent`) ou valor em reais (se `fixed`)."
+            discount_cents: { type: integer, description: "Legacy — usado quando `discount_type`/`discount_value` ausentes." }
+            apply_patient_credit_cents:
+              type: integer
+              description: "Crédito do paciente a abater no recebimento (centavos)."
+            keep_installment_open:
+              type: boolean
+              default: true
+              description: BUG-01 — mantém saldo em nova parcela quando baixa é parcial.
+            notes: { type: string }
+  responses:
+    '200':
+      description: Parcela atualizada (com `receipts` inline)
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Installment.yml'
+    '403':
+      description: Sem permissão (requer RECEPCAO/GERENTE/ADMIN)
+    '422':
+      description: Erro (conta não encontrada, etc)

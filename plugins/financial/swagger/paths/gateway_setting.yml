@@ -1,0 +1,53 @@
+get:
+  tags:
+    - Financeiro · Gateway
+  summary: Ler configuração do gateway
+  description: |
+    Singleton por conta (criado on-the-fly com `gateway=manual` se não
+    existe). Requer ADMIN. **Nunca devolve api_key/webhook_secret** —
+    apenas flags `has_api_key`/`has_webhook_secret`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  responses:
+    '200':
+      description: Configuração
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/GatewaySetting.yml'
+patch:
+  tags:
+    - Financeiro · Gateway
+  summary: Atualizar configuração
+  description: |
+    `api_key` e `webhook_secret` só são atualizados se vierem preenchidos
+    no body (omissão = não mexe). Requer ADMIN.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [gateway_setting]
+          properties:
+            gateway_setting:
+              type: object
+              properties:
+                gateway: { type: string, enum: [manual, asaas] }
+                environment: { type: string, enum: [sandbox, production] }
+                api_key: { type: string, description: "Sensível — não é devolvido em GET." }
+                webhook_secret: { type: string, description: "Sensível — não é devolvido em GET." }
+                default_pix_key: { type: string }
+                default_customer_external_ref_strategy: { type: string }
+                auto_sync_enabled: { type: boolean }
+  responses:
+    '200':
+      description: Atualizada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/GatewaySetting.yml'
+    '422':
+      description: Erro de validação

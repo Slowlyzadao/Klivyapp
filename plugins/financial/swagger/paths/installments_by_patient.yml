@@ -1,0 +1,84 @@
+get:
+  tags:
+    - Financeiro · Parcelas
+  summary: Listar parcelas AGRUPADAS por paciente
+  description: |
+    Mesmos filtros do `index`, mas pagina **por paciente**. Cada item traz
+    o `summary` (count, total_remaining, overdue, next_due) + as parcelas
+    embutidas — frontend só precisa alternar visibilidade ao expandir
+    (sem 2ª request).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: status
+      in: query
+      schema:
+        oneOf:
+          - type: string
+          - type: array
+            items: { type: string }
+    - name: patient_id
+      in: query
+      schema: { type: integer }
+    - name: professional_id
+      in: query
+      schema: { type: integer }
+    - name: payment_method
+      in: query
+      schema: { type: string }
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+    - name: q
+      in: query
+      schema: { type: string }
+    - name: page
+      in: query
+      schema: { type: integer, default: 1 }
+    - name: per_page
+      in: query
+      schema: { type: integer, default: 10, maximum: 50 }
+  responses:
+    '200':
+      description: Lista paginada de pacientes
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    patient:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        name: { type: string }
+                        avatar_url: { type: string, nullable: true }
+                    summary:
+                      type: object
+                      properties:
+                        count: { type: integer }
+                        open_count: { type: integer }
+                        total_remaining_cents: { type: integer }
+                        overdue_count: { type: integer }
+                        overdue_remaining_cents: { type: integer }
+                        next_due_date: { type: string, format: date, nullable: true }
+                    installments:
+                      type: array
+                      items:
+                        $ref: '../definitions/Installment.yml'
+              meta:
+                type: object
+                properties:
+                  page: { type: integer }
+                  per_page: { type: integer }
+                  total: { type: integer, description: "Total de pacientes" }
+                  total_to_receive_cents: { type: integer }
+                  total_received_cents: { type: integer }
+                  total_overdue_cents: { type: integer }
+                  total_installments: { type: integer }

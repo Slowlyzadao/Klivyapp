@@ -11,6 +11,11 @@ module AiAgent
       ActiveRecord::Migrator.migrations_paths << root.join('db/migrate').to_s
     end
 
+    # Rake tasks em `lib/tasks/*.rake` são auto-descobertas pelo Rails
+    # via `paths['lib/tasks'].existent` do engine — não precisa do
+    # `rake_tasks do load(...) end` (e usar o block duplica o load,
+    # gerando warning de "already initialized constant").
+
     # Gemini 3 Preview rejects function calls missing `thoughtSignature`.
     # The official Python/Node SDKs handle the round-trip transparently;
     # RubyLLM 1.9.2 does not. We monkey-patch the Gemini provider to capture
@@ -125,6 +130,11 @@ module AiAgent
                    class_name: 'AiAgent::Document',
                    dependent: :destroy_async
         end
+        unless reflect_on_association(:ai_agent_training_conversations)
+          has_many :ai_agent_training_conversations,
+                   class_name: 'AiAgent::TrainingConversation',
+                   dependent: :destroy_async
+        end
 
         # Brand new accounts ship with a Captain::Assistant called "Beatriz"
         # already wired up. Without this, the Bea sidebar lands on an empty
@@ -137,7 +147,7 @@ module AiAgent
 
           def ensure_default_bea_assistant
             return unless defined?(::Captain::Assistant)
-            return if ::Captain::Assistant.where(account_id: id).exists?
+            return if ::Captain::Assistant.exists?(account_id: id)
 
             ::Captain::Assistant.create!(
               account_id: id,
@@ -167,11 +177,24 @@ module AiAgent
       # AiAgent::Document). We short-circuit the legacy job whenever its
       # target assistant is Beatriz, leaving the rest of the Captain stack
       # untouched for any other custom assistant a clinic might wire up.
+      # rubocop:disable Rails/NegateInclude — `Module#include?` (ancestors check)
+      # NÃO tem `.exclude?` (que é método do Rails Enumerable). Reverter pra `!include?`.
       if defined?(::Captain::Conversation::ResponseBuilderJob) &&
          !::Captain::Conversation::ResponseBuilderJob.include?(AiAgent::SkipBeatrizLegacyResponse)
         ::Captain::Conversation::ResponseBuilderJob.prepend(AiAgent::SkipBeatrizLegacyResponse)
       end
+      # rubocop:enable Rails/NegateInclude
 
+      # SEC-29 (auditoria 2026-05-18): `protect_beatriz_destroy` é uma
+      # ActiveRecord callback `before_destroy` — BYPASSÁVEL via:
+      #   - `Captain::Assistant.delete_all` (não dispara callbacks)
+      #   - `update_columns` em raw SQL (cirurgia em prod)
+      #   - SQL direto no banco
+      # Aceitável porque os 3 vetores exigem super_admin Klivy + acesso ao
+      # container/banco. Equivalente ao SEC-10 padrão — Pundit/AR callbacks
+      # são API gates, não DB gates. Documentado em vez de tentar bloquear
+      # no DB level (constraints triggers viriam à custa de migrations e
+      # debug ruim no console).
       if defined?(::Captain::Assistant)
         ::Captain::Assistant.class_eval do
           unless method_defined?(:protect_beatriz_destroy)
@@ -258,10 +281,12 @@ module AiAgent
       # (slot ocupou, profissional não realiza serviço, etc), notifica equipe
       # interna. Plugado via prepend pra não inflar o método `execute` (250+ LOC).
       # Idempotente — `unless include?` evita stacking de prepends em reload.
+      # rubocop:disable Rails/NegateInclude — Module#include? não tem `.exclude?`.
       if defined?(::AiAgent::Tools::BookAppointmentTool) &&
          !::AiAgent::Tools::BookAppointmentTool.include?(AiAgent::InternalNotifier::BookAppointmentToolPrepend)
         ::AiAgent::Tools::BookAppointmentTool.prepend(AiAgent::InternalNotifier::BookAppointmentToolPrepend)
       end
+      # rubocop:enable Rails/NegateInclude
 
       # Pipeline A — Bea avisa o grupo Recepção quando ela mesma reserva um
       # agendamento que ficou em pending_confirmation (D-16). Filtramos por
@@ -279,6 +304,12 @@ module AiAgent
             # interno + idempotência via notifier_key no service.
             after_commit :notify_internal_chat_pending_confirmation, on: [:create, :update]
             after_commit :notify_internal_chat_lifecycle_change, on: :update
+            # Wiring do trigger de follow-up `appointment_confirmed`: até a
+            # auditoria 2026-06-11 o DispatchAppointmentConfirmedJob existia
+            # mas NUNCA era enfileirado, então o trigger era morto. Dispara
+            # na criação já confirmada ou na transição de status p/
+            # scheduled/confirmed. O job é idempotente por (regra, evento).
+            after_commit :dispatch_appointment_confirmed_follow_ups, on: [:create, :update]
 
             def notify_internal_chat_pending_confirmation
               return unless status == 'pending_confirmation' && source == 'ai_agent'
@@ -305,6 +336,19 @@ module AiAgent
             rescue StandardError => e
               Rails.logger.error(
                 "[AiAgent::InternalNotifier] lifecycle_change failed for agenda_event #{id}: #{e.class}: #{e.message}"
+              )
+            end
+
+            def dispatch_appointment_confirmed_follow_ups
+              return unless %w[scheduled confirmed].include?(status)
+              # Só na criação já confirmada OU na transição de status —
+              # nunca em updates que não mexem no status.
+              return unless previously_new_record? || saved_change_to_status?
+
+              AiAgent::FollowUps::DispatchAppointmentConfirmedJob.perform_later(id)
+            rescue StandardError => e
+              Rails.logger.error(
+                "[AiAgent] dispatch_appointment_confirmed failed for agenda_event #{id}: #{e.class}: #{e.message}"
               )
             end
           end

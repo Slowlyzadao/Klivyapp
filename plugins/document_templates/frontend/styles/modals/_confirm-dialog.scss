@@ -1,0 +1,9 @@
+// Mensagem do ConfirmDialog — texto corrido dentro do BaseModal body.
+
+.confirm-dialog__message {
+  margin: 0;
+  font-family: var(--kl-font-family);
+  font-size: var(--kl-font-body-lg);
+  line-height: 1.6;
+  color: var(--kl-on-surface-variant);
+}

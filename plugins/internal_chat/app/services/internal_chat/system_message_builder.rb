@@ -44,17 +44,45 @@ module InternalChat
 
     private
 
+    # FE-16/17 (auditoria 2026-05-18): strings migradas pra I18n
+    # (`internal_chat.system_messages.*`). Interpolação preserva
+    # safe_label sanitization — vars vão pro template já limpas.
     def text
-      a = @actor&.available_name || 'Sistema'
-      t = @target&.available_name
+      a = safe_label(@actor&.available_name) || I18n.t('internal_chat.system_messages.system_actor')
+      t = safe_label(@target&.available_name)
       case @event
-      when :member_added then "#{a} adicionou #{t} ao grupo"
-      when :member_removed then "#{a} removeu #{t} do grupo"
-      when :member_left then "#{t || a} saiu do grupo"
-      when :role_changed then "#{a} definiu #{t} como #{@payload[:role]}"
-      when :renamed then "#{a} renomeou o grupo para “#{@payload[:name]}”"
-      when :description_changed then "#{a} alterou a descrição do grupo"
+      when :member_added
+        I18n.t('internal_chat.system_messages.member_added', actor: a, target: t)
+      when :member_removed
+        I18n.t('internal_chat.system_messages.member_removed', actor: a, target: t)
+      when :member_left
+        I18n.t('internal_chat.system_messages.member_left', actor: t || a)
+      when :role_changed
+        I18n.t('internal_chat.system_messages.role_changed',
+               actor: a, target: t, role: safe_label(@payload[:role]))
+      when :renamed
+        I18n.t('internal_chat.system_messages.renamed',
+               actor: a, name: safe_label(@payload[:name]))
+      when :description_changed
+        I18n.t('internal_chat.system_messages.description_changed', actor: a)
       end
+    end
+
+    # Defesa em profundidade contra BE-14 (auditoria 2026-05-18). O frontend
+    # atual renderiza system messages via `{{ message.content }}` (Vue
+    # auto-escape — XSS bloqueado no rendering). Esse helper blinda contra
+    # regressão futura caso alguém troque pra `v-html`, e também limpa nomes
+    # com control chars que quebrariam a pílula visual. Não escapa &, ", '
+    # pra preservar nomes legítimos como "Maria d'Aragão" ou "Pedro & João".
+    def safe_label(text)
+      return nil if text.nil?
+
+      text.to_s
+          .delete("\x00")
+          .gsub(/[[:cntrl:]]/, ' ')
+          .gsub(/[<>]/, '')
+          .squeeze(' ')
+          .strip[0, 120].to_s.presence
     end
   end
 end

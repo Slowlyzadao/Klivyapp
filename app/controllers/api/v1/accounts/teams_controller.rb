@@ -18,10 +18,6 @@ class Api::V1::Accounts::TeamsController < Api::V1::Accounts::BaseController
   end
 
   def destroy
-    if @team.dono? && Current.account.teams.where(beclinic_role: 'dono').count <= 1
-      return render json: { error: 'Não é possível remover o último perfil Dono da conta' }, status: :forbidden
-    end
-
     @team.destroy!
     head :ok
   end
@@ -33,10 +29,6 @@ class Api::V1::Accounts::TeamsController < Api::V1::Accounts::BaseController
   end
 
   def team_params
-    # BeClinic sends `permissions` and `beclinic_role` directly. Since they are not columns 
-    # of the teams table, Rails wrap_parameters ignores them. We fall back to `params` 
-    # to avoid ParameterMissing errors and correctly permit these virtual attributes.
-    base_params = params[:team].present? ? params.require(:team) : params
-    base_params.permit(:name, :description, :allow_auto_assign, :beclinic_role, :is_preset, permissions: {})
+    params.require(:team).permit(:name, :description, :allow_auto_assign)
   end
 end

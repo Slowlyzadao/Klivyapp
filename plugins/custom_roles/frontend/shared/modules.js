@@ -69,6 +69,7 @@ export const MODULES = [
         icon: 'i-lucide-user-cog',
         permissions: [
           { key: 'view_patient_record', label: 'Ver prontuário' },
+          { key: 'create_appointment', label: 'Agendar consulta a partir da conversa' },
           { key: 'edit_contact', label: 'Editar contato' },
           { key: 'merge_contact', label: 'Mesclar contato' },
           { key: 'manage_waiting_list', label: 'Adicionar à lista de espera' },
@@ -92,6 +93,31 @@ export const MODULES = [
       { key: 'manage_inboxes', label: 'Gerenciar caixas de entrada' },
       { key: 'manage_tools', label: 'Gerenciar ferramentas' },
       { key: 'manage_settings', label: 'Configurar BEA' },
+      { key: 'manage_follow_ups', label: 'Gerenciar follow-ups da Bea' },
+      {
+        key: 'manage_templates',
+        label: 'Gerenciar notificações internas',
+        description:
+          'Templates pré-definidos que a Beatriz dispara no Chat Interno (zero token). Quem tem esta perm edita texto, destino e ativa/desativa.',
+      },
+    ],
+  },
+  {
+    key: 'internal_chat',
+    label: 'Chat Interno',
+    icon: 'i-lucide-message-square',
+    description:
+      'Chat interno entre profissionais — salas, DMs, menções e stickers. Acesso a sala específica é auto-gateado por membership.',
+    permissions: [
+      { key: 'view', label: 'Acessar o Chat Interno' },
+      { key: 'create_room', label: 'Criar salas / iniciar conversas' },
+      { key: 'manage_stickers', label: 'Gerenciar stickers da conta' },
+      {
+        key: 'manage_memberships',
+        label: 'Gerenciar membros de salas (futuro)',
+        description:
+          'Reservado pra release futuro — quando ativo vai restringir add/remove de membros e mudanças de role só pra users com esta perm + papel owner/admin da sala. Hoje a checagem ainda é só por papel da sala (owner/admin) + admin da conta como bypass. Adicionar a perm em roles existentes não muda comportamento atual.',
+      },
     ],
   },
   {
@@ -100,6 +126,19 @@ export const MODULES = [
     icon: 'i-lucide-calendar',
     description: 'Calendário, eventos, configurações e atributos.',
     groups: [
+      {
+        key: 'provider',
+        label: 'Profissional da agenda',
+        icon: 'i-lucide-user-round',
+        permissions: [
+          {
+            key: 'is_provider',
+            label: 'É profissional / atende na agenda',
+            description:
+              'Quem tem este papel aparece como coluna no calendário e pode receber agendamentos. Desligue para papéis administrativos (recepção, gerência sem atendimento, financeiro).',
+          },
+        ],
+      },
       {
         key: 'calendar',
         label: 'Calendário',

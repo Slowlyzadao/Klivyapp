@@ -1,0 +1,77 @@
+get:
+  tags:
+    - Financeiro · Formas de Pagamento
+  summary: Listar formas de pagamento
+  description: |
+    Lista os métodos vivos da conta (ordem `kind, name`). Read-only, sem gate
+    de RBAC — qualquer usuário autenticado. Acessível mesmo com setup
+    incompleto (faz parte do wizard).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: kind
+      in: query
+      description: Filtra por tipo canon.
+      schema: { type: string, enum: [dinheiro, pix, debito, credito, boleto, transferencia, convenio, parcelamento_proprio] }
+    - name: status
+      in: query
+      schema: { type: string, enum: [active, inactive] }
+  responses:
+    '200':
+      description: Lista de formas de pagamento
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/PaymentMethod.yml'
+post:
+  tags:
+    - Financeiro · Formas de Pagamento
+  summary: Criar forma de pagamento
+  description: |
+    Cria um método. Requer ADMIN ou GERENTE (`authorize_write!`). Idempotência
+    via header `Idempotency-Key`. `kind` é obrigatório e fica congelado após
+    criação. Crédito é obrigado a suportar parcelas; `settlement_mode=on_due_date`
+    só é aceito para crédito/débito.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [payment_method]
+          properties:
+            payment_method:
+              type: object
+              required: [kind, name]
+              properties:
+                kind: { type: string, enum: [dinheiro, pix, debito, credito, boleto, transferencia, convenio, parcelamento_proprio] }
+                name: { type: string, example: "Cielo Crédito" }
+                provider: { type: string, example: "Cielo" }
+                provider_alias: { type: string }
+                default_bank_account_id: { type: integer }
+                supports_installments: { type: boolean }
+                max_installments: { type: integer, minimum: 1, maximum: 24 }
+                status: { type: string, enum: [active, inactive] }
+                passes_fee_to_patient: { type: boolean }
+                settlement_mode: { type: string, enum: [manual, on_confirm, on_due_date] }
+  responses:
+    '201':
+      description: Forma de pagamento criada
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PaymentMethod.yml'
+    '403':
+      description: Sem permissão (requer ADMIN/GERENTE)
+    '422':
+      description: Erro de validação
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'

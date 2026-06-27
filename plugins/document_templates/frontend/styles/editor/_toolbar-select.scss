@@ -1,0 +1,15 @@
+// Wrapper do select da toolbar. O campo em si é o <FormSelect> (beclinic_core);
+// aqui só damos a largura (via :style) e compactamos a altura do gatilho pra
+// casar com a toolbar (34px, alinhado ao stepper e aos botões de 32px).
+
+.tb-select {
+  display: inline-block;
+  vertical-align: middle;
+
+  :deep(.ms-trigger) {
+    min-height: 34px;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+    font-size: var(--kl-font-body-md);
+  }
+}

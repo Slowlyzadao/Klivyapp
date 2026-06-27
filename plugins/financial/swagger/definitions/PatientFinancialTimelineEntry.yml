@@ -1,0 +1,83 @@
+type: object
+description: |
+  Entry da timeline financeira do paciente. Representa um `Budget` com
+  suas `Installments` agrupadas. `status` é derivado em runtime considerando
+  pagamentos, estornos e vencimentos.
+properties:
+  id: { type: integer }
+  display_id:
+    type: integer
+    description: "ID visível preservado de migração (`metadata.legacy_id`)"
+  source_type: { type: string, example: "Financial::Budget" }
+  source_id: { type: integer }
+  recurrence_type:
+    type: string
+    enum: [avulso, parcelamento, mensalidade, plano_tratamento]
+  origin:
+    type: object
+    properties:
+      kind:
+        type: string
+        enum: [estimate, treatment_plan]
+      label: { type: string, description: "Ex.: 'Plano de Tratamento #5', 'Orçamento #31'" }
+      link: { type: integer, nullable: true, description: "treatment_plan_id quando aplicável" }
+  date: { type: string, format: date }
+  description: { type: string, nullable: true }
+  total: { type: number, format: float, description: "BRL" }
+  paid: { type: number, format: float }
+  open: { type: number, format: float }
+  overdue: { type: number, format: float }
+  total_cents: { type: integer }
+  paid_cents: { type: integer }
+  open_cents: { type: integer }
+  overdue_cents: { type: integer }
+  progress:
+    type: object
+    description: |
+      Counts de parcelas (não valores). Frontend usa pra renderizar
+      "7/14 pagas · 1 vencida". `*_amount_cents` permite calcular % real
+      da barra considerando baixa parcial.
+    properties:
+      paid: { type: integer }
+      open: { type: integer }
+      overdue: { type: integer }
+      canceled: { type: integer }
+      total: { type: integer }
+      paid_amount_cents: { type: integer }
+      total_amount_cents: { type: integer }
+  status:
+    type: string
+    description: "Status overall derivado: rascunho/enviado/cancelado/reembolsado/vencido/pago/parcial/pendente"
+  installments:
+    type: array
+    items:
+      type: object
+      properties:
+        id: { type: integer }
+        number: { type: integer }
+        total: { type: integer, description: "total_in_series" }
+        amount: { type: number, format: float }
+        amount_cents: { type: integer }
+        received_amount: { type: number, format: float }
+        received_amount_cents: { type: integer }
+        remaining: { type: number, format: float }
+        remaining_cents: { type: integer }
+        refunded_cents: { type: integer }
+        refunded: { type: number, format: float }
+        partially_refunded: { type: boolean }
+        status:
+          type: string
+          description: "Status mapeado para UI: pago/parcial/vencido/reembolsado/cancelado/pendente"
+        due_date: { type: string, format: date, nullable: true }
+        paid_at: { type: string, format: date-time, nullable: true }
+        payment_method: { type: string, nullable: true }
+        payment_proof_url:
+          type: string
+          nullable: true
+          description: "URL signed (15min) do comprovante quando há blob anexado."
+        gateway: { type: string, nullable: true }
+        payment_link: { type: string, nullable: true }
+  actions_available:
+    type: array
+    description: "Ações permitidas no contexto atual (ex.: approve_estimate, cancel_estimate)"
+    items: { type: string }

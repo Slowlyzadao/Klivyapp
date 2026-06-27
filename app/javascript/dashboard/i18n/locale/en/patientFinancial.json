@@ -1,0 +1,261 @@
+{
+  "PATIENT_FINANCIAL": {
+    "HEADER": {
+      "TITLE": "Patient Finances",
+      "SUBTITLE": "Estimates, charges, installments and payments tied to treatment.",
+      "NEW_ESTIMATE": "New Estimate",
+      "NEW_ENTRY": "New Entry",
+      "RECEIVE_PAYMENT": "Receive Payment",
+      "PRINT_STATEMENT": "Print Statement"
+    },
+    "KPI": {
+      "TOTAL_APPROVED": "Total Approved",
+      "TOTAL_APPROVED_HINT": "Main plan",
+      "TOTAL_PAID": "Paid / Received",
+      "TOTAL_PAID_HINT": "Up to date",
+      "TOTAL_OPEN": "Open",
+      "NEXT_DUE": "Next: {date}",
+      "NO_PENDING": "No pending items",
+      "TOTAL_OVERDUE": "Overdue (Owed)",
+      "OVERDUE_NEEDS_ATTENTION": "Needs attention",
+      "OVERDUE_ALL_OK": "All up to date",
+      "CREDIT": "Credit",
+      "CREDIT_HINT": "Refund balance"
+    },
+    "TABS": {
+      "TRANSACTIONS": "Transactions",
+      "ESTIMATES": "Estimates",
+      "TREATMENT_PLANS": "Treatment Plan",
+      "RECEIPTS": "Receipts"
+    },
+    "FILTERS": {
+      "ALL": "All",
+      "OPEN": "Open",
+      "PENDING": "Pending",
+      "PAID": "Received",
+      "OVERDUE": "Overdue",
+      "REFUNDED": "Refunded",
+      "CANCELLED": "Cancelled",
+      "ARIA_LABEL": "Filter entries by status"
+    },
+    "TX_TABLE": {
+      "DUE_DATE": "Due Date",
+      "DESCRIPTION": "Description",
+      "INSTALLMENT": "Installment",
+      "AMOUNT": "Amount (R$)",
+      "METHOD": "Method",
+      "STATUS": "Status",
+      "ACTIONS": "Actions",
+      "EMPTY": "No transactions found.",
+      "PAID_AT": "Paid on {date}",
+      "DEFAULT_DESCRIPTION": "Procedure/Plan",
+      "MANUAL_BADGE": "Manual"
+    },
+    "TX_ACTIONS": {
+      "RECEIVE": "Receive",
+      "WHATSAPP_TITLE": "Charge via WhatsApp",
+      "VIEW_PROOF_TITLE": "View receipt",
+      "ATTACH_PROOF_TITLE": "Attach receipt",
+      "REFUND_TITLE": "Refund transaction"
+    },
+    "ESTIMATES": {
+      "EMPTY": "No estimates found.",
+      "EMPTY_HINT": "Click \"New Estimate\" to create one.",
+      "ID_PREFIX": "Estimate #{id}",
+      "PLAN_LINKED": "Treatment Plan",
+      "SUBTOTAL": "Subtotal",
+      "DISCOUNT": "Discount",
+      "TOTAL": "Total",
+      "INSTALLMENTS": "Installments",
+      "INSTALLMENTS_VALUE": "{count}x of {amount}",
+      "PAID": "Paid",
+      "PENDING": "Pending",
+      "OVERDUE": "Overdue",
+      "CREATED_AT": "Created on {date}",
+      "VALID_UNTIL": "Valid until {date}",
+      "APPROVE": "Approve",
+      "CANCEL": "Cancel"
+    },
+    "RECEIPTS": {
+      "PAYMENT_DATE": "Payment Date",
+      "DESCRIPTION": "Description",
+      "AMOUNT": "Amount (R$)",
+      "METHOD": "Method",
+      "RECEIPT": "Receipt",
+      "LOADING": "Generating...",
+      "EMPTY": "No confirmed payments yet.",
+      "DEFAULT_DESCRIPTION": "Payment"
+    },
+    "MODALS": {
+      "PAY": {
+        "TITLE": "Register Payment",
+        "SUBTITLE": "Confirm method and date of payment",
+        "SELECT_INSTALLMENT": "Select Installment *",
+        "NO_PENDING": "No pending installment. All paid!",
+        "INSTALLMENT_LABEL": "Due: {date} · Installment {current}/{total}",
+        "INSTALLMENT_OF": "Installment {current}/{total}",
+        "DUE_AT": "Due {date}",
+        "SELECTED": "Selected installment",
+        "DEFAULT_INSTALLMENT": "Installment",
+        "CHANGE": "Change",
+        "PAYMENT_METHOD": "Payment Method *",
+        "PAYMENT_DATE": "Payment Date",
+        "BANK_ACCOUNT": "Destination Account",
+        "BANK_ACCOUNT_PLACEHOLDER": "— Select an account —",
+        "DATE_PLACEHOLDER": "Select date",
+        "CONFIRM": "Confirm Payment",
+        "CANCEL": "Cancel"
+      },
+      "ESTIMATE": {
+        "TITLE": "New Entry",
+        "SUBTITLE": "Create a financial entry for this patient",
+        "RECURRENCE_TYPE_LABEL": "Entry Type",
+        "SUBTOTAL": "Subtotal (R$) *",
+        "INSTALLMENTS": "Installments",
+        "DISCOUNT_TYPE": "Discount Type",
+        "DISCOUNT_VALUE": "Discount Value",
+        "DEFAULT_METHOD": "Default Method",
+        "FIRST_DUE": "1st Due Date",
+        "NOTES": "Notes",
+        "NOTES_PLACEHOLDER": "Notes about the entry...",
+        "PREVIEW_INSTALLMENTS": "{count}x of",
+        "CONFIRM": "Create Entry",
+        "CANCEL": "Cancel",
+        "DATE_PLACEHOLDER": "Select date",
+        "DISCOUNT_PLACEHOLDER": "Discount type",
+        "METHOD_PLACEHOLDER": "Payment method"
+      },
+      "PROOF": {
+        "TITLE": "Attach Receipt",
+        "SUBTITLE": "Attach the payment receipt (PIX, boleto, etc.)",
+        "TRANSACTION": "Transaction",
+        "DEFAULT_DESCRIPTION": "Payment",
+        "FILE_LABEL": "File (image or PDF)",
+        "FILE_HINT": "Click to select or drag the file",
+        "FILE_LIMITS": "PNG, JPG, PDF — max. 10MB",
+        "UPLOADING": "Uploading receipt..."
+      },
+      "PRINT": {
+        "PRINT_PDF": "Print / PDF"
+      }
+    },
+    "STATUS": {
+      "TX": {
+        "PAID": "PAID",
+        "PENDING": "OPEN",
+        "OVERDUE": "OVERDUE",
+        "CANCELLED": "CANCELLED",
+        "REFUNDED": "REFUNDED",
+        "PARTIAL": "PARTIAL"
+      },
+      "ESTIMATE": {
+        "DRAFT": "Draft",
+        "SENT": "Sent",
+        "APPROVED": "Approved",
+        "CANCELLED": "Cancelled"
+      }
+    },
+    "DISCOUNT": {
+      "FIXED": "Fixed Value (R$)",
+      "PERCENT": "Percent (%)"
+    },
+    "PAYMENT_METHODS": {
+      "PIX": "PIX",
+      "CREDIT_CARD": "Credit Card",
+      "DEBIT_CARD": "Debit Card",
+      "CASH": "Cash",
+      "BOLETO": "Boleto",
+      "TRANSFER": "Bank Transfer",
+      "OTHERS": "Others",
+      "BADGE": {
+        "PIX": "PIX",
+        "CREDIT_CARD": "Credit",
+        "DEBIT_CARD": "Debit",
+        "CASH": "Cash",
+        "BOLETO": "Boleto",
+        "TRANSFER": "Transfer",
+        "OTHERS": "Others"
+      }
+    },
+    "REFUND_MODAL": {
+      "TITLE": "Refund payment",
+      "ORIGINAL_AMOUNT": "Original amount",
+      "DESCRIPTION": "Description",
+      "AMOUNT_LABEL": "Amount to refund (R$)",
+      "PARTIAL_HINT": "Partial refund — {remaining} will remain paid.",
+      "METHOD_LABEL": "Refund method",
+      "REASON_LABEL": "Refund reason",
+      "REASON_PLACEHOLDER": "Ex: duplicate payment, patient gave up...",
+      "REASON_HINT": "Goes into the refund transaction's notes. Useful for auditing.",
+      "OPTIONAL": "optional",
+      "IRREVERSIBLE_WARNING": "This action cannot be undone. A new refund transaction will be created and the original will be marked as refunded.",
+      "ERROR_AMOUNT_REQUIRED": "Enter an amount greater than zero.",
+      "ERROR_AMOUNT_EXCEEDS": "The refund amount cannot exceed the original amount.",
+      "CANCEL": "Cancel",
+      "CONFIRM": "Confirm refund"
+    },
+    "MESSAGES": {
+      "LOAD_ERROR": "Failed to load financial data.",
+      "PAY_SUCCESS": "Payment registered successfully!",
+      "PAY_ERROR": "Error registering payment.",
+      "ESTIMATE_INVALID_SUBTOTAL": "Provide a valid subtotal.",
+      "ESTIMATE_CREATED": "Estimate created successfully!",
+      "ESTIMATE_CREATE_ERROR": "Error creating estimate.",
+      "ESTIMATE_APPROVED": "Estimate approved!",
+      "ESTIMATE_APPROVE_ERROR": "Error approving estimate.",
+      "ESTIMATE_CANCELLED": "Estimate cancelled.",
+      "ESTIMATE_CANCEL_ERROR": "Error cancelling estimate.",
+      "WHATSAPP_NO_PHONE": "Charge prepared — patient has no registered phone.",
+      "WHATSAPP_ERROR": "Error preparing WhatsApp charge.",
+      "REFUND_CONFIRM": "Confirm refund of this transaction?",
+      "REFUND_SUCCESS": "Transaction refunded successfully!",
+      "REFUND_ERROR": "Error refunding transaction.",
+      "PROOF_SUCCESS": "Receipt attached successfully!",
+      "PROOF_ERROR": "Error attaching receipt.",
+      "SETUP_REQUIRED_TITLE": "Financial module not set up",
+      "SETUP_REQUIRED": "Complete Bank Accounts and Payment Methods to create entries.",
+      "SETUP_REQUIRED_CTA": "Set up"
+    },
+    "PRINT": {
+      "STATEMENT_TITLE": "Financial Statement",
+      "RECEIPT_TITLE_PREFIX": "Receipt #{number}"
+    },
+    "VIEW_MODE": {
+      "ARIA_LABEL": "Toggle between classic view and timeline",
+      "CLASSIC": "Classic view",
+      "TIMELINE": "Timeline view"
+    },
+    "TIMELINE": {
+      "LOADING": "Loading financial timeline...",
+      "EMPTY_TITLE": "No entries yet",
+      "EMPTY_HINT": "Create an entry or register a payment to get started.",
+      "UNSUPPORTED_HINT": "Timeline temporarily unavailable for this clinic. We're working on it — back online soon.",
+      "FEATURE_DISABLED_HINT": "Patient finance module is under maintenance for this clinic. Contact support if you need urgent access.",
+      "DUE_AT": "Due {date}",
+      "TOGGLE_ARIA": "Expand entry: {description}",
+      "NEEDS_APPROVAL": "Needs approval",
+      "RECURRENCE": {
+        "AVULSO": "One-off",
+        "PARCELAMENTO": "Installments",
+        "MENSALIDADE": "Subscription",
+        "PLANO_TRATAMENTO": "Treatment Plan",
+        "MENSALIDADE_TOOLTIP": "Automatic billing will be available in future versions."
+      },
+      "ACTIONS": {
+        "APPROVE_ESTIMATE": "Approve estimate",
+        "CANCEL_ESTIMATE": "Cancel estimate",
+        "RECEIPT_TITLE": "Print receipt"
+      }
+    },
+    "PROGRESS": {
+      "PAID_LABEL": "paid",
+      "OVERDUE_LABEL": "overdue",
+      "ARIA_PAID": "{paid} of {total} installments paid",
+      "ARIA_OVERDUE": "{overdue} overdue",
+      "ARIA_OPEN": "{open} open",
+      "PAID_TOOLTIP": "{count} paid",
+      "OPEN_TOOLTIP": "{count} open",
+      "OVERDUE_TOOLTIP": "{count} overdue"
+    }
+  }
+}

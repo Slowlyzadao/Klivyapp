@@ -1,0 +1,16 @@
+get:
+  tags:
+    - Financeiro · Fechamento
+  summary: Detalhar fechamento de período
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Fechamento
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PeriodClosure.yml'
+    '404':
+      description: Não encontrado nesta conta

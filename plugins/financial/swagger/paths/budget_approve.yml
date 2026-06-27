@@ -1,0 +1,40 @@
+post:
+  tags:
+    - Financeiro · Orçamentos
+  summary: Aprovar orçamento (gera installments)
+  description: |
+    `Financial::ApproveBudget` cria as parcelas conforme `installments_plan`.
+    Requer RECEPCAO/GERENTE/ADMIN/DENTIST. Idempotência via header
+    `Idempotency-Key` (obrigatório).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            installments_plan:
+              type: array
+              description: "Override do plano padrão. Cada item: `{ number, amount_cents, due_date, payment_method }`."
+              items:
+                type: object
+                properties:
+                  number: { type: integer }
+                  amount_cents: { type: integer }
+                  due_date: { type: string, format: date }
+                  payment_method: { type: string }
+            payment_method: { type: string }
+            first_due_date: { type: string, format: date }
+            interval_days: { type: integer, default: 30 }
+  responses:
+    '200':
+      description: Aprovado (com `installments` inline)
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Budget.yml'
+    '422':
+      description: Erro

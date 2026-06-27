@@ -21,7 +21,7 @@ module Api
                 needs_recall_updated: true
               }, status: :created
             else
-              render json: { error: result.error }, status: :unprocessable_entity
+              render_error(result.error, status: :unprocessable_entity)
             end
           end
         end

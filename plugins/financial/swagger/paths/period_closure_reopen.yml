@@ -1,0 +1,43 @@
+post:
+  tags:
+    - Financeiro · Fechamento
+  summary: Reabrir período fechado
+  description: |
+    Reabre o mês via `Financial::Governance::ReopenPeriod`, liberando a edição
+    retroativa de novo. Atualiza o MESMO registro (não cria outro): muda
+    `status` para `reopened` e popula `reopened_at`/`reopened_by_id`/`reopen_reason`,
+    preservando a trilha de auditoria.
+
+    `reason` (motivo) é obrigatório. Requer ADMIN. Idempotência via header
+    `Idempotency-Key`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [reason]
+          properties:
+            reason:
+              type: string
+              description: Motivo da reabertura (obrigatório para auditoria).
+  responses:
+    '200':
+      description: Período reaberto
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PeriodClosure.yml'
+    '422':
+      description: Motivo obrigatório ou erro de reabertura
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'
+    '403':
+      description: Sem permissão (requer ADMIN)
+    '404':
+      description: Não encontrado nesta conta

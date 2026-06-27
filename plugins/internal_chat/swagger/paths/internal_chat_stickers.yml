@@ -1,0 +1,83 @@
+get:
+  tags:
+    - Chat Interno — Stickers
+  summary: Listar stickers (default + da conta)
+  description: |
+    Lista stickers conforme `filter`:
+    - `all` (default): defaults da Klivy (`kind='default'`, `account_id=NULL`)
+      + stickers salvos na coleção (favoritos) do requester nesta conta.
+    - `mine`: só os que o requester criou.
+    - `recent`: top 10 stickers que o requester mais enviou (frequência DESC).
+
+    `category` filtra por categoria (só defaults têm categoria) e é ignorado
+    se não for uma categoria conhecida. Autorização: admin OR Klivy
+    `internal_chat.view`. Cada item segue o `StickerSerializer`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: filter
+      in: query
+      schema:
+        type: string
+        enum: [all, mine, recent]
+        default: all
+    - name: category
+      in: query
+      schema:
+        type: string
+        enum: [dentista, bem_estar, estetica]
+  responses:
+    '200':
+      description: Lista
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/Sticker.yml'
+post:
+  tags:
+    - Chat Interno — Stickers
+  summary: Upload de sticker custom da conta
+  description: |
+    Cria um sticker `kind='account'` e auto-salva na coleção (favorito
+    implícito) do criador. Autorização: admin OR Klivy
+    `internal_chat.manage_stickers`. `image` obrigatória via multipart
+    (webp/png/gif, ≤300KB). `width`/`height` são aceitos (já calculados no
+    client). Resposta embrulha o sticker em `data`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      multipart/form-data:
+        schema:
+          type: object
+          required: [image]
+          properties:
+            image:
+              type: string
+              format: binary
+            name:
+              type: string
+              nullable: true
+            width:
+              type: integer
+            height:
+              type: integer
+  responses:
+    '201':
+      description: Criado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                $ref: '../definitions/Sticker.yml'
+    '403':
+      description: Sem permissão (`internal_chat.manage_stickers`)
+    '422':
+      description: Imagem ausente, tipo MIME inválido ou tamanho excedido

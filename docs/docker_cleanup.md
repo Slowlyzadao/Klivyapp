@@ -12,6 +12,12 @@ A cada **~5 builds novas**, ou sempre que o Docker Desktop estiver consumindo mu
 
 ### Passo a passo
 
+> **Setup inicial (uma vez só):** se for o primeiro uso após `clone` ou em WSL, dê permissão de execução nos scripts:
+> ```bash
+> chmod +x bin/*.sh
+> ```
+> Sem isso, `bin/cleanup-prod-images.sh` retorna `Permission denied`.
+
 **1. Abre o terminal WSL no projeto:**
 
 ```bash

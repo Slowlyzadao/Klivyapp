@@ -1,0 +1,29 @@
+get:
+  tags:
+    - Exames e Mídias
+  summary: Comparar duas mídias lado a lado (slider before/after)
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - name: left_id
+      in: query
+      required: true
+      schema: { type: integer }
+    - name: right_id
+      in: query
+      required: true
+      schema: { type: integer }
+  responses:
+    '200':
+      description: Par de URLs assinadas
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              left:
+                $ref: '../definitions/ExamMedia.yml'
+              right:
+                $ref: '../definitions/ExamMedia.yml'
+    '404':
+      description: Uma ou mais imagens não encontradas

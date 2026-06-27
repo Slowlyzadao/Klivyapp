@@ -1,6 +1,14 @@
 <script setup>
+// FE-16/17 + ARCH-23 (auditoria 2026-05-19): strings PT-BR migradas pra
+// `INTERNAL_CHAT.ATTACHMENT_BUBBLE.*` via i18n. `formatLightboxTime` usa
+// `useI18n()` em JS pra montar "Hoje às {time}" / "Ontem às {time}" /
+// "{date} às {time}" — formatação numérica (hour/minute, day/month/year)
+// segue com API nativa do browser (`toLocaleTimeString`/`toLocaleDateString`).
 import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
+// FE-6: Tooltip moderno em vez de title="..." nativo.
+import Tooltip from '@plugins/beclinic_core/frontend/components/Tooltip.vue';
 import AudioMessage from './AudioMessage.vue';
 
 const props = defineProps({
@@ -9,6 +17,8 @@ const props = defineProps({
   sender: { type: Object, default: () => ({}) },
   messageCreatedAt: { type: String, default: null },
 });
+
+const { t } = useI18n();
 
 const lightbox = ref(null); // { url, name } | null
 const videoLightbox = ref(null); // { url, name } | null
@@ -47,9 +57,18 @@ const formatLightboxTime = ts => {
   const yest = new Date(today);
   yest.setDate(yest.getDate() - 1);
   const time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  if (d.toDateString() === today.toDateString()) return `Hoje às ${time}`;
-  if (d.toDateString() === yest.toDateString()) return `Ontem às ${time}`;
-  return `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} às ${time}`;
+  if (d.toDateString() === today.toDateString()) {
+    return t('INTERNAL_CHAT.ATTACHMENT_BUBBLE.DATE_TODAY', { time });
+  }
+  if (d.toDateString() === yest.toDateString()) {
+    return t('INTERNAL_CHAT.ATTACHMENT_BUBBLE.DATE_YESTERDAY', { time });
+  }
+  const date = d.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+  return t('INTERNAL_CHAT.ATTACHMENT_BUBBLE.DATE_DEFAULT', { date, time });
 };
 
 // thumb_url usa ActiveStorage::Representation, que precisa de ImageMagick.
@@ -208,14 +227,14 @@ const formatSize = bytes => {
         <header class="flex items-center justify-between px-4 py-3 shrink-0">
           <div class="flex items-center gap-3 min-w-0">
             <Avatar
-              :name="sender.name || 'Usuário'"
+              :name="sender.name || $t('INTERNAL_CHAT.ATTACHMENT_BUBBLE.USER_FALLBACK_NAME')"
               :src="sender.avatar_url || ''"
               :size="36"
               rounded-full
             />
             <div class="min-w-0">
               <p class="text-sm font-semibold truncate" style="color: #0f172a;">
-                {{ sender.name || 'Usuário' }}
+                {{ sender.name || $t('INTERNAL_CHAT.ATTACHMENT_BUBBLE.USER_FALLBACK_NAME') }}
               </p>
               <p class="text-xs truncate" style="color: rgba(15, 23, 42, 0.65);">
                 {{ formatLightboxTime(props.messageCreatedAt) }}
@@ -223,24 +242,26 @@ const formatSize = bytes => {
             </div>
           </div>
           <div class="flex items-center gap-2 shrink-0">
-            <a
-              :href="videoLightbox.downloadUrl || videoLightbox.url"
-              :download="videoLightbox.name"
-              target="_blank"
-              rel="noopener"
-              class="ic-lightbox-btn"
-              title="Baixar"
-            >
-              <span class="i-lucide-download text-xl" />
-            </a>
-            <button
-              type="button"
-              class="ic-lightbox-btn"
-              title="Fechar"
-              @click="closeVideoLightbox"
-            >
-              <span class="i-lucide-x text-xl" />
-            </button>
+            <Tooltip :label="$t('INTERNAL_CHAT.ATTACHMENT_BUBBLE.DOWNLOAD_TOOLTIP')">
+              <a
+                :href="videoLightbox.downloadUrl || videoLightbox.url"
+                :download="videoLightbox.name"
+                target="_blank"
+                rel="noopener"
+                class="ic-lightbox-btn"
+              >
+                <span class="i-lucide-download text-xl" />
+              </a>
+            </Tooltip>
+            <Tooltip :label="$t('INTERNAL_CHAT.ATTACHMENT_BUBBLE.CLOSE_TOOLTIP')">
+              <button
+                type="button"
+                class="ic-lightbox-btn"
+                @click="closeVideoLightbox"
+              >
+                <span class="i-lucide-x text-xl" />
+              </button>
+            </Tooltip>
           </div>
         </header>
         <div

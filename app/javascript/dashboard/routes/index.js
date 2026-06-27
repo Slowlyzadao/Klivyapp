@@ -31,8 +31,7 @@ export const validateAuthenticateRoutePermission = (to, next) => {
     return next(frontendURL(`accounts/${accountId}/dashboard`));
   }
 
-  const klivyPermissions =
-    store.getters['beclinicPermissions/getPermissions'];
+  const klivyPermissions = store.getters['beclinicPermissions/getPermissions'];
   const nextRoute = validateLoggedInRoutes(
     to,
     store.getters.getCurrentUser,
@@ -54,14 +53,11 @@ export const initalizeRouter = () => {
       // RBAC navigation guard: check meta.rbac on routes
       if (to.meta?.rbac && store.getters.isLoggedIn) {
         const { module: mod, action } = to.meta.rbac;
-        const beclinicRole =
-          store.getters['beclinicPermissions/getBeclinicRole'];
         const chatwootRole = store.getters.getCurrentRole;
         const permissions = store.getters['beclinicPermissions/getPermissions'];
 
-        // Super admins (Chatwoot administrator), donos bypass all checks
-        const isBypass =
-          chatwootRole === 'administrator' || beclinicRole === 'dono';
+        // Chatwoot administrators bypass all checks
+        const isBypass = chatwootRole === 'administrator';
 
         if (!isBypass && mod && action) {
           const modulePerms = permissions?.[mod] || {};

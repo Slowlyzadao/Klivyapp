@@ -10,8 +10,9 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
+ActiveRecord::Schema[7.1].define(version: 2026_06_27_000001) do
   # These extensions should be enabled to support this database
+  enable_extension "btree_gist"
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
   enable_extension "pgcrypto"
@@ -40,51 +41,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.index ["account_id"], name: "index_account_saml_settings_on_account_id"
   end
 
-  create_table "account_transactions", force: :cascade do |t|
-    t.bigint "account_id", null: false
-    t.bigint "patient_id"
-    t.bigint "financial_category_id"
-    t.bigint "bank_account_id"
-    t.bigint "registered_by_id"
-    t.bigint "professional_id"
-    t.bigint "source_transaction_id"
-    t.bigint "recurring_expense_id"
-    t.bigint "estorno_de_id"
-    t.string "entry_type", null: false
-    t.decimal "amount", precision: 12, scale: 2, null: false
-    t.decimal "original_amount", precision: 12, scale: 2
-    t.decimal "discount_amount", precision: 12, scale: 2, default: "0.0"
-    t.string "payment_method"
-    t.string "status", default: "pendente", null: false
-    t.date "competence_date"
-    t.date "due_date"
-    t.date "received_at"
-    t.date "paid_at"
-    t.text "description"
-    t.text "notes"
-    t.string "origin"
-    t.jsonb "metadata", default: {}
-    t.datetime "deleted_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.string "payment_source"
-    t.index ["account_id", "competence_date"], name: "idx_acct_txns_account_competence"
-    t.index ["account_id", "entry_type", "status"], name: "idx_acct_txns_account_type_status"
-    t.index ["account_id"], name: "index_account_transactions_on_account_id"
-    t.index ["bank_account_id"], name: "index_account_transactions_on_bank_account_id"
-    t.index ["competence_date"], name: "index_account_transactions_on_competence_date"
-    t.index ["deleted_at"], name: "index_account_transactions_on_deleted_at"
-    t.index ["due_date"], name: "index_account_transactions_on_due_date"
-    t.index ["entry_type"], name: "index_account_transactions_on_entry_type"
-    t.index ["financial_category_id"], name: "index_account_transactions_on_financial_category_id"
-    t.index ["patient_id"], name: "index_account_transactions_on_patient_id"
-    t.index ["payment_source"], name: "index_account_transactions_on_payment_source"
-    t.index ["recurring_expense_id"], name: "index_account_transactions_on_recurring_expense_id"
-    t.index ["source_transaction_id"], name: "index_account_transactions_on_source_transaction_id", unique: true
-    t.index ["status"], name: "index_account_transactions_on_status"
-    t.check_constraint "payment_source IS NULL OR (payment_source::text = ANY (ARRAY['particular'::character varying, 'convenio'::character varying, 'plano'::character varying, 'outro'::character varying]::text[]))", name: "chk_account_transactions_payment_source"
-  end
-
   create_table "account_users", force: :cascade do |t|
     t.bigint "account_id"
     t.bigint "user_id"
@@ -98,6 +54,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.bigint "custom_role_id"
     t.bigint "agent_capacity_policy_id"
     t.bigint "klivy_role_id"
+    t.boolean "is_agenda_provider"
     t.index ["account_id", "user_id"], name: "uniq_user_id_per_account_id", unique: true
     t.index ["account_id"], name: "index_account_users_on_account_id"
     t.index ["agent_capacity_policy_id"], name: "index_account_users_on_agent_capacity_policy_id"
@@ -160,6 +117,25 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
+  create_table "agenda_audit_logs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.string "entity_type", limit: 80, null: false
+    t.bigint "entity_id", null: false
+    t.string "action", limit: 30, null: false
+    t.string "ip_address", limit: 45
+    t.string "user_agent"
+    t.jsonb "before", default: {}
+    t.jsonb "after", default: {}
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.index ["account_id", "action"], name: "index_agenda_audit_logs_on_account_id_and_action"
+    t.index ["account_id", "created_at"], name: "index_agenda_audit_logs_on_account_id_and_created"
+    t.index ["account_id", "entity_type", "entity_id"], name: "idx_agenda_audit_logs_on_entity"
+    t.index ["account_id", "user_id", "created_at"], name: "idx_agenda_audit_logs_chronological"
+    t.index ["account_id"], name: "index_agenda_audit_logs_on_account_id"
+  end
+
   create_table "agenda_categories", force: :cascade do |t|
     t.string "name", null: false
     t.string "color", default: "#3b82f6", null: false
@@ -202,12 +178,22 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.datetime "updated_at", null: false
     t.bigint "category_id"
     t.string "source", default: "manual", null: false
+    t.datetime "deleted_at"
+    t.bigint "deleted_by_id"
+    t.string "deletion_reason"
+    t.text "deletion_note"
+    t.bigint "agenda_service_id"
+    t.index "((custom_attributes ->> 'patient_id'::text))", name: "index_agenda_events_on_patient_id_in_custom_attrs", where: "(((custom_attributes ->> 'patient_id'::text) IS NOT NULL) AND ((custom_attributes ->> 'patient_id'::text) <> ''::text))"
     t.index ["account_id", "source"], name: "index_agenda_events_on_account_and_source"
     t.index ["account_id", "starts_at"], name: "index_agenda_events_on_account_and_starts_at"
+    t.index ["account_id", "user_id", "starts_at"], name: "index_agenda_events_kept_on_account_user_starts_at", where: "(deleted_at IS NULL)"
     t.index ["account_id", "user_id", "starts_at"], name: "index_agenda_events_on_account_user_starts_at"
     t.index ["account_id"], name: "index_agenda_events_on_account_id"
+    t.index ["agenda_service_id"], name: "index_agenda_events_on_agenda_service_id"
     t.index ["category_id"], name: "index_agenda_events_on_category_id"
     t.index ["contact_id"], name: "index_agenda_events_on_contact_id"
+    t.index ["deleted_at"], name: "index_agenda_events_on_deleted_at"
+    t.index ["deleted_by_id"], name: "index_agenda_events_on_deleted_by_id"
     t.index ["user_id"], name: "index_agenda_events_on_user_id"
   end
 
@@ -275,7 +261,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
   create_table "agenda_services", force: :cascade do |t|
     t.string "name", null: false
     t.integer "duration_minutes", default: 60, null: false
-    t.decimal "price", precision: 10, scale: 2, default: "0.0"
     t.boolean "requires_room", default: false, null: false
     t.string "color", default: "#3b82f6"
     t.integer "position", default: 0
@@ -283,9 +268,16 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "default_category_id"
+    t.datetime "deleted_at"
+    t.uuid "uuid", default: -> { "gen_random_uuid()" }
+    t.string "external_id", limit: 100
+    t.index "account_id, lower(btrim((name)::text))", name: "uniq_agenda_services_account_lower_btrim_name", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["account_id", "deleted_at"], name: "index_agenda_services_on_account_id_and_deleted_at"
+    t.index ["account_id", "external_id"], name: "uniq_agenda_services_account_external_id", unique: true, where: "(external_id IS NOT NULL)"
     t.index ["account_id", "position"], name: "index_agenda_services_on_account_id_and_position"
     t.index ["account_id"], name: "index_agenda_services_on_account_id"
     t.index ["default_category_id"], name: "index_agenda_services_on_default_category_id"
+    t.index ["uuid"], name: "uniq_agenda_services_uuid", unique: true
   end
 
   create_table "agenda_settings", force: :cascade do |t|
@@ -349,6 +341,10 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.bigint "responsible_physician_id"
     t.string "responsible_physician_crm"
     t.string "responsible_physician_council"
+    t.jsonb "style_profile", default: {}, null: false
+    t.jsonb "style_profile_draft", default: {}, null: false
+    t.text "system_prompt"
+    t.jsonb "voucher_config", default: {}, null: false
     t.index ["account_id"], name: "index_ai_agent_account_settings_on_account_id", unique: true
     t.index ["persona_id"], name: "index_ai_agent_account_settings_on_persona_id"
     t.index ["responsible_physician_id"], name: "index_ai_agent_account_settings_on_responsible_physician_id"
@@ -418,6 +414,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.datetime "processed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "content"
     t.index ["account_id", "checksum"], name: "index_ai_agent_documents_on_account_id_and_checksum"
     t.index ["account_id"], name: "index_ai_agent_documents_on_account_id"
     t.index ["status"], name: "index_ai_agent_documents_on_status"
@@ -452,10 +449,12 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.bigint "message_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "step_id"
+    t.index "rule_id, contact_id, COALESCE(agenda_event_id, (0)::bigint), COALESCE(step_id, (0)::bigint), target_at", name: "idx_ai_agent_fue_unique_target_v2", unique: true
     t.index ["account_id", "status", "target_at"], name: "idx_ai_agent_follow_up_executions_status"
     t.index ["account_id"], name: "index_ai_agent_follow_up_executions_on_account_id"
-    t.index ["rule_id", "contact_id", "agenda_event_id", "target_at"], name: "idx_ai_agent_follow_up_executions_unique_target", unique: true
     t.index ["rule_id"], name: "index_ai_agent_follow_up_executions_on_rule_id"
+    t.index ["step_id"], name: "idx_ai_agent_follow_up_executions_step"
   end
 
   create_table "ai_agent_follow_up_rules", force: :cascade do |t|
@@ -466,14 +465,40 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.string "trigger_type", null: false
     t.integer "offset_hours", default: 24, null: false
     t.jsonb "status_filter", default: {}, null: false
-    t.text "context_brief", null: false
+    t.text "context_brief"
     t.integer "max_per_target", default: 1, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "offset_unit", default: "hours", null: false
     t.string "applies_to", default: "both", null: false
+    t.string "action_type", default: "generative", null: false
+    t.text "static_body"
+    t.boolean "stop_on_reply", default: false, null: false
+    t.boolean "stop_on_booking", default: false, null: false
+    t.string "cloud_template_name"
+    t.string "cloud_template_lang", default: "pt_BR", null: false
+    t.jsonb "cloud_template_params", default: [], null: false
+    t.text "persona_override"
+    t.bigint "agenda_service_id"
+    t.integer "recall_interval_value"
+    t.string "recall_interval_unit", default: "months", null: false
+    t.integer "cooldown_minutes", default: 10, null: false
     t.index ["account_id", "enabled", "trigger_type"], name: "idx_ai_agent_follow_up_rules_dispatch"
     t.index ["account_id"], name: "index_ai_agent_follow_up_rules_on_account_id"
+    t.index ["agenda_service_id"], name: "idx_ai_agent_follow_up_rules_service"
+  end
+
+  create_table "ai_agent_follow_up_steps", force: :cascade do |t|
+    t.bigint "rule_id", null: false
+    t.integer "position", default: 1, null: false
+    t.integer "offset_hours", default: 24, null: false
+    t.string "offset_unit", default: "hours", null: false
+    t.text "context_brief"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.text "static_body"
+    t.index ["rule_id", "position"], name: "idx_ai_agent_follow_up_steps_order"
+    t.index ["rule_id"], name: "index_ai_agent_follow_up_steps_on_rule_id"
   end
 
   create_table "ai_agent_global_settings", force: :cascade do |t|
@@ -582,6 +607,32 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.index ["escalated"], name: "index_ai_agent_traces_on_escalated"
     t.index ["message_id"], name: "idx_ai_agent_traces_unique_message_success", unique: true, where: "((message_id IS NOT NULL) AND (error_message IS NULL))"
     t.index ["message_id"], name: "index_ai_agent_traces_on_message_id"
+  end
+
+  create_table "ai_agent_training_conversations", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.string "clinic_sender_name"
+    t.integer "status", default: 0, null: false
+    t.text "error_message"
+    t.integer "message_count", default: 0
+    t.integer "clinic_message_count", default: 0
+    t.integer "patient_message_count", default: 0
+    t.integer "audio_total", default: 0
+    t.integer "audio_transcribed", default: 0
+    t.integer "faq_count", default: 0
+    t.jsonb "parsed_messages", default: []
+    t.datetime "processed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "faqs", default: []
+    t.datetime "published_at"
+    t.jsonb "participants", default: []
+    t.bigint "published_document_id"
+    t.datetime "archived_at"
+    t.index ["account_id", "created_at"], name: "idx_on_account_id_created_at_6658113cb0"
+    t.index ["account_id"], name: "index_ai_agent_training_conversations_on_account_id"
+    t.index ["status"], name: "index_ai_agent_training_conversations_on_status"
   end
 
   create_table "ai_agent_usage_counters", force: :cascade do |t|
@@ -746,20 +797,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.index ["account_id"], name: "index_automation_rules_on_account_id"
   end
 
-  create_table "bank_accounts", force: :cascade do |t|
-    t.bigint "account_id", null: false
-    t.string "name", null: false
-    t.string "bank_name"
-    t.string "bank_code"
-    t.string "account_type", default: "checking"
-    t.decimal "initial_balance", precision: 12, scale: 2, default: "0.0"
-    t.boolean "active", default: true
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["account_id", "active"], name: "index_bank_accounts_on_account_id_and_active"
-    t.index ["account_id"], name: "index_bank_accounts_on_account_id"
-  end
-
   create_table "beclinic_account_profiles", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.decimal "monthly_goal", precision: 15, scale: 2
@@ -767,16 +804,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.decimal "annual_goal", precision: 15, scale: 2
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "default_specialty"
+    t.jsonb "enabled_specialties", default: []
     t.index ["account_id"], name: "index_beclinic_account_profiles_on_account_id"
-  end
-
-  create_table "beclinic_team_profiles", force: :cascade do |t|
-    t.bigint "team_id", null: false
-    t.string "beclinic_role"
-    t.jsonb "permissions", default: {}
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["team_id"], name: "index_beclinic_team_profiles_on_team_id"
   end
 
   create_table "beclinic_user_profiles", force: :cascade do |t|
@@ -784,6 +814,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.string "agenda_public_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "account_id", null: false
+    t.index ["account_id"], name: "index_beclinic_user_profiles_on_account_id"
+    t.index ["user_id", "account_id"], name: "index_beclinic_user_profiles_on_user_and_account", unique: true
     t.index ["user_id"], name: "index_beclinic_user_profiles_on_user_id"
   end
 
@@ -973,45 +1006,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.index ["patient_id"], name: "index_cash_entries_on_patient_id"
     t.index ["payment_method"], name: "index_cash_entries_on_payment_method"
     t.index ["source_type", "source_id"], name: "index_cash_entries_on_source_type_and_source_id"
-  end
-
-  create_table "cash_register_entries", force: :cascade do |t|
-    t.bigint "cash_register_id", null: false
-    t.bigint "account_id", null: false
-    t.string "entry_type", null: false
-    t.decimal "amount", precision: 10, scale: 2, null: false
-    t.string "payment_method"
-    t.text "description"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_cash_register_entries_on_account_id"
-    t.index ["cash_register_id", "entry_type"], name: "idx_cash_reg_entries_register_type"
-    t.index ["cash_register_id"], name: "index_cash_register_entries_on_cash_register_id"
-  end
-
-  create_table "cash_registers", force: :cascade do |t|
-    t.bigint "account_id", null: false
-    t.bigint "operator_id", null: false
-    t.date "register_date", null: false
-    t.string "status", default: "open", null: false
-    t.decimal "opening_balance", precision: 10, scale: 2, default: "0.0", null: false
-    t.decimal "cash_in", precision: 10, scale: 2, default: "0.0", null: false
-    t.decimal "cash_out", precision: 10, scale: 2, default: "0.0", null: false
-    t.decimal "withdrawals", precision: 10, scale: 2, default: "0.0", null: false
-    t.decimal "supplements", precision: 10, scale: 2, default: "0.0", null: false
-    t.decimal "closing_balance", precision: 10, scale: 2
-    t.decimal "declared_balance", precision: 10, scale: 2
-    t.decimal "difference", precision: 10, scale: 2
-    t.text "closing_notes"
-    t.datetime "opened_at"
-    t.datetime "closed_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["account_id", "operator_id", "register_date"], name: "idx_cash_registers_account_operator_date"
-    t.index ["account_id", "register_date"], name: "idx_cash_registers_account_date"
-    t.index ["account_id", "status"], name: "idx_cash_registers_account_status"
-    t.index ["account_id"], name: "index_cash_registers_on_account_id"
-    t.index ["operator_id"], name: "index_cash_registers_on_operator_id"
   end
 
   create_table "categories", force: :cascade do |t|
@@ -1231,36 +1225,26 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "erratum_at"
+    t.bigint "erratum_by_id"
+    t.text "erratum_reason"
+    t.integer "lock_version", default: 0, null: false
+    t.bigint "proposed_evolution_id"
+    t.string "source", default: "manual", null: false
     t.index ["account_id"], name: "index_clinical_notes_on_account_id"
     t.index ["appointment_id"], name: "index_clinical_notes_on_appointment_id"
     t.index ["deleted_at"], name: "index_clinical_notes_on_deleted_at"
+    t.index ["erratum_at"], name: "index_clinical_notes_on_erratum_at"
+    t.index ["erratum_by_id"], name: "index_clinical_notes_on_erratum_by_id"
     t.index ["note_date"], name: "index_clinical_notes_on_note_date"
     t.index ["patient_id", "note_date"], name: "index_clinical_notes_on_patient_id_and_note_date"
     t.index ["patient_id", "status", "deleted_at"], name: "index_clinical_notes_on_patient_status_deleted"
     t.index ["patient_id"], name: "index_clinical_notes_on_patient_id"
     t.index ["professional_id"], name: "index_clinical_notes_on_professional_id"
+    t.index ["proposed_evolution_id"], name: "index_clinical_notes_on_proposed_evolution_id"
     t.index ["signed_by_id"], name: "index_clinical_notes_on_signed_by_id"
+    t.index ["source"], name: "index_clinical_notes_on_source"
     t.index ["status"], name: "index_clinical_notes_on_status"
-  end
-
-  create_table "commission_rules", force: :cascade do |t|
-    t.bigint "account_id", null: false
-    t.bigint "professional_id", null: false
-    t.string "commission_type", null: false
-    t.decimal "value", precision: 10, scale: 2, null: false
-    t.bigint "financial_category_id"
-    t.string "procedure_name"
-    t.string "specialty"
-    t.date "valid_from"
-    t.date "valid_until"
-    t.boolean "active", default: true
-    t.text "notes"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["account_id", "professional_id"], name: "index_commission_rules_on_account_id_and_professional_id"
-    t.index ["account_id"], name: "index_commission_rules_on_account_id"
-    t.index ["active"], name: "index_commission_rules_on_active"
-    t.index ["professional_id"], name: "index_commission_rules_on_professional_id"
   end
 
   create_table "companies", force: :cascade do |t|
@@ -1300,8 +1284,11 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.text "body"
     t.string "document_type"
     t.text "observations"
+    t.bigint "document_template_id"
+    t.text "rendered_html"
     t.index ["account_id"], name: "index_consent_records_on_account_id"
     t.index ["deleted_at"], name: "index_consent_records_on_deleted_at"
+    t.index ["document_template_id"], name: "index_consent_records_on_document_template_id"
     t.index ["expires_at"], name: "index_consent_records_on_expires_at"
     t.index ["form_template_id"], name: "index_consent_records_on_form_template_id"
     t.index ["patient_id", "status"], name: "index_consent_records_on_patient_id_and_status"
@@ -1343,6 +1330,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.string "country_code", default: ""
     t.boolean "blocked", default: false, null: false
     t.bigint "company_id"
+    t.index "((custom_attributes ->> 'cpf'::text))", name: "index_contacts_on_custom_attrs_cpf", where: "(custom_attributes ? 'cpf'::text)"
     t.index "lower((email)::text), account_id", name: "index_contacts_on_lower_email_account_id"
     t.index ["account_id", "contact_type"], name: "index_contacts_on_account_id_and_contact_type"
     t.index ["account_id", "email", "phone_number", "identifier"], name: "index_contacts_on_nonempty_fields", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"
@@ -1558,6 +1546,50 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.index ["kind"], name: "index_discount_coupons_on_kind"
   end
 
+  create_table "document_template_folders", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "parent_id"
+    t.string "name", limit: 120, null: false
+    t.integer "position", default: 0, null: false
+    t.string "color", limit: 16
+    t.string "icon", limit: 32
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "name"], name: "idx_doc_tpl_folders_unique_root_name_per_account", unique: true, where: "(parent_id IS NULL)"
+    t.index ["account_id", "parent_id", "position"], name: "idx_doc_tpl_folders_account_parent_position"
+    t.index ["account_id"], name: "index_document_template_folders_on_account_id"
+    t.index ["parent_id"], name: "index_document_template_folders_on_parent_id"
+  end
+
+  create_table "document_templates", force: :cascade do |t|
+    t.bigint "account_id"
+    t.bigint "folder_id"
+    t.bigint "created_by_user_id"
+    t.bigint "source_template_id"
+    t.string "name", limit: 200, null: false
+    t.text "description"
+    t.string "document_type", null: false
+    t.jsonb "content_json", default: {}, null: false
+    t.text "content_html_cached"
+    t.string "source", default: "clinic", null: false
+    t.string "status", default: "active", null: false
+    t.integer "version", default: 1, null: false
+    t.string "paper_size", default: "A4"
+    t.string "orientation", default: "portrait"
+    t.jsonb "metadata", default: {}
+    t.datetime "archived_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "document_type", "status"], name: "idx_doc_tpls_account_type_status"
+    t.index ["account_id", "folder_id"], name: "idx_doc_tpls_account_folder"
+    t.index ["account_id"], name: "index_document_templates_on_account_id"
+    t.index ["archived_at"], name: "index_document_templates_on_archived_at"
+    t.index ["created_by_user_id"], name: "index_document_templates_on_created_by_user_id"
+    t.index ["folder_id"], name: "index_document_templates_on_folder_id"
+    t.index ["source", "document_type"], name: "idx_doc_tpls_klivy_library", where: "(account_id IS NULL)"
+    t.index ["source_template_id"], name: "index_document_templates_on_source_template_id"
+  end
+
   create_table "documents", force: :cascade do |t|
     t.bigint "patient_id", null: false
     t.bigint "account_id", null: false
@@ -1578,12 +1610,17 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "document_template_id"
+    t.text "rendered_html"
+    t.string "pdf_hash", limit: 64
     t.index ["account_id"], name: "index_documents_on_account_id"
     t.index ["deleted_at"], name: "index_documents_on_deleted_at"
+    t.index ["document_template_id"], name: "index_documents_on_document_template_id"
     t.index ["document_type"], name: "index_documents_on_document_type"
     t.index ["form_template_id"], name: "index_documents_on_form_template_id"
     t.index ["patient_id", "document_type"], name: "index_documents_on_patient_id_and_document_type"
     t.index ["patient_id"], name: "index_documents_on_patient_id"
+    t.index ["pdf_hash"], name: "index_documents_on_pdf_hash"
     t.index ["status"], name: "index_documents_on_status"
   end
 
@@ -1639,49 +1676,920 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.index ["session_log_id"], name: "index_exam_medias_on_session_log_id"
   end
 
-  create_table "financial_categories", force: :cascade do |t|
+  create_table "financial_agent_profiles", force: :cascade do |t|
     t.bigint "account_id", null: false
-    t.string "name", null: false
-    t.string "category_type", null: false
-    t.string "cost_type"
-    t.bigint "parent_id"
-    t.string "color", default: "#64748b"
-    t.string "icon", default: "i-lucide-tag"
-    t.boolean "is_default", default: false
-    t.integer "position", default: 0
+    t.bigint "user_id", null: false
+    t.text "cpf"
+    t.string "agent_category", limit: 20, null: false
+    t.string "bond_type", limit: 10, null: false
+    t.date "entry_date", null: false
+    t.boolean "commissionable", default: false, null: false
+    t.string "cro", limit: 40
+    t.string "specialties", limit: 80, array: true
+    t.string "bank_name", limit: 120
+    t.string "bank_agency", limit: 20
+    t.string "bank_account_number", limit: 40
+    t.string "pix_key", limit: 120
+    t.string "status", limit: 16, default: "active", null: false
+    t.text "notes"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.integer "lock_version", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id", "category_type"], name: "index_financial_categories_on_account_id_and_category_type"
-    t.index ["account_id"], name: "index_financial_categories_on_account_id"
-    t.index ["category_type"], name: "index_financial_categories_on_category_type"
-    t.index ["parent_id"], name: "index_financial_categories_on_parent_id"
+    t.index ["account_id", "agent_category"], name: "idx_agent_profiles_category", where: "(deleted_at IS NULL)"
+    t.index ["account_id", "commissionable"], name: "idx_agent_profiles_commissionable", where: "((deleted_at IS NULL) AND (commissionable = true))"
+    t.index ["account_id", "user_id"], name: "idx_uniq_agent_profile_per_user", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["account_id"], name: "index_financial_agent_profiles_on_account_id"
+    t.check_constraint "agent_category::text <> 'administrador'::text OR commissionable = false", name: "chk_agent_profiles_admin_not_commissionable"
+    t.check_constraint "agent_category::text <> 'profissional'::text OR cro IS NOT NULL", name: "chk_agent_profiles_profissional_has_cro"
+    t.check_constraint "agent_category::text = ANY (ARRAY['profissional'::character varying, 'operacional'::character varying, 'comercial'::character varying, 'administrador'::character varying]::text[])", name: "chk_agent_profiles_category"
+    t.check_constraint "bond_type::text = ANY (ARRAY['PJ'::character varying, 'CLT'::character varying, 'Socio'::character varying]::text[])", name: "chk_agent_profiles_bond_type"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]::text[])", name: "chk_agent_profiles_status"
   end
 
-  create_table "financial_estimates", force: :cascade do |t|
+  create_table "financial_audit_logs", force: :cascade do |t|
     t.bigint "account_id", null: false
-    t.bigint "patient_id", null: false
-    t.bigint "treatment_plan_id"
-    t.bigint "generated_by_id"
-    t.string "status", default: "rascunho", null: false
-    t.decimal "subtotal", precision: 10, scale: 2, default: "0.0"
-    t.decimal "discount_amount", precision: 10, scale: 2, default: "0.0"
-    t.decimal "total", precision: 10, scale: 2, default: "0.0"
-    t.string "discount_type"
-    t.decimal "discount_value", precision: 10, scale: 2, default: "0.0"
-    t.integer "installments_count", default: 1
-    t.string "payment_method"
-    t.text "notes"
-    t.date "valid_until"
-    t.datetime "approved_at"
-    t.datetime "sent_at"
+    t.bigint "user_id"
+    t.string "entity_type", limit: 80, null: false
+    t.bigint "entity_id", null: false
+    t.string "action", limit: 30, null: false
+    t.string "ip_address", limit: 45
+    t.string "user_agent"
+    t.jsonb "before", default: {}
+    t.jsonb "after", default: {}
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.index ["account_id", "action"], name: "index_financial_audit_logs_on_account_id_and_action"
+    t.index ["account_id", "created_at"], name: "index_financial_audit_logs_on_account_id_and_created_at"
+    t.index ["account_id", "entity_type", "entity_id"], name: "idx_audit_logs_on_entity"
+    t.index ["account_id", "user_id", "created_at"], name: "idx_audit_logs_account_user_chronological"
+    t.index ["account_id"], name: "index_financial_audit_logs_on_account_id"
+  end
+
+  create_table "financial_bank_accounts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 120, null: false
+    t.string "kind", limit: 30, default: "checking", null: false
+    t.string "bank_name", limit: 120
+    t.string "bank_code", limit: 10
+    t.string "agency", limit: 20
+    t.string "account_number", limit: 30
+    t.bigint "initial_balance_cents", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.integer "card_settlement_days"
+    t.string "gateway_account_id"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_financial_estimates_on_account_id"
-    t.index ["deleted_at"], name: "index_financial_estimates_on_deleted_at"
-    t.index ["patient_id"], name: "index_financial_estimates_on_patient_id"
-    t.index ["status"], name: "index_financial_estimates_on_status"
-    t.index ["treatment_plan_id"], name: "index_financial_estimates_on_treatment_plan_id"
+    t.integer "lock_version", default: 0, null: false
+    t.string "cnpj", limit: 20
+    t.string "pix_key", limit: 120
+    t.date "cut_date"
+    t.string "color", limit: 16, default: "#3b82f6", null: false
+    t.boolean "default_for_receivables", default: false, null: false
+    t.boolean "default_for_payments", default: false, null: false
+    t.index ["account_id", "kind"], name: "index_financial_bank_accounts_on_account_id_and_kind"
+    t.index ["account_id", "name"], name: "idx_uniq_bank_account_name_per_account", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["account_id"], name: "idx_uniq_bank_default_payments_per_account", unique: true, where: "((default_for_payments = true) AND (deleted_at IS NULL))"
+    t.index ["account_id"], name: "idx_uniq_bank_default_receivables_per_account", unique: true, where: "((default_for_receivables = true) AND (deleted_at IS NULL))"
+    t.index ["account_id"], name: "index_financial_bank_accounts_on_account_id"
+    t.index ["deleted_at"], name: "index_financial_bank_accounts_on_deleted_at"
+    t.check_constraint "initial_balance_cents >= 0", name: "chk_bank_initial_balance_nonneg"
+  end
+
+  create_table "financial_budget_items", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "financial_budget_id", null: false
+    t.bigint "treatment_item_id"
+    t.string "description", limit: 240, null: false
+    t.string "procedure_code", limit: 40
+    t.integer "quantity", default: 1, null: false
+    t.bigint "unit_price_cents", default: 0, null: false
+    t.bigint "discount_cents", default: 0, null: false
+    t.bigint "total_cents", default: 0, null: false
+    t.bigint "professional_id"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.index ["account_id"], name: "index_financial_budget_items_on_account_id"
+    t.index ["financial_budget_id"], name: "idx_budget_items_on_budget"
+    t.index ["treatment_item_id"], name: "index_financial_budget_items_on_treatment_item_id"
+  end
+
+  create_table "financial_budgets", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "patient_id", null: false
+    t.bigint "professional_id"
+    t.bigint "treatment_plan_id"
+    t.string "external_id", limit: 60
+    t.string "origin", limit: 30, default: "orcamento", null: false
+    t.string "status", limit: 20, default: "rascunho", null: false
+    t.bigint "subtotal_cents", default: 0, null: false
+    t.bigint "discount_cents", default: 0, null: false
+    t.string "discount_kind", limit: 16
+    t.integer "discount_basis_points"
+    t.bigint "total_cents", default: 0, null: false
+    t.integer "installments_count", default: 1, null: false
+    t.string "payment_method", limit: 30
+    t.text "notes"
+    t.date "valid_until"
+    t.datetime "sent_at"
+    t.datetime "approved_at"
+    t.bigint "approved_by_id"
+    t.datetime "canceled_at"
+    t.bigint "canceled_by_id"
+    t.text "cancel_reason"
+    t.jsonb "metadata", default: {}
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.index ["account_id", "external_id"], name: "idx_uniq_budget_external_id", unique: true, where: "(external_id IS NOT NULL)"
+    t.index ["account_id", "patient_id"], name: "index_financial_budgets_on_account_id_and_patient_id"
+    t.index ["account_id", "status"], name: "index_financial_budgets_on_account_id_and_status"
+    t.index ["account_id"], name: "index_financial_budgets_on_account_id"
+    t.index ["deleted_at"], name: "index_financial_budgets_on_deleted_at"
+    t.index ["professional_id"], name: "index_financial_budgets_on_professional_id"
+    t.index ["treatment_plan_id"], name: "index_financial_budgets_on_treatment_plan_id"
+    t.check_constraint "discount_cents >= 0", name: "chk_budget_discount_nonneg"
+    t.check_constraint "subtotal_cents >= 0", name: "chk_budget_subtotal_nonneg"
+    t.check_constraint "total_cents >= 0", name: "chk_budget_total_nonneg"
+  end
+
+  create_table "financial_cash_movements", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "financial_cash_register_id", null: false
+    t.bigint "financial_bank_account_id"
+    t.string "kind", limit: 20, null: false
+    t.bigint "amount_cents", null: false
+    t.bigint "financial_entry_in_id"
+    t.bigint "financial_entry_out_id"
+    t.text "notes"
+    t.datetime "occurred_at", null: false
+    t.bigint "registered_by_id"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.index ["account_id", "kind"], name: "index_financial_cash_movements_on_account_id_and_kind"
+    t.index ["account_id"], name: "index_financial_cash_movements_on_account_id"
+    t.index ["deleted_at"], name: "index_financial_cash_movements_on_deleted_at"
+    t.index ["financial_cash_register_id"], name: "idx_cash_movements_on_register"
+  end
+
+  create_table "financial_cash_registers", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "financial_bank_account_id", null: false
+    t.bigint "operator_id", null: false
+    t.date "session_date", null: false
+    t.string "status", limit: 16, default: "open", null: false
+    t.bigint "opening_balance_cents", default: 0, null: false
+    t.bigint "expected_balance_cents"
+    t.bigint "counted_balance_cents"
+    t.bigint "difference_cents", default: 0
+    t.text "opening_note"
+    t.text "closing_note"
+    t.text "reopen_reason"
+    t.datetime "opened_at", null: false
+    t.datetime "closed_at"
+    t.bigint "closed_by_id"
+    t.datetime "reopened_at"
+    t.bigint "reopened_by_id"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.index ["account_id", "financial_bank_account_id", "session_date"], name: "idx_uniq_open_cash_register_per_day", unique: true, where: "(((status)::text = 'open'::text) AND (deleted_at IS NULL))"
+    t.index ["account_id", "status", "session_date"], name: "idx_cash_registers_account_status_date"
+    t.index ["account_id"], name: "index_financial_cash_registers_on_account_id"
+    t.index ["deleted_at"], name: "index_financial_cash_registers_on_deleted_at"
+    t.index ["operator_id"], name: "index_financial_cash_registers_on_operator_id"
+    t.check_constraint "opening_balance_cents >= 0", name: "chk_cash_opening_nonneg"
+  end
+
+  create_table "financial_commission_entries", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "professional_id", null: false
+    t.bigint "financial_installment_id"
+    t.bigint "financial_commission_rule_id"
+    t.bigint "financial_payment_receipt_id"
+    t.string "status", limit: 20, default: "provisionada", null: false
+    t.bigint "base_amount_cents", null: false
+    t.bigint "mdr_deduction_cents", default: 0, null: false
+    t.bigint "lab_deduction_cents", default: 0, null: false
+    t.bigint "calc_base_cents", null: false
+    t.integer "percent_basis_points"
+    t.bigint "commission_amount_cents", null: false
+    t.date "competence_date", null: false
+    t.date "paid_at"
+    t.bigint "paid_by_id"
+    t.bigint "financial_expense_id"
+    t.bigint "reverses_entry_id"
+    t.text "notes"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.jsonb "rule_snapshot", default: {}, null: false
+    t.datetime "triggered_at", precision: nil, null: false
+    t.bigint "reverses_commission_entry_id"
+    t.datetime "approved_at", precision: nil
+    t.bigint "approved_by_id"
+    t.bigint "financial_budget_id"
+    t.index ["account_id", "financial_installment_id", "financial_commission_rule_id", "professional_id"], name: "idx_uniq_commission_entry_per_rule_inst_prof", unique: true, where: "((financial_installment_id IS NOT NULL) AND (deleted_at IS NULL) AND ((status)::text <> 'estornada'::text) AND (reverses_commission_entry_id IS NULL))"
+    t.index ["account_id", "professional_id"], name: "idx_commission_entries_on_professional"
+    t.index ["account_id", "status"], name: "index_financial_commission_entries_on_account_id_and_status"
+    t.index ["account_id"], name: "index_financial_commission_entries_on_account_id"
+    t.index ["deleted_at"], name: "index_financial_commission_entries_on_deleted_at"
+    t.index ["financial_budget_id"], name: "index_financial_commission_entries_on_financial_budget_id", where: "(financial_budget_id IS NOT NULL)"
+    t.index ["financial_installment_id"], name: "idx_commission_entries_on_installment"
+    t.index ["financial_payment_receipt_id"], name: "idx_commission_entries_on_receipt"
+    t.index ["reverses_commission_entry_id"], name: "idx_commission_entries_reverses", where: "(reverses_commission_entry_id IS NOT NULL)"
+    t.check_constraint "base_amount_cents >= 0", name: "chk_commission_base_nonneg"
+    t.check_constraint "mdr_deduction_cents >= 0", name: "chk_commission_mdr_nonneg"
+  end
+
+  create_table "financial_commission_rules", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "professional_id", null: false
+    t.bigint "financial_dre_category_id"
+    t.string "kind", limit: 40, null: false
+    t.string "base", limit: 30, default: "recebido", null: false
+    t.integer "percent_basis_points"
+    t.bigint "fixed_amount_cents"
+    t.string "procedure_name", limit: 200
+    t.string "specialty", limit: 80
+    t.boolean "deduct_mdr", default: false, null: false
+    t.boolean "deduct_lab", default: false, null: false
+    t.date "valid_from", null: false
+    t.date "valid_until"
+    t.boolean "active", default: true, null: false
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.string "name", limit: 120
+    t.string "role", limit: 20
+    t.string "trigger_event", limit: 30, default: "pagamento_confirmado", null: false
+    t.string "scope", limit: 20, default: "todos", null: false
+    t.string "pay_when", limit: 30, default: "fechamento_mes", null: false
+    t.index ["account_id", "professional_id"], name: "idx_commission_rules_account_professional"
+    t.index ["account_id", "role"], name: "idx_commission_rules_role"
+    t.index ["account_id", "trigger_event"], name: "idx_commission_rules_trigger"
+    t.index ["account_id"], name: "index_financial_commission_rules_on_account_id"
+    t.index ["deleted_at"], name: "index_financial_commission_rules_on_deleted_at"
+    t.index ["professional_id", "valid_from", "valid_until"], name: "idx_commission_rules_validity"
+    t.check_constraint "pay_when::text = ANY (ARRAY['fechamento_mes'::character varying, 'imediato'::character varying, 'no_recebimento'::character varying]::text[])", name: "chk_commission_rules_pay_when"
+    t.check_constraint "role IS NULL OR (role::text = ANY (ARRAY['DR'::character varying, 'SDR'::character varying, 'Comercial'::character varying]::text[]))", name: "chk_commission_rules_role"
+    t.check_constraint "scope::text = ANY (ARRAY['todos'::character varying, 'por_procedimento'::character varying, 'por_especialidade'::character varying]::text[])", name: "chk_commission_rules_scope"
+    t.check_constraint "trigger_event::text = ANY (ARRAY['paciente_comparece'::character varying, 'orcamento_aceito'::character varying, 'profissional_realizou'::character varying, 'pagamento_confirmado'::character varying]::text[])", name: "chk_commission_rules_trigger"
+  end
+
+  create_table "financial_dre_categories", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 120, null: false
+    t.string "kind", limit: 30, null: false
+    t.bigint "parent_id"
+    t.string "color", limit: 16, default: "#64748b"
+    t.string "icon", limit: 60, default: "i-lucide-tag"
+    t.boolean "is_default", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.integer "position", default: 0, null: false
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.string "path", limit: 512
+    t.integer "level", default: 1, null: false
+    t.boolean "system_default", default: false, null: false
+    t.string "code", limit: 32
+    t.index ["account_id", "kind"], name: "index_financial_dre_categories_on_account_id_and_kind"
+    t.index ["account_id", "name", "kind"], name: "idx_uniq_dre_category_per_account", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["account_id", "path"], name: "idx_uniq_dre_categories_account_path", unique: true, where: "((deleted_at IS NULL) AND (path IS NOT NULL))"
+    t.index ["account_id"], name: "index_financial_dre_categories_on_account_id"
+    t.index ["deleted_at"], name: "index_financial_dre_categories_on_deleted_at"
+    t.index ["parent_id"], name: "index_financial_dre_categories_on_parent_id"
+    t.check_constraint "level >= 1 AND level <= 4", name: "chk_dre_categories_level_range"
+  end
+
+  create_table "financial_entries", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "financial_bank_account_id", null: false
+    t.bigint "financial_dre_category_id"
+    t.bigint "patient_id"
+    t.bigint "professional_id"
+    t.string "direction", limit: 10, null: false
+    t.string "kind", limit: 30, null: false
+    t.bigint "amount_cents", null: false
+    t.string "payment_method", limit: 30
+    t.date "competence_date", null: false
+    t.date "cash_date", null: false
+    t.string "description", limit: 240, null: false
+    t.string "source_type", limit: 60
+    t.bigint "source_id"
+    t.bigint "transfer_pair_id"
+    t.bigint "reverses_entry_id"
+    t.boolean "affects_dre", default: true, null: false
+    t.boolean "affects_cashflow", default: true, null: false
+    t.bigint "cash_register_id"
+    t.jsonb "metadata", default: {}
+    t.bigint "registered_by_id"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.index ["account_id", "cash_date"], name: "idx_entries_account_cash_date"
+    t.index ["account_id", "competence_date", "affects_dre"], name: "idx_entries_account_competence_dre"
+    t.index ["account_id", "direction"], name: "index_financial_entries_on_account_id_and_direction"
+    t.index ["account_id"], name: "index_financial_entries_on_account_id"
+    t.index ["cash_register_id"], name: "index_financial_entries_on_cash_register_id", where: "(cash_register_id IS NOT NULL)"
+    t.index ["deleted_at"], name: "index_financial_entries_on_deleted_at"
+    t.index ["financial_bank_account_id"], name: "idx_entries_on_bank_account"
+    t.index ["financial_dre_category_id"], name: "idx_entries_on_category"
+    t.index ["patient_id"], name: "index_financial_entries_on_patient_id"
+    t.index ["professional_id"], name: "index_financial_entries_on_professional_id"
+    t.index ["reverses_entry_id"], name: "index_financial_entries_on_reverses_entry_id", where: "(reverses_entry_id IS NOT NULL)"
+    t.index ["source_type", "source_id"], name: "index_financial_entries_on_source_type_and_source_id"
+    t.index ["transfer_pair_id"], name: "index_financial_entries_on_transfer_pair_id", where: "(transfer_pair_id IS NOT NULL)"
+    t.check_constraint "amount_cents > 0", name: "chk_entry_amount_pos"
+  end
+
+  create_table "financial_expenses", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "financial_dre_category_id", null: false
+    t.bigint "financial_bank_account_id"
+    t.bigint "financial_recurring_expense_id"
+    t.bigint "financial_commission_entry_id"
+    t.bigint "supplier_id"
+    t.string "supplier_name", limit: 200
+    t.string "description", limit: 240, null: false
+    t.string "status", limit: 20, default: "pendente", null: false
+    t.bigint "amount_cents", null: false
+    t.bigint "paid_amount_cents", default: 0, null: false
+    t.string "payment_method", limit: 30
+    t.date "competence_date", null: false
+    t.date "due_date", null: false
+    t.date "paid_at"
+    t.bigint "installments_count", default: 1
+    t.bigint "installment_number", default: 1
+    t.bigint "parent_expense_id"
+    t.string "external_id", limit: 60
+    t.text "notes"
+    t.jsonb "metadata", default: {}
+    t.string "gateway", limit: 30, default: "manual"
+    t.string "gateway_id", limit: 100
+    t.string "gateway_status", limit: 40
+    t.jsonb "gateway_metadata", default: {}
+    t.datetime "gateway_synced_at"
+    t.bigint "registered_by_id"
+    t.bigint "paid_by_id"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.bigint "payment_method_id"
+    t.bigint "interest_amount_cents", default: 0, null: false
+    t.string "interest_type", limit: 16, default: "fixed", null: false
+    t.decimal "interest_value", precision: 10, scale: 2, default: "0.0", null: false
+    t.bigint "fine_amount_cents", default: 0, null: false
+    t.string "fine_type", limit: 16, default: "fixed", null: false
+    t.decimal "fine_value", precision: 10, scale: 2, default: "0.0", null: false
+    t.bigint "discount_amount_cents", default: 0, null: false
+    t.string "discount_type", limit: 16, default: "fixed", null: false
+    t.decimal "discount_value", precision: 10, scale: 2, default: "0.0", null: false
+    t.index ["account_id", "competence_date"], name: "idx_expenses_account_competence"
+    t.index ["account_id", "external_id"], name: "idx_uniq_expense_external_id", unique: true, where: "(external_id IS NOT NULL)"
+    t.index ["account_id", "status", "due_date"], name: "idx_expenses_account_status_due"
+    t.index ["account_id", "status"], name: "index_financial_expenses_on_account_id_and_status"
+    t.index ["account_id"], name: "index_financial_expenses_on_account_id"
+    t.index ["deleted_at"], name: "index_financial_expenses_on_deleted_at"
+    t.index ["financial_commission_entry_id"], name: "idx_expenses_on_commission_entry"
+    t.index ["financial_dre_category_id"], name: "idx_expenses_on_category"
+    t.index ["financial_recurring_expense_id"], name: "idx_expenses_on_recurring"
+    t.index ["parent_expense_id"], name: "index_financial_expenses_on_parent_expense_id"
+    t.index ["payment_method_id"], name: "index_financial_expenses_on_payment_method_id"
+    t.check_constraint "amount_cents >= 0", name: "chk_expense_amount_nonneg"
+    t.check_constraint "discount_amount_cents >= 0", name: "chk_expense_discount_cents_nn"
+    t.check_constraint "discount_type::text = ANY (ARRAY['fixed'::character varying, 'percent'::character varying]::text[])", name: "chk_expense_discount_type"
+    t.check_constraint "discount_value >= 0::numeric AND (discount_type::text <> 'percent'::text OR discount_value < 100::numeric)", name: "chk_expense_discount_value_range"
+    t.check_constraint "fine_amount_cents >= 0", name: "chk_expense_fine_cents_nn"
+    t.check_constraint "fine_type::text = ANY (ARRAY['fixed'::character varying, 'percent'::character varying]::text[])", name: "chk_expense_fine_type"
+    t.check_constraint "fine_value >= 0::numeric AND (fine_type::text <> 'percent'::text OR fine_value < 100::numeric)", name: "chk_expense_fine_value_range"
+    t.check_constraint "interest_amount_cents >= 0", name: "chk_expense_interest_cents_nn"
+    t.check_constraint "interest_type::text = ANY (ARRAY['fixed'::character varying, 'percent'::character varying]::text[])", name: "chk_expense_interest_type"
+    t.check_constraint "interest_value >= 0::numeric AND (interest_type::text <> 'percent'::text OR interest_value < 100::numeric)", name: "chk_expense_interest_value_range"
+    t.check_constraint "paid_amount_cents >= 0", name: "chk_expense_paid_nonneg"
+  end
+
+  create_table "financial_gateway_settings", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "gateway", limit: 30, default: "manual", null: false
+    t.string "environment", limit: 20, default: "sandbox"
+    t.text "api_key"
+    t.text "webhook_secret"
+    t.string "default_pix_key"
+    t.string "default_customer_external_ref_strategy", limit: 30, default: "patient_id"
+    t.boolean "auto_sync_enabled", default: false, null: false
+    t.boolean "webhook_verified", default: false, null: false
+    t.datetime "webhook_last_received_at"
+    t.jsonb "metadata", default: {}
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.index ["account_id"], name: "idx_uniq_gateway_settings_per_account", unique: true
+  end
+
+  create_table "financial_gateway_webhook_events", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "gateway", limit: 30, null: false
+    t.string "event_id", limit: 100, null: false
+    t.string "event_type", limit: 80, null: false
+    t.string "status", limit: 20, default: "received", null: false
+    t.jsonb "payload", default: {}, null: false
+    t.text "processing_error"
+    t.datetime "received_at", null: false
+    t.datetime "processed_at"
+    t.integer "processing_attempts", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "index_financial_gateway_webhook_events_on_account_id_and_status"
+    t.index ["account_id"], name: "index_financial_gateway_webhook_events_on_account_id"
+    t.index ["gateway", "event_id"], name: "idx_uniq_gateway_event_id", unique: true
+    t.index ["received_at"], name: "index_financial_gateway_webhook_events_on_received_at"
+  end
+
+  create_table "financial_idempotency_keys", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "key", limit: 80, null: false
+    t.string "request_path", limit: 200, null: false
+    t.string "request_method", limit: 10, null: false
+    t.string "request_fingerprint", limit: 64, null: false
+    t.integer "response_status", null: false
+    t.jsonb "response_body", default: {}
+    t.bigint "user_id"
+    t.datetime "created_at", null: false
+    t.index ["account_id", "key"], name: "idx_uniq_idempotency_key_per_account", unique: true
+    t.index ["account_id"], name: "index_financial_idempotency_keys_on_account_id"
+    t.index ["created_at"], name: "index_financial_idempotency_keys_on_created_at"
+  end
+
+  create_table "financial_installments", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "financial_budget_id", null: false
+    t.bigint "patient_id", null: false
+    t.bigint "professional_id"
+    t.bigint "financial_dre_category_id"
+    t.integer "number", null: false
+    t.integer "total_in_series", null: false
+    t.bigint "amount_cents", null: false
+    t.bigint "received_amount_cents", default: 0, null: false
+    t.string "status", limit: 20, default: "pendente", null: false
+    t.string "payment_method", limit: 30
+    t.date "due_date", null: false
+    t.date "competence_date", null: false
+    t.date "received_at"
+    t.bigint "renegotiated_to_id"
+    t.bigint "replaces_installment_id"
+    t.text "notes"
+    t.string "gateway", limit: 30, default: "manual"
+    t.string "gateway_id", limit: 100
+    t.string "gateway_status", limit: 40
+    t.string "payment_link"
+    t.string "barcode_line"
+    t.text "pix_qr_code"
+    t.string "pix_qr_code_image_url"
+    t.jsonb "gateway_metadata", default: {}
+    t.datetime "gateway_synced_at"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "external_id", limit: 60
+    t.integer "lock_version", default: 0, null: false
+    t.bigint "payment_method_id"
+    t.bigint "payment_method_fee_id"
+    t.integer "fee_percent_basis_points"
+    t.bigint "fee_fixed_cents"
+    t.bigint "fee_amount_cents", default: 0, null: false
+    t.bigint "net_amount_cents", default: 0, null: false
+    t.date "expected_liquidation_date"
+    t.integer "card_installments"
+    t.uuid "tender_group"
+    t.boolean "auto_settled", default: false, null: false
+    t.index ["account_id", "due_date"], name: "index_financial_installments_on_account_id_and_due_date"
+    t.index ["account_id", "external_id"], name: "idx_uniq_installment_external_id", unique: true, where: "(external_id IS NOT NULL)"
+    t.index ["account_id", "status", "due_date"], name: "idx_installments_account_status_due"
+    t.index ["account_id", "status"], name: "index_financial_installments_on_account_id_and_status"
+    t.index ["account_id"], name: "index_financial_installments_on_account_id"
+    t.index ["deleted_at"], name: "index_financial_installments_on_deleted_at"
+    t.index ["financial_budget_id", "number"], name: "idx_uniq_installment_number_per_budget", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["financial_budget_id"], name: "index_financial_installments_on_financial_budget_id"
+    t.index ["gateway_id"], name: "index_financial_installments_on_gateway_id", where: "(gateway_id IS NOT NULL)"
+    t.index ["patient_id"], name: "index_financial_installments_on_patient_id"
+    t.index ["payment_method_fee_id"], name: "index_financial_installments_on_payment_method_fee_id"
+    t.index ["payment_method_id"], name: "index_financial_installments_on_payment_method_id"
+    t.index ["professional_id"], name: "index_financial_installments_on_professional_id"
+    t.index ["tender_group"], name: "idx_financial_installments_tender_group", where: "(tender_group IS NOT NULL)"
+    t.check_constraint "amount_cents > 0", name: "chk_installment_amount_pos"
+    t.check_constraint "fee_amount_cents >= 0", name: "chk_installment_fee_amount_nonneg"
+    t.check_constraint "fee_fixed_cents IS NULL OR fee_fixed_cents >= 0", name: "chk_installment_fee_fixed_nonneg"
+    t.check_constraint "fee_percent_basis_points IS NULL OR fee_percent_basis_points >= 0 AND fee_percent_basis_points <= 10000", name: "chk_installment_fee_pct_range"
+    t.check_constraint "net_amount_cents >= 0", name: "chk_installment_net_nonneg"
+    t.check_constraint "received_amount_cents >= 0", name: "chk_installment_received_nonneg"
+  end
+
+  create_table "financial_lgpd_requests", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "patient_id", null: false
+    t.string "status", limit: 20, default: "pending", null: false
+    t.text "reason"
+    t.datetime "requested_at", null: false
+    t.datetime "approved_at"
+    t.bigint "approved_by_id"
+    t.datetime "executed_at"
+    t.bigint "executed_by_id"
+    t.datetime "rejected_at"
+    t.bigint "rejected_by_id"
+    t.text "rejection_reason"
+    t.jsonb "anonymized_fields", default: {}
+    t.text "notes"
+    t.datetime "deleted_at"
+    t.bigint "deleted_by_id"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.index ["account_id"], name: "index_financial_lgpd_requests_on_account_id"
+    t.index ["deleted_at"], name: "index_financial_lgpd_requests_on_deleted_at"
+    t.index ["patient_id"], name: "index_financial_lgpd_requests_on_patient_id"
+    t.index ["status"], name: "index_financial_lgpd_requests_on_status"
+  end
+
+  create_table "financial_patient_credits", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "patient_id", null: false
+    t.bigint "amount_cents", null: false
+    t.string "origin", limit: 40, null: false
+    t.bigint "origin_id"
+    t.string "origin_type"
+    t.text "description"
+    t.bigint "registered_by_id"
+    t.datetime "occurred_at", null: false
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.index ["account_id", "patient_id", "occurred_at"], name: "idx_patient_credits_chronological"
+    t.index ["account_id", "patient_id"], name: "index_financial_patient_credits_on_account_id_and_patient_id"
+    t.index ["account_id"], name: "index_financial_patient_credits_on_account_id"
+    t.index ["deleted_at"], name: "index_financial_patient_credits_on_deleted_at"
+    t.index ["origin_type", "origin_id"], name: "index_financial_patient_credits_on_origin_type_and_origin_id"
+  end
+
+  create_table "financial_payment_method_fees", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "payment_method_id", null: false
+    t.integer "installments_count", null: false
+    t.integer "fee_percent_basis_points", default: 0, null: false
+    t.bigint "fee_fixed_cents", default: 0, null: false
+    t.integer "liquidation_days", default: 0, null: false
+    t.date "valid_from", null: false
+    t.date "valid_to"
+    t.string "status", limit: 16, default: "active", null: false
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "payment_method_id", "installments_count", "valid_from", "valid_to"], name: "idx_payment_method_fees_lookup"
+    t.index ["account_id"], name: "index_financial_payment_method_fees_on_account_id"
+    t.index ["payment_method_id"], name: "index_financial_payment_method_fees_on_payment_method_id"
+    t.check_constraint "fee_fixed_cents >= 0", name: "chk_fees_fixed_nonneg"
+    t.check_constraint "fee_percent_basis_points >= 0 AND fee_percent_basis_points <= 10000", name: "chk_fees_percent_range"
+    t.check_constraint "installments_count >= 1 AND installments_count <= 24", name: "chk_fees_installments_count"
+    t.check_constraint "liquidation_days >= 0", name: "chk_fees_liquidation_nonneg"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]::text[])", name: "chk_fees_status"
+    t.check_constraint "valid_to IS NULL OR valid_to >= valid_from", name: "chk_fees_valid_range"
+    t.exclusion_constraint "account_id WITH =, payment_method_id WITH =, installments_count WITH =, daterange(valid_from, COALESCE(valid_to, 'infinity'::date), '[]'::text) WITH &&", where: "(deleted_at IS NULL) AND ((status)::text = 'active'::text)", using: :gist, name: "no_overlapping_payment_method_fees"
+  end
+
+  create_table "financial_payment_methods", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "kind", limit: 30, null: false
+    t.string "name", limit: 120, null: false
+    t.string "provider", limit: 80
+    t.bigint "default_bank_account_id"
+    t.boolean "supports_installments", default: false, null: false
+    t.integer "max_installments", default: 1, null: false
+    t.string "status", limit: 16, default: "active", null: false
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "provider_alias", limit: 120
+    t.string "settlement_mode", limit: 20, default: "manual", null: false
+    t.index ["account_id", "kind"], name: "index_financial_payment_methods_on_account_id_and_kind"
+    t.index ["account_id", "name"], name: "idx_uniq_payment_method_account_name", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["account_id", "provider"], name: "index_financial_payment_methods_on_account_id_and_provider"
+    t.index ["account_id", "status"], name: "index_financial_payment_methods_on_account_id_and_status"
+    t.index ["account_id"], name: "index_financial_payment_methods_on_account_id"
+    t.check_constraint "kind::text = ANY (ARRAY['dinheiro'::character varying, 'pix'::character varying, 'debito'::character varying, 'credito'::character varying, 'boleto'::character varying, 'transferencia'::character varying, 'convenio'::character varying, 'parcelamento_proprio'::character varying]::text[])", name: "chk_payment_methods_kind"
+    t.check_constraint "max_installments >= 1 AND max_installments <= 24", name: "chk_payment_methods_max_installments"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]::text[])", name: "chk_payment_methods_status"
+  end
+
+  create_table "financial_payment_receipt_items", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "financial_payment_receipt_id", null: false
+    t.bigint "financial_installment_id", null: false
+    t.bigint "amount_cents", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.index ["account_id"], name: "index_financial_payment_receipt_items_on_account_id"
+    t.index ["financial_installment_id"], name: "idx_receipt_items_on_installment"
+    t.index ["financial_payment_receipt_id", "financial_installment_id"], name: "idx_uniq_receipt_installment_pair", unique: true
+    t.index ["financial_payment_receipt_id"], name: "idx_receipt_items_on_receipt"
+    t.check_constraint "amount_cents > 0", name: "chk_receipt_item_amount_pos"
+  end
+
+  create_table "financial_payment_receipts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "patient_id", null: false
+    t.bigint "financial_bank_account_id", null: false
+    t.bigint "financial_entry_id"
+    t.bigint "received_by_id"
+    t.string "receipt_number", limit: 30, null: false
+    t.string "payment_method", limit: 30, null: false
+    t.bigint "gross_amount_cents", null: false
+    t.bigint "interest_amount_cents", default: 0, null: false
+    t.bigint "fine_amount_cents", default: 0, null: false
+    t.bigint "discount_amount_cents", default: 0, null: false
+    t.bigint "credit_applied_cents", default: 0, null: false
+    t.bigint "net_amount_cents", null: false
+    t.date "received_at", null: false
+    t.text "notes"
+    t.string "pdf_status", limit: 20, default: "pending"
+    t.string "pdf_url"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "external_id", limit: 60
+    t.jsonb "metadata", default: {}, null: false
+    t.integer "lock_version", default: 0, null: false
+    t.string "interest_type", limit: 16, default: "fixed", null: false
+    t.decimal "interest_value", precision: 10, scale: 2, default: "0.0", null: false
+    t.string "fine_type", limit: 16, default: "fixed", null: false
+    t.decimal "fine_value", precision: 10, scale: 2, default: "0.0", null: false
+    t.string "discount_type", limit: 16, default: "fixed", null: false
+    t.decimal "discount_value", precision: 10, scale: 2, default: "0.0", null: false
+    t.index ["account_id", "external_id"], name: "idx_uniq_receipt_external_id", unique: true, where: "(external_id IS NOT NULL)"
+    t.index ["account_id", "patient_id"], name: "index_financial_payment_receipts_on_account_id_and_patient_id"
+    t.index ["account_id", "receipt_number"], name: "idx_uniq_receipt_number_per_account", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["account_id"], name: "index_financial_payment_receipts_on_account_id"
+    t.index ["deleted_at"], name: "index_financial_payment_receipts_on_deleted_at"
+    t.index ["financial_entry_id"], name: "index_financial_payment_receipts_on_financial_entry_id"
+    t.check_constraint "discount_type::text = ANY (ARRAY['fixed'::character varying, 'percent'::character varying]::text[])", name: "chk_receipt_discount_type"
+    t.check_constraint "discount_value >= 0::numeric AND (discount_type::text <> 'percent'::text OR discount_value < 100::numeric)", name: "chk_receipt_discount_value_range"
+    t.check_constraint "fine_type::text = ANY (ARRAY['fixed'::character varying, 'percent'::character varying]::text[])", name: "chk_receipt_fine_type"
+    t.check_constraint "fine_value >= 0::numeric AND (fine_type::text <> 'percent'::text OR fine_value < 100::numeric)", name: "chk_receipt_fine_value_range"
+    t.check_constraint "interest_type::text = ANY (ARRAY['fixed'::character varying, 'percent'::character varying]::text[])", name: "chk_receipt_interest_type"
+    t.check_constraint "interest_value >= 0::numeric AND (interest_type::text <> 'percent'::text OR interest_value < 100::numeric)", name: "chk_receipt_interest_value_range"
+  end
+
+  create_table "financial_period_closures", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.integer "period_year", null: false
+    t.integer "period_month", null: false
+    t.datetime "closed_at", null: false
+    t.bigint "closed_by_id", null: false
+    t.text "notes"
+    t.datetime "reopened_at"
+    t.bigint "reopened_by_id"
+    t.text "reopen_reason"
+    t.string "status", limit: 16, default: "closed", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "period_year", "period_month", "status"], name: "idx_uniq_period_closure_active", unique: true, where: "((status)::text = 'closed'::text)"
+    t.index ["account_id", "period_year", "period_month"], name: "idx_period_closures_lookup"
+    t.index ["account_id"], name: "index_financial_period_closures_on_account_id"
+    t.check_constraint "period_month >= 1 AND period_month <= 12", name: "chk_period_closures_month_range"
+    t.check_constraint "period_year >= 2020 AND period_year <= 2100", name: "chk_period_closures_year_range"
+    t.check_constraint "status::text <> 'reopened'::text OR reopened_at IS NOT NULL AND reopened_by_id IS NOT NULL AND reopen_reason IS NOT NULL", name: "chk_period_closures_reopen_complete"
+    t.check_constraint "status::text = ANY (ARRAY['closed'::character varying, 'reopened'::character varying]::text[])", name: "chk_period_closures_status"
+  end
+
+  create_table "financial_recurring_billings", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "patient_id", null: false
+    t.bigint "professional_id"
+    t.bigint "financial_dre_category_id"
+    t.bigint "payment_method_id", null: false
+    t.bigint "financial_bank_account_id"
+    t.string "description", limit: 200, null: false
+    t.bigint "amount_cents", null: false
+    t.string "frequency", limit: 20, default: "monthly", null: false
+    t.date "start_date", null: false
+    t.date "end_date"
+    t.date "next_generation_at", null: false
+    t.datetime "last_generated_at"
+    t.string "status", limit: 20, default: "active", null: false
+    t.text "notes"
+    t.bigint "created_by_id"
+    t.datetime "paused_at"
+    t.bigint "paused_by_id"
+    t.datetime "canceled_at"
+    t.bigint "canceled_by_id"
+    t.text "cancel_reason"
+    t.datetime "deleted_at"
+    t.bigint "deleted_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "next_generation_at"], name: "idx_rb_due_active", where: "(deleted_at IS NULL)"
+    t.index ["account_id", "status"], name: "idx_rb_account_status"
+    t.index ["deleted_at"], name: "index_financial_recurring_billings_on_deleted_at"
+    t.index ["patient_id"], name: "index_financial_recurring_billings_on_patient_id"
+    t.index ["payment_method_id"], name: "index_financial_recurring_billings_on_payment_method_id"
+  end
+
+  create_table "financial_recurring_expenses", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 200, null: false
+    t.bigint "financial_dre_category_id", null: false
+    t.bigint "financial_bank_account_id"
+    t.bigint "amount_cents", null: false
+    t.boolean "variable_amount", default: false, null: false
+    t.string "frequency", limit: 20, default: "monthly", null: false
+    t.integer "due_day", null: false
+    t.string "competence_rule", limit: 20, default: "same_month", null: false
+    t.date "start_date", null: false
+    t.date "end_date"
+    t.boolean "auto_pay", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.index ["account_id", "active"], name: "index_financial_recurring_expenses_on_account_id_and_active"
+    t.index ["account_id"], name: "index_financial_recurring_expenses_on_account_id"
+    t.index ["deleted_at"], name: "index_financial_recurring_expenses_on_deleted_at"
+    t.check_constraint "amount_cents >= 0", name: "chk_recurring_amount_nonneg"
+  end
+
+  create_table "financial_refunds", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "installment_id", null: false
+    t.bigint "refund_amount_cents", null: false
+    t.integer "refund_proportion_bps", null: false
+    t.text "reason", null: false
+    t.string "refund_method", limit: 16, null: false
+    t.bigint "bank_account_id"
+    t.date "refunded_at", null: false
+    t.bigint "reverses_payment_receipt_id"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "refunded_at"], name: "index_financial_refunds_on_account_id_and_refunded_at"
+    t.index ["account_id"], name: "index_financial_refunds_on_account_id"
+    t.index ["installment_id"], name: "index_financial_refunds_on_installment_id", where: "(deleted_at IS NULL)"
+    t.index ["reverses_payment_receipt_id"], name: "index_financial_refunds_on_reverses_payment_receipt_id", where: "(reverses_payment_receipt_id IS NOT NULL)"
+    t.check_constraint "refund_amount_cents > 0", name: "chk_refunds_amount_pos"
+    t.check_constraint "refund_method::text = 'patient_credit'::text OR bank_account_id IS NOT NULL", name: "chk_refunds_bank_required_when_real_refund"
+    t.check_constraint "refund_method::text = ANY (ARRAY['cash'::character varying, 'pix'::character varying, 'bank_transfer'::character varying, 'patient_credit'::character varying]::text[])", name: "chk_refunds_method"
+    t.check_constraint "refund_proportion_bps >= 1 AND refund_proportion_bps <= 10000", name: "chk_refunds_proportion_range"
+  end
+
+  create_table "financial_revenue_goals", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "target_cents"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.string "name", limit: 120, default: "Meta sem nome", null: false
+    t.string "kind", limit: 20, default: "total", null: false
+    t.string "metric", limit: 20, default: "currency", null: false
+    t.bigint "financial_dre_category_id"
+    t.bigint "professional_id"
+    t.date "start_date", default: -> { "CURRENT_DATE" }, null: false
+    t.date "end_date", default: -> { "CURRENT_DATE" }, null: false
+    t.bigint "min_target_cents"
+    t.bigint "stretch_target_cents"
+    t.integer "min_target_qty"
+    t.integer "target_qty"
+    t.integer "stretch_target_qty"
+    t.boolean "active", default: true, null: false
+    t.index ["account_id", "active"], name: "idx_revenue_goals_active"
+    t.index ["account_id", "kind"], name: "idx_revenue_goals_kind"
+    t.index ["account_id", "start_date", "end_date"], name: "idx_revenue_goals_period"
+    t.index ["account_id"], name: "index_financial_revenue_goals_on_account_id"
+    t.check_constraint "end_date >= start_date", name: "chk_revenue_goals_date_range"
+    t.check_constraint "kind::text = ANY (ARRAY['total'::character varying, 'por_categoria'::character varying, 'por_agente'::character varying]::text[])", name: "chk_revenue_goals_kind"
+    t.check_constraint "metric::text = ANY (ARRAY['currency'::character varying, 'count'::character varying]::text[])", name: "chk_revenue_goals_metric"
+    t.check_constraint "target_cents >= 0", name: "chk_revenue_goal_amount_nonneg"
+  end
+
+  create_table "financial_service_pricings", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "agenda_service_id", null: false
+    t.bigint "financial_dre_category_id", null: false
+    t.bigint "particular_price_cents", default: 0, null: false
+    t.bigint "convenio_price_cents"
+    t.bigint "default_commission_rule_id"
+    t.string "tuss_code", limit: 32
+    t.string "internal_code", limit: 32
+    t.text "notes"
+    t.string "status", limit: 16, default: "active", null: false
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.bigint "deleted_by_id"
+    t.datetime "deleted_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "agenda_service_id"], name: "idx_uniq_service_pricing_per_service", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["account_id", "financial_dre_category_id"], name: "idx_service_pricings_dre_category", where: "(deleted_at IS NULL)"
+    t.index ["account_id", "internal_code"], name: "idx_uniq_service_pricings_internal_code", unique: true, where: "((internal_code IS NOT NULL) AND (deleted_at IS NULL))"
+    t.index ["account_id", "tuss_code"], name: "idx_uniq_service_pricings_tuss", unique: true, where: "((tuss_code IS NOT NULL) AND (deleted_at IS NULL))"
+    t.index ["account_id"], name: "index_financial_service_pricings_on_account_id"
+    t.check_constraint "convenio_price_cents IS NULL OR convenio_price_cents >= 0", name: "chk_service_pricings_convenio_nonneg"
+    t.check_constraint "particular_price_cents >= 0", name: "chk_service_pricings_particular_nonneg"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]::text[])", name: "chk_service_pricings_status"
+  end
+
+  create_table "financial_setup_states", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "status", limit: 20, default: "pending", null: false
+    t.boolean "step_categories_done", default: false, null: false
+    t.boolean "step_bank_accounts_done", default: false, null: false
+    t.boolean "step_commission_rules_done", default: false, null: false
+    t.boolean "step_recurring_expenses_done", default: false, null: false
+    t.boolean "step_revenue_goal_done", default: false, null: false
+    t.datetime "completed_at"
+    t.bigint "completed_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.boolean "step_payment_methods_done", default: false, null: false
+    t.boolean "step_agent_profiles_done", default: false, null: false
+    t.boolean "step_services_done", default: false, null: false
+    t.index ["account_id"], name: "idx_uniq_setup_state_per_account", unique: true
   end
 
   create_table "folders", force: :cascade do |t|
@@ -1822,30 +2730,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.index ["name"], name: "index_installation_configs_on_name", unique: true
   end
 
-  create_table "installments", force: :cascade do |t|
-    t.bigint "account_id", null: false
-    t.bigint "patient_id", null: false
-    t.bigint "transaction_id", null: false
-    t.integer "number", null: false
-    t.decimal "amount", precision: 10, scale: 2, null: false
-    t.string "status", default: "pendente", null: false
-    t.date "due_date", null: false
-    t.date "paid_at"
-    t.string "payment_method"
-    t.bigint "cash_entry_id"
-    t.bigint "registered_by_id"
-    t.text "notes"
-    t.datetime "deleted_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_installments_on_account_id"
-    t.index ["cash_entry_id"], name: "index_installments_on_cash_entry_id"
-    t.index ["due_date"], name: "index_installments_on_due_date"
-    t.index ["patient_id"], name: "index_installments_on_patient_id"
-    t.index ["status"], name: "index_installments_on_status"
-    t.index ["transaction_id"], name: "index_installments_on_transaction_id"
-  end
-
   create_table "integrations_hooks", force: :cascade do |t|
     t.integer "status", default: 1
     t.integer "inbox_id"
@@ -1882,10 +2766,12 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.datetime "left_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "archived_at"
     t.index ["ai_agent_id"], name: "index_internal_chat_memberships_on_ai_agent_id"
     t.index ["room_id", "ai_agent_id"], name: "idx_unique_membership_ai_agent", unique: true, where: "(ai_agent_id IS NOT NULL)"
     t.index ["room_id", "user_id"], name: "idx_unique_membership_user", unique: true, where: "(user_id IS NOT NULL)"
     t.index ["room_id"], name: "index_internal_chat_memberships_on_room_id"
+    t.index ["user_id", "archived_at"], name: "index_internal_chat_memberships_on_user_id_and_archived_at"
     t.index ["user_id"], name: "index_internal_chat_memberships_on_user_id"
     t.check_constraint "user_id IS NOT NULL AND ai_agent_id IS NULL OR user_id IS NULL AND ai_agent_id IS NOT NULL", name: "internal_chat_memberships_member_check"
   end
@@ -2185,6 +3071,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.index ["last_activity_at"], name: "index_notifications_on_last_activity_at"
     t.index ["primary_actor_type", "primary_actor_id"], name: "uniq_primary_actor_per_account_notifications"
     t.index ["secondary_actor_type", "secondary_actor_id"], name: "uniq_secondary_actor_per_account_notifications"
+    t.index ["user_id", "account_id", "last_activity_at"], name: "idx_notifications_unread_by_activity", order: { last_activity_at: :desc }, where: "((read_at IS NULL) AND (snoozed_until IS NULL))"
     t.index ["user_id", "account_id", "snoozed_until", "read_at"], name: "idx_notifications_performance"
     t.index ["user_id"], name: "index_notifications_on_user_id"
   end
@@ -2248,6 +3135,148 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.index ["resource_type", "resource_id"], name: "index_patient_audit_logs_on_resource_type_and_resource_id"
   end
 
+  create_table "patient_portal_access_logs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "patient_id", null: false
+    t.string "action", null: false
+    t.string "resource_type"
+    t.bigint "resource_id"
+    t.string "ip"
+    t.string "user_agent"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id", "action", "created_at"], name: "idx_pp_access_logs_account_action_at"
+    t.index ["account_id"], name: "index_patient_portal_access_logs_on_account_id"
+    t.index ["patient_id", "created_at"], name: "index_patient_portal_access_logs_on_patient_id_and_created_at"
+    t.index ["patient_id"], name: "index_patient_portal_access_logs_on_patient_id"
+  end
+
+  create_table "patient_portal_consents", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "patient_id", null: false
+    t.string "term_type", null: false
+    t.string "term_version", null: false
+    t.datetime "accepted_at", null: false
+    t.datetime "revoked_at"
+    t.text "revocation_reason"
+    t.string "ip"
+    t.string "user_agent"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_patient_portal_consents_on_account_id"
+    t.index ["patient_id", "term_type", "term_version"], name: "idx_pp_consents_patient_term_version", unique: true
+    t.index ["patient_id"], name: "index_patient_portal_consents_on_patient_id"
+  end
+
+  create_table "patient_portal_notifications", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "patient_id", null: false
+    t.string "kind", null: false
+    t.string "title", null: false
+    t.text "body"
+    t.jsonb "payload", default: {}
+    t.datetime "read_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "patient_id", "created_at"], name: "idx_pp_notifications_recent"
+    t.index ["account_id"], name: "index_patient_portal_notifications_on_account_id"
+    t.index ["patient_id", "read_at"], name: "index_patient_portal_notifications_on_patient_id_and_read_at"
+    t.index ["patient_id"], name: "index_patient_portal_notifications_on_patient_id"
+  end
+
+  create_table "patient_portal_otps", force: :cascade do |t|
+    t.string "identifier", null: false
+    t.string "code_digest", null: false
+    t.string "channel", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "used_at"
+    t.integer "attempts", default: 0, null: false
+    t.string "ip"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["expires_at"], name: "index_patient_portal_otps_on_expires_at"
+    t.index ["identifier"], name: "index_patient_portal_otps_on_identifier"
+  end
+
+  create_table "patient_portal_push_subscriptions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "patient_id", null: false
+    t.string "endpoint", limit: 1024, null: false
+    t.string "p256dh_key", null: false
+    t.string "auth_key", null: false
+    t.string "user_agent", limit: 500
+    t.datetime "last_used_at"
+    t.integer "failure_count", default: 0, null: false
+    t.datetime "disabled_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_patient_portal_push_subscriptions_on_account_id"
+    t.index ["endpoint"], name: "idx_pp_push_subs_endpoint_unique", unique: true
+    t.index ["patient_id"], name: "index_patient_portal_push_subscriptions_on_patient_id"
+  end
+
+  create_table "patient_portal_sessions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "patient_id", null: false
+    t.string "jwt_jti", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "last_seen_at"
+    t.datetime "revoked_at"
+    t.string "ip"
+    t.string "user_agent"
+    t.string "device_fingerprint"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "active_patient_id", null: false
+    t.index ["account_id"], name: "index_patient_portal_sessions_on_account_id"
+    t.index ["active_patient_id"], name: "index_patient_portal_sessions_on_active_patient_id"
+    t.index ["jwt_jti"], name: "index_patient_portal_sessions_on_jwt_jti", unique: true
+    t.index ["patient_id", "expires_at"], name: "index_patient_portal_sessions_on_patient_id_and_expires_at"
+    t.index ["patient_id"], name: "index_patient_portal_sessions_on_patient_id"
+  end
+
+  create_table "patient_portal_settings", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "active_preset", default: "autonomy_guided", null: false
+    t.jsonb "scheduling", default: {}, null: false
+    t.jsonb "rescheduling", default: {}, null: false
+    t.jsonb "financial", default: {}, null: false
+    t.jsonb "documents", default: {}, null: false
+    t.jsonb "clinical", default: {}, null: false
+    t.jsonb "messaging", default: {}, null: false
+    t.jsonb "engagement", default: {}, null: false
+    t.jsonb "invite", default: {}, null: false
+    t.jsonb "business_hours", default: {}, null: false
+    t.jsonb "notification_events_enabled", default: {}, null: false
+    t.bigint "default_inbox_id"
+    t.bigint "appointment_request_inbox_id"
+    t.bigint "document_request_inbox_id"
+    t.bigint "compliance_inbox_id"
+    t.bigint "urgent_inbox_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "telemedicine_recording", default: {}, null: false
+    t.index ["account_id"], name: "index_patient_portal_settings_on_account_id", unique: true
+  end
+
+  create_table "patient_responsible_links", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "responsible_patient_id", null: false
+    t.bigint "dependent_patient_id", null: false
+    t.string "role", default: "guardian", null: false
+    t.boolean "is_primary", default: false, null: false
+    t.datetime "active_from", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "active_until"
+    t.datetime "revoked_at"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_patient_responsible_links_on_account_id"
+    t.index ["dependent_patient_id"], name: "idx_resp_links_dependent"
+    t.index ["responsible_patient_id", "dependent_patient_id"], name: "idx_resp_links_unique_pair", unique: true
+    t.index ["responsible_patient_id"], name: "idx_resp_links_responsible"
+  end
+
   create_table "patient_timeline_events", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "patient_id", null: false
@@ -2306,15 +3335,25 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.boolean "has_guardian", default: false, null: false
     t.jsonb "guardian", default: {}, null: false
     t.string "social_name"
+    t.jsonb "external_ids", default: {}, null: false
+    t.datetime "anonymized_at"
+    t.string "portal_status", default: "active", null: false
+    t.datetime "portal_suspended_until"
+    t.text "portal_suspension_reason"
+    t.datetime "last_recall_at"
     t.index ["account_id", "deleted_at"], name: "index_patients_on_account_id_and_deleted_at"
     t.index ["account_id", "name"], name: "index_patients_on_account_id_and_name"
     t.index ["account_id"], name: "index_patients_on_account_id"
+    t.index ["anonymized_at"], name: "index_patients_on_anonymized_at"
     t.index ["contact_id"], name: "index_patients_on_contact_id"
     t.index ["cpf"], name: "index_patients_on_cpf"
     t.index ["deleted_at"], name: "index_patients_on_deleted_at"
     t.index ["email"], name: "index_patients_on_email"
+    t.index ["external_ids"], name: "index_patients_on_external_ids", using: :gin
+    t.index ["needs_recall"], name: "idx_patients_needs_recall_partial", where: "(needs_recall = true)"
     t.index ["patient_status"], name: "index_patients_on_patient_status"
     t.index ["phone"], name: "index_patients_on_phone"
+    t.index ["portal_status"], name: "index_patients_on_portal_status"
     t.index ["recall_dismissed_at"], name: "idx_patients_recall_dismissed", where: "(recall_dismissed_at IS NOT NULL)"
   end
 
@@ -2333,6 +3372,89 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.string "name", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "portal_appointment_requests", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "patient_id", null: false
+    t.bigint "preferred_professional_id"
+    t.bigint "preferred_service_id"
+    t.jsonb "preferred_dates", default: []
+    t.string "preferred_period"
+    t.text "notes"
+    t.string "status", default: "pending", null: false
+    t.bigint "processed_by_id"
+    t.datetime "processed_at"
+    t.text "processed_notes"
+    t.bigint "agenda_event_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_portal_appointment_requests_on_account_id"
+    t.index ["patient_id", "status"], name: "index_portal_appointment_requests_on_patient_id_and_status"
+    t.index ["patient_id"], name: "index_portal_appointment_requests_on_patient_id"
+    t.index ["status"], name: "index_portal_appointment_requests_on_status"
+  end
+
+  create_table "portal_document_requests", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "patient_id", null: false
+    t.bigint "source_document_id"
+    t.string "document_type"
+    t.text "reason", null: false
+    t.string "status", default: "pending", null: false
+    t.bigint "processed_by_id"
+    t.datetime "processed_at"
+    t.text "processed_notes"
+    t.bigint "fulfilled_document_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_portal_document_requests_on_account_id"
+    t.index ["patient_id", "status"], name: "index_portal_document_requests_on_patient_id_and_status"
+    t.index ["patient_id"], name: "index_portal_document_requests_on_patient_id"
+    t.index ["status"], name: "index_portal_document_requests_on_status"
+  end
+
+  create_table "portal_invites", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "patient_id", null: false
+    t.bigint "invited_by_user_id"
+    t.string "channel", default: "whatsapp", null: false
+    t.string "token", null: false
+    t.datetime "sent_at"
+    t.datetime "accepted_at"
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "patient_id"], name: "index_portal_invites_on_account_id_and_patient_id"
+    t.index ["account_id"], name: "index_portal_invites_on_account_id"
+    t.index ["patient_id"], name: "index_portal_invites_on_patient_id"
+    t.index ["token"], name: "index_portal_invites_on_token", unique: true
+  end
+
+  create_table "portal_payments", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "patient_id", null: false
+    t.bigint "financial_installment_id", null: false
+    t.string "method", null: false
+    t.string "status", default: "pending", null: false
+    t.string "gateway", default: "mock", null: false
+    t.string "gateway_payment_id"
+    t.text "pix_qr_code"
+    t.text "pix_copy_paste"
+    t.string "boleto_url"
+    t.string "boleto_barcode"
+    t.integer "amount_cents", null: false
+    t.datetime "expires_at"
+    t.datetime "paid_at"
+    t.jsonb "gateway_payload", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_portal_payments_on_account_id"
+    t.index ["financial_installment_id", "status"], name: "idx_portal_payments_installment_status"
+    t.index ["financial_installment_id"], name: "index_portal_payments_on_financial_installment_id"
+    t.index ["gateway_payment_id"], name: "index_portal_payments_on_gateway_payment_id", unique: true, where: "(gateway_payment_id IS NOT NULL)"
+    t.index ["patient_id", "status"], name: "index_portal_payments_on_patient_id_and_status"
+    t.index ["patient_id"], name: "index_portal_payments_on_patient_id"
   end
 
   create_table "portals", force: :cascade do |t|
@@ -2363,30 +3485,42 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.index ["user_id"], name: "index_portals_members_on_user_id"
   end
 
-  create_table "recurring_expenses", force: :cascade do |t|
+  create_table "professional_portal_settings", force: :cascade do |t|
     t.bigint "account_id", null: false
-    t.bigint "financial_category_id"
-    t.bigint "bank_account_id"
-    t.bigint "registered_by_id"
-    t.string "description", null: false
-    t.decimal "amount", precision: 12, scale: 2, null: false
-    t.string "payment_method"
-    t.string "frequency", null: false
-    t.integer "due_day", default: 1
-    t.integer "competence_offset_days", default: 0
-    t.string "competence_rule", default: "same_month"
-    t.date "start_date", null: false
-    t.date "end_date"
-    t.date "last_generated_at"
-    t.boolean "active", default: true
-    t.boolean "auto_confirm", default: false
-    t.text "notes"
+    t.bigint "user_id", null: false
+    t.jsonb "overrides", default: {}, null: false
+    t.boolean "accepts_direct_messages", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_recurring_expenses_on_account_id"
-    t.index ["active"], name: "index_recurring_expenses_on_active"
-    t.index ["financial_category_id"], name: "index_recurring_expenses_on_financial_category_id"
-    t.index ["frequency"], name: "index_recurring_expenses_on_frequency"
+    t.index ["account_id", "user_id"], name: "idx_prof_portal_settings_account_user", unique: true
+    t.index ["account_id"], name: "index_professional_portal_settings_on_account_id"
+    t.index ["user_id"], name: "index_professional_portal_settings_on_user_id"
+  end
+
+  create_table "proposed_evolutions", force: :cascade do |t|
+    t.bigint "telemed_recording_id", null: false
+    t.bigint "clinical_note_id"
+    t.string "provider", null: false
+    t.jsonb "soap_structure", default: {}, null: false
+    t.text "raw_markdown"
+    t.jsonb "attention_points", default: [], null: false
+    t.string "status", default: "pending_review", null: false
+    t.bigint "reviewed_by_id"
+    t.datetime "reviewed_at"
+    t.text "reviewer_notes"
+    t.integer "input_tokens"
+    t.integer "output_tokens"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.text "summary"
+    t.jsonb "procedure_fields", default: {}, null: false
+    t.index ["clinical_note_id"], name: "index_proposed_evolutions_on_clinical_note_id"
+    t.index ["reviewed_by_id"], name: "index_proposed_evolutions_on_reviewed_by_id"
+    t.index ["status", "updated_at"], name: "idx_proposed_evolutions_status_updated"
+    t.index ["status"], name: "index_proposed_evolutions_on_status"
+    t.index ["telemed_recording_id", "created_at"], name: "index_proposed_evolutions_on_recording_and_created"
+    t.index ["telemed_recording_id"], name: "idx_proposed_evolutions_unique_pending_per_recording", unique: true, where: "((status)::text = 'pending_review'::text)"
+    t.index ["telemed_recording_id"], name: "index_proposed_evolutions_on_telemed_recording_id"
   end
 
   create_table "related_categories", force: :cascade do |t|
@@ -2439,15 +3573,78 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "procedure_name"
+    t.text "procedure_name"
+    t.text "complaint_of_day"
+    t.text "assessment"
+    t.text "next_consultation_details"
+    t.text "observation"
+    t.string "status", default: "draft", null: false
+    t.datetime "signed_at"
+    t.bigint "signed_by_id"
+    t.datetime "erratum_at"
+    t.bigint "erratum_by_id"
+    t.text "erratum_reason"
+    t.integer "lock_version", default: 0, null: false
+    t.bigint "form_template_id"
+    t.bigint "migrated_from_clinical_note_id"
+    t.text "patient_signature_blob"
+    t.string "patient_signature_mode"
+    t.datetime "patient_signed_at"
+    t.string "patient_signature_integrity_hash"
+    t.string "patient_signature_remote_token"
+    t.datetime "patient_signature_remote_link_sent_at"
+    t.datetime "patient_signature_remote_link_expires_at"
+    t.string "patient_signature_ip"
+    t.text "patient_signature_device_info"
+    t.bigint "proposed_evolution_id"
     t.index ["account_id"], name: "index_session_logs_on_account_id"
     t.index ["appointment_id"], name: "index_session_logs_on_appointment_id"
     t.index ["deleted_at"], name: "index_session_logs_on_deleted_at"
+    t.index ["erratum_at"], name: "index_session_logs_on_erratum_at"
+    t.index ["erratum_by_id"], name: "index_session_logs_on_erratum_by_id"
+    t.index ["form_template_id"], name: "index_session_logs_on_form_template_id"
+    t.index ["migrated_from_clinical_note_id"], name: "idx_session_logs_migrated_from_clinical_note", unique: true, where: "(migrated_from_clinical_note_id IS NOT NULL)"
+    t.index ["patient_id", "status", "deleted_at"], name: "idx_session_logs_patient_status"
     t.index ["patient_id"], name: "index_session_logs_on_patient_id"
+    t.index ["patient_signature_remote_token"], name: "idx_session_logs_patient_signature_token", unique: true, where: "(patient_signature_remote_token IS NOT NULL)"
     t.index ["performed_at"], name: "index_session_logs_on_performed_at"
     t.index ["professional_id"], name: "index_session_logs_on_professional_id"
+    t.index ["proposed_evolution_id"], name: "index_session_logs_on_proposed_evolution_id"
+    t.index ["signed_by_id"], name: "index_session_logs_on_signed_by_id"
     t.index ["treatment_item_id"], name: "index_session_logs_on_treatment_item_id"
     t.index ["treatment_plan_id"], name: "index_session_logs_on_treatment_plan_id"
+  end
+
+  create_table "signature_requests", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "signable_type", null: false
+    t.bigint "signable_id", null: false
+    t.bigint "requested_by_user_id"
+    t.string "provider", default: "mock", null: false
+    t.string "external_id", limit: 128
+    t.string "signing_url", limit: 2048
+    t.string "status", default: "pending", null: false
+    t.string "signer_name", limit: 200
+    t.string "signer_email", limit: 255
+    t.string "signer_phone", limit: 32
+    t.string "signer_cpf", limit: 14
+    t.text "message"
+    t.datetime "sent_at"
+    t.datetime "viewed_at"
+    t.datetime "signed_at"
+    t.datetime "completed_at"
+    t.datetime "cancelled_at"
+    t.datetime "expires_at"
+    t.jsonb "audit_log", default: [], null: false
+    t.string "original_pdf_hash", limit: 64
+    t.string "signed_pdf_hash", limit: 64
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "idx_signature_requests_account_status"
+    t.index ["account_id"], name: "index_signature_requests_on_account_id"
+    t.index ["provider", "external_id"], name: "idx_signature_requests_external_id_unique", unique: true, where: "(external_id IS NOT NULL)"
+    t.index ["requested_by_user_id"], name: "index_signature_requests_on_requested_by_user_id"
+    t.index ["signable_type", "signable_id"], name: "index_signature_requests_on_signable"
   end
 
   create_table "sla_events", force: :cascade do |t|
@@ -2508,6 +3705,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.datetime "created_at", precision: nil
     t.index ["context"], name: "index_taggings_on_context"
     t.index ["tag_id", "taggable_id", "taggable_type", "context", "tagger_id", "tagger_type"], name: "taggings_idx", unique: true
+    t.index ["tag_id", "taggable_type"], name: "idx_taggings_tag_type_for_label_filter", where: "((context)::text = 'labels'::text)"
     t.index ["tag_id"], name: "index_taggings_on_tag_id"
     t.index ["taggable_id", "taggable_type", "context"], name: "index_taggings_on_taggable_id_and_taggable_type_and_context"
     t.index ["taggable_id", "taggable_type", "tagger_id", "context"], name: "taggings_idy"
@@ -2541,9 +3739,59 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.bigint "account_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.boolean "is_preset", default: false, null: false
     t.index ["account_id"], name: "index_teams_on_account_id"
     t.index ["name", "account_id"], name: "index_teams_on_name_and_account_id", unique: true
+  end
+
+  create_table "telemed_consents", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "patient_id", null: false
+    t.string "term_version", default: "1.0", null: false
+    t.datetime "accepted_at", null: false
+    t.string "ip", limit: 64
+    t.string "user_agent", limit: 255
+    t.datetime "revoked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "patient_id", "term_version"], name: "idx_telemed_consents_unique_per_version", unique: true
+    t.index ["account_id"], name: "index_telemed_consents_on_account_id"
+    t.index ["patient_id"], name: "index_telemed_consents_on_patient_id"
+  end
+
+  create_table "telemed_recordings", force: :cascade do |t|
+    t.bigint "agenda_event_id", null: false
+    t.bigint "account_id", null: false
+    t.string "doctor_egress_id"
+    t.string "patient_egress_id"
+    t.string "status", default: "pending", null: false
+    t.string "doctor_audio_key"
+    t.string "patient_audio_key"
+    t.string "doctor_video_key"
+    t.string "patient_video_key"
+    t.string "composite_video_key"
+    t.integer "duration_seconds"
+    t.bigint "total_size_bytes"
+    t.text "transcript_text"
+    t.jsonb "transcript_segments"
+    t.string "transcript_provider"
+    t.text "failure_reason"
+    t.integer "retry_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "composite_egress_id"
+    t.string "composite_audio_key"
+    t.datetime "archived_at"
+    t.string "recording_kind", default: "audio", null: false
+    t.index ["account_id", "created_at"], name: "idx_telemed_recordings_active_account_created", where: "(archived_at IS NULL)"
+    t.index ["account_id", "created_at"], name: "index_telemed_recordings_on_account_id_and_created_at"
+    t.index ["account_id"], name: "index_telemed_recordings_on_account_id"
+    t.index ["agenda_event_id", "created_at"], name: "idx_telemed_recordings_event_created_desc", order: { created_at: :desc }
+    t.index ["agenda_event_id"], name: "index_telemed_recordings_on_agenda_event_id"
+    t.index ["archived_at"], name: "index_telemed_recordings_on_archived_at"
+    t.index ["composite_egress_id"], name: "index_telemed_recordings_on_composite_egress_id", unique: true, where: "(composite_egress_id IS NOT NULL)"
+    t.index ["doctor_egress_id"], name: "index_telemed_recordings_on_doctor_egress_id", unique: true, where: "(doctor_egress_id IS NOT NULL)"
+    t.index ["patient_egress_id"], name: "index_telemed_recordings_on_patient_egress_id", unique: true, where: "(patient_egress_id IS NOT NULL)"
+    t.index ["status"], name: "index_telemed_recordings_on_status"
   end
 
   create_table "transactions", force: :cascade do |t|
@@ -2593,7 +3841,11 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "discount_type"
+    t.decimal "discount_value", precision: 10, scale: 2, default: "0.0", null: false
+    t.bigint "agenda_service_id"
     t.index ["account_id"], name: "index_treatment_items_on_account_id"
+    t.index ["agenda_service_id"], name: "index_treatment_items_on_agenda_service_id"
     t.index ["deleted_at"], name: "index_treatment_items_on_deleted_at"
     t.index ["status"], name: "index_treatment_items_on_status"
     t.index ["treatment_plan_id"], name: "index_treatment_items_on_treatment_plan_id"
@@ -2614,6 +3866,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "estimated_duration"
+    t.integer "lock_version", default: 0, null: false
     t.index ["account_id"], name: "index_treatment_plans_on_account_id"
     t.index ["deleted_at"], name: "index_treatment_plans_on_deleted_at"
     t.index ["patient_id"], name: "index_treatment_plans_on_patient_id"
@@ -2706,9 +3959,11 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
   add_foreign_key "account_users", "klivy_roles"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "agenda_audit_logs", "accounts"
   add_foreign_key "agenda_categories", "accounts"
   add_foreign_key "agenda_events", "accounts"
   add_foreign_key "agenda_events", "agenda_categories", column: "category_id"
+  add_foreign_key "agenda_events", "agenda_services", on_delete: :nullify
   add_foreign_key "agenda_events", "contacts", on_delete: :nullify
   add_foreign_key "agenda_events", "users"
   add_foreign_key "agenda_notification_logs", "accounts"
@@ -2733,27 +3988,110 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
   add_foreign_key "ai_agent_follow_up_executions", "accounts"
   add_foreign_key "ai_agent_follow_up_executions", "ai_agent_follow_up_rules", column: "rule_id", on_delete: :cascade
   add_foreign_key "ai_agent_follow_up_rules", "accounts"
+  add_foreign_key "ai_agent_follow_up_steps", "ai_agent_follow_up_rules", column: "rule_id", on_delete: :cascade
   add_foreign_key "ai_agent_internal_notification_templates", "accounts"
   add_foreign_key "ai_agent_parent_chunks", "ai_agent_documents", column: "document_id"
   add_foreign_key "ai_agent_patient_memories", "accounts"
   add_foreign_key "ai_agent_traces", "accounts"
+  add_foreign_key "ai_agent_training_conversations", "accounts"
   add_foreign_key "ai_agent_usage_counters", "accounts"
   add_foreign_key "anamneses", "accounts"
   add_foreign_key "anamneses", "patients"
   add_foreign_key "beclinic_account_profiles", "accounts"
-  add_foreign_key "beclinic_team_profiles", "teams"
+  add_foreign_key "beclinic_user_profiles", "accounts"
   add_foreign_key "beclinic_user_profiles", "users"
   add_foreign_key "billing_payments", "billing_subscriptions", column: "subscription_id"
   add_foreign_key "billing_subscriptions", "accounts"
   add_foreign_key "cash_entries", "accounts"
-  add_foreign_key "cash_register_entries", "accounts"
-  add_foreign_key "cash_register_entries", "cash_registers"
-  add_foreign_key "cash_registers", "accounts"
-  add_foreign_key "cash_registers", "users", column: "operator_id"
   add_foreign_key "clinical_notes", "accounts"
   add_foreign_key "clinical_notes", "patients"
+  add_foreign_key "clinical_notes", "proposed_evolutions", on_delete: :nullify
+  add_foreign_key "consent_records", "document_templates"
   add_foreign_key "critical_alerts", "accounts"
   add_foreign_key "critical_alerts", "patients"
+  add_foreign_key "document_template_folders", "accounts"
+  add_foreign_key "document_template_folders", "document_template_folders", column: "parent_id"
+  add_foreign_key "document_templates", "accounts"
+  add_foreign_key "document_templates", "document_template_folders", column: "folder_id"
+  add_foreign_key "document_templates", "document_templates", column: "source_template_id"
+  add_foreign_key "document_templates", "users", column: "created_by_user_id"
+  add_foreign_key "documents", "document_templates"
+  add_foreign_key "financial_agent_profiles", "accounts", on_delete: :restrict
+  add_foreign_key "financial_agent_profiles", "users", on_delete: :restrict
+  add_foreign_key "financial_audit_logs", "accounts", on_delete: :restrict
+  add_foreign_key "financial_bank_accounts", "accounts", on_delete: :restrict
+  add_foreign_key "financial_budget_items", "accounts", on_delete: :restrict
+  add_foreign_key "financial_budget_items", "financial_budgets", on_delete: :restrict
+  add_foreign_key "financial_budgets", "accounts", on_delete: :restrict
+  add_foreign_key "financial_budgets", "patients", on_delete: :restrict
+  add_foreign_key "financial_cash_movements", "accounts", on_delete: :restrict
+  add_foreign_key "financial_cash_movements", "financial_cash_registers", on_delete: :restrict
+  add_foreign_key "financial_cash_registers", "accounts", on_delete: :restrict
+  add_foreign_key "financial_cash_registers", "financial_bank_accounts", on_delete: :restrict
+  add_foreign_key "financial_commission_entries", "accounts", on_delete: :restrict
+  add_foreign_key "financial_commission_entries", "financial_budgets", on_delete: :restrict
+  add_foreign_key "financial_commission_entries", "financial_commission_entries", column: "reverses_commission_entry_id", on_delete: :restrict
+  add_foreign_key "financial_commission_entries", "financial_commission_rules", on_delete: :restrict
+  add_foreign_key "financial_commission_entries", "financial_expenses", on_delete: :restrict
+  add_foreign_key "financial_commission_entries", "financial_installments", on_delete: :restrict
+  add_foreign_key "financial_commission_entries", "financial_payment_receipts", on_delete: :restrict
+  add_foreign_key "financial_commission_entries", "users", column: "approved_by_id", on_delete: :nullify
+  add_foreign_key "financial_commission_rules", "accounts", on_delete: :restrict
+  add_foreign_key "financial_dre_categories", "accounts", on_delete: :restrict
+  add_foreign_key "financial_dre_categories", "financial_dre_categories", column: "parent_id", on_delete: :restrict
+  add_foreign_key "financial_entries", "accounts", on_delete: :restrict
+  add_foreign_key "financial_entries", "financial_bank_accounts", on_delete: :restrict
+  add_foreign_key "financial_entries", "financial_cash_registers", column: "cash_register_id", on_delete: :restrict
+  add_foreign_key "financial_entries", "financial_dre_categories", on_delete: :restrict
+  add_foreign_key "financial_entries", "financial_entries", column: "reverses_entry_id", on_delete: :restrict
+  add_foreign_key "financial_entries", "financial_entries", column: "transfer_pair_id", on_delete: :restrict
+  add_foreign_key "financial_entries", "patients", on_delete: :restrict
+  add_foreign_key "financial_expenses", "accounts", on_delete: :restrict
+  add_foreign_key "financial_expenses", "financial_bank_accounts", on_delete: :restrict
+  add_foreign_key "financial_expenses", "financial_dre_categories", on_delete: :restrict
+  add_foreign_key "financial_expenses", "financial_payment_methods", column: "payment_method_id", on_delete: :restrict
+  add_foreign_key "financial_expenses", "financial_recurring_expenses", on_delete: :restrict
+  add_foreign_key "financial_gateway_settings", "accounts", on_delete: :restrict
+  add_foreign_key "financial_gateway_webhook_events", "accounts", on_delete: :restrict
+  add_foreign_key "financial_idempotency_keys", "accounts", on_delete: :restrict
+  add_foreign_key "financial_installments", "accounts", on_delete: :restrict
+  add_foreign_key "financial_installments", "financial_budgets", on_delete: :restrict
+  add_foreign_key "financial_installments", "financial_dre_categories", on_delete: :restrict
+  add_foreign_key "financial_installments", "financial_installments", column: "renegotiated_to_id", on_delete: :restrict
+  add_foreign_key "financial_installments", "financial_installments", column: "replaces_installment_id", on_delete: :restrict
+  add_foreign_key "financial_installments", "financial_payment_method_fees", column: "payment_method_fee_id", on_delete: :restrict
+  add_foreign_key "financial_installments", "financial_payment_methods", column: "payment_method_id", on_delete: :restrict
+  add_foreign_key "financial_installments", "patients", on_delete: :restrict
+  add_foreign_key "financial_lgpd_requests", "accounts", on_delete: :restrict
+  add_foreign_key "financial_lgpd_requests", "patients", on_delete: :restrict
+  add_foreign_key "financial_patient_credits", "accounts", on_delete: :restrict
+  add_foreign_key "financial_patient_credits", "patients", on_delete: :restrict
+  add_foreign_key "financial_payment_method_fees", "accounts", on_delete: :restrict
+  add_foreign_key "financial_payment_method_fees", "financial_payment_methods", column: "payment_method_id", on_delete: :restrict
+  add_foreign_key "financial_payment_methods", "accounts", on_delete: :restrict
+  add_foreign_key "financial_payment_methods", "financial_bank_accounts", column: "default_bank_account_id", on_delete: :restrict
+  add_foreign_key "financial_payment_receipt_items", "accounts", on_delete: :restrict
+  add_foreign_key "financial_payment_receipt_items", "financial_installments", on_delete: :restrict
+  add_foreign_key "financial_payment_receipt_items", "financial_payment_receipts", on_delete: :restrict
+  add_foreign_key "financial_payment_receipts", "accounts", on_delete: :restrict
+  add_foreign_key "financial_payment_receipts", "financial_bank_accounts", on_delete: :restrict
+  add_foreign_key "financial_payment_receipts", "patients", on_delete: :restrict
+  add_foreign_key "financial_period_closures", "accounts", on_delete: :restrict
+  add_foreign_key "financial_period_closures", "users", column: "closed_by_id", on_delete: :restrict
+  add_foreign_key "financial_period_closures", "users", column: "reopened_by_id", on_delete: :restrict
+  add_foreign_key "financial_recurring_expenses", "accounts", on_delete: :restrict
+  add_foreign_key "financial_recurring_expenses", "financial_bank_accounts", on_delete: :restrict
+  add_foreign_key "financial_recurring_expenses", "financial_dre_categories", on_delete: :restrict
+  add_foreign_key "financial_refunds", "accounts", on_delete: :restrict
+  add_foreign_key "financial_refunds", "financial_bank_accounts", column: "bank_account_id", on_delete: :restrict
+  add_foreign_key "financial_refunds", "financial_installments", column: "installment_id", on_delete: :restrict
+  add_foreign_key "financial_refunds", "financial_payment_receipts", column: "reverses_payment_receipt_id", on_delete: :restrict
+  add_foreign_key "financial_revenue_goals", "accounts", on_delete: :restrict
+  add_foreign_key "financial_service_pricings", "accounts", on_delete: :restrict
+  add_foreign_key "financial_service_pricings", "agenda_services", on_delete: :restrict
+  add_foreign_key "financial_service_pricings", "financial_commission_rules", column: "default_commission_rule_id", on_delete: :restrict
+  add_foreign_key "financial_service_pricings", "financial_dre_categories", on_delete: :restrict
+  add_foreign_key "financial_setup_states", "accounts", on_delete: :restrict
   add_foreign_key "form_templates", "accounts"
   add_foreign_key "inboxes", "portals"
   add_foreign_key "internal_chat_attachments", "internal_chat_messages", column: "message_id", on_delete: :cascade
@@ -2779,12 +4117,48 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_17_160001) do
   add_foreign_key "patient_appointments", "users", column: "professional_id"
   add_foreign_key "patient_audit_logs", "accounts"
   add_foreign_key "patient_audit_logs", "patients"
+  add_foreign_key "patient_portal_access_logs", "accounts"
+  add_foreign_key "patient_portal_access_logs", "patients"
+  add_foreign_key "patient_portal_consents", "accounts"
+  add_foreign_key "patient_portal_consents", "patients"
+  add_foreign_key "patient_portal_notifications", "accounts"
+  add_foreign_key "patient_portal_notifications", "patients"
+  add_foreign_key "patient_portal_push_subscriptions", "accounts"
+  add_foreign_key "patient_portal_push_subscriptions", "patients"
+  add_foreign_key "patient_portal_sessions", "accounts"
+  add_foreign_key "patient_portal_sessions", "patients"
+  add_foreign_key "patient_portal_settings", "accounts"
+  add_foreign_key "patient_responsible_links", "accounts"
+  add_foreign_key "patient_responsible_links", "patients", column: "dependent_patient_id"
+  add_foreign_key "patient_responsible_links", "patients", column: "responsible_patient_id"
   add_foreign_key "patient_timeline_events", "accounts"
   add_foreign_key "patient_timeline_events", "patients"
   add_foreign_key "patient_timeline_events", "users", column: "actor_id"
   add_foreign_key "patients", "accounts"
+  add_foreign_key "portal_appointment_requests", "accounts"
+  add_foreign_key "portal_appointment_requests", "patients"
+  add_foreign_key "portal_document_requests", "accounts"
+  add_foreign_key "portal_document_requests", "patients"
+  add_foreign_key "portal_invites", "accounts"
+  add_foreign_key "portal_invites", "patients"
+  add_foreign_key "portal_payments", "accounts"
+  add_foreign_key "portal_payments", "financial_installments"
+  add_foreign_key "portal_payments", "patients"
+  add_foreign_key "professional_portal_settings", "accounts"
+  add_foreign_key "professional_portal_settings", "users"
+  add_foreign_key "proposed_evolutions", "clinical_notes"
+  add_foreign_key "proposed_evolutions", "telemed_recordings"
+  add_foreign_key "proposed_evolutions", "users", column: "reviewed_by_id"
+  add_foreign_key "session_logs", "proposed_evolutions", on_delete: :nullify
+  add_foreign_key "signature_requests", "accounts"
+  add_foreign_key "signature_requests", "users", column: "requested_by_user_id"
+  add_foreign_key "telemed_consents", "accounts"
+  add_foreign_key "telemed_consents", "patients"
+  add_foreign_key "telemed_recordings", "accounts"
+  add_foreign_key "telemed_recordings", "agenda_events"
+  add_foreign_key "treatment_items", "agenda_services", on_delete: :nullify
   add_foreign_key "waiting_list_entries", "accounts"
-  add_foreign_key "waiting_list_entries", "contacts"
+  add_foreign_key "waiting_list_entries", "contacts", on_delete: :cascade
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).
       on("accounts").
       after(:insert).

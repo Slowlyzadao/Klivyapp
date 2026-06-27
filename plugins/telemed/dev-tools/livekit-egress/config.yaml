@@ -1,0 +1,44 @@
+# Sprint L — Config do LiveKit Egress server (dev local).
+#
+# Egress é um container/serviço que escuta o Redis e dispara gravações sob
+# demanda. Não escuta porta exposta — todo o controle vem via:
+#   1. API do LiveKit server (RPC Twirp) → escreve no Redis
+#   2. Egress consome do Redis e processa
+#
+# Em produção, o serviço sobe em container dedicado com mais recursos
+# (Chrome headless é pesado pra room_composite). Pro MVP usamos
+# `participant_egress` que só precisa de ffmpeg interno → leve.
+
+# Endereço do LiveKit server pra Egress puxar tracks.
+# Em dev: localhost — em Docker, troca pro nome do serviço.
+ws_url: ws://host.docker.internal:7880
+
+# Mesmas credenciais do LiveKit server.
+# `livekit-server --dev` usa devkey/secret.
+api_key: devkey
+api_secret: secret
+
+# Redis pra job queue (Egress lê jobs daqui).
+redis:
+  address: host.docker.internal:6379
+
+# Log level — debug ajuda em dev.
+log_level: info
+
+# 🔑 CRÍTICO: usar SDK source ao invés de Chrome headless pra RoomComposite.
+#
+# Por padrão, Egress sobe um Chrome headless que abre um template web em
+# `http://localhost:7980/` pra "ver" a sala e capturar o que renderiza.
+# Esse template precisa ser servido por um HTTP separado — em dev local,
+# NÃO temos esse servidor → Chrome carrega 404 → grava silêncio/preto.
+#
+# Com SDK source, Egress conecta direto no LiveKit como participante
+# usando o SDK Go nativo, sem precisar de browser. Funciona perfeito pra
+# audio-only (nosso caso), é muito mais leve (sem Chrome) e mais rápido.
+enable_room_composite_sdk_source: true
+
+# CPU cost: define quantos jobs rodam em paralelo. Default cobre o MVP.
+cpu_cost:
+  participant_composite: 2.0
+  participant: 1.0
+  track_egress: 0.5

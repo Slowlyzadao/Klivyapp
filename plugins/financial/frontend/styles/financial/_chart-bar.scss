@@ -1,0 +1,91 @@
+@use "../variables" as *;
+
+/* ── Bar chart (CashFlow) ─────────────────────────────────── */
+.financial-chart-container {
+  width: 100%;
+}
+
+.financial-bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.25rem;
+  height: 200px;
+  padding: 0.5rem 0;
+}
+
+.financial-bar-chart__column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.financial-bar-chart__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  flex: 1;
+  width: 100%;
+}
+
+.financial-bar {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+  transition: height 0.3s ease;
+}
+
+.financial-bar--income {
+  background: linear-gradient(180deg, $brand-success-bright, $brand-success);
+}
+
+.financial-bar--expense {
+  background: linear-gradient(180deg, #f97316, $brand-danger);
+}
+
+.financial-bar-chart__label {
+  font-size: 0.625rem;
+  color: rgb(var(--s-500));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: center;
+}
+
+/* ── Chart legend ─────────────────────────────────────────── */
+.financial-chart-legend {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 0.75rem 0 0;
+}
+
+.financial-chart-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: rgb(var(--s-600));
+}
+
+body.dark .financial-chart-legend__item {
+  color: rgb(var(--s-400));
+}
+
+.financial-chart-legend__item::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.financial-chart-legend__item--income::before {
+  background: $brand-success;
+}
+
+.financial-chart-legend__item--expense::before {
+  background: $brand-danger;
+}

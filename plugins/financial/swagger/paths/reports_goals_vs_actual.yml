@@ -1,0 +1,102 @@
+get:
+  tags:
+    - Financeiro · Relatórios
+  summary: Metas vs Realizado (Hub Relatórios)
+  description: |
+    Lista as Metas (RevenueGoal) ATIVAS que têm overlap com o período
+    solicitado, com o valor realizado calculado on-the-fly. Compara os 3 tiers
+    (Mínima / Principal / Desafio) e calcula % atingido + status. O período do
+    request é informativo (cada Meta usa seu próprio start/end). Exige role
+    GERENTE/ADMIN/AUDITOR.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: from
+      in: query
+      schema: { type: string, format: date }
+    - name: to
+      in: query
+      schema: { type: string, format: date }
+  responses:
+    '200':
+      description: Metas ativas com realizado e progresso
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              period:
+                type: object
+                properties:
+                  from: { type: string, format: date }
+                  to: { type: string, format: date }
+              summary:
+                type: object
+                properties:
+                  goals_count: { type: integer }
+                  achieved_principal_count: { type: integer }
+                  total_actual_cents: { type: integer }
+                  total_target_principal_cents: { type: integer }
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    name: { type: string }
+                    kind: { type: string, enum: [total, por_categoria, por_agente] }
+                    kind_label: { type: string }
+                    metric: { type: string, enum: [currency, quantity] }
+                    category:
+                      type: object
+                      nullable: true
+                      properties:
+                        id: { type: integer }
+                        name: { type: string }
+                    professional:
+                      type: object
+                      nullable: true
+                      properties:
+                        id: { type: integer }
+                        name: { type: string }
+                        avatar_url: { type: string, nullable: true }
+                    period:
+                      type: object
+                      properties:
+                        start_date: { type: string, format: date }
+                        end_date: { type: string, format: date }
+                    targets:
+                      type: object
+                      properties:
+                        min_cents: { type: integer }
+                        principal_cents: { type: integer }
+                        stretch_cents: { type: integer }
+                        min_qty: { type: integer }
+                        principal_qty: { type: integer }
+                        stretch_qty: { type: integer }
+                    actual:
+                      type: object
+                      description: "Inclui `value` sempre, mais `value_cents` (metric=currency) ou `value_qty` (metric=quantity)."
+                      properties:
+                        value: { type: integer }
+                        value_cents: { type: integer }
+                        value_qty: { type: integer }
+                    progress:
+                      type: object
+                      properties:
+                        percent_min: { type: number, nullable: true }
+                        percent_principal: { type: number, nullable: true }
+                        percent_stretch: { type: number, nullable: true }
+                        status:
+                          type: string
+                          enum: [sem_meta, abaixo_min, entre_min_e_principal, atingiu_principal, atingiu_desafio]
+    '403':
+      description: Sem permissão (exige GERENTE/ADMIN/AUDITOR)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string, example: forbidden }
+              required_roles:
+                type: array
+                items: { type: string }

@@ -1,0 +1,77 @@
+type: object
+description: |
+  Payload consolidado do prontuário — usado por `GET /patients/:id/summary` e
+  `GET /patients/by_contact`. Embute dados básicos do paciente + recortes
+  clínicos + último/próximo agendamento + flags de consentimentos pendentes.
+  O bloco `financial_status` (v1) foi removido em 2026-05-11; números
+  financeiros vivem em `GET /financial/v2/patient_summaries/:patient_id`.
+allOf:
+  - $ref: './Patient.yml'
+  - type: object
+    properties:
+      billing_info:
+        type: object
+        additionalProperties: true
+      contact_preferences:
+        type: object
+        additionalProperties: true
+      communication_opt_ins:
+        type: object
+        additionalProperties: true
+      lgpd_consent:
+        type: object
+        additionalProperties: true
+      contacts:
+        type: array
+        items:
+          type: object
+          additionalProperties: true
+      last_appointment:
+        type: object
+        description: Último `AgendaEvent` passado (ou objeto vazio).
+        properties:
+          id: { type: integer }
+          title: { type: string }
+          start_time: { type: string, format: date-time }
+          end_time: { type: string, format: date-time }
+          status: { type: string }
+      next_appointment:
+        type: object
+        description: Próximo `AgendaEvent` futuro.
+        properties:
+          id: { type: integer }
+          title: { type: string }
+          start_time: { type: string, format: date-time }
+          end_time: { type: string, format: date-time }
+          status: { type: string }
+      clinical_summary:
+        type: object
+        description: |
+          Extraído da `Anamnesis` finalizada mais recente. Quando o paciente
+          não tem anamnese, devolve listas vazias e flags `false`.
+        properties:
+          allergies:
+            type: array
+            items: { type: string }
+          current_medications:
+            type: array
+            items: { type: string }
+          conditions:
+            type: object
+            properties:
+              diabetes: { type: boolean }
+              hypertension: { type: boolean }
+              oncology: { type: boolean }
+              hepatitis: { type: boolean }
+              has_implants: { type: boolean }
+              bleeding_disorder: { type: boolean }
+              pregnant: { type: boolean }
+              other: { type: string, nullable: true }
+          contraindications:
+            type: array
+            items: { type: string }
+      urgent_consent_required:
+        type: boolean
+        description: True quando há consentimentos LGPD pendentes que bloqueiam atendimento.
+      pending_consents_count:
+        type: integer

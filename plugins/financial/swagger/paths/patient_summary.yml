@@ -1,0 +1,31 @@
+get:
+  tags:
+    - Financeiro · Paciente
+  summary: Summary financeiro do paciente (aba do prontuário)
+  description: |
+    Substitui `Patients::TransactionsController#financial_summary` legacy.
+    Retorna **2 versões dos números** — em BRL (decimal) pra compat e em
+    centavos (`_cents`) pra código novo. `overall_status`:
+    `inadimplente` > `em_aberto` > `em_dia`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  responses:
+    '200':
+      description: Summary
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PatientFinancialSummary.yml'
+    '403':
+      description: |
+        Sem permissão `patients.view_financial` (RBAC Klivy). Admin/super_admin
+        têm bypass. Recepção/SDR e roles sem essa key recebem 403 mesmo tendo
+        acesso ao módulo financeiro standalone (`financial.*`).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string, example: forbidden }
+              message: { type: string, example: 'Você não tem permissão para ver o financeiro do paciente.' }

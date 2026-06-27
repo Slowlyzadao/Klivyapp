@@ -1,0 +1,17 @@
+get:
+  tags:
+    - Consentimentos (LGPD)
+  summary: Consentimentos pendentes
+  description: Filtra apenas os com `status=pendente`.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+  responses:
+    '200':
+      description: Lista de pendentes
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../definitions/ConsentRecord.yml'

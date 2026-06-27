@@ -1,0 +1,29 @@
+get:
+  tags:
+    - Billing · Onboarding
+  summary: Verificar disponibilidade de email
+  description: |
+    Endpoint **público** usado pelo formulário de onboarding para mostrar
+    feedback em tempo real ao digitar. Valida formato + checa se existe
+    `User` com esse email.
+  parameters:
+    - name: email
+      in: query
+      required: true
+      schema:
+        type: string
+        format: email
+  responses:
+    '200':
+      description: Disponibilidade
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              available: { type: boolean }
+              reason:
+                type: string
+                nullable: true
+                enum: [invalid_email, email_already_registered]
+                description: "Preenchido apenas quando `available=false`."

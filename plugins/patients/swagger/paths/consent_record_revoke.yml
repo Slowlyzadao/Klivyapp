@@ -1,0 +1,20 @@
+patch:
+  tags:
+    - Consentimentos (LGPD)
+  summary: Revogar consentimento
+  description: |
+    Marca `status=revogado`. Registra audit log `delete` + timeline event
+    `consent_revoked`. Idempotente: revogar duas vezes retorna 422.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Revogado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/ConsentRecord.yml'
+    '422':
+      description: Já estava revogado

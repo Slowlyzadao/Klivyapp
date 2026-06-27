@@ -1,0 +1,225 @@
+@use "../variables" as *;
+
+/* ── Profile Banner ─────────────────────────────────── */
+.profile-banner {
+  background: rgb(var(--slate-2)) !important;
+  border: 1px solid rgb(var(--slate-4)) !important;
+}
+
+.pb-name {
+  color: rgb(var(--slate-12)) !important;
+}
+
+.pb-meta-text {
+  color: rgb(var(--slate-9)) !important;
+}
+
+.pb-meta-sep {
+  color: rgb(var(--slate-7)) !important;
+}
+
+.pb-chip {
+  background: rgb(var(--slate-3)) !important;
+  border: 1px solid rgb(var(--slate-6)) !important;
+  color: rgb(var(--slate-12)) !important;
+}
+
+.pb-chip-icon {
+  color: rgb(var(--slate-11)) !important;
+}
+
+.pb-status-dot {
+  border-color: rgb(var(--slate-2)) !important;
+}
+
+/* Profile banner Avatar */
+.pb-avatar-img {
+  border-color: rgb(var(--slate-4)) !important;
+}
+
+/* Finance badge adimplente */
+.pb-finance-adimplente {
+  background: rgba($brand-success, 0.08) !important;
+  color: $brand-success !important;
+  border-color: rgba($brand-success, 0.18) !important;
+}
+.pb-finance-inadimplente {
+  background: rgba($brand-danger, 0.08) !important;
+  color: $brand-danger !important;
+  border-color: rgba($brand-danger, 0.18) !important;
+}
+
+/* ── Profile Banner ──────────────────────────────────────── */
+.profile-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1c1c1d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  gap: 16px;
+}
+.profile-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1;
+}
+
+.pb-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.pb-avatar-img,
+.pb-avatar-placeholder {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pb-avatar-placeholder {
+  background: rgba($brand-info-bright, 0.15);
+  border: 1px solid rgba($brand-info-bright, 0.2);
+  color: $brand-info-light;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.pb-status-dot {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid #0e1016;
+}
+.pb-dot-novo { background: $brand-info-light; }
+.pb-dot-ativo { background: $brand-success-light; }
+.pb-dot-inativo { background: $brand-slate-light; }
+.pb-dot-faltoso { background: $brand-amber-strong; }
+.pb-dot-alta { background: #c084fc; }
+.pb-dot-arquivado { background: #64748b; }
+
+.pb-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.pb-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pb-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pb-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pb-meta-text {
+  font-size: 13px;
+}
+.pb-meta-sep {
+  font-size: 12px;
+}
+.pb-chip-icon {
+  flex-shrink: 0;
+}
+
+.pb-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+.pb-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+  color: #e2e8f0;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.pb-right {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+.pb-finance-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.pb-finance-crédito,
+.pb-finance-credito {
+  background: rgba($brand-info-bright, 0.08);
+  color: $brand-info-light;
+  border-color: rgba($brand-info-bright, 0.18);
+}
+.pb-finance-em.pb-finance-aberto {
+  background: rgba(251, 191, 36, 0.08);
+  color: $brand-amber-strong;
+  border-color: rgba(251, 191, 36, 0.18);
+}
+
+@media (max-width: 1280px) {
+  .hide-mobile {
+    display: none;
+  }
+}
+@media (max-width: 1024px) {
+  .profile-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    position: static;
+  }
+  .hide-mobile {
+    display: flex;
+  }
+}
+
+/* ── Status badge base (variants .badge-blue/.badge-green em record.css) ── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+

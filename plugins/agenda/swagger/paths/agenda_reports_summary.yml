@@ -1,0 +1,127 @@
+get:
+  tags:
+    - Relatórios da Agenda
+  summary: Resumo do período (KPIs, breakdown, performance por profissional)
+  description: |
+    Retorna KPIs do período + métricas do período anterior equivalente
+    (para deltas), breakdown por status, distribuição diária e performance
+    por profissional. Parâmetros `open_hour`/`close_hour`/`lunch_duration_minutes`/
+    `slot_minutes`/`open_days` vêm das settings locais da UI para alinhar o
+    cálculo de **ocupação** com o que a clínica considera dia útil.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: since
+      in: query
+      description: Início do período (parseável por `Time.zone.parse`).
+      schema:
+        type: string
+        example: "2026-05-01"
+    - name: until
+      in: query
+      description: Fim do período.
+      schema:
+        type: string
+        example: "2026-05-31"
+    - name: user_id
+      in: query
+      schema:
+        type: integer
+    - name: open_hour
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 23
+        default: 9
+    - name: close_hour
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 23
+        default: 18
+    - name: lunch_duration_minutes
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 120
+        default: 0
+    - name: slot_minutes
+      in: query
+      schema:
+        type: integer
+        minimum: 15
+        maximum: 120
+        default: 30
+    - name: open_days
+      in: query
+      description: Índices de dia (0=Dom, 6=Sáb) separados por vírgula. Default `1,2,3,4,5,6`.
+      schema:
+        type: string
+        example: "1,2,3,4,5"
+  responses:
+    '200':
+      description: Resumo do período
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              current:
+                $ref: '../definitions/AgendaReportMetrics.yml'
+              previous:
+                $ref: '../definitions/AgendaReportMetrics.yml'
+              range:
+                type: object
+                properties:
+                  from: { type: string, format: date-time }
+                  to: { type: string, format: date-time }
+              previous_range:
+                type: object
+                properties:
+                  from: { type: string, format: date-time }
+                  to: { type: string, format: date-time }
+              status_breakdown:
+                type: object
+                description: Mapa `status → count`.
+                additionalProperties:
+                  type: integer
+              daily_distribution:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date: { type: string, format: date }
+                    label: { type: string }
+                    total: { type: integer }
+                    completed: { type: integer }
+                    no_show: { type: integer }
+                    cancelled: { type: integer }
+                    confirmed: { type: integer }
+              agent_performance:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    name: { type: string }
+                    avatar_url: { type: string, nullable: true }
+                    total: { type: integer }
+                    completed: { type: integer }
+                    no_show: { type: integer }
+                    cancelled: { type: integer }
+                    completion_rate: { type: number, format: float }
+                    no_show_rate: { type: number, format: float }
+              schedule_info:
+                type: object
+                properties:
+                  open_hour: { type: integer }
+                  close_hour: { type: integer }
+                  lunch_duration_minutes: { type: integer }
+                  slot_minutes: { type: integer }
+                  work_minutes_per_day: { type: integer }
+                  slots_per_day: { type: integer }
+                  open_days:
+                    type: array
+                    items: { type: integer }

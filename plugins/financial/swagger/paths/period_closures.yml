@@ -1,0 +1,89 @@
+get:
+  tags:
+    - Financeiro · Fechamento
+  summary: Listar fechamentos de período
+  description: |
+    Histórico de fechamentos contábeis (ordem `period_year DESC, period_month DESC`).
+    Acessível mesmo durante o setup (pula `ensure_setup_complete!`) — usado para
+    mostrar status na tela de Configurações > Contador.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - name: year
+      in: query
+      schema: { type: integer }
+      description: Filtra por ano contábil (`period_year`).
+    - name: status
+      in: query
+      schema: { type: string, enum: [closed, reopened] }
+      description: Filtra por status do fechamento.
+  responses:
+    '200':
+      description: Lista de fechamentos
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '../definitions/PeriodClosure.yml'
+post:
+  tags:
+    - Financeiro · Fechamento
+  summary: Fechar mês contábil
+  description: |
+    Fecha o mês via `Financial::Governance::ClosePeriod`, criando um registro
+    `status=closed`. A partir daí, qualquer edição retroativa (Entry/Installment/
+    Expense com data dentro do período) levanta `Financial::Errors::PeriodClosed`
+    e os outros recursos respondem `423 Locked`.
+
+    Append-only: não existe `update`/`destroy` de fechamento. Para fechar de novo
+    após uma reabertura, cria-se um NOVO registro.
+
+    Requer ADMIN. Idempotência via header `Idempotency-Key`. Se o mês já estava
+    fechado, retorna `200` (em vez de `201`) com o registro existente.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [period_closure]
+          properties:
+            period_closure:
+              type: object
+              required: [period_year, period_month]
+              properties:
+                period_year:
+                  type: integer
+                  description: Ano contábil (2020..2100).
+                period_month:
+                  type: integer
+                  description: Mês contábil (1..12).
+                notes:
+                  type: string
+                  description: Observações livres do fechamento.
+  responses:
+    '201':
+      description: Mês fechado
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PeriodClosure.yml'
+    '200':
+      description: Mês já estava fechado (idempotente) — retorna o registro existente
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/PeriodClosure.yml'
+    '422':
+      description: Erro de validação
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'
+    '403':
+      description: Sem permissão (requer ADMIN)

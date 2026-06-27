@@ -54,11 +54,6 @@
         "ROUTE": "ajustes_times_editar_membros",
         "BODY": "Gerenciar agentes do seu time."
       },
-      "EDIT_WIZARD_PERMISSIONS": {
-        "TITLE": "Permissões",
-        "ROUTE": "ajustes_times_editar_permissões",
-        "BODY": "Configure o que este time pode acessar."
-      },
       "EDIT_WIZARD_FINISH": {
         "TITLE": "Finalizar",
         "ROUTE": "ajustes_times_editar_finalizar",

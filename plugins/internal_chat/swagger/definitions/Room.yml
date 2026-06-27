@@ -1,0 +1,74 @@
+type: object
+description: |
+  Sala do Chat Interno, conforme `RoomSerializer`. `kind='direct'` é DM 1-1
+  (sem `name`, resolvido relativo ao requester); `kind='group'` é sala nomeada
+  de múltiplos membros. `unread_count` e `muted_until` são por-membro
+  (relativos ao requester). `members` lista os membros ativos.
+properties:
+  id: { type: integer }
+  account_id: { type: integer }
+  kind:
+    type: string
+    enum: [direct, group]
+  name:
+    type: string
+    nullable: true
+    description: Resolvido relativo ao requester; em DM é o nome do outro membro.
+  description:
+    type: string
+    nullable: true
+  avatar_url:
+    type: string
+    nullable: true
+  archived_at:
+    type: string
+    format: date-time
+    nullable: true
+  muted_until:
+    type: string
+    format: date-time
+    nullable: true
+    description: Preferência por-membro, retornada relativa ao requester.
+  last_message_at:
+    type: string
+    format: date-time
+    nullable: true
+  last_message:
+    description: Última mensagem visível da sala (preview pra lista).
+    $ref: 'Message.yml'
+  unread_count:
+    type: integer
+    description: Não lidas do requester nesta sala (0 se não for membro).
+  members:
+    type: array
+    description: Membros ativos da sala.
+    items:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID da membership.
+        user_id:
+          type: integer
+          nullable: true
+        ai_agent_id:
+          type: integer
+          nullable: true
+        role: { type: string }
+        name:
+          type: string
+          nullable: true
+          description: Nome do usuário, ou label da Bea quando `is_ai=true`.
+        avatar_url:
+          type: string
+          nullable: true
+        is_ai: { type: boolean }
+        last_read_message_id:
+          type: integer
+          nullable: true
+  created_by_user_id:
+    type: integer
+    nullable: true
+  created_at:
+    type: string
+    format: date-time

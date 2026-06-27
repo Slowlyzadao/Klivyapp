@@ -120,11 +120,16 @@ const onStartByPhone = () => emit('startConversationByPhone');
           </div>
           <button
             type="button"
-            :disabled="!contact.phone_number || startingContactId === contact.id"
+            :disabled="
+              !contact.phone_number || startingContactId === contact.id
+            "
             class="px-3 py-1 text-xs font-medium rounded-md bg-n-brand text-n-slate-1 hover:bg-n-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
             @click="onStartConversation(contact)"
           >
-            <span v-if="startingContactId === contact.id" class="flex items-center gap-1">
+            <span
+              v-if="startingContactId === contact.id"
+              class="flex items-center gap-1"
+            >
               <span class="i-lucide-loader-2 animate-spin size-3" />
               Iniciando…
             </span>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="Portal do Paciente — Klivy" />
+    <title>Portal do Paciente — Klivy</title>
+    <link rel="icon" type="image/svg+xml" href="/brand-assets/logo_thumbnail.svg" />
+    <!-- Sprint G — PWA básico pra habilitar Web Push em iOS (>= 16.4 quando instalado). -->
+    <link rel="manifest" href="/patient_portal_manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-icon-180x180.png" />
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Klivy" />
+    <script>
+      // apiBaseUrl SEMPRE vazio — http.js usa caminhos relativos. Assim a SPA
+      // chama o mesmo host que serviu o HTML (resolve corretamente em localhost,
+      // pacientes.lvh.me, tunnels *.trycloudflare.com, e produção).
+      // Antes lia ENV['FRONTEND_URL'] mas isso quebrava acesso mobile via tunnel:
+      // o celular tentava conectar em http://0.0.0.0:3000 (que é o próprio device),
+      // resultando em fetch "Load failed".
+      window.klivyPatientPortalConfig = {
+        apiBaseUrl: '',
+        env: '<%= Rails.env %>'
+      };
+    </script>
+    <%= vite_client_tag %>
+    <%= vite_javascript_tag 'patient_portal' %>
+  </head>
+  <body class="bg-slate-50 text-slate-900 antialiased">
+    <div id="patient-portal-app"></div>
+    <noscript>Este aplicativo funciona melhor com JavaScript habilitado.</noscript>
+  </body>
+</html>

@@ -11,6 +11,12 @@ O jeito suportado é via [`bin/build-prod.sh`](../bin/build-prod.sh). Ele:
 - Executa `docker pull` (best-effort), `docker build --platform linux/amd64`, e `docker push`.
 - Captura todo o stdout/stderr em `build_production.log` (sobrescrito a cada execução), para auditoria.
 
+> **Setup inicial (uma vez só):** se for o primeiro uso após `clone` ou em WSL, dê permissão de execução nos scripts:
+> ```bash
+> chmod +x bin/*.sh
+> ```
+> Sem isso, `bin/build-prod.sh` e `bin/cleanup-prod-images.sh` retornam `Permission denied`.
+
 ```bash
 # Build + push de uma nova versão. Autodetecta a anterior localmente.
 bin/build-prod.sh v1.4.4.53

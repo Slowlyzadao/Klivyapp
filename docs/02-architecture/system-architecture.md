@@ -15,10 +15,10 @@ Todo código do BeClinic vive estritamente na pasta `plugins/`, e toda mutação
 Cada Módulo de negócio é um ecossistema independente (com sua própria API, Rotas, Models, e Store Angular/Vue). O Vite foi configurado via Alias (`@plugins/...`) para compilar esses injetáveis no pipeline original do Chatwoot.
 
 ### 📋 Módulo 1: SYSTEM CORE (`plugins/beclinic_core`)
-Responsável pelas regras basais, Perfis Satélites, Configurações, e RBAC (Role-Based Access Control).
-- **Frontend**: Configurações de Equipe, Vite Aliases
-- **Banco de Dados (Satélite)**: `beclinic_team_profiles`, `beclinic_account_profiles`, `beclinic_user_profiles`
-- **Técnica de Isolamento**: O engine deste módulo abriga o callback `Account.class_eval`, `User.class_eval`, e `Team.class_eval`, embutindo a lógica de perfis customizados via proxy pattern (`delegate`). Isso mantém o banco da Chatwoot vazio.
+Responsável pelas regras basais, Perfis Satélites e concern `BeclinicPermissible` (resolução de permissões em 3 passos: super_admin → admin → `KlivyRole`). RBAC granular vive no plugin separado `plugins/custom_roles/`.
+- **Frontend**: Configurações de Equipe, Vite Aliases, componentes compartilhados (`FormSelect`, `Tooltip`).
+- **Banco de Dados (Satélite)**: `beclinic_account_profiles`, `beclinic_user_profiles`. A tabela `beclinic_team_profiles` (RBAC legado via Times) foi **removida em 2026-04-30** junto com o conceito `dono` — ver `db/migrate/20260430130000_drop_legacy_team_rbac_schema.rb`.
+- **Técnica de Isolamento**: O engine deste módulo abriga callbacks `Account.class_eval` e `User.class_eval`, embutindo a lógica de perfis customizados via proxy pattern (`delegate`). Mantém o banco do Chatwoot vazio.
 
 ### 📋 Módulo 2: AGENDA (`plugins/agenda`)
 Agendamento inteligente. Adotou arquitetura "Mobile-First" 100% responsiva (CSS Grid/Flexbox) desacoplada do core do Chatwoot. 

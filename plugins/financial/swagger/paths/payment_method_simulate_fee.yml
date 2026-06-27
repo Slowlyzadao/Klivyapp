@@ -1,0 +1,73 @@
+get:
+  tags:
+    - Financeiro · Formas de Pagamento
+  summary: Simular taxa vigente do método
+  description: |
+    Preview da taxa vigente para `(amount_cents × installments_count × on_date)`.
+    Read-only — não persiste nada, não dispara `AuditLog`, sem gate de RBAC
+    (qualquer usuário autenticado). Acessível mesmo com setup incompleto. Usado
+    pelo `PaymentPlanWizardV2` para mostrar bruto × taxa × líquido antes de aprovar.
+
+    Dois modos de cálculo:
+    - `absorb` (canon V2): `amount_cents` é o que o paciente paga; a taxa é retida
+      e a clínica recebe `net = amount - fee`.
+    - `passthrough` (F2.5): `amount_cents` é o BASE que a clínica recebe; o paciente
+      paga um valor inflado para cobrir o MDR.
+
+    Quando `mode` é omitido, usa o flag `passes_fee_to_patient` do método.
+    Se não houver fee cadastrada, retorna `200` com `fee_resolved: false` e valores zerados.
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/id'
+    - name: amount_cents
+      in: query
+      required: true
+      description: "Inteiro > 0. Interpretação depende de `mode`."
+      schema: { type: integer, minimum: 1 }
+    - name: installments_count
+      in: query
+      description: "Entre 1 e 24 (default 1)."
+      schema: { type: integer, minimum: 1, maximum: 24, default: 1 }
+    - name: on_date
+      in: query
+      description: "Data ISO 'YYYY-MM-DD' (default hoje)."
+      schema: { type: string, format: date }
+    - name: mode
+      in: query
+      description: "Modelo de cálculo. Ausente → usa `passes_fee_to_patient` do método."
+      schema: { type: string, enum: [absorb, passthrough] }
+  responses:
+    '200':
+      description: "Taxa simulada (mesmo quando não há fee — `fee_resolved: false`)"
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: object
+                properties:
+                  payment_method_id: { type: integer }
+                  payment_method_kind: { type: string }
+                  payment_method_name: { type: string }
+                  passes_fee_to_patient: { type: boolean }
+                  mode: { type: string, enum: [absorb, passthrough] }
+                  amount_cents: { type: integer, description: "Input do operador." }
+                  amount_for_patient_cents: { type: integer, description: "Quanto o paciente paga." }
+                  base_amount_cents: { type: integer, description: "Quanto entra como receita da clínica." }
+                  installments_count: { type: integer }
+                  on_date: { type: string, format: date }
+                  fee_resolved: { type: boolean, description: "False quando não há fee vigente para a combinação." }
+                  fee_id: { type: integer, nullable: true }
+                  fee_percent_basis_points: { type: integer }
+                  fee_fixed_cents: { type: integer }
+                  fee_amount_cents: { type: integer }
+                  net_amount_cents: { type: integer, description: "Quanto cai na conta da clínica." }
+                  liquidation_days: { type: integer }
+                  expected_liquidation_date: { type: string, format: date }
+    '422':
+      description: "`amount_cents` ausente/inválido ou `installments_count` fora de 1..24"
+      content:
+        application/json:
+          schema:
+            $ref: '../definitions/Error.yml'

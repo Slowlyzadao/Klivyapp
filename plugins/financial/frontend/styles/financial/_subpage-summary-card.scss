@@ -1,0 +1,91 @@
+@use "../variables" as *;
+
+/* ── Summary card (KPI cards in sub-pages) ─────────────────── */
+.financial-summary-card {
+  background: #f1fdf0;
+  color: $brand-success;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+body.dark .financial-summary-card {
+  background: rgb(var(--s-800));
+  border-color: rgb(var(--s-700));
+}
+
+.financial-summary-card--income {
+  background: #e5effd;
+  color: #2781f6;
+}
+
+.financial-summary-card--income .financial-summary-label,
+.financial-summary-card--income .financial-summary-value,
+.financial-summary-card--income .cf-balance-icon {
+  color: #2781f6 !important;
+}
+
+.financial-summary-card--expense {
+  background: #fdf0f0;
+  color: $brand-danger;
+}
+
+.financial-summary-card--expense .financial-summary-label,
+.financial-summary-card--expense .financial-summary-value,
+.financial-summary-card--expense .cf-balance-icon {
+  color: $brand-danger !important;
+}
+
+.financial-summary-card--net,
+.financial-summary-card:not(.financial-summary-card--income):not(.financial-summary-card--expense):not(.financial-summary-card--neutral) {
+  background: #f1fdf0;
+  color: $brand-success;
+}
+
+.financial-summary-card--net .financial-summary-label,
+.financial-summary-card--net .financial-summary-value,
+.financial-summary-card--net .cf-balance-icon,
+.financial-summary-card:not(.financial-summary-card--income):not(.financial-summary-card--expense):not(.financial-summary-card--neutral) .financial-summary-label,
+.financial-summary-card:not(.financial-summary-card--income):not(.financial-summary-card--expense):not(.financial-summary-card--neutral) .financial-summary-value,
+.financial-summary-card:not(.financial-summary-card--income):not(.financial-summary-card--expense):not(.financial-summary-card--neutral) .cf-balance-icon {
+  color: $brand-success !important;
+}
+
+.financial-summary-card--neutral {
+  background: #f8fafc;
+  color: $brand-slate;
+}
+
+body.dark .financial-summary-card--neutral {
+  background: rgb(var(--s-800));
+  color: rgb(var(--s-400));
+}
+
+.financial-summary-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgb(var(--s-500));
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.financial-summary-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: rgb(var(--s-900));
+  line-height: 1.2;
+}
+
+body.dark .financial-summary-value {
+  color: rgb(var(--s-50));
+}
+
+.financial-summary-value--positive {
+  color: $brand-success;
+}
+
+.financial-summary-value--negative {
+  color: $brand-danger;
+}

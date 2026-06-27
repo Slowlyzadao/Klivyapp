@@ -1,0 +1,23 @@
+post:
+  tags:
+    - Consentimentos (LGPD)
+  summary: Gerar link de assinatura remota
+  description: |
+    Gera/atualiza `remote_token` e `remote_link_expires_at` (48h). O envio
+    via WhatsApp/SMS é responsabilidade do frontend (consumir o token e
+    montar a URL pública do mini-site).
+  parameters:
+    - $ref: '../common.yml#/components/parameters/accountId'
+    - $ref: '../common.yml#/components/parameters/patientId'
+    - $ref: '../common.yml#/components/parameters/id'
+  responses:
+    '200':
+      description: Token gerado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string }
+              remote_token: { type: string }
+              expires_at: { type: string, format: date-time }
